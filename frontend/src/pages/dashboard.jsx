@@ -128,9 +128,10 @@ export default function Dashboard() {
     async function loadDashboard() {
       try {
         const res = await api.get("/api/dashboard");
+        console.log("📦 Dados recebidos do backend:", res.data.data);  // ← ADICIONADO: Debug dos dados
         setDados(res.data.data);
       } catch (err) {
-        console.error(err);
+        console.error("❌ Erro no fetch:", err);  // ← ADICIONADO: Mais detalhes no erro
         if (err.response && err.response.status === 401) {
           logout();
           navigate("/login");
@@ -142,7 +143,7 @@ export default function Dashboard() {
       }
     }
     loadDashboard();
-  }, []);
+  }, [logout, navigate]);  // ← ADICIONADO: Dependências para evitar warnings
 
   if (loading) return <div className="flex items-center justify-center h-screen text-gray-700 dark:text-gray-300">Carregando dashboard...</div>;
   if (erro) return <div className="flex items-center justify-center h-screen text-red-600">{erro}</div>;
@@ -151,22 +152,35 @@ export default function Dashboard() {
   // ----------------- FILTRAR COLABORADORES POR TURNO -----------------
   const colaboradoresDoTurno = (dados.colaboradores || []).filter(c => (c.turno || "T1") === turnoSelecionado);
 
+  // ----------------- CALCULAR AUSENTES COM BASE EM AUSÊNCIAS DE HOJE -----------------
+  const idsAusentes = new Set((dados?.ausenciasHoje || []).map(a => a.colaboradorId));  // Set de opsId ausentes
+  const ausentes = colaboradoresDoTurno.filter(c => idsAusentes.has(c.id)).length;  // c.id é opsId
+  const presentes = colaboradoresDoTurno.length - ausentes;  // Abate ausentes do total
+
   // ----------------- STATS -----------------
   const totalColaboradores = colaboradoresDoTurno.length;
-  const presentes = colaboradoresDoTurno.filter(c => c.presente !== false).length; // default true
   const absenteismo = totalColaboradores
-    ? (((totalColaboradores - presentes) / totalColaboradores) * 100).toFixed(1) + "%"
+    ? (((ausentes / totalColaboradores) * 100).toFixed(1) + "%")
     : "0%";
 
   const stats = [
     { title: "Total de Colaboradores", value: totalColaboradores, icon: Users },
     { title: "Presentes Hoje", value: presentes, icon: Clock },
     { title: "Absenteísmo", value: absenteismo, icon: TrendingUp },
-    { title: "Unidades / Empresas", value: dados.empresas?.length || 0, icon: Building2 },
+    { title: "Unidades / Empresas", value: dados?.empresas?.length || 0, icon: Building2 },
   ];
 
+  // Debug temporário (remova depois de testar):
+  console.log("🔍 Debug ausências:", { 
+    totalColaboradores, 
+    ausentes, 
+    presentes, 
+    idsAusentes: Array.from(idsAusentes).slice(0, 5),  // Primeiros 5 IDs
+    ausenciasHoje: dados?.ausenciasHoje?.length || 0 
+  });
+
   // ----------------- QUANTIDADE POR EMPRESA -----------------
-  const empresasData = (dados.empresas || []).map(emp => ({
+  const empresasData = (dados?.empresas || []).map(emp => ({
     ...emp,
     qtd: colaboradoresDoTurno.filter(c => (c.empresa || "").trim() === (emp.nome || "").trim()).length
   }));
@@ -190,7 +204,7 @@ export default function Dashboard() {
   }, {});
 
   // ----------------- AUSENTES -----------------
-  const ausentes = dados.ausenciasHoje || [];
+  const listaAusentes = dados?.ausenciasHoje || [];  // ← RENOMEADO: Evita conflito com 'ausentes' (número)
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -268,13 +282,15 @@ export default function Dashboard() {
                   <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
                     <th className="py-2">Colaborador</th>
                     <th className="py-2">Motivo</th>
+                    <th className="py-2">Turno</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ausentes.map((a, i) => (
+                  {listaAusentes.map((a, i) => (
                     <tr key={i} className="text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
                       <td className="py-3">{a.nome}</td>
                       <td className="py-3">{a.motivo}</td>
+                      <td className="py-3">{a.turno || "Sem Turno"}</td>
                     </tr>
                   ))}
                 </tbody>
