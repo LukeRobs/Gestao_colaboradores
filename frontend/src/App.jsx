@@ -7,14 +7,21 @@ import Colaboradores from "./pages/colaboradores";
 import EmpresasPage from "./pages/empresas";
 import CargosPage from "./pages/cargos";
 import SetoresPage from "./pages/Setores";
+import PontoPage from "./pages/Ponto";
 
-import { AuthProvider, AuthContext } from "./context/AuthContext";
+// ⬇️ IMPORTS CORRETOS AGORA
+import { AuthProvider } from "./context/AuthProvider";
+import { AuthContext } from "./context/AuthContext";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useContext(AuthContext);
-  const token = localStorage.getItem("token");
+  const hasToken = !!localStorage.getItem("token");
 
-  return isAuthenticated || token ? children : <Navigate to="/login" replace />;
+  if (isAuthenticated || hasToken) {
+    return children;
+  }
+
+  return <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -22,6 +29,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+
           {/* LOGIN */}
           <Route path="/login" element={<Login />} />
 
@@ -55,7 +63,7 @@ export default function App() {
             }
           />
 
-          {/* CARGOS */} 
+          {/* CARGOS */}
           <Route
             path="/cargos"
             element={
@@ -64,6 +72,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* SETORES */}
           <Route
             path="/setores"
             element={
@@ -73,7 +83,17 @@ export default function App() {
             }
           />
 
-          {/* REDIRECT CASO CAIA EM ROTA INEXISTENTE */}
+          {/* PONTO */}
+          <Route
+            path="/ponto"
+            element={
+              <ProtectedRoute>
+                <PontoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* DEFAULT → REDIRECIONA PARA / */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

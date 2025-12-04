@@ -245,6 +245,13 @@ model Contrato {
 model Colaborador {
   opsId                String    @id @map("ops_id") @db.VarChar(50)
   nomeCompleto         String    @map("nome_completo") @db.VarChar(200)
+
+  // 🔥 CAMPOS NOVOS (NECESSÁRIOS PARA O SISTEMA)
+  cpf                  String?   @db.VarChar(14)
+  telefone             String?   @db.VarChar(20)
+  email                String?   @unique @db.VarChar(200)
+  dataNascimento       DateTime? @map("data_nascimento")
+
   genero               String?   @db.VarChar(20)
   matricula            String    @unique @db.VarChar(50)
   dataAdmissao         DateTime  @map("data_admissao") @db.Date

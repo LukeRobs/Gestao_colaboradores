@@ -11,6 +11,10 @@ const config = require('./config/config');
 const routes = require('./routes');
 const { notFound, errorHandler } = require('./middlewares/error.middleware');
 const logger = require('./utils/logger');
+const cron = require("node-cron");
+
+// ⚠️ AJUSTE O CAMINHO CONFORME SUA ESTRUTURA:
+const { gerarAusenciasDiaOperacional } = require("./controllers/ponto.controller");
 
 // Cria a aplicação Express
 const app = express();
@@ -43,6 +47,19 @@ app.use((req, res, next) => {
     userAgent: req.get('user-agent'),
   });
   next();
+});
+
+// =====================================================
+// CRON JOB → gerar ausências todo dia às 06:05
+// =====================================================
+
+cron.schedule("5 6 * * *", async () => {
+  try {
+    console.log("⏰ Rodando job: gerarAusenciasDiaOperacional");
+    await gerarAusenciasDiaOperacional();
+  } catch (err) {
+    console.error("❌ Erro no job de ausências:", err);
+  }
 });
 
 // =====================================================

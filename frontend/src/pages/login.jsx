@@ -26,17 +26,15 @@ export default function Login() {
     try {
       setLoading(true);
 
-      // Faz login via API
-      const response = await api.post("/api/auth/login", {
+      const response = await api.post("/auth/login", {
         email,
         password: senha,
       });
 
-      // 🔥 CORREÇÃO: Acessa response.data.data (conforme o successResponse)
       console.log("Resposta completa:", response.data);
-      
-      const { user, token } = response.data.data; // <-- AQUI está o problema!
-      
+
+      const { user, token } = response.data.data;
+
       if (!token) {
         setError("Token não recebido do servidor.");
         return;
@@ -45,11 +43,16 @@ export default function Login() {
       console.log("✅ Token recebido:", token.substring(0, 20) + "...");
       console.log("✅ User recebido:", user.name);
 
-      // Salva user e token no contexto (apenas UMA vez)
+      // 🔥 SALVA NO LOCALSTORAGE PARA O AXIOS USAR AUTOMÁTICO
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Atualiza contexto global
       login(user, token);
 
-      // Redireciona para dashboard
+      // Redireciona
       navigate("/");
+
     } catch (err) {
       console.error("❌ Erro no login:", err);
       setError(err.response?.data?.message || "Erro ao fazer login");
@@ -79,7 +82,7 @@ export default function Login() {
               placeholder="E-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl placeholder-gray-300 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl placeholder-gray-300 text-white focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -90,7 +93,7 @@ export default function Login() {
               placeholder="Senha"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="w-full pl-12 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-xl placeholder-gray-300 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full pl-12 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-xl placeholder-gray-300 text-white focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="button"
@@ -104,16 +107,15 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
 
-        {/* Info de teste */}
         <div className="mt-6 p-3 bg-gray-700/50 rounded-lg">
           <p className="text-xs text-gray-400 text-center">
-            <strong>Teste:</strong> Use as credenciais cadastradas no banco
+            <strong>Teste:</strong> Use suas credenciais cadastradas.
           </p>
         </div>
       </div>

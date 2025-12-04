@@ -1,6 +1,5 @@
 /**
- * Controller de Autenticação - Ajustado
- * Gerencia login, registro e autenticação de usuários
+ * Controller de Autenticação - COMPLETO E CORRIGIDO
  */
 
 const { prisma } = require('../config/database');
@@ -13,22 +12,16 @@ const {
 } = require('../utils/response');
 
 /**
- * Registra um novo usuário
- * POST /api/auth/register
+ * REGISTRO
  */
 const register = async (req, res) => {
   const { name, email, password, role } = req.body;
 
-  // Verifica se o email já existe
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    return errorResponse(res, 'Email já cadastrado', 409);
-  }
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return errorResponse(res, 'Email já cadastrado', 409);
 
-  // Hash da senha
   const hashedPassword = await hashPassword(password);
 
-  // Cria o usuário
   const user = await prisma.user.create({
     data: {
       name,
@@ -46,47 +39,131 @@ const register = async (req, res) => {
     },
   });
 
-  // Gera token JWT
-  const token = generateToken({ id: user.id, email: user.email, role: user.role });
+  const token = generateToken({
+    id: user.id,
+    email: user.email,
+    role: user.role
+  });
 
   return createdResponse(res, { user, token }, 'Usuário registrado com sucesso');
 };
 
 /**
- * Realiza login do usuário
- * POST /api/auth/login
+ * LOGIN
  */
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
+  const { password } = req.body;
 
-  // Busca o usuário
-  const user = await prisma.user.findUnique({ where: { email } });
+  console.log("📩 Login recebido:", { email, password });
 
-  // Valida existência do usuário e senha
-  if (!user || !user.password) {
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } }
+  });
+
+  console.log("📌 Usuário buscado no banco:", user);
+
+  if (!user || !user.password)
     return errorResponse(res, 'Email ou senha incorretos', 401);
-  }
 
-  if (!user.isActive) {
+  if (!user.isActive)
     return errorResponse(res, 'Usuário inativo', 401);
-  }
 
-  // Compara senha
-  const isPasswordValid = await comparePassword(password, user.password);
-  if (!isPasswordValid) {
+  const isValid = await comparePassword(password, user.password);
+
+  if (!isValid)
     return errorResponse(res, 'Email ou senha incorretos', 401);
-  }
 
-  // Gera token JWT
-  const token = generateToken({ id: user.id, email: user.email, role: user.role });
+  const token = generateToken({
+    id: user.id,
+    email: user.email,
+    role: user.role
+  });
 
-  // Remove senha da resposta
-  const { password: _, ...userWithoutPassword } = user;
+  const { password: _, ...safeUser } = user;
 
-  return successResponse(res, { user: userWithoutPassword, token }, 'Login realizado com sucesso');
+  return successResponse(res, { user: safeUser, token }, 'Login realizado com sucesso');
+};
+
+/**
+ * GET USER LOGADO
+ */
+const getMe = async (req, res) => {
+  if (!req.user)
+    return errorResponse(res, 'Nenhuma sessão válida encontrada', 401);
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return successResponse(res, user);
+};
+
+/**
+ * UPDATE PROFILE
+ */
+const updateMe = async (req, res) => {
+  if (!req.user)
+    return errorResponse(res, 'Nenhuma sessão válida encontrada', 401);
+
+  const { name, avatar } = req.body;
+
+  const updated = await prisma.user.update({
+    where: { id: req.user.id },
+    data: { name, avatar },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      avatar: true,
+      updatedAt: true,
+    },
+  });
+
+  return successResponse(res, updated, 'Perfil atualizado');
+};
+
+/**
+ * ALTERA SENHA
+ */
+const changePassword = async (req, res) => {
+  if (!req.user)
+    return errorResponse(res, 'Nenhuma sessão válida encontrada', 401);
+
+  const { senhaAtual, novaSenha } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id }
+  });
+
+  const isMatch = await comparePassword(senhaAtual, user.password);
+  if (!isMatch)
+    return errorResponse(res, 'Senha atual incorreta', 401);
+
+  const hashed = await hashPassword(novaSenha);
+
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { password: hashed },
+  });
+
+  return successResponse(res, null, 'Senha alterada com sucesso');
 };
 
 module.exports = {
   register,
   login,
+  getMe,
+  updateMe,
+  changePassword,
 };
