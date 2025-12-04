@@ -10,6 +10,7 @@ const {
   deletedResponse,
   notFoundResponse,
   paginatedResponse,
+  errorResponse,
 } = require('../utils/response');
 
 /**
@@ -31,7 +32,6 @@ const getAllColaboradores = async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);
 
-  // Construindo filtros
   const where = {};
 
   if (search) {
@@ -125,51 +125,98 @@ const getColaboradorById = async (req, res) => {
  * POST /api/colaboradores
  */
 const createColaborador = async (req, res) => {
-  const {
-    opsId,
-    nomeCompleto,
-    genero,
-    matricula,
-    dataAdmissao,
-    horarioInicioJornada,
-    idSetor,
-    idCargo,
-    idLider,
-    idEstacao,
-    idEmpresa,
-    idContrato,
-    idEscala,
-    idTurno,
-    status,
-  } = req.body;
-
-  const colaborador = await prisma.colaborador.create({
-    data: {
+  try {
+    const {
       opsId,
       nomeCompleto,
+      cpf,
+      telefone,
+      dataNascimento,
+      email,
       genero,
       matricula,
-      dataAdmissao: new Date(dataAdmissao),
-      horarioInicioJornada: new Date(`1970-01-01T${horarioInicioJornada}`),
-      idSetor: idSetor ? parseInt(idSetor) : null,
-      idCargo: idCargo ? parseInt(idCargo) : null,
-      idLider: idLider || null,
-      idEstacao: idEstacao ? parseInt(idEstacao) : null,
-      idEmpresa: idEmpresa ? parseInt(idEmpresa) : null,
-      idContrato: idContrato ? parseInt(idContrato) : null,
-      idEscala: idEscala ? parseInt(idEscala) : null,
-      idTurno: idTurno ? parseInt(idTurno) : null,
-      status: status || 'ATIVO',
-    },
-    include: {
-      setor: true,
-      cargo: true,
-      empresa: true,
-      lider: { select: { opsId: true, nomeCompleto: true } },
-    },
-  });
+      dataAdmissao,
+      horarioInicioJornada,
 
-  return createdResponse(res, colaborador, 'Colaborador criado com sucesso');
+      empresaNome, // vem do front
+      cargoNome,   // vem do front
+
+      idSetor,
+      idLider,
+      idEstacao,
+      idContrato,
+      idEscala,
+      idTurno,
+      status,
+    } = req.body;
+
+    // ------------------------------
+    //  BUSCAR EMPRESA PELO NOME
+    // ------------------------------
+    let empresa = null;
+    if (empresaNome) {
+      empresa = await prisma.empresa.findFirst({
+        where: { razaoSocial: empresaNome },
+      });
+
+      if (!empresa) {
+        return errorResponse(res, 400, `Empresa '${empresaNome}' não encontrada.`);
+      }
+    }
+
+    // ------------------------------
+    //  BUSCAR CARGO PELO NOME
+    // ------------------------------
+    let cargo = null;
+    if (cargoNome) {
+      cargo = await prisma.cargo.findFirst({
+        where: { nomeCargo: cargoNome },
+      });
+
+      if (!cargo) {
+        return errorResponse(res, 400, `Cargo '${cargoNome}' não encontrado.`);
+      }
+    }
+
+    // ------------------------------
+    //  CRIAÇÃO DO COLABORADOR
+    // ------------------------------
+    const colaborador = await prisma.colaborador.create({
+      data: {
+        opsId,
+        nomeCompleto,
+        cpf,
+        telefone,
+        dataNascimento,
+        email,
+        genero,
+        matricula,
+        dataAdmissao: new Date(dataAdmissao),
+        horarioInicioJornada: new Date(`1970-01-01T${horarioInicioJornada}`),
+
+        idEmpresa: empresa ? empresa.idEmpresa : null,
+        idCargo: cargo ? cargo.idCargo : null,
+
+        idSetor: idSetor ? parseInt(idSetor) : null,
+        idLider: idLider || null,
+        idEstacao: idEstacao ? parseInt(idEstacao) : null,
+        idContrato: idContrato ? parseInt(idContrato) : null,
+        idEscala: idEscala ? parseInt(idEscala) : null,
+        idTurno: idTurno ? parseInt(idTurno) : null,
+        status: status || 'ATIVO',
+      },
+      include: {
+        setor: true,
+        cargo: true,
+        empresa: true,
+        lider: { select: { opsId: true, nomeCompleto: true } },
+      },
+    });
+
+    return createdResponse(res, colaborador, 'Colaborador criado com sucesso');
+  } catch (error) {
+    return errorResponse(res, 500, 'Erro ao criar colaborador', error);
+  }
 };
 
 /**
@@ -180,7 +227,6 @@ const updateColaborador = async (req, res) => {
   const { opsId } = req.params;
   const updateData = { ...req.body };
 
-  // Converte datas se existirem
   if (updateData.dataAdmissao) {
     updateData.dataAdmissao = new Date(updateData.dataAdmissao);
   }
@@ -191,7 +237,6 @@ const updateColaborador = async (req, res) => {
     updateData.horarioInicioJornada = new Date(`1970-01-01T${updateData.horarioInicioJornada}`);
   }
 
-  // Converte IDs para inteiros
   ['idSetor', 'idCargo', 'idEstacao', 'idEmpresa', 'idContrato', 'idEscala', 'idTurno'].forEach(field => {
     if (updateData[field]) {
       updateData[field] = parseInt(updateData[field]);
@@ -239,49 +284,41 @@ const getColaboradorStats = async (req, res) => {
     select: { opsId: true, nomeCompleto: true, matricula: true },
   });
 
-  if (!colaborador) {
-    return notFoundResponse(res, 'Colaborador não encontrado');
-  }
+  if (!colaborador) return notFoundResponse(res, 'Colaborador não encontrado');
 
-  // Filtro de data
   const dateFilter = {};
   if (startDate) dateFilter.gte = new Date(startDate);
   if (endDate) dateFilter.lte = new Date(endDate);
 
-  // Busca estatísticas
   const [frequencias, ausencias, subordinados] = await Promise.all([
     prisma.frequencia.findMany({
       where: {
         opsId,
         ...(Object.keys(dateFilter).length > 0 && { dataReferencia: dateFilter }),
       },
-      include: {
-        tipoAusencia: true,
-      },
+      include: { tipoAusencia: true },
     }),
     prisma.ausencia.findMany({
       where: {
         opsId,
         ...(Object.keys(dateFilter).length > 0 && { dataInicio: dateFilter }),
       },
-      include: {
-        tipoAusencia: true,
-      },
+      include: { tipoAusencia: true },
     }),
     prisma.colaborador.count({
       where: { idLider: opsId, status: 'ATIVO' },
     }),
   ]);
 
-  // Calcula estatísticas
   const diasPresentes = frequencias.filter(
-    (f) => f.tipoAusencia?.codigo === 'P'
+    f => f.tipoAusencia?.codigo === 'P'
   ).length;
   const diasAusentes = frequencias.filter(
-    (f) => f.tipoAusencia?.impactaAbsenteismo
+    f => f.tipoAusencia?.impactaAbsenteismo
   ).length;
   const totalDias = frequencias.length;
-  const percentualAbsenteismo = totalDias > 0 ? ((diasAusentes / totalDias) * 100).toFixed(2) : 0;
+  const percentualAbsenteismo =
+    totalDias > 0 ? ((diasAusentes / totalDias) * 100).toFixed(2) : 0;
 
   return successResponse(res, {
     colaborador,
@@ -294,12 +331,10 @@ const getColaboradorStats = async (req, res) => {
     },
     ausencias: {
       total: ausencias.length,
-      ativas: ausencias.filter((a) => a.status === 'ATIVO').length,
-      finalizadas: ausencias.filter((a) => a.status === 'FINALIZADO').length,
+      ativas: ausencias.filter(a => a.status === 'ATIVO').length,
+      finalizadas: ausencias.filter(a => a.status === 'FINALIZADO').length,
     },
-    lideranca: {
-      subordinados,
-    },
+    lideranca: { subordinados },
   });
 };
 

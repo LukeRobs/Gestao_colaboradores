@@ -1,35 +1,35 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
-import EmployeeModal from "../components/EmployeeModal";
-import EmployeeTable from "../components/EmployeeTable";
-import { ColaboradoresAPI } from "../services/colaboradores";
+import CargoModal from "../components/CargoModal";
+import CargoTable from "../components/CargoTable";
+import { CargosAPI } from "../services/cargos";
+import { useNavigate } from "react-router-dom"; // ⬅ ADICIONADO
 
-export default function ColaboradoresPage() {
-  const [employees, setEmployees] = useState([]);
+export default function CargosPage() {
+  const [cargos, setCargos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigate = useNavigate(); // 👈 ESSENCIAL
+  const navigate = useNavigate(); // ⬅ ADICIONADO
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await ColaboradoresAPI.listar({
+      const list = await CargosAPI.listar({
         limit: 1000,
         search: query || undefined,
       });
-      setEmployees(list);
+      setCargos(list);
     } catch (err) {
-      console.error("Erro ao listar colaboradores:", err);
-      alert("Erro ao carregar colaboradores.");
+      console.error("Erro ao listar cargos:", err);
+      alert("Erro ao carregar cargos.");
     } finally {
       setLoading(false);
     }
@@ -44,56 +44,55 @@ export default function ColaboradoresPage() {
     setModalOpen(true);
   };
 
-  const handleEdit = (emp) => {
-    setSelected(emp);
+  const handleEdit = (cargo) => {
+    setSelected(cargo);
     setModalOpen(true);
   };
 
-  const handleDelete = async (emp) => {
-    if (!window.confirm(`Excluir o colaborador "${emp.nomeCompleto}"?`)) return;
+  const handleDelete = async (cargo) => {
+    if (!window.confirm(`Excluir o cargo "${cargo.nomeCargo}"?`)) return;
     try {
-      await ColaboradoresAPI.excluir(emp.opsId);
+      await CargosAPI.excluir(cargo.idCargo);
       load();
     } catch (err) {
-      console.error("Erro ao excluir colaborador:", err);
-      alert("Erro ao excluir colaborador.");
+      console.error("Erro ao excluir cargo:", err);
+      alert("Erro ao excluir cargo.");
     }
   };
 
-  const filtered = employees.filter((e) => {
+  const filtered = cargos.filter((c) => {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
-      e.nomeCompleto?.toLowerCase().includes(q) ||
-      e.email?.toLowerCase().includes(q) ||
-      e.cpf?.toLowerCase().includes(q) ||
-      String(e.opsId)?.includes(q)
+      c.nomeCargo.toLowerCase().includes(q) ||
+      (c.nivel || "").toLowerCase().includes(q)
     );
   });
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950 relative">
-      {/* SIDEBAR */}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+      
+      {/* SIDEBAR — AGORA COM NAVIGATE */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        navigate={navigate}   // 👈 ENVIE O navigate AQUI
+        navigate={navigate}   // ⬅ AQUI ESTAVA FALTANDO
       />
 
-      <div className="flex-1 lg:ml-64 transition-all duration-300">
+      <div className="flex-1 lg:ml-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Colaboradores
+              Cargos
             </h1>
 
             <div className="flex items-center gap-3">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar nome, e-mail, CPF ou OPS ID..."
+                placeholder="Buscar cargo..."
                 className="px-4 py-2 rounded-xl border bg-white dark:bg-gray-800 dark:text-white"
               />
 
@@ -102,17 +101,18 @@ export default function ColaboradoresPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl shadow"
               >
                 <Plus className="w-4 h-4" />
-                Adicionar Colaborador
+                Adicionar Cargo
               </button>
             </div>
           </div>
 
+          {/* TABLE */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800">
             {loading ? (
-              <p className="p-6 text-gray-500">Carregando colaboradores...</p>
+              <p className="p-6 text-gray-500">Carregando cargos...</p>
             ) : (
-              <EmployeeTable
-                employees={filtered}
+              <CargoTable
+                cargos={filtered}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
@@ -122,9 +122,9 @@ export default function ColaboradoresPage() {
       </div>
 
       {modalOpen && (
-        <EmployeeModal
-          key={selected?.opsId || "new"}
-          employee={selected}
+        <CargoModal
+          key={selected?.idCargo || "new"}
+          cargo={selected}
           onClose={() => {
             setModalOpen(false);
             setSelected(null);
@@ -132,16 +132,16 @@ export default function ColaboradoresPage() {
           onSave={async (data) => {
             try {
               if (selected) {
-                await ColaboradoresAPI.atualizar(selected.opsId, data);
+                await CargosAPI.atualizar(selected.idCargo, data);
               } else {
-                await ColaboradoresAPI.criar(data);
+                await CargosAPI.criar(data);
               }
               setModalOpen(false);
               setSelected(null);
               load();
             } catch (err) {
-              console.error("Erro ao salvar colaborador:", err);
-              alert("Erro ao salvar colaborador.");
+              console.error("Erro ao salvar cargo:", err);
+              alert("Erro ao salvar cargo.");
             }
           }}
         />
