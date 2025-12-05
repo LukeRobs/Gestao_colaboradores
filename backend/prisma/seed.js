@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcrypt"; // ADICIONE NO TOPO SE AINDA NÃO EXISTIR
 const prisma = new PrismaClient();
 
 async function main() {
@@ -190,6 +191,23 @@ async function main() {
       requerDocumento: false,
     },
   });
+// ---------------------------------------------------------
+// 9. USUÁRIO ADMIN
+// ---------------------------------------------------------
+
+const admin = await prisma.user.upsert({
+  where: { email: "admin@admin.com" },
+  update: {},
+  create: {
+    name: "Admin",
+    email: "admin@admin.com",
+    password: await bcrypt.hash("123456", 10),
+    role: "ADMIN",
+    isActive: true,
+  },
+});
+
+console.log("🛡️ Admin criado/validado:", admin.email);
 
   console.log("📌 Tipo ausência OK");
 
