@@ -9,24 +9,28 @@ import NovoColaborador from "./pages/colaboradores/novo";
 import EditarColaborador from "./pages/colaboradores/editar";
 import MovimentarColaborador from "./pages/colaboradores/movimentar";
 import PerfilColaborador from "./pages/colaboradores/perfil";
+
 import EmpresasPage from "./pages/empresas";
 import SetoresPage from "./pages/Setores";
 import CargosPage from "./pages/cargos";
 import PontoPage from "./pages/Ponto";
-import AtestadosPage from "./pages/atestados/index";
+
+import AtestadosPage from "./pages/atestados";
 import NovoAtestado from "./pages/atestados/novo";
+
+import MedidasDisciplinaresPage from "./pages/medidas-disciplinares";
+import NovaMedidaDisciplinar from "./pages/medidas-disciplinares/novo";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
   return (
     <Routes>
-
       {/* ================= ROTAS PÚBLICAS ================= */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ================= ROTAS PROTEGIDAS ================= */}
+      {/* ================= DASHBOARD ================= */}
       <Route
         path="/"
         element={
@@ -36,7 +40,7 @@ export default function App() {
         }
       />
 
-      {/* COLABORADORES */}
+      {/* ================= COLABORADORES ================= */}
       <Route
         path="/colaboradores"
         element={
@@ -63,23 +67,26 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/colaboradores/:opsId/movimentar"
         element={
           <ProtectedRoute>
             <MovimentarColaborador />
           </ProtectedRoute>
-      }
+        }
       />
+
       <Route
         path="/colaboradores/:opsId"
         element={
           <ProtectedRoute>
             <PerfilColaborador />
           </ProtectedRoute>
-      }
+        }
       />
-      {/* ATESTADOS MÉDICOS */}
+
+      {/* ================= ATESTADOS ================= */}
       <Route
         path="/atestados"
         element={
@@ -98,30 +105,64 @@ export default function App() {
         }
       />
 
-      {/* OUTRAS PÁGINAS */}
+      {/* ================= MEDIDAS DISCIPLINARES ================= */}
+      <Route
+        path="/medidas-disciplinares"
+        element={
+          <ProtectedRoute>
+            <MedidasDisciplinaresPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/medidas-disciplinares/novo"
+        element={
+          <ProtectedRoute>
+            <NovaMedidaDisciplinar />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ================= OUTRAS PÁGINAS ================= */}
       <Route
         path="/empresas"
-        element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>}
+        element={
+          <ProtectedRoute>
+            <EmpresasPage />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/setores"
-        element={<ProtectedRoute><SetoresPage /></ProtectedRoute>}
+        element={
+          <ProtectedRoute>
+            <SetoresPage />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/cargos"
-        element={<ProtectedRoute><CargosPage /></ProtectedRoute>}
+        element={
+          <ProtectedRoute>
+            <CargosPage />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/ponto"
-        element={<ProtectedRoute><PontoPage /></ProtectedRoute>}
+        element={
+          <ProtectedRoute>
+            <PontoPage />
+          </ProtectedRoute>
+        }
       />
 
-      {/* FALLBACK */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-
+      {/* ================= FALLBACK ================= */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

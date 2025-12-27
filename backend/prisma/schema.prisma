@@ -236,7 +236,7 @@ model Colaborador {
   frequencias           Frequencia[]
   historicoMovimentacao HistoricoMovimentacao[] @relation("ColaboradorMovimentado")
   atestadosMedicos     AtestadoMedico[]
-
+  medidasDisciplinares  MedidaDisciplinar[]
 
   @@index([matricula])
   @@index([status])
@@ -266,6 +266,21 @@ model AtestadoMedico {
   @@index([dataInicio, dataFim])
   @@map("atestado_medico")
 }
+model MedidaDisciplinar {
+  idMedida        Int      @id @default(autoincrement()) @map("id_medida")
+  opsId           String   @map("ops_id")
+  tipoMedida      String   @map("tipo_medida")
+  motivo          String
+  dataAplicacao   DateTime @map("data_aplicacao")
+  documentoAnexo  String   @map("documento_anexo")
+  dataRegistro    DateTime @default(now()) @map("data_registro")
+
+  colaborador     Colaborador @relation(fields: [opsId], references: [opsId])
+
+  @@map("medida_disciplinar")
+}
+
+
 
 enum UserRole {
   USER
@@ -289,4 +304,10 @@ enum StatusAtestado {
   ATIVO
   FINALIZADO
   CANCELADO
+}
+enum TipoMedida {
+  ADVERTENCIA
+  SUSPENSAO
+  ORIENTACAO
+  OUTRA
 }

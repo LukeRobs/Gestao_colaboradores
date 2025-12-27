@@ -6,6 +6,7 @@ import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import AtestadoCard from "../../components/AtestadoCard";
 import { AtestadosAPI } from "../../services/atestados";
+import api from "../../services/api";
 
 export default function AtestadosPage() {
   const navigate = useNavigate();
@@ -15,27 +16,21 @@ export default function AtestadosPage() {
 
   /* ================= LOAD ================= */
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
-    async function fetchAtestados() {
+    (async () => {
       try {
         const data = await AtestadosAPI.listar();
-        if (isMounted) {
-          setAtestados(data);
-        }
+        if (mounted) setAtestados(data);
       } catch {
         alert("Erro ao carregar atestados médicos");
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
-    }
-
-    fetchAtestados();
+    })();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, []);
 
@@ -43,6 +38,20 @@ export default function AtestadosPage() {
   async function refresh() {
     const data = await AtestadosAPI.listar();
     setAtestados(data);
+  }
+
+  async function handleDownload(idAtestado) {
+    try {
+      const res = await api.get(
+        `/atestados-medicos/${idAtestado}/presign-download`
+      );
+
+      const { url } = res.data.data;
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao abrir o PDF do atestado.");
+    }
   }
 
   return (
@@ -96,9 +105,7 @@ export default function AtestadosPage() {
                 <AtestadoCard
                   key={a.idAtestado}
                   atestado={a}
-                  onEdit={() =>
-                    navigate(`/atestados/${a.idAtestado}/editar`)
-                  }
+                  onDownload={() => handleDownload(a.idAtestado)}
                   onFinalizar={async () => {
                     await AtestadosAPI.finalizar(a.idAtestado);
                     refresh();

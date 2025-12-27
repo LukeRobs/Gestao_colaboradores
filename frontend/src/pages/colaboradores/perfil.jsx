@@ -6,6 +6,7 @@ import {
   Shuffle,
   Trash2,
   User,
+  FileText,
 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
@@ -16,22 +17,32 @@ import api from "../../services/api";
 export default function PerfilColaborador() {
   const { opsId } = useParams();
   const navigate = useNavigate();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
   const [colaborador, setColaborador] = useState(null);
+  const [medidas, setMedidas] = useState([]);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.get(`/colaboradores/${opsId}`);
-        setColaborador(res.data.data);
-      } catch {
+        const [colabRes, mdRes] = await Promise.all([
+          api.get(`/colaboradores/${opsId}`),
+          api.get(`/medidas-disciplinares?opsId=${opsId}`),
+        ]);
+
+        setColaborador(colabRes.data.data);
+        setMedidas(mdRes.data.data || []);
+      } catch (err) {
+        console.error(err);
         alert("Erro ao carregar perfil do colaborador");
         navigate("/colaboradores");
       } finally {
         setLoading(false);
       }
     }
+
     load();
   }, [opsId, navigate]);
 
@@ -49,7 +60,7 @@ export default function PerfilColaborador() {
     );
   }
 
-  const indicadores = colaborador.indicadores?.atestados || {
+  const indicadoresAtestado = colaborador.indicadores?.atestados || {
     total: 0,
     ativos: 0,
     finalizados: 0,
@@ -161,17 +172,56 @@ export default function PerfilColaborador() {
           {/* INDICADORES DE SAÚDE */}
           <Section title="Indicadores de Saúde">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Indicator label="Atestados" value={indicadores.total} />
+              <Indicator label="Atestados" value={indicadoresAtestado.total} />
               <Indicator
                 label="Ativos"
-                value={indicadores.ativos}
+                value={indicadoresAtestado.ativos}
                 color="text-yellow-400"
               />
               <Indicator
                 label="Finalizados"
-                value={indicadores.finalizados}
+                value={indicadoresAtestado.finalizados}
                 color="text-green-400"
               />
+            </div>
+          </Section>
+
+          {/* MEDIDAS DISCIPLINARES */}
+          <Section title="Medidas Disciplinares">
+            <div className="md:col-span-2 space-y-4">
+
+              <Indicator
+                label="Total de Medidas"
+                value={medidas.length}
+                color="text-orange-400"
+              />
+
+              {medidas.length === 0 && (
+                <p className="text-sm text-[#BFBFC3]">
+                  Nenhuma medida disciplinar registrada.
+                </p>
+              )}
+
+              {medidas.map((md) => (
+                <div
+                  key={md.idMedida}
+                  className="flex items-start gap-4 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4"
+                >
+                  <FileText size={18} className="text-orange-400 mt-1" />
+
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">
+                      {md.tipoMedida}
+                    </p>
+                    <p className="text-xs text-[#BFBFC3]">
+                      {new Date(md.dataAplicacao).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm mt-2">
+                      {md.motivo}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </Section>
 

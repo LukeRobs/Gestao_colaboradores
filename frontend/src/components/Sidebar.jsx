@@ -24,7 +24,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { icon: Briefcase, label: "Cargos", path: "/cargos" },
     { icon: FileText, label: "Atestados Médicos", path: "/atestados" },
     { icon: Settings, label: "Acidentes", path: "/acidentes" },
-    { icon: Settings, label: "Medidas Disciplinares", path: "/medidas-disciplinares" }
+    { icon: FileText, label: "Medidas Disciplinares", path: "/medidas-disciplinares" }
   ];
 
   return (
