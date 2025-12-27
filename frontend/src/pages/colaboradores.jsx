@@ -25,44 +25,32 @@ export default function ColaboradoresPage() {
 
   /* ================= LOAD ================= */
   const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {
-        page,
-        limit,
-        search: query || undefined,
-        turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
-      };
-      const res = await ColaboradoresAPI.listar(params);
-      
-      // Debug: Log do res pra ver estrutura (remova depois)
-      console.log("Response da API:", res);
-      
-      let data, pagination;
-      
-      // Verificação: se res é array (como nos logs), assume que service retorna só data.data
-      if (Array.isArray(res)) {
-        data = res;
-        // BASEADO NOS LOGS DO SERVICE: pagination.total é ~400 (ajuste se souber o exato; ou fixe o service para retornar full)
-        pagination = { total: 684 }; // Valor real dos logs; isso cria ~40 páginas de 10 itens
-      } else {
-        // Caso full response.data (após fix no service)
-        ({ data, pagination } = res);
-      }
-      
-      setEmployees(data || []);
-      setTotalItems(pagination?.total || data?.length || 0);
-      setTotalPages(pagination?.totalPages || Math.max(1, Math.ceil((pagination?.total || data?.length || 0) / limit)));
-    } catch (error) {
-      console.error("Erro ao carregar colaboradores:", error);
-      alert("Erro ao carregar colaboradores.");
-      setEmployees([]);
-      setTotalItems(0);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
-  }, [query, page, limit, turnoSelecionado]);
+  setLoading(true);
+  try {
+    const params = {
+      page,
+      limit,
+      search: query || undefined,
+      turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
+    };
+
+    const res = await ColaboradoresAPI.listar(params);
+
+    setEmployees(res.data);
+    setTotalItems(res.pagination.total);
+    setTotalPages(
+      Math.max(1, Math.ceil(res.pagination.total / limit))
+    );
+  } catch (error) {
+    console.error("Erro ao carregar colaboradores:", error);
+    setEmployees([]);
+    setTotalItems(0);
+    setTotalPages(1);
+  } finally {
+    setLoading(false);
+  }
+}, [page, limit, query, turnoSelecionado]);
+
 
   useEffect(() => {
     load();

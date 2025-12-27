@@ -1,24 +1,21 @@
 // src/services/colaboradores.js
 import api from "./api";
 
-function normalizeListResponse(res) {
-  // tenta detectar estruturas comuns (paginação, data wrapper, array direto)
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  if (Array.isArray(res.data)) return res.data;
-  if (res.data && Array.isArray(res.data.data)) return res.data.data;
-  if (res.data && Array.isArray(res.data.colaboradores)) return res.data.colaboradores;
-  if (res.data && Array.isArray(res.data.items)) return res.data.items;
-  if (res.data && Array.isArray(res.data)) return res.data;
-  // fallback
-  return res.data || [];
-}
-
 export const ColaboradoresAPI = {
   listar: async (params = {}) => {
     const res = await api.get("/colaboradores", { params });
-    console.log("Full axios response.data:", res.data); // DEBUG - remova em produção
-    return normalizeListResponse(res); // Retorna o objeto completo { data: array, pagination: { total: 684, ... } }
+
+    // Estrutura esperada do backend
+    const { data, pagination } = res.data || {};
+
+    return {
+      data: Array.isArray(data) ? data : [],
+      pagination: pagination || {
+        page: 1,
+        limit: params.limit || 10,
+        total: 0,
+      },
+    };
   },
 
   buscarPorOpsId: async (opsId) => {
