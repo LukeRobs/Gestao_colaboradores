@@ -17,7 +17,7 @@ export default function DistribuicaoGeneroChart({ data }) {
 
   return (
     <div className="bg-[#1A1A1C] rounded-2xl p-6">
-      <h2 className="text-sm font-semibold text-[#BFBFC3] mb-4 uppercase">
+      <h2 className="text-sm font-semibold text-[#ffffff] mb-4 uppercase">
         Distribuição por Gênero
       </h2>
 
@@ -51,7 +51,7 @@ export default function DistribuicaoGeneroChart({ data }) {
               return [`${value} (${percent}%)`, name];
             }}
             contentStyle={{
-              backgroundColor: "#1A1A1C",
+              backgroundColor: "#FFFFFF",
               border: "1px solid #3D3D40",
               borderRadius: "8px",
               color: "#FFFFFF",
