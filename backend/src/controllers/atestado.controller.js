@@ -20,7 +20,9 @@ const { getR2Client } = require("../services/r2");
 
 const BUCKET = process.env.R2_BUCKET_NAME;
 
-/* ================= UTIL ================= */
+/* =====================================================
+   UTIL
+   ===================================================== */
 
 function normalizeDateOnly(dateStr) {
   return new Date(`${dateStr}T00:00:00`);
@@ -35,38 +37,38 @@ function calcDias(dataInicio, dataFim) {
   return diff + 1;
 }
 
-/* ================= PRESIGN UPLOAD =================
-   POST /api/atestados-medicos/presign-upload
-   body: { opsId, filename, contentType, size }
-*/
+/* =====================================================
+   PRESIGN UPLOAD
+   ===================================================== */
 const presignUpload = async (req, res) => {
   try {
     const { opsId, filename, contentType, size } = req.body;
 
     if (!BUCKET) {
-      return errorResponse(res, 500, "R2_BUCKET_NAME não configurado");
+      return errorResponse(res, "R2_BUCKET_NAME não configurado", 500);
     }
 
     if (!opsId || !filename || !contentType) {
       return errorResponse(
         res,
-        400,
-        "opsId, filename e contentType são obrigatórios"
+        "opsId, filename e contentType são obrigatórios",
+        400
       );
     }
 
     if (contentType !== "application/pdf") {
-      return errorResponse(res, 400, "Apenas arquivos PDF são permitidos");
+      return errorResponse(res, "Apenas arquivos PDF são permitidos", 400);
     }
 
-    const maxBytes = 5 * 1024 * 1024; // 5MB
+    const maxBytes = 5 * 1024 * 1024;
     if (size && Number(size) > maxBytes) {
-      return errorResponse(res, 400, "O PDF excede o limite de 5MB");
+      return errorResponse(res, "O PDF excede o limite de 5MB", 400);
     }
 
     const colaborador = await prisma.colaborador.findUnique({
       where: { opsId },
     });
+
     if (!colaborador) {
       return notFoundResponse(res, "Colaborador não encontrado");
     }
@@ -82,7 +84,7 @@ const presignUpload = async (req, res) => {
     });
 
     const uploadUrl = await getSignedUrl(r2, command, {
-      expiresIn: 60 * 5, // 5 minutos
+      expiresIn: 300,
     });
 
     return successResponse(res, {
@@ -92,19 +94,19 @@ const presignUpload = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ PRESIGN UPLOAD:", err);
-    return errorResponse(res, 500, "Erro ao gerar URL de upload", err);
+    return errorResponse(res, "Erro ao gerar URL de upload", 500, err);
   }
 };
 
-/* ================= PRESIGN DOWNLOAD =================
-   GET /api/atestados-medicos/:id/presign-download
-*/
+/* =====================================================
+   PRESIGN DOWNLOAD
+   ===================================================== */
 const presignDownload = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!BUCKET) {
-      return errorResponse(res, 500, "R2_BUCKET_NAME não configurado");
+      return errorResponse(res, "R2_BUCKET_NAME não configurado", 500);
     }
 
     const atestado = await prisma.atestadoMedico.findUnique({
@@ -121,7 +123,7 @@ const presignDownload = async (req, res) => {
     }
 
     if (!atestado.documentoAnexo) {
-      return errorResponse(res, 400, "Atestado não possui documento");
+      return errorResponse(res, "Atestado não possui documento", 400);
     }
 
     const r2 = getR2Client();
@@ -133,22 +135,19 @@ const presignDownload = async (req, res) => {
     });
 
     const url = await getSignedUrl(r2, command, {
-      expiresIn: 60 * 10, // 10 minutos
-    });
-
-    return successResponse(res, {
-      url,
       expiresIn: 600,
     });
+
+    return successResponse(res, { url, expiresIn: 600 });
   } catch (err) {
     console.error("❌ PRESIGN DOWNLOAD:", err);
-    return errorResponse(res, 500, "Erro ao gerar URL de download", err);
+    return errorResponse(res, "Erro ao gerar URL de download", 500, err);
   }
 };
 
-/* ================= CREATE =================
-   POST /api/atestados-medicos
-*/
+/* =====================================================
+   CREATE
+   ===================================================== */
 const createAtestado = async (req, res) => {
   try {
     const {
@@ -164,14 +163,15 @@ const createAtestado = async (req, res) => {
     if (!opsId || !dataInicio || !dataFim || !documentoKey) {
       return errorResponse(
         res,
-        400,
-        "opsId, datas e documento PDF são obrigatórios"
+        "opsId, datas e documento PDF são obrigatórios",
+        400
       );
     }
 
     const colaborador = await prisma.colaborador.findUnique({
       where: { opsId },
     });
+
     if (!colaborador) {
       return notFoundResponse(res, "Colaborador não encontrado");
     }
@@ -197,18 +197,19 @@ const createAtestado = async (req, res) => {
     return createdResponse(res, atestado, "Atestado criado com sucesso");
   } catch (err) {
     console.error("❌ CREATE ATESTADO:", err);
-    return errorResponse(res, 500, "Erro ao criar atestado", err);
+    return errorResponse(res, "Erro ao criar atestado", 500, err);
   }
 };
 
-/* ================= GET ALL ================= */
+/* =====================================================
+   GET ALL
+   ===================================================== */
 const getAllAtestados = async (req, res) => {
   try {
     const { opsId } = req.query;
-    const where = opsId ? { opsId } : {};
 
     const atestados = await prisma.atestadoMedico.findMany({
-      where,
+      where: opsId ? { opsId } : {},
       orderBy: { dataInicio: "desc" },
       include: {
         colaborador: {
@@ -224,11 +225,13 @@ const getAllAtestados = async (req, res) => {
     return successResponse(res, atestados);
   } catch (err) {
     console.error("❌ GET ATESTADOS:", err);
-    return errorResponse(res, 500, "Erro ao buscar atestados", err);
+    return errorResponse(res, "Erro ao buscar atestados", 500, err);
   }
 };
 
-/* ================= GET BY ID ================= */
+/* =====================================================
+   GET BY ID
+   ===================================================== */
 const getAtestadoById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -244,11 +247,14 @@ const getAtestadoById = async (req, res) => {
 
     return successResponse(res, atestado);
   } catch (err) {
-    return errorResponse(res, 500, "Erro ao buscar atestado", err);
+    console.error("❌ GET ATESTADO BY ID:", err);
+    return errorResponse(res, "Erro ao buscar atestado", 500, err);
   }
 };
 
-/* ================= UPDATE ================= */
+/* =====================================================
+   UPDATE
+   ===================================================== */
 const updateAtestado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -269,11 +275,14 @@ const updateAtestado = async (req, res) => {
 
     return successResponse(res, atestado, "Atestado atualizado com sucesso");
   } catch (err) {
-    return errorResponse(res, 500, "Erro ao atualizar atestado", err);
+    console.error("❌ UPDATE ATESTADO:", err);
+    return errorResponse(res, "Erro ao atualizar atestado", 500, err);
   }
 };
 
-/* ================= FINALIZAR ================= */
+/* =====================================================
+   FINALIZAR
+   ===================================================== */
 const finalizarAtestado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -285,11 +294,14 @@ const finalizarAtestado = async (req, res) => {
 
     return successResponse(res, atestado, "Atestado finalizado");
   } catch (err) {
-    return errorResponse(res, 500, "Erro ao finalizar atestado", err);
+    console.error("❌ FINALIZAR ATESTADO:", err);
+    return errorResponse(res, "Erro ao finalizar atestado", 500, err);
   }
 };
 
-/* ================= CANCELAR ================= */
+/* =====================================================
+   CANCELAR
+   ===================================================== */
 const cancelarAtestado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -301,7 +313,8 @@ const cancelarAtestado = async (req, res) => {
 
     return successResponse(res, atestado, "Atestado cancelado");
   } catch (err) {
-    return errorResponse(res, 500, "Erro ao cancelar atestado", err);
+    console.error("❌ CANCELAR ATESTADO:", err);
+    return errorResponse(res, "Erro ao cancelar atestado", 500, err);
   }
 };
 
