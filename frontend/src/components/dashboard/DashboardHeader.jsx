@@ -1,7 +1,8 @@
 export default function DashboardHeader({ dataOperacional, turnoAtual }) {
   const dataFmt = dataOperacional
-    ? new Date(dataOperacional).toLocaleDateString("pt-BR")
+    ? new Date(dataOperacional + "T00:00:00").toLocaleDateString("pt-BR")
     : "-";
+
 
   return (
     <div className="flex flex-col gap-1">
