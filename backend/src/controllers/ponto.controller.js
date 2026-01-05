@@ -334,24 +334,21 @@ const getControlePresenca = async (req, res) => {
     const resultado = colaboradores.map((c) => {
       const diasMap = {};
 
-      for (let d = 1; d <= dias.length; d++) {
-        const data = new Date(ano, mesNum - 1, d);
-        const dataISO = ymd(data);
-        const key = `${c.opsId}_${dataISO}`;
+    for (let d = 1; d <= dias.length; d++) {
+      // 🔑 dia civil do calendário (SEM virada de turno)
+      const dataCalendario = new Date(ano, mesNum - 1, d);
+      dataCalendario.setHours(0, 0, 0, 0);
 
-        const turnoObj = c.turno;
-        const dataOperacional = getDataOperacionalPorTurno(data, turnoObj);
+      const dataISO = ymd(dataCalendario);
+      const key = `${c.opsId}_${dataISO}`;
 
-        // se não existe frequência, decide default:
-        // - DSR => DSR
-        // - senão => F (falta)
-        if (!freqMap[key]) {
-          diasMap[dataISO] = {
-            status: isDiaDSR(dataOperacional, c.escala?.nomeEscala) ? "DSR" : "F",
-            manual: false,
-          };
-          continue;
-        }
+      if (!freqMap[key]) {
+        diasMap[dataISO] = {
+          status: isDiaDSR(dataCalendario, c.escala?.nomeEscala) ? "DSR" : "F",
+          manual: false,
+        };
+        continue;
+      }
 
         const f = freqMap[key];
         diasMap[dataISO] = {
