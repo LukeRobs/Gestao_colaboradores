@@ -22,13 +22,9 @@ export default function PresencaRow({
          * 🔑 Encontra a data ISO REAL vinda do backend
          * Ex: "2025-12-28"
          */
-        const dataISO = Object.keys(colaborador.dias).find(
-          (d) => d.endsWith(`-${String(diaNumero).padStart(2, "0")}`)
-        );
+        const dataISO = `${colaborador.ano}-${String(colaborador.mes).padStart(2, "0")}-${String(diaNumero).padStart(2, "0")}`;
 
-        const registro = dataISO
-          ? colaborador.dias[dataISO]
-          : null;
+        const registro = colaborador.dias[dataISO] || null;
 
         return (
           <PresencaCell

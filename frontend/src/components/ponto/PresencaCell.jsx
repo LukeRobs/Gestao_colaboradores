@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import clsx from "clsx";
 import PresencaTooltip from "./PresencaTooltip";
 
+/* ================= STATUS CONFIG ================= */
 const STATUS_CONFIG = {
   P:   { label: "Presente", short: "P", bg: "bg-emerald-600/20", text: "text-emerald-400" },
   F:   { label: "Falta", short: "F", bg: "bg-red-600/20", text: "text-red-400" },
@@ -18,16 +19,38 @@ const STATUS_CONFIG = {
   S1:  { label: "Sinergia", short: "S1", bg: "bg-lime-600/20", text: "text-lime-400" },
 };
 
-
+/* ================= HELPERS ================= */
 function fmtHora(iso) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return null;
   }
 }
 
+
+function isDSR(dateISO, escala) {
+  if (!dateISO || !escala) return false;
+
+  // força data local (evita bug de UTC)
+  const date = new Date(`${dateISO}T00:00:00`);
+  const day = date.getDay(); // 0=Dom, 3=Qua
+
+  const DSR_BY_ESCALA = {
+    A: [0, 3], // Domingo e Quarta
+    B: [1, 4],
+    C: [2, 5],
+  };
+
+  return DSR_BY_ESCALA[escala]?.includes(day);
+}
+
+/* ================= COMPONENT ================= */
 export default function PresencaCell({
   dia,
   registro,
@@ -37,21 +60,27 @@ export default function PresencaCell({
 }) {
   const [hover, setHover] = useState(false);
 
-const status = useMemo(() => {
-  if (registro?.status) return registro.status;
-  return "F";
-}, [registro]);
+  /* ================= STATUS ================= */
+  const status = useMemo(() => {
+    // 1️⃣ Registro explícito sempre vence
+    if (registro?.status) return registro.status;
 
-
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.F;
-
-  const disabled = status === "DSR" && !canEdit;
-
-    function handleClick() {
-    if (!canEdit) return;
-    onEdit?.({ colaborador, dia, registro });
+    // 2️⃣ DSR automático pela escala
+    if (isDSR(dia?.date, colaborador?.escala)) {
+      return "DSR";
     }
 
+    // 3️⃣ Fallback
+    return "F";
+  }, [registro, dia?.date, colaborador?.escala]);
+
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.F;
+  const disabled = status === "DSR" && !canEdit;
+
+  function handleClick() {
+    if (!canEdit) return;
+    onEdit?.({ colaborador, dia, registro });
+  }
 
   const horaEntrada = fmtHora(registro?.horaEntrada);
   const horaSaida = fmtHora(registro?.horaSaida);
@@ -77,7 +106,7 @@ const status = useMemo(() => {
             <div className="flex items-center justify-between">
               <span className="font-semibold">{cfg.label}</span>
               <span className="text-[#BFBFC3]">
-                {dia?.label || dia?.data || ""}
+                {dia?.label || dia?.date || ""}
               </span>
             </div>
 
@@ -86,7 +115,7 @@ const status = useMemo(() => {
             <div className="space-y-1 text-[#BFBFC3]">
               <div>
                 <span className="text-[#EDEDED]">Colab:</span>{" "}
-                {colaborador?.nomeCompleto || "-"}
+                {colaborador?.nome || "-"}
               </div>
 
               {(horaEntrada || horaSaida) && (
