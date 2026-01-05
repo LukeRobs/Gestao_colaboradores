@@ -14,6 +14,7 @@ import Header from "../../components/Header";
 import { Badge } from "../../components/UIComponents";
 import api from "../../services/api";
 
+
 export default function PerfilColaborador() {
   const { opsId } = useParams();
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function PerfilColaborador() {
   const [colaborador, setColaborador] = useState(null);
   const [medidas, setMedidas] = useState([]);
   const [acidentes, setAcidentes] = useState([]);
-
+  const [vinculoOrganizacional, setVinculoOrganizacional] = useState({});
   useEffect(() => {
     async function load() {
       try {
@@ -35,10 +36,11 @@ export default function PerfilColaborador() {
           api.get(`/medidas-disciplinares?opsId=${opsId}`),
           api.get(`/acidentes/colaborador/${opsId}`),
         ]);
-
-        setColaborador(colabRes.data.data);
+        const payload = colabRes.data.data;
+        setColaborador(payload.colaborador);
         setMedidas(mdRes.data.data || []);
         setAcidentes(acRes.data.data || []);
+        setVinculoOrganizacional(payload.vinculoOrganizacional || {});
       } catch (err) {
         console.error("Erro perfil colaborador:", err);
         navigate("/colaboradores");
@@ -73,7 +75,7 @@ export default function PerfilColaborador() {
       </div>
     );
   }
-
+  const vinculo = vinculoOrganizacional;
   const indicadoresAtestado = colaborador?.indicadores?.atestados || {
     total: 0,
     ativos: 0,
@@ -111,9 +113,11 @@ export default function PerfilColaborador() {
                   <h1 className="text-2xl font-semibold">
                     {colaborador.nomeCompleto}
                   </h1>
-                  <p className="text-sm text-[#BFBFC3]">
-                    OPS ID: {colaborador.opsId}
-                  </p>
+                <p className="text-sm text-[#BFBFC3]">
+                  OPS ID: {colaborador.opsId}
+                </p>
+
+
                 </div>
               </div>
             </div>
@@ -147,7 +151,7 @@ export default function PerfilColaborador() {
             />
           </div>
 
-          {/* DADOS */}
+          {/* DADOS PESSOAIS */}
           <Section title="Dados Pessoais">
             <Info label="CPF" value={colaborador.cpf} />
             <Info label="E-mail" value={colaborador.email} />
@@ -156,13 +160,17 @@ export default function PerfilColaborador() {
             <Info label="Matrícula" value={colaborador.matricula} />
           </Section>
 
+          {/* 🔑 VÍNCULO ORGANIZACIONAL (AJUSTADO) */}
           <Section title="Vínculo Organizacional">
-            <Info label="Empresa" value={colaborador.empresa?.razaoSocial} />
-            <Info label="Setor" value={colaborador.setor?.nomeSetor} />
-            <Info label="Cargo" value={colaborador.cargo?.nomeCargo} />
-            <Info label="Turno" value={colaborador.turno?.nomeTurno} />
+            <Info label="Empresa" value={vinculo.empresa || colaborador.empresa?.razaoSocial} />
+            <Info label="Regional" value={vinculo.regional} />
+            <Info label="Estação" value={vinculo.estacao} />
+            <Info label="Setor" value={vinculo.setor || colaborador.setor?.nomeSetor} />
+            <Info label="Cargo" value={vinculo.cargo || colaborador.cargo?.nomeCargo} />
+            <Info label="Turno" value={vinculo.turno || colaborador.turno?.nomeTurno} />
           </Section>
 
+          {/* JORNADA */}
           <Section title="Jornada">
             <Info
               label="Data de Admissão"
@@ -222,22 +230,18 @@ export default function PerfilColaborador() {
                   <FileText size={18} className="text-orange-400 mt-1" />
 
                   <div className="flex-1">
-                    <p className="text-sm font-semibold">
-                      {md.tipoMedida}
-                    </p>
+                    <p className="text-sm font-semibold">{md.tipoMedida}</p>
                     <p className="text-xs text-[#BFBFC3]">
                       {new Date(md.dataAplicacao).toLocaleDateString()}
                     </p>
-                    <p className="text-sm mt-2">
-                      {md.motivo}
-                    </p>
+                    <p className="text-sm mt-2">{md.motivo}</p>
                   </div>
                 </div>
               ))}
             </div>
           </Section>
 
-          {/* ACIDENTES DE TRABALHO */}
+          {/* ACIDENTES */}
           <Section title="Acidentes de Trabalho">
             <div className="md:col-span-2 space-y-4">
               <Indicator

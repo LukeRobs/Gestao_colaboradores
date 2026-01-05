@@ -18,16 +18,20 @@ export default function MovimentarColaborador() {
     idSetor: "",
     idCargo: "",
     idTurno: "",
+    idEstacao: "",
     idLider: "",
     dataEfetivacao: "",
     motivo: "",
   });
+
+  const [regional, setRegional] = useState("");
 
   /* ================= LISTAS ================= */
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [turnos, setTurnos] = useState([]);
+  const [estacoes, setEstacoes] = useState([]);
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -40,11 +44,15 @@ export default function MovimentarColaborador() {
           setRes,
           carRes,
           turRes,
+          estRes,
+          colabRes,
         ] = await Promise.all([
           api.get("/empresas"),
           api.get("/setores"),
           api.get("/cargos"),
           api.get("/turnos"),
+          api.get("/estacoes"),
+          api.get(`/colaboradores/${opsId}`),
         ]);
 
         if (!mounted) return;
@@ -53,21 +61,43 @@ export default function MovimentarColaborador() {
         setSetores(setRes.data.data || setRes.data);
         setCargos(carRes.data.data || carRes.data);
         setTurnos(turRes.data.data || turRes.data);
+        setEstacoes(estRes.data.data || estRes.data);
+
+        const payload = colabRes.data.data;
+
+        setForm((prev) => ({
+          ...prev,
+          idEmpresa: payload.colaborador.idEmpresa || "",
+          idSetor: payload.colaborador.idSetor || "",
+          idCargo: payload.colaborador.idCargo || "",
+          idTurno: payload.colaborador.idTurno || "",
+          idEstacao: payload.colaborador.idEstacao || "",
+          idLider: payload.colaborador.idLider || "",
+        }));
+
+        setRegional(payload.vinculoOrganizacional?.regional || "");
       } catch (err) {
-        console.error("Erro ao carregar dados organizacionais", err);
-        alert("Erro ao carregar dados organizacionais");
+        console.error("Erro ao carregar dados", err);
+        alert("Erro ao carregar dados do colaborador");
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [opsId]);
 
   /* ================= HANDLERS ================= */
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "idEstacao") {
+      const est = estacoes.find(
+        (e) => String(e.idEstacao) === String(value)
+      );
+      setRegional(est?.regional?.nome || "");
+    }
   }
 
   async function handleSave() {
@@ -80,7 +110,14 @@ export default function MovimentarColaborador() {
       setSaving(true);
 
       await api.post(`/colaboradores/${opsId}/movimentar`, {
-        ...form,
+        idEmpresa: form.idEmpresa || undefined,
+        idSetor: form.idSetor || undefined,
+        idCargo: form.idCargo || undefined,
+        idTurno: form.idTurno || undefined,
+        idEstacao: form.idEstacao || undefined,
+        idLider: form.idLider || undefined,
+        dataEfetivacao: form.dataEfetivacao,
+        motivo: form.motivo,
       });
 
       navigate(`/colaboradores/${opsId}`);
@@ -181,6 +218,22 @@ export default function MovimentarColaborador() {
               valueKey="idTurno"
             />
 
+            <Select
+              label="Estação"
+              name="idEstacao"
+              value={form.idEstacao}
+              onChange={handleChange}
+              options={estacoes}
+              labelKey="nomeEstacao"
+              valueKey="idEstacao"
+            />
+
+            <Input
+              label="Regional"
+              value={regional}
+              disabled
+            />
+
             <Input
               label="Líder (OPS ID)"
               name="idLider"
@@ -235,7 +288,7 @@ function Input({ label, ...props }) {
       <input
         {...props}
         className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40]
-        rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
+        rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00] disabled:opacity-70"
       />
     </div>
   );

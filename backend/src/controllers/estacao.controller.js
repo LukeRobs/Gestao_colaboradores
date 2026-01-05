@@ -1,30 +1,110 @@
-const { prisma } = require('../config/database');
-const { successResponse, createdResponse, deletedResponse, notFoundResponse } = require('../utils/response');
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
-const getAllEstacoes = async (req, res) => {
-  const estacoes = await prisma.estacao.findMany({ where: { ativo: true }, orderBy: { nomeEstacao: 'asc' } });
-  return successResponse(res, estacoes);
+/* =====================================================
+   LISTAR ESTAÇÕES
+===================================================== */
+const listarEstacoes = async (req, res) => {
+  try {
+    const estacoes = await prisma.estacao.findMany({
+      include: {
+        regional: true,
+      },
+      orderBy: { nomeEstacao: "asc" },
+    });
+
+    return res.json({ success: true, data: estacoes });
+  } catch (error) {
+    console.error("❌ ERRO LISTAR ESTAÇÕES:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao listar estações",
+    });
+  }
 };
 
-const getEstacaoById = async (req, res) => {
-  const estacao = await prisma.estacao.findUnique({ where: { idEstacao: parseInt(req.params.id) } });
-  if (!estacao) return notFoundResponse(res, 'Estação não encontrada');
-  return successResponse(res, estacao);
+/* =====================================================
+   CRIAR ESTAÇÃO
+===================================================== */
+const criarEstacao = async (req, res) => {
+  try {
+    const { nomeEstacao, idRegional, localizacao, capacidade } = req.body;
+
+    if (!nomeEstacao) {
+      return res.status(400).json({
+        success: false,
+        message: "Nome da estação é obrigatório",
+      });
+    }
+
+    const existente = await prisma.estacao.findUnique({
+      where: { nomeEstacao },
+    });
+
+    if (existente) {
+      return res.status(409).json({
+        success: false,
+        message: "Estação já cadastrada",
+      });
+    }
+
+    const estacao = await prisma.estacao.create({
+      data: {
+        nomeEstacao,
+        idRegional,
+        localizacao,
+        capacidade,
+      },
+    });
+
+    return res.json({ success: true, data: estacao });
+  } catch (error) {
+    console.error("❌ ERRO CRIAR ESTAÇÃO:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao criar estação",
+    });
+  }
 };
 
-const createEstacao = async (req, res) => {
-  const estacao = await prisma.estacao.create({ data: req.body });
-  return createdResponse(res, estacao);
+/* =====================================================
+   ATUALIZAR ESTAÇÃO
+===================================================== */
+const atualizarEstacao = async (req, res) => {
+  try {
+    const { idEstacao } = req.params;
+    const { nomeEstacao, idRegional, localizacao, capacidade, ativo } = req.body;
+
+    const estacao = await prisma.estacao.update({
+      where: {
+        idEstacao: Number(idEstacao),
+      },
+      data: {
+        ...(nomeEstacao && { nomeEstacao }),
+        ...(idRegional !== undefined && {
+          idRegional: Number(idRegional),
+        }),
+        ...(localizacao !== undefined && { localizacao }),
+        ...(capacidade !== undefined && {
+          capacidade: capacidade !== null ? Number(capacidade) : null,
+        }),
+        ...(ativo !== undefined && { ativo: Boolean(ativo) }),
+      },
+    });
+
+
+    return res.json({ success: true, data: estacao });
+  } catch (error) {
+    console.error("❌ ERRO ATUALIZAR ESTAÇÃO:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao atualizar estação",
+    });
+  }
 };
 
-const updateEstacao = async (req, res) => {
-  const estacao = await prisma.estacao.update({ where: { idEstacao: parseInt(req.params.id) }, data: req.body });
-  return successResponse(res, estacao);
+module.exports = {
+  listarEstacoes,
+  criarEstacao,
+  atualizarEstacao,
 };
-
-const deleteEstacao = async (req, res) => {
-  await prisma.estacao.delete({ where: { idEstacao: parseInt(req.params.id) } });
-  return deletedResponse(res);
-};
-
-module.exports = { getAllEstacoes, getEstacaoById, createEstacao, updateEstacao, deleteEstacao };

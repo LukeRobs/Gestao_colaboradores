@@ -24,7 +24,8 @@ import ControlePresenca from "./pages/ponto/ControlePresenca";
 import EmpresasPage from "./pages/empresas";
 import SetoresPage from "./pages/Setores";
 import CargosPage from "./pages/cargos";
-
+import RegionaisList from "./pages/organizacao/regionais/Regionais";
+import EstacoesList from "./pages/organizacao/estacoes/Estacoes";
 /* ================= RH ================= */
 import AtestadosPage from "./pages/atestados";
 import NovoAtestado from "./pages/atestados/novo";
@@ -205,6 +206,23 @@ export default function App() {
         element={
           <ProtectedRoute>
             <CargosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/regionais"
+        element={
+          <ProtectedRoute>
+            <RegionaisList />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/estacoes"
+        element={
+          <ProtectedRoute>
+            <EstacoesList />
           </ProtectedRoute>
         }
       />

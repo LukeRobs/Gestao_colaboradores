@@ -5,6 +5,8 @@ import {
   Building2,
   Briefcase,
   Layers,
+  MapPin,
+  Network,
   FileText,
   Settings,
   Upload,
@@ -25,6 +27,12 @@ export default function Sidebar({ isOpen, onClose }) {
     location.pathname.startsWith("/dashboard")
   );
 
+  const [organizacaoOpen, setOrganizacaoOpen] = useState(
+    ["/empresas", "/regionais", "/estacoes", "/setores", "/cargos"].some((p) =>
+      location.pathname.startsWith(p)
+    )
+  );
+
   const [pontoOpen, setPontoOpen] = useState(
     location.pathname.startsWith("/ponto")
   );
@@ -34,9 +42,6 @@ export default function Sidebar({ isOpen, onClose }) {
   ===================== */
   const menuItems = [
     { icon: Users, label: "Colaboradores", path: "/colaboradores" },
-    { icon: Building2, label: "Empresas", path: "/empresas" },
-    { icon: Layers, label: "Setores", path: "/setores" },
-    { icon: Briefcase, label: "Cargos", path: "/cargos" },
     { icon: FileText, label: "Atestados Médicos", path: "/atestados" },
     { icon: Settings, label: "Acidentes", path: "/acidentes" },
     {
@@ -96,7 +101,7 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Menu */}
         <nav className="px-3 py-4 space-y-1">
           {/* =====================
-              DASHBOARDS (SUBMENU)
+              DASHBOARDS
           ===================== */}
           <div>
             <button
@@ -139,11 +144,78 @@ export default function Sidebar({ isOpen, onClose }) {
                   active={isActive("/dashboard/operacional")}
                   onClick={() => go("/dashboard/operacional")}
                 />
-
                 <SidebarSubItem
                   label="Administrativo"
                   active={isActive("/dashboard/admin")}
                   onClick={() => go("/dashboard/admin")}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* =====================
+              ORGANIZAÇÃO
+          ===================== */}
+          <div>
+            <button
+              onClick={() => setOrganizacaoOpen(!organizacaoOpen)}
+              className={`
+                w-full flex items-center justify-between
+                px-4 py-3 rounded-xl
+                text-sm font-medium transition
+                ${
+                  organizacaoOpen
+                    ? "bg-[#2A2A2C] text-white"
+                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                }
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <Network
+                  size={18}
+                  className={
+                    organizacaoOpen
+                      ? "text-[#FA4C00]"
+                      : "text-[#BFBFC3]"
+                  }
+                />
+                Organização
+              </div>
+
+              <ChevronDown
+                size={16}
+                className={`transition ${
+                  organizacaoOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {organizacaoOpen && (
+              <div className="ml-8 mt-1 space-y-1">
+                <SidebarSubItem
+                  label="Empresas"
+                  active={isActive("/empresas")}
+                  onClick={() => go("/empresas")}
+                />
+                <SidebarSubItem
+                  label="Regionais"
+                  active={isActive("/regionais")}
+                  onClick={() => go("/regionais")}
+                />
+                <SidebarSubItem
+                  label="Estações"
+                  active={isActive("/estacoes")}
+                  onClick={() => go("/estacoes")}
+                />
+                <SidebarSubItem
+                  label="Setores"
+                  active={isActive("/setores")}
+                  onClick={() => go("/setores")}
+                />
+                <SidebarSubItem
+                  label="Cargos"
+                  active={isActive("/cargos")}
+                  onClick={() => go("/cargos")}
                 />
               </div>
             )}
@@ -184,7 +256,7 @@ export default function Sidebar({ isOpen, onClose }) {
           })}
 
           {/* =====================
-              PONTO (SUBMENU)
+              PONTO
           ===================== */}
           <div className="mt-2">
             <button
@@ -214,9 +286,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
               <ChevronDown
                 size={16}
-                className={`transition ${
-                  pontoOpen ? "rotate-180" : ""
-                }`}
+                className={`transition ${pontoOpen ? "rotate-180" : ""}`}
               />
             </button>
 
@@ -227,7 +297,6 @@ export default function Sidebar({ isOpen, onClose }) {
                   active={location.pathname === "/ponto"}
                   onClick={() => go("/ponto")}
                 />
-
                 <SidebarSubItem
                   label="Controle de Presença"
                   active={location.pathname === "/ponto/controle"}

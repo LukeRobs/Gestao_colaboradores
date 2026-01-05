@@ -163,8 +163,11 @@ model Estacao {
   capacidade    Int?
   ativo         Boolean       @default(true)
   dataCriacao   DateTime      @default(now()) @map("data_criacao")
+  idRegional    Int?          @map("id_regional")
+  regional      Regional?     @relation(fields: [idRegional], references: [idRegional])
   colaboradores Colaborador[]
 
+  @@index([idRegional])
   @@map("estacao")
 }
 
@@ -352,6 +355,19 @@ model Desligamento {
   @@index([dataDesligamento])
   @@map("desligamento")
 }
+
+model Regional {
+  idRegional   Int       @id @default(autoincrement()) @map("id_regional")
+  nome         String    @unique @db.VarChar(100)
+  codigo       String?   @db.VarChar(20)
+  ativo        Boolean   @default(true)
+  dataCriacao  DateTime  @default(now()) @map("data_criacao")
+
+  estacoes     Estacao[]
+
+  @@map("regional")
+}
+
 
 enum TipoOcorrencia {
   TIPICA

@@ -104,6 +104,11 @@ const getColaboradorById = async (req, res) => {
         setor: true,
         turno: true,
         escala: true,
+        estacao: {
+          include: {
+            regional: true, // ✅ REGIONAL VEM DA ESTAÇÃO
+          },
+        },
       },
     });
 
@@ -111,7 +116,9 @@ const getColaboradorById = async (req, res) => {
       return notFoundResponse(res, "Colaborador não encontrado");
     }
 
-    // ================= ATESTADOS (INDICADORES) =================
+    /* =====================================================
+       INDICADORES — ATESTADOS
+    ===================================================== */
     const [totalAtestados, ativos, finalizados] = await Promise.all([
       prisma.atestadoMedico.count({
         where: { opsId },
@@ -124,21 +131,37 @@ const getColaboradorById = async (req, res) => {
       }),
     ]);
 
-    return successResponse(res, {
-      ...colaborador,
-      indicadores: {
-        atestados: {
-          total: totalAtestados,
-          ativos,
-          finalizados,
-        },
+    /* =====================================================
+       RESPOSTA FINAL (SEM QUEBRAR O FRONT)
+    ===================================================== */
+  return successResponse(res, {
+    colaborador, // 👈 mantém o objeto inteiro SEM espalhar
+
+    vinculoOrganizacional: {
+      empresa: colaborador.empresa?.razaoSocial || null,
+      regional: colaborador.estacao?.regional?.nome || null,
+      estacao: colaborador.estacao?.nomeEstacao || null,
+      setor: colaborador.setor?.nomeSetor || null,
+      turno: colaborador.turno?.nomeTurno || null,
+      escala: colaborador.escala?.nomeEscala || null,
+      cargo: colaborador.cargo?.nomeCargo || null,
+    },
+
+    indicadores: {
+      atestados: {
+        total: totalAtestados,
+        ativos,
+        finalizados,
       },
-    });
+    },
+  });
+
   } catch (err) {
     console.error("❌ ERRO GET BY ID:", err);
     return errorResponse(res, "Erro ao buscar colaborador", 500, err);
   }
 };
+
 
 /* ================= CREATE ================= */
 const createColaborador = async (req, res) => {
