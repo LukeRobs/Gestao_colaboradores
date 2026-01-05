@@ -80,7 +80,7 @@ const presignUpload = async (req, res) => {
     const command = new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      ContentType: "application/pdf",
+      ContentType: contentType,
     });
 
     const uploadUrl = await getSignedUrl(r2, command, {

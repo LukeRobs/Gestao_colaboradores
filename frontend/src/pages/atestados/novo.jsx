@@ -83,10 +83,11 @@ export default function NovoAtestado() {
       const upload = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/pdf",
+          "Content-Type": file.type, // application/pdf
         },
         body: file,
       });
+
 
       if (!upload.ok) {
         console.error("Erro PUT:", upload.status);
