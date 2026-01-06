@@ -42,27 +42,10 @@ function calcDias(dataInicio, dataFim) {
    ===================================================== */
 const presignUpload = async (req, res) => {
   try {
-    const { opsId, filename, contentType, size } = req.body;
+    const { opsId } = req.body;
 
-    if (!BUCKET) {
-      return errorResponse(res, "R2_BUCKET_NAME não configurado", 500);
-    }
-
-    if (!opsId || !filename || !contentType) {
-      return errorResponse(
-        res,
-        "opsId, filename e contentType são obrigatórios",
-        400
-      );
-    }
-
-    if (contentType !== "application/pdf") {
-      return errorResponse(res, "Apenas arquivos PDF são permitidos", 400);
-    }
-
-    const maxBytes = 5 * 1024 * 1024;
-    if (size && Number(size) > maxBytes) {
-      return errorResponse(res, "O PDF excede o limite de 5MB", 400);
+    if (!opsId) {
+      return errorResponse(res, "opsId é obrigatório", 400);
     }
 
     const colaborador = await prisma.colaborador.findUnique({
@@ -73,28 +56,23 @@ const presignUpload = async (req, res) => {
       return notFoundResponse(res, "Colaborador não encontrado");
     }
 
-    const id = crypto.randomUUID();
-    const key = `atestados/${opsId}/${id}.pdf`;
+    if (!process.env.R2_WORKER_UPLOAD_URL) {
+      return errorResponse(
+        res,
+        "R2_WORKER_UPLOAD_URL não configurado",
+        500
+      );
+    }
 
-    const r2 = getR2Client();
-    const command = new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      ContentType: contentType,
-    });
-
-    const uploadUrl = await getSignedUrl(r2, command, {
-      expiresIn: 300,
-    });
+    const key = `atestados/${opsId}/${crypto.randomUUID()}.pdf`;
 
     return successResponse(res, {
       key,
-      uploadUrl,
-      expiresIn: 300,
+      uploadUrl: `${process.env.R2_WORKER_UPLOAD_URL}/${key}`,
     });
   } catch (err) {
-    console.error("❌ PRESIGN UPLOAD:", err);
-    return errorResponse(res, "Erro ao gerar URL de upload", 500, err);
+    console.error("❌ presignUpload:", err);
+    return errorResponse(res, "Erro ao gerar URL de upload", 500);
   }
 };
 
