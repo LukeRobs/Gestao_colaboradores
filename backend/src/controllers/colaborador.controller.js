@@ -119,17 +119,33 @@ const getColaboradorById = async (req, res) => {
     /* =====================================================
        INDICADORES — ATESTADOS
     ===================================================== */
-    const [totalAtestados, ativos, finalizados] = await Promise.all([
-      prisma.atestadoMedico.count({
-        where: { opsId },
-      }),
-      prisma.atestadoMedico.count({
-        where: { opsId, status: "ATIVO" },
-      }),
-      prisma.atestadoMedico.count({
-        where: { opsId, status: "FINALIZADO" },
-      }),
-    ]);
+function startOfDaySafe(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+const hoje = startOfDaySafe();
+
+const [totalAtestados, ativos, finalizados] = await Promise.all([
+  prisma.atestadoMedico.count({
+    where: { opsId },
+  }),
+
+  prisma.atestadoMedico.count({
+    where: {
+      opsId,
+      status: "ATIVO",
+      dataInicio: { lte: hoje },
+      dataFim: { gte: hoje },
+    },
+  }),
+
+  prisma.atestadoMedico.count({
+    where: { opsId, status: "FINALIZADO" },
+  }),
+]);
+
 
     /* =====================================================
        RESPOSTA FINAL (SEM QUEBRAR O FRONT)

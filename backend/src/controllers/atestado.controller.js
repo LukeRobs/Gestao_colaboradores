@@ -23,20 +23,22 @@ const BUCKET = process.env.R2_BUCKET_NAME;
    UTIL
 ===================================================== */
 
-function normalizeDateOnly(dateStr) {
+function dateOnlySafe(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setHours(0, 0, 0, 0);
-  return dt;
+  // Meio-dia evita qualquer shift de timezone
+  return new Date(y, m - 1, d, 12, 0, 0);
 }
 
 function calcDias(dataInicio, dataFim) {
-  const ini = normalizeDateOnly(dataInicio);
-  const fim = normalizeDateOnly(dataFim);
-  const diff =
-    Math.floor((fim.getTime() - ini.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  return diff;
+  const ini = dateOnlySafe(dataInicio);
+  const fim = dateOnlySafe(dataFim);
+
+  const diffMs = fim.getTime() - ini.getTime();
+  const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  return diffDias + 1;
 }
+
 
 /* =====================================================
    UPLOAD (via Cloudflare Worker)
@@ -161,8 +163,8 @@ const createAtestado = async (req, res) => {
     const atestado = await prisma.atestadoMedico.create({
       data: {
         opsId,
-        dataInicio: normalizeDateOnly(dataInicio),
-        dataFim: normalizeDateOnly(dataFim),
+        dataInicio: dateOnlySafe(dataInicio),
+        dataFim: dateOnlySafe(dataFim),
         diasAfastamento: dias,
         cid: cid || null,
         observacao: observacao || null,
@@ -237,8 +239,8 @@ const updateAtestado = async (req, res) => {
     const { id } = req.params;
     const data = { ...req.body };
 
-    if (data.dataInicio) data.dataInicio = normalizeDateOnly(data.dataInicio);
-    if (data.dataFim) data.dataFim = normalizeDateOnly(data.dataFim);
+    if (data.dataInicio) data.dataInicio = dateOnlySafe(data.dataInicio);
+    if (data.dataFim) data.dataFim = dateOnlySafe(data.dataFim);
 
     if (data.documentoKey) {
       data.documentoAnexo = data.documentoKey;
