@@ -1,7 +1,7 @@
 /**
  * Controller de Atestado Médico
  * Upload via Cloudflare Worker
- * Download via Presigned GET (R2)
+ * Datas normalizadas para o fuso do Brasil
  */
 
 const { prisma } = require("../config/database");
@@ -20,25 +20,52 @@ const { getR2Client } = require("../services/r2");
 const BUCKET = process.env.R2_BUCKET_NAME;
 
 /* =====================================================
-   UTIL
+   DATAS — BRASIL (FIX DEFINITIVO)
 ===================================================== */
 
-function dateOnlySafe(dateStr) {
+function dateOnlyBrasil(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
-  // Meio-dia evita qualquer shift de timezone
-  return new Date(y, m - 1, d, 12, 0, 0);
+  const date = new Date(y, m - 1, d);
+  date.setHours(0, 0, 0, 0);
+  return date;
 }
 
 function calcDias(dataInicio, dataFim) {
-  const ini = dateOnlySafe(dataInicio);
-  const fim = dateOnlySafe(dataFim);
+  const ini = dateOnlyBrasil(dataInicio);
+  const fim = dateOnlyBrasil(dataFim);
 
   const diffMs = fim.getTime() - ini.getTime();
-  const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   return diffDias + 1;
 }
+const getAtestadoById = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    const atestado = await prisma.atestadoMedico.findUnique({
+      where: { idAtestado: Number(id) },
+      include: {
+        colaborador: {
+          select: {
+            opsId: true,
+            nomeCompleto: true,
+            matricula: true,
+          },
+        },
+      },
+    });
+
+    if (!atestado) {
+      return notFoundResponse(res, "Atestado não encontrado");
+    }
+
+    return successResponse(res, atestado);
+  } catch (err) {
+    console.error("❌ GET ATESTADO BY ID:", err);
+    return errorResponse(res, "Erro ao buscar atestado", 500);
+  }
+};
 
 /* =====================================================
    UPLOAD (via Cloudflare Worker)
@@ -92,19 +119,10 @@ const presignDownload = async (req, res) => {
 
     const atestado = await prisma.atestadoMedico.findUnique({
       where: { idAtestado: Number(id) },
-      include: {
-        colaborador: {
-          select: { opsId: true, nomeCompleto: true },
-        },
-      },
     });
 
-    if (!atestado) {
-      return notFoundResponse(res, "Atestado não encontrado");
-    }
-
-    if (!atestado.documentoAnexo) {
-      return errorResponse(res, "Atestado não possui documento", 400);
+    if (!atestado || !atestado.documentoAnexo) {
+      return notFoundResponse(res, "Documento não encontrado");
     }
 
     const r2 = getR2Client();
@@ -112,7 +130,7 @@ const presignDownload = async (req, res) => {
       Bucket: BUCKET,
       Key: atestado.documentoAnexo,
       ResponseContentType: "application/pdf",
-      ResponseContentDisposition: `inline; filename="atestado-${atestado.idAtestado}.pdf"`,
+      ResponseContentDisposition: `inline; filename="atestado-${id}.pdf"`,
     });
 
     const url = await getSignedUrl(r2, command, { expiresIn: 600 });
@@ -163,8 +181,8 @@ const createAtestado = async (req, res) => {
     const atestado = await prisma.atestadoMedico.create({
       data: {
         opsId,
-        dataInicio: dateOnlySafe(dataInicio),
-        dataFim: dateOnlySafe(dataFim),
+        dataInicio: dateOnlyBrasil(dataInicio),
+        dataFim: dateOnlyBrasil(dataFim),
         diasAfastamento: dias,
         cid: cid || null,
         observacao: observacao || null,
@@ -209,38 +227,15 @@ const getAllAtestados = async (req, res) => {
 };
 
 /* =====================================================
-   GET BY ID
-===================================================== */
-const getAtestadoById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const atestado = await prisma.atestadoMedico.findUnique({
-      where: { idAtestado: Number(id) },
-      include: { colaborador: true },
-    });
-
-    if (!atestado) {
-      return notFoundResponse(res, "Atestado não encontrado");
-    }
-
-    return successResponse(res, atestado);
-  } catch (err) {
-    console.error("❌ GET ATESTADO BY ID:", err);
-    return errorResponse(res, "Erro ao buscar atestado", 500);
-  }
-};
-
-/* =====================================================
-   UPDATE
+   UPDATE / FINALIZAR / CANCELAR
 ===================================================== */
 const updateAtestado = async (req, res) => {
   try {
     const { id } = req.params;
     const data = { ...req.body };
 
-    if (data.dataInicio) data.dataInicio = dateOnlySafe(data.dataInicio);
-    if (data.dataFim) data.dataFim = dateOnlySafe(data.dataFim);
+    if (data.dataInicio) data.dataInicio = dateOnlyBrasil(data.dataInicio);
+    if (data.dataFim) data.dataFim = dateOnlyBrasil(data.dataFim);
 
     if (data.documentoKey) {
       data.documentoAnexo = data.documentoKey;
@@ -259,39 +254,22 @@ const updateAtestado = async (req, res) => {
   }
 };
 
-/* =====================================================
-   FINALIZAR / CANCELAR
-===================================================== */
 const finalizarAtestado = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const atestado = await prisma.atestadoMedico.update({
-      where: { idAtestado: Number(id) },
-      data: { status: "FINALIZADO" },
-    });
-
-    return successResponse(res, atestado, "Atestado finalizado");
-  } catch (err) {
-    console.error("❌ FINALIZAR ATESTADO:", err);
-    return errorResponse(res, "Erro ao finalizar atestado", 500);
-  }
+  const { id } = req.params;
+  const atestado = await prisma.atestadoMedico.update({
+    where: { idAtestado: Number(id) },
+    data: { status: "FINALIZADO" },
+  });
+  return successResponse(res, atestado, "Atestado finalizado");
 };
 
 const cancelarAtestado = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const atestado = await prisma.atestadoMedico.update({
-      where: { idAtestado: Number(id) },
-      data: { status: "CANCELADO" },
-    });
-
-    return successResponse(res, atestado, "Atestado cancelado");
-  } catch (err) {
-    console.error("❌ CANCELAR ATESTADO:", err);
-    return errorResponse(res, "Erro ao cancelar atestado", 500);
-  }
+  const { id } = req.params;
+  const atestado = await prisma.atestadoMedico.update({
+    where: { idAtestado: Number(id) },
+    data: { status: "CANCELADO" },
+  });
+  return successResponse(res, atestado, "Atestado cancelado");
 };
 
 module.exports = {

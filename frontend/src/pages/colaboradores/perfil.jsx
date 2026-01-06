@@ -26,6 +26,8 @@ export default function PerfilColaborador() {
   const [medidas, setMedidas] = useState([]);
   const [acidentes, setAcidentes] = useState([]);
   const [vinculoOrganizacional, setVinculoOrganizacional] = useState({});
+  const [indicadores, setIndicadores] = useState(null);
+
   useEffect(() => {
     async function load() {
       try {
@@ -41,6 +43,7 @@ export default function PerfilColaborador() {
         setMedidas(mdRes.data.data || []);
         setAcidentes(acRes.data.data || []);
         setVinculoOrganizacional(payload.vinculoOrganizacional || {});
+        + setIndicadores(payload.indicadores || null);
       } catch (err) {
         console.error("Erro perfil colaborador:", err);
         navigate("/colaboradores");
@@ -76,11 +79,12 @@ export default function PerfilColaborador() {
     );
   }
   const vinculo = vinculoOrganizacional;
-  const indicadoresAtestado = colaborador?.indicadores?.atestados || {
+  const indicadoresAtestado = indicadores?.atestados || {
     total: 0,
     ativos: 0,
     finalizados: 0,
   };
+console.log("INDICADORES ATESTADO:", indicadoresAtestado);
 
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">

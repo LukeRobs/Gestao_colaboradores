@@ -16,6 +16,16 @@ const {
 /* ================= CONSTANTES ================= */
 const HORARIOS_PERMITIDOS = ["05:25", "13:20", "21:00"];
 
+/* ================= HELPERS DE DATA (BR) ================= */
+function startOfDaySafe(date = new Date()) {
+  const d = new Date(date);
+
+  // força Brasil sem risco de UTC shift
+  d.setHours(0, 0, 0, 0);
+
+  return d;
+}
+
 /* ================= GET ALL ================= */
 const getAllColaboradores = async (req, res) => {
   const {
@@ -106,7 +116,7 @@ const getColaboradorById = async (req, res) => {
         escala: true,
         estacao: {
           include: {
-            regional: true, // ✅ REGIONAL VEM DA ESTAÇÃO
+            regional: true,
           },
         },
       },
@@ -117,66 +127,66 @@ const getColaboradorById = async (req, res) => {
     }
 
     /* =====================================================
-       INDICADORES — ATESTADOS
+       INDICADORES — ATESTADOS (CORRETO + BR TIME)
     ===================================================== */
-function startOfDaySafe(date = new Date()) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
 
-const hoje = startOfDaySafe();
+    // 📅 Hoje no padrão Brasil (sem UTC shift)
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
 
-const [totalAtestados, ativos, finalizados] = await Promise.all([
-  prisma.atestadoMedico.count({
-    where: { opsId },
-  }),
+    const [totalAtestados, ativos, finalizados] = await Promise.all([
+      prisma.atestadoMedico.count({
+        where: { opsId },
+      }),
 
-  prisma.atestadoMedico.count({
-    where: {
-      opsId,
-      status: "ATIVO",
-      dataInicio: { lte: hoje },
-      dataFim: { gte: hoje },
-    },
-  }),
+      prisma.atestadoMedico.count({
+        where: {
+          opsId,
+          status: "ATIVO",
+          dataInicio: { lte: hoje },
+          dataFim: { gte: hoje },
+        },
+      }),
 
-  prisma.atestadoMedico.count({
-    where: { opsId, status: "FINALIZADO" },
-  }),
-]);
-
+      prisma.atestadoMedico.count({
+        where: {
+          opsId,
+          status: "FINALIZADO",
+        },
+      }),
+    ]);
 
     /* =====================================================
        RESPOSTA FINAL (SEM QUEBRAR O FRONT)
     ===================================================== */
-  return successResponse(res, {
-    colaborador, // 👈 mantém o objeto inteiro SEM espalhar
+    return successResponse(res, {
+      colaborador,
 
-    vinculoOrganizacional: {
-      empresa: colaborador.empresa?.razaoSocial || null,
-      regional: colaborador.estacao?.regional?.nome || null,
-      estacao: colaborador.estacao?.nomeEstacao || null,
-      setor: colaborador.setor?.nomeSetor || null,
-      turno: colaborador.turno?.nomeTurno || null,
-      escala: colaborador.escala?.nomeEscala || null,
-      cargo: colaborador.cargo?.nomeCargo || null,
-    },
-
-    indicadores: {
-      atestados: {
-        total: totalAtestados,
-        ativos,
-        finalizados,
+      vinculoOrganizacional: {
+        empresa: colaborador.empresa?.razaoSocial || null,
+        regional: colaborador.estacao?.regional?.nome || null,
+        estacao: colaborador.estacao?.nomeEstacao || null,
+        setor: colaborador.setor?.nomeSetor || null,
+        turno: colaborador.turno?.nomeTurno || null,
+        escala: colaborador.escala?.nomeEscala || null,
+        cargo: colaborador.cargo?.nomeCargo || null,
       },
-    },
-  });
 
+      indicadores: {
+        atestados: {
+          total: totalAtestados,
+          ativos,
+          finalizados,
+        },
+      },
+    });
   } catch (err) {
     console.error("❌ ERRO GET BY ID:", err);
     return errorResponse(res, "Erro ao buscar colaborador", 500, err);
   }
 };
+
+
 
 
 /* ================= CREATE ================= */
