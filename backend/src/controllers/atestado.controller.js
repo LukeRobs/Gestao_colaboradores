@@ -1,5 +1,7 @@
 /**
- * Controller de Atestado Médico (Cloudflare R2 + Presigned URLs)
+ * Controller de Atestado Médico
+ * Upload via Cloudflare Worker
+ * Download via Presigned GET (R2)
  */
 
 const { prisma } = require("../config/database");
@@ -12,34 +14,33 @@ const {
 
 const crypto = require("crypto");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const {
-  PutObjectCommand,
-  GetObjectCommand,
-} = require("@aws-sdk/client-s3");
+const { GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getR2Client } = require("../services/r2");
 
 const BUCKET = process.env.R2_BUCKET_NAME;
 
 /* =====================================================
    UTIL
-   ===================================================== */
+===================================================== */
 
 function normalizeDateOnly(dateStr) {
-  return new Date(`${dateStr}T00:00:00`);
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
 }
 
 function calcDias(dataInicio, dataFim) {
   const ini = normalizeDateOnly(dataInicio);
   const fim = normalizeDateOnly(dataFim);
-  const diff = Math.floor(
-    (fim.getTime() - ini.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  return diff + 1;
+  const diff =
+    Math.floor((fim.getTime() - ini.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  return diff;
 }
 
 /* =====================================================
-   PRESIGN UPLOAD
-   ===================================================== */
+   UPLOAD (via Cloudflare Worker)
+===================================================== */
 const presignUpload = async (req, res) => {
   try {
     const { opsId } = req.body;
@@ -77,8 +78,8 @@ const presignUpload = async (req, res) => {
 };
 
 /* =====================================================
-   PRESIGN DOWNLOAD
-   ===================================================== */
+   DOWNLOAD (Presigned GET)
+===================================================== */
 const presignDownload = async (req, res) => {
   try {
     const { id } = req.params;
@@ -112,20 +113,18 @@ const presignDownload = async (req, res) => {
       ResponseContentDisposition: `inline; filename="atestado-${atestado.idAtestado}.pdf"`,
     });
 
-    const url = await getSignedUrl(r2, command, {
-      expiresIn: 600,
-    });
+    const url = await getSignedUrl(r2, command, { expiresIn: 600 });
 
     return successResponse(res, { url, expiresIn: 600 });
   } catch (err) {
-    console.error("❌ PRESIGN DOWNLOAD:", err);
-    return errorResponse(res, "Erro ao gerar URL de download", 500, err);
+    console.error("❌ presignDownload:", err);
+    return errorResponse(res, "Erro ao gerar URL de download", 500);
   }
 };
 
 /* =====================================================
    CREATE
-   ===================================================== */
+===================================================== */
 const createAtestado = async (req, res) => {
   try {
     const {
@@ -175,13 +174,13 @@ const createAtestado = async (req, res) => {
     return createdResponse(res, atestado, "Atestado criado com sucesso");
   } catch (err) {
     console.error("❌ CREATE ATESTADO:", err);
-    return errorResponse(res, "Erro ao criar atestado", 500, err);
+    return errorResponse(res, "Erro ao criar atestado", 500);
   }
 };
 
 /* =====================================================
    GET ALL
-   ===================================================== */
+===================================================== */
 const getAllAtestados = async (req, res) => {
   try {
     const { opsId } = req.query;
@@ -203,13 +202,13 @@ const getAllAtestados = async (req, res) => {
     return successResponse(res, atestados);
   } catch (err) {
     console.error("❌ GET ATESTADOS:", err);
-    return errorResponse(res, "Erro ao buscar atestados", 500, err);
+    return errorResponse(res, "Erro ao buscar atestados", 500);
   }
 };
 
 /* =====================================================
    GET BY ID
-   ===================================================== */
+===================================================== */
 const getAtestadoById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -226,13 +225,13 @@ const getAtestadoById = async (req, res) => {
     return successResponse(res, atestado);
   } catch (err) {
     console.error("❌ GET ATESTADO BY ID:", err);
-    return errorResponse(res, "Erro ao buscar atestado", 500, err);
+    return errorResponse(res, "Erro ao buscar atestado", 500);
   }
 };
 
 /* =====================================================
    UPDATE
-   ===================================================== */
+===================================================== */
 const updateAtestado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -254,13 +253,13 @@ const updateAtestado = async (req, res) => {
     return successResponse(res, atestado, "Atestado atualizado com sucesso");
   } catch (err) {
     console.error("❌ UPDATE ATESTADO:", err);
-    return errorResponse(res, "Erro ao atualizar atestado", 500, err);
+    return errorResponse(res, "Erro ao atualizar atestado", 500);
   }
 };
 
 /* =====================================================
-   FINALIZAR
-   ===================================================== */
+   FINALIZAR / CANCELAR
+===================================================== */
 const finalizarAtestado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -273,13 +272,10 @@ const finalizarAtestado = async (req, res) => {
     return successResponse(res, atestado, "Atestado finalizado");
   } catch (err) {
     console.error("❌ FINALIZAR ATESTADO:", err);
-    return errorResponse(res, "Erro ao finalizar atestado", 500, err);
+    return errorResponse(res, "Erro ao finalizar atestado", 500);
   }
 };
 
-/* =====================================================
-   CANCELAR
-   ===================================================== */
 const cancelarAtestado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -292,7 +288,7 @@ const cancelarAtestado = async (req, res) => {
     return successResponse(res, atestado, "Atestado cancelado");
   } catch (err) {
     console.error("❌ CANCELAR ATESTADO:", err);
-    return errorResponse(res, "Erro ao cancelar atestado", 500, err);
+    return errorResponse(res, "Erro ao cancelar atestado", 500);
   }
 };
 
