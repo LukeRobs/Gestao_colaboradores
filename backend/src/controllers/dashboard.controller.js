@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { getDateOperacional } = require("../utils/dateOperacional");
 
 /* =====================================================
    ⏰ TIMEZONE FIXO — BRASIL
@@ -10,39 +11,6 @@ function agoraBrasil() {
     timeZone: "America/Sao_Paulo",
   });
   return new Date(spString);
-}
-
-/* =====================================================
-   📅 CONTEXTO OPERACIONAL
-===================================================== */
-function getContextoOperacional(baseDate) {
-  const d = new Date(baseDate);
-  const minutos = d.getHours() * 60 + d.getMinutes();
-
-  const inRange = (s, e) =>
-    s <= e ? minutos >= s && minutos <= e : minutos >= s || minutos <= e;
-
-  let turno;
-  let diaOperacional = new Date(d);
-
-  if (inRange(21 * 60, 5 * 60 + 48)) {
-    turno = "T3";
-    diaOperacional.setDate(diaOperacional.getDate() - 1);
-  } else if (inRange(13 * 60 + 20, 23 * 60)) {
-    turno = "T2";
-  } else if (inRange(5 * 60 + 25, 15 * 60 + 5)) {
-    turno = "T1";
-  } else {
-    turno = "T1";
-  }
-
-  diaOperacional.setHours(0, 0, 0, 0);
-
-  return {
-    turnoAtual: turno,
-    dataOperacional: diaOperacional,
-    dataOperacionalStr: diaOperacional.toISOString().slice(0, 10), // ✅ STRING SEGURA
-  };
 }
 
 /* =====================================================
@@ -57,6 +25,20 @@ const normalizeTurno = (t) => {
   if (v.includes("T3")) return "T3";
   return "Sem turno";
 };
+
+function isDiaDSR(dataOperacional, nomeEscala) {
+  // 0 = domingo ... 6 = sábado
+  const dow = new Date(dataOperacional).getDay();
+
+  const dsrMap = {
+    A: [0, 3], // domingo, quarta
+    B: [1, 2], // segunda, terça
+    C: [4, 5], // quinta, sexta
+  };
+
+  const dias = dsrMap[String(nomeEscala || "").toUpperCase()];
+  return !!dias?.includes(dow);
+}
 
 function getStatusDoDia(registro) {
   if (registro?.horaEntrada)
@@ -112,7 +94,7 @@ const carregarDashboard = async (req, res) => {
       dataOperacional,
       dataOperacionalStr,
       turnoAtual,
-    } = getContextoOperacional(agora);
+    } = getDateOperacional(agora);
 
     const [
       colaboradores,
@@ -122,7 +104,11 @@ const carregarDashboard = async (req, res) => {
       frequenciasHoje,
     ] = await Promise.all([
       prisma.colaborador.findMany({
-        include: { empresa: true, turno: true, setor: true },
+        where: {
+          status: "ATIVO",
+          dataDesligamento: null,
+        },
+        include: { empresa: true, turno: true, setor: true, escala: true, },
       }),
       prisma.empresa.findMany(),
       prisma.turno.findMany(),
@@ -146,17 +132,22 @@ const carregarDashboard = async (req, res) => {
     const ausenciasHoje = [];
 
     colaboradores.forEach((c) => {
+        // 🔒 1. ignora desligados / inativos
+      if (c.status !== "ATIVO" || c.dataDesligamento) {
+        return;
+      }
       const registro = freqMap.get(c.opsId);
       const turno = normalizeTurno(c.turno?.nomeTurno);
       const genero = normalize(c.genero) || "N/I";
       const empresa = normalize(c.empresa?.razaoSocial) || "Sem empresa";
 
-      generoPorTurno[turno][genero] =
-        (generoPorTurno[turno][genero] || 0) + 1;
-
-      empresaPorTurno[turno][empresa] =
-        (empresaPorTurno[turno][empresa] || 0) + 1;
-
+      const estaEmDSR = isDiaDSR(
+        dataOperacional,
+        c.escala?.nomeEscala
+      );
+      if( estaEmDSR) {
+        return;
+      }
       if (!turnoSetorAgg[turno]) {
         turnoSetorAgg[turno] = {
           turno,
@@ -166,9 +157,13 @@ const carregarDashboard = async (req, res) => {
           setores: {},
         };
       }
-
       turnoSetorAgg[turno].totalEscalados++;
 
+      generoPorTurno[turno][genero] =
+        (generoPorTurno[turno][genero] || 0) + 1;
+
+      empresaPorTurno[turno][empresa] =
+        (empresaPorTurno[turno][empresa] || 0) + 1;
       const setor = getSetor(registro, c);
       turnoSetorAgg[turno].setores[setor] =
         (turnoSetorAgg[turno].setores[setor] || 0) + 1;

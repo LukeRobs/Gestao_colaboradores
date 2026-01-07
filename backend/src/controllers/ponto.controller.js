@@ -6,10 +6,18 @@ const {
   notFoundResponse,
   errorResponse,
 } = require("../utils/response");
+const { getDateOperacional } = require("../utils/dateOperacional");
 
 /* =====================================================
    HELPERS
 ===================================================== */
+function agoraBrasil() {
+  const now = new Date();
+  const spString = now.toLocaleString("en-US", {
+    timeZone: "America/Sao_Paulo",
+  });
+  return new Date(spString);
+}
 
 // "âncora" pra salvar time-only no Postgres (campo @db.Time)
 function toTimeOnly(dateObj) {
@@ -42,29 +50,6 @@ function nowToMinutes(dateObj) {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-/**
- * Dia operacional por turno:
- * - Usa o horarioInicio do turno cadastrado (db.Time)
- * - Se agora < inicio do turno => pertence ao dia anterior
- * - Isso funciona inclusive pro T3 (21:00) quando o cara bate 02:00 => 02:00 < 21:00 => dia anterior
- */
-function getDataOperacionalPorTurno(agora, turno) {
-  const base = new Date(agora);
-
-  // fallback (caso turno não venha)
-  if (!turno?.horarioInicio) {
-    // mantém a regra antiga 06:00 como fallback
-    const ref = new Date(base.getTime() - 6 * 60 * 60 * 1000);
-    return startOfDay(ref);
-  }
-
-  const inicioMin = timeToMinutes(turno.horarioInicio);
-  const agoraMin = nowToMinutes(base);
-
-  if (agoraMin < inicioMin) base.setDate(base.getDate() - 1);
-
-  return startOfDay(base);
-}
 
 function isDiaDSR(dataOperacional, nomeEscala) {
   // 0 = domingo ... 6 = sábado
@@ -93,7 +78,8 @@ const registrarPontoCPF = async (req, res) => {
 
     if (!cpf) return errorResponse(res, "CPF não informado", 400);
 
-    const agora = new Date();
+    const agora = agoraBrasil();
+
 
     /* ==========================================
        BUSCA COLABORADOR
@@ -124,16 +110,17 @@ const registrarPontoCPF = async (req, res) => {
     if (!colaborador)
       return notFoundResponse(res, "Colaborador não encontrado");
 
-    if (colaborador.status !== "ATIVO")
+    if (colaborador.status !== "ATIVO" || colaborador.dataDesligamento) {
       return errorResponse(res, "Colaborador não está ativo", 400);
+    }
+
 
     /* ==========================================
        DIA OPERACIONAL (POR TURNO)
     ========================================== */
-    const dataReferencia = getDataOperacionalPorTurno(
-      agora,
-      colaborador.turno
-    );
+    const { dataOperacional } = getDateOperacional(agora);
+    const dataReferencia = dataOperacional;
+
 
     console.log(
       `[${reqId}] opsId=${colaborador.opsId} turno=${colaborador.turno?.nomeTurno}`
