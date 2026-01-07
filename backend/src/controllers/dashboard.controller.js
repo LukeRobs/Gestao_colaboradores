@@ -26,6 +26,16 @@ const normalizeTurno = (t) => {
   return "Sem turno";
 };
 
+function isCargoElegivel(cargo) {
+  const nome = String(cargo || "").toUpperCase();
+
+  return (
+    nome.includes("AUXILIAR DE LOGÍSTICA I") ||
+    nome.includes("AUXILIAR DE LOGÍSTICA II")
+  );
+}
+
+
 function isDiaDSR(dataOperacional, nomeEscala) {
   // 0 = domingo ... 6 = sábado
   const dow = new Date(dataOperacional).getDay();
@@ -108,7 +118,7 @@ const carregarDashboard = async (req, res) => {
           status: "ATIVO",
           dataDesligamento: null,
         },
-        include: { empresa: true, turno: true, setor: true, escala: true, },
+        include: { empresa: true, turno: true, setor: true, escala: true, cargo: true, },
       }),
       prisma.empresa.findMany(),
       prisma.turno.findMany(),
@@ -136,8 +146,13 @@ const carregarDashboard = async (req, res) => {
       if (c.status !== "ATIVO" || c.dataDesligamento) {
         return;
       }
+      if (!isCargoElegivel(c.cargo?.nomeCargo)) {
+        return;
+      }
+      
       const registro = freqMap.get(c.opsId);
       const turno = normalizeTurno(c.turno?.nomeTurno);
+      if (turno === "Sem turno") return;
       const genero = normalize(c.genero) || "N/I";
       const empresa = normalize(c.empresa?.razaoSocial) || "Sem empresa";
 
