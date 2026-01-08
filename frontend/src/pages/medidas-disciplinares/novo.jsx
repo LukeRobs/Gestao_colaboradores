@@ -12,7 +12,7 @@ export default function NovaMedidaDisciplinar() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    opsId: "",
+    cpf: "",
     dataAplicacao: "",
     tipoMedida: "",
     motivo: "",
@@ -20,31 +20,45 @@ export default function NovaMedidaDisciplinar() {
 
   const [file, setFile] = useState(null);
   const [colaborador, setColaborador] = useState(null);
-  const [erroOps, setErroOps] = useState("");
+  const [erroCpf, setErroCpf] = useState("");
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  /* ================= BUSCA COLABORADOR ================= */
+  /* ================= BUSCA COLABORADOR (CPF) ================= */
   async function buscarColaborador() {
-    if (!form.opsId) return;
+    if (!form.cpf) return;
+
+    const cpfLimpo = form.cpf.replace(/\D/g, "");
+
+    if (cpfLimpo.length !== 11) {
+      setErroCpf("CPF inválido");
+      setColaborador(null);
+      return;
+    }
 
     try {
-      const res = await api.get(`/colaboradores/${form.opsId}`);
+      const res = await api.get(`/colaboradores/cpf/${cpfLimpo}`);
       setColaborador(res.data.data);
-      setErroOps("");
-    } catch {
+      setErroCpf("");
+    } catch (err) {
       setColaborador(null);
-      setErroOps("Colaborador não encontrado");
+
+      if (err.response?.status === 404) {
+        setErroCpf("Colaborador não encontrado");
+      } else {
+        setErroCpf("Erro ao buscar colaborador");
+      }
     }
   }
+
 
   /* ================= SALVAR ================= */
   async function handleSave() {
     if (!colaborador) {
-      alert("Informe um OPS ID válido.");
+      alert("Informe um CPF válido.");
       return;
     }
 
@@ -66,11 +80,11 @@ export default function NovaMedidaDisciplinar() {
     try {
       setSaving(true);
 
-      // 1️⃣ Presign upload
+      /* 1️⃣ Presign upload */
       const presign = await api.post(
         "/medidas-disciplinares/presign-upload",
         {
-          opsId: form.opsId,
+          cpf: form.cpf,
           filename: file.name,
           contentType: file.type,
           size: file.size,
@@ -79,7 +93,7 @@ export default function NovaMedidaDisciplinar() {
 
       const { uploadUrl, key } = presign.data.data;
 
-      // 2️⃣ Upload direto no R2
+      /* 2️⃣ Upload direto no R2 */
       const upload = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/pdf" },
@@ -91,9 +105,12 @@ export default function NovaMedidaDisciplinar() {
         return;
       }
 
-      // 3️⃣ Salvar registro
+      /* 3️⃣ Criar medida */
       await api.post("/medidas-disciplinares", {
-        ...form,
+        cpf: form.cpf,
+        dataAplicacao: form.dataAplicacao,
+        tipoMedida: form.tipoMedida,
+        motivo: form.motivo,
         documentoKey: key,
       });
 
@@ -118,7 +135,6 @@ export default function NovaMedidaDisciplinar() {
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 max-w-5xl mx-auto space-y-8">
-
           {/* HEADER */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -154,20 +170,20 @@ export default function NovaMedidaDisciplinar() {
             </button>
           </div>
 
-          {/* OPS ID */}
+          {/* CPF */}
           <Section title="Identificação do Colaborador">
             <Input
-              label="OPS ID do Colaborador"
-              name="opsId"
-              value={form.opsId}
+              label="CPF do Colaborador"
+              name="cpf"
+              value={form.cpf}
               onChange={handleChange}
               onBlur={buscarColaborador}
-              placeholder="Ex: OPS001"
+              placeholder="000.000.000-00"
             />
 
-            {erroOps && (
+            {erroCpf && (
               <p className="text-sm text-red-400 md:col-span-2">
-                {erroOps}
+                {erroCpf}
               </p>
             )}
           </Section>
@@ -190,26 +206,6 @@ export default function NovaMedidaDisciplinar() {
                 <ReadOnly label="Setor" value={colaborador.setor?.nomeSetor} />
                 <ReadOnly label="Cargo" value={colaborador.cargo?.nomeCargo} />
                 <ReadOnly label="Turno" value={colaborador.turno?.nomeTurno} />
-              </Section>
-
-              {/* JORNADA */}
-              <Section title="Jornada">
-                <ReadOnly
-                  label="Data de Admissão"
-                  value={
-                    colaborador.dataAdmissao
-                      ? new Date(colaborador.dataAdmissao).toLocaleDateString()
-                      : "-"
-                  }
-                />
-                <ReadOnly
-                  label="Início da Jornada"
-                  value={
-                    colaborador.horarioInicioJornada
-                      ? colaborador.horarioInicioJornada.substring(11, 16)
-                      : "-"
-                  }
-                />
               </Section>
             </>
           )}
@@ -307,7 +303,8 @@ function FileUpload({ file, onChange }) {
         PDF da Medida (obrigatório)
       </label>
 
-      <label className="flex items-center gap-3 px-4 py-3 mt-1
+      <label
+        className="flex items-center gap-3 px-4 py-3 mt-1
         bg-[#2A2A2C] border border-[#3D3D40]
         rounded-xl cursor-pointer hover:bg-[#242426]"
       >

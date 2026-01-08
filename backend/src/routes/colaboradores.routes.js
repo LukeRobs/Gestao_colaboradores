@@ -5,9 +5,8 @@ const controller = require("../controllers/colaborador.controller");
 const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { asyncHandler } = require("../middlewares/error.middleware");
 const { upload } = require("../middlewares/uploadCsv.middleware");
-const { listarLideres } = require("../controllers/colaborador.controller")
 
-/* ================= IMPORT CSV (ANTES DE :opsId) ================= */
+/* ================= IMPORT CSV ================= */
 router.post(
   "/import",
   authenticate,
@@ -16,14 +15,29 @@ router.post(
   asyncHandler(controller.importColaboradores)
 );
 
-router.get("/lideres",
+/* ================= LÍDERES ================= */
+router.get(
+  "/lideres",
   authenticate,
   authorize("ADMIN"),
-  asyncHandler(controller.listarLideres))
-  
-/* ================= ROTAS PADRÃO ================= */
-router.get("/", authenticate, asyncHandler(controller.getAllColaboradores));
+  asyncHandler(controller.listarLideres)
+);
 
+/* ================= CPF (⚠️ TEM QUE VIR ANTES DE :opsId) ================= */
+router.get(
+  "/cpf/:cpf",
+  authenticate,
+  asyncHandler(controller.getColaboradorByCpf)
+);
+
+/* ================= LISTAGEM ================= */
+router.get(
+  "/",
+  authenticate,
+  asyncHandler(controller.getAllColaboradores)
+);
+
+/* ================= STATS / HISTÓRICO ================= */
 router.get(
   "/:opsId/stats",
   authenticate,
@@ -36,6 +50,7 @@ router.get(
   asyncHandler(controller.getColaboradorHistorico)
 );
 
+/* ================= GET / UPDATE / DELETE POR OPS ID ================= */
 router.get(
   "/:opsId",
   authenticate,

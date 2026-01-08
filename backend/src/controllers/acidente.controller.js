@@ -19,14 +19,23 @@ const BUCKET = process.env.R2_BUCKET_NAME;
 
 /* ================= UTIL ================= */
 
+// Data somente (Brasil safe)
 function normalizeDateOnly(dateStr) {
-  return new Date(`${dateStr}T00:00:00`);
+  if (!dateStr) return null;
+
+  const [y, m, d] = dateStr.split("-").map(Number);
+
+  // ⛔ nunca usar meia-noite
+  // ✅ meio-dia evita qualquer problema de timezone
+  return new Date(y, m - 1, d, 12, 0, 0);
 }
 
+// Hora somente (sem risco de timezone)
 function normalizeTimeOnly(timeStr) {
   if (!timeStr) return null;
   return new Date(`1970-01-01T${timeStr}:00`);
 }
+
 
 /* ================= PRESIGN UPLOAD ================= */
 const presignUpload = async (req, res) => {
@@ -50,7 +59,7 @@ const presignUpload = async (req, res) => {
       return errorResponse(res, 400, "CPF inválido");
     }
 
-    const colaborador = await prisma.colaborador.findUnique({
+    const colaborador = await prisma.colaborador.findFirst({
       where: { cpf: cpfLimpo },
     });
 
@@ -149,7 +158,7 @@ const createAcidente = async (req, res) => {
       return errorResponse(res, 400, "CPF inválido");
     }
 
-    const colaborador = await prisma.colaborador.findUnique({
+    const colaborador = await prisma.colaborador.findFirst({
       where: { cpf: cpfLimpo },
     });
 
@@ -209,7 +218,7 @@ const getAllAcidentes = async (req, res) => {
         return errorResponse(res, 400, "CPF inválido");
       }
 
-      const colab = await prisma.colaborador.findUnique({
+      const colab = await prisma.colaborador.findFirst({
         where: { cpf: cpfLimpo },
       });
 
@@ -272,7 +281,7 @@ const getAcidentesByColaborador = async (req, res) => {
 
     // 🔹 Se for CPF válido
     if (cpfLimpo.length === 11) {
-      colaborador = await prisma.colaborador.findUnique({
+      colaborador = await prisma.colaborador.findFirst({
         where: { cpf: cpfLimpo },
       });
     } 

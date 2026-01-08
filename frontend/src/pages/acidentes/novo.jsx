@@ -25,6 +25,7 @@ export default function NovoAcidente() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // registrador
   const [registrador, setRegistrador] = useState(null);
@@ -86,9 +87,7 @@ export default function NovoAcidente() {
     }
 
     try {
-      const res = await api.get(`/colaboradores`, {
-        params: { cpf: cpfLimpo },
-      });
+      const res = await api.get(`/colaboradores/cpf/${cpfLimpo}`);
       setColaborador(res.data.data);
       setErroOps("");
     } catch {
@@ -102,17 +101,17 @@ export default function NovoAcidente() {
     const files = Array.from(filesList || []);
     if (!files.length) return;
 
-    // valida tipos e limite 5
     const next = [...fotos, ...files].slice(0, 5);
 
     const invalid = next.find((f) => !isImageType(f.type));
     if (invalid) {
-      alert("Envie apenas imagens (JPG/PNG/WEBP/HEIC).");
+      alert(`Arquivo inválido: ${invalid.name}`);
       return;
     }
 
     setFotos(next);
   }
+
 
   const podeSalvar = useMemo(() => {
     const cpfLimpo = form.cpf.replace(/\D/g, "");
@@ -135,88 +134,80 @@ export default function NovoAcidente() {
     return true;
   }, [colaborador, form, fotos.length]);
 
-
     async function handleSave() {
-      if (!podeSalvar) {
-        alert("Preencha todos os campos obrigatórios e envie de 1 a 5 fotos.");
-        return;
-      }
+      if (!podeSalvar || saving || uploading) return;
 
       const cpfLimpo = form.cpf.replace(/\D/g, "");
 
       try {
         setSaving(true);
 
+        /* 1️⃣ Upload das fotos */
+        setUploading(true);
 
+        const uploadedKeys = [];
 
-      // 1) Presign + upload de cada foto
-      const uploadedKeys = [];
+        for (const file of fotos) {
+          const fileInfo = {
+            filename: file.name,
+            contentType: file.type,
+            size: file.size,
+          };
 
-      for (const file of fotos) {
+          const presignResponse = await AcidentesAPI.presignUpload({
+            cpf: cpfLimpo,
+            files: [fileInfo],
+          });
 
-        const fileInfo = {
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        };
+          const { uploadUrl, key } = presignResponse[0];
 
-        const presignResponse = await AcidentesAPI.presignUpload({
-          cpf: cpfLimpo,
-          files: [fileInfo],
-        });
+          const put = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
 
+          if (!put.ok) {
+            alert(`Falha ao enviar imagem: ${file.name}`);
+            return;
+          }
 
-        const { uploadUrl, key } = presignResponse[0];
-
-        const put = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-
-        if (!put.ok) {
-          console.error("PUT falhou:", put.status, await put.text());
-          alert(`Falha ao enviar imagem: ${file.name}`);
-          return;
+          uploadedKeys.push(key);
         }
 
-        uploadedKeys.push(key);
+        setUploading(false);
+
+        /* 2️⃣ Criação do acidente */
+        await AcidentesAPI.criar({
+          cpf: cpfLimpo,
+          nomeRegistrante: registrador?.name || "Sistema",
+          setor: colaborador?.setor?.nomeSetor || "",
+          cargo: colaborador?.cargo?.nomeCargo || "",
+          participouIntegracao: form.participouIntegracao === "true",
+          tipoOcorrencia: form.tipoOcorrencia,
+          dataOcorrencia: form.dataOcorrencia,
+          horarioOcorrencia: form.horarioOcorrencia,
+          dataComunicacaoHSE: form.dataComunicacaoHSE,
+          localOcorrencia: form.localOcorrencia,
+          situacaoGeradora: form.situacaoGeradora,
+          agenteCausador: form.agenteCausador,
+          parteCorpoAtingida: form.parteCorpoAtingida,
+          lateralidade: form.lateralidade,
+          tipoLesao: form.tipoLesao,
+          acoesImediatas: form.acoesImediatas,
+          evidencias: uploadedKeys,
+        });
+
+        navigate("/acidentes");
+      } catch (err) {
+        console.error("Erro ao salvar acidente:", err);
+        alert("Erro ao salvar acidente.");
+      } finally {
+        setUploading(false);
+        setSaving(false);
       }
-
-      // 2) cria acidente no backend
-      await AcidentesAPI.criar({
-        cpf: cpfLimpo,
-        nomeRegistrante: registrador?.name || "Sistema",
-        setor: colaborador?.setor?.nomeSetor || "",
-        cargo: colaborador?.cargo?.nomeCargo || "",
-        participouIntegracao: form.participouIntegracao === "true",
-        tipoOcorrencia: form.tipoOcorrencia,
-        dataOcorrencia: form.dataOcorrencia,
-        horarioOcorrencia: form.horarioOcorrencia,
-        dataComunicacaoHSE: form.dataComunicacaoHSE,
-        localOcorrencia: form.localOcorrencia,
-        situacaoGeradora: form.situacaoGeradora,
-        agenteCausador: form.agenteCausador,
-        parteCorpoAtingida: form.parteCorpoAtingida,
-        lateralidade: form.lateralidade,
-        tipoLesao: form.tipoLesao,
-        acoesImediatas: form.acoesImediatas,
-        evidencias: uploadedKeys,
-      });
-
-
-      navigate("/acidentes");
-    } catch (err) {
-      console.error("Erro completo:", err);
-      // Log mais detalhado para debug
-      if (err.response?.data) {
-        console.error("Resposta do erro:", err.response.data);
-      }
-      alert("Erro ao salvar acidente.");
-    } finally {
-      setSaving(false);
     }
-  }
+
 
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
@@ -245,16 +236,24 @@ export default function NovoAcidente() {
             </div>
 
             <button
-              disabled={saving || !podeSalvar}
+              disabled={saving || uploading || !podeSalvar}
               onClick={handleSave}
               className={`
                 flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium
-                ${saving || !podeSalvar ? "bg-[#FA4C00]/50 cursor-not-allowed" : "bg-[#FA4C00] hover:bg-[#ff5a1a]"}
+                ${saving || uploading || !podeSalvar
+                  ? "bg-[#FA4C00]/50 cursor-not-allowed"
+                  : "bg-[#FA4C00] hover:bg-[#ff5a1a]"
+                }
               `}
             >
               <Save size={16} />
-              {saving ? "Salvando..." : "Salvar"}
+              {uploading
+                ? "Enviando fotos..."
+                : saving
+                ? "Salvando..."
+                : "Salvar"}
             </button>
+
           </div>
 
           {/* Seção 1: Identificação */}

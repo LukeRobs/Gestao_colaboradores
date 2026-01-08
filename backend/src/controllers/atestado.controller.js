@@ -53,6 +53,7 @@ const getAtestadoById = async (req, res) => {
             opsId: true,
             nomeCompleto: true,
             matricula: true,
+            cpf: true,
           },
         },
       },
@@ -87,7 +88,7 @@ const presignUpload = async (req, res) => {
     }
 
 
-    const colaborador = await prisma.colaborador.findUnique({
+    const colaborador = await prisma.colaborador.findFirst({
       where: { cpf: cpfLimpo },
     });
 
@@ -182,7 +183,7 @@ const createAtestado = async (req, res) => {
     }
 
 
-    const colaborador = await prisma.colaborador.findUnique({
+    const colaborador = await prisma.colaborador.findFirst({
       where: { cpf: cpfLimpo },
     });
 
@@ -233,7 +234,7 @@ const getAllAtestados = async (req, res) => {
         return errorResponse(res, 400, "CPF inválido");
       }
 
-      const colab = await prisma.colaborador.findUnique({ where: { cpf: cpfLimpo }, });
+      const colab = await prisma.colaborador.findFirst({ where: { cpf: cpfLimpo }, });
       if (!colab) return successResponse(res, []);
       where.opsId = colab.opsId;
     }

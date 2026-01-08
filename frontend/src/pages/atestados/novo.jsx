@@ -6,6 +6,13 @@ import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
 
+function dateOnlyBrasil(dateStr) {
+  if (!dateStr) return null;
+
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
+}
+
 export default function NovoAtestado() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,19 +29,20 @@ export default function NovoAtestado() {
   const [saving, setSaving] = useState(false);
 
   /* ================= DIAS DERIVADOS ================= */
-  function calcularDiasAfastamento() {
-    if (!form.dataInicio || !form.dataFim) return 0;
+function calcularDiasAfastamento() {
+  if (!form.dataInicio || !form.dataFim) return 0;
 
-    const inicio = new Date(form.dataInicio);
-    const fim = new Date(form.dataFim);
-    if (fim < inicio) return 0;
+  const inicio = dateOnlyBrasil(form.dataInicio);
+  const fim = dateOnlyBrasil(form.dataFim);
 
-    return (
-      Math.ceil(
-        (fim.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)
-      ) + 1
-    );
-  }
+  if (!inicio || !fim || fim < inicio) return 0;
+
+  const diffMs = fim.getTime() - inicio.getTime();
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  return diffDias + 1;
+}
+
 
   const diasAfastamento = calcularDiasAfastamento();
 
@@ -42,10 +50,11 @@ export default function NovoAtestado() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+const [uploading, setUploading] = useState(false);
 
   /* ================= SALVAR ================= */
   async function handleSave() {
-    if (saving) return;
+    if (saving || uploading) return;
 
     const cpfLimpo = form.cpf.replace(/\D/g, "");
 
@@ -81,6 +90,8 @@ export default function NovoAtestado() {
       const { uploadUrl, key } = presignRes.data.data;
 
       /* 2️⃣ Upload direto para o R2 */
+      setUploading(true);
+
       const upload = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
@@ -88,6 +99,8 @@ export default function NovoAtestado() {
         },
         body: file,
       });
+
+      setUploading(false);
 
       if (!upload.ok) {
         alert("Falha ao enviar o PDF.");
@@ -107,9 +120,11 @@ export default function NovoAtestado() {
       console.error(err);
       alert("Erro ao salvar atestado médico.");
     } finally {
+      setUploading(false);
       setSaving(false);
     }
   }
+
 
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
@@ -143,14 +158,20 @@ export default function NovoAtestado() {
               </div>
             </div>
 
-            <button
-              disabled={saving}
+           <button
+              disabled={saving || uploading}
               onClick={handleSave}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#FA4C00] rounded-xl"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl
+                ${saving || uploading ? "bg-[#555] cursor-not-allowed" : "bg-[#FA4C00]"}`}
             >
               <Save size={16} />
-              {saving ? "Salvando..." : "Salvar"}
+              {uploading
+                ? "Enviando PDF..."
+                : saving
+                ? "Salvando..."
+                : "Salvar"}
             </button>
+
           </div>
 
           {/* FORM */}
@@ -174,10 +195,12 @@ export default function NovoAtestado() {
             <Input
               type="date"
               name="dataFim"
+              min={form.dataInicio || undefined}
               label="Data de Fim"
               value={form.dataFim}
               onChange={handleChange}
             />
+
 
             <Info
               label="Dias de Afastamento"

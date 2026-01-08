@@ -95,6 +95,33 @@ const getAllColaboradores = async (req, res) => {
     return errorResponse(res, "Erro ao buscar colaboradores", 500, err);
   }
 };
+const getColaboradorByCpf = async (req, res) => {
+  const { cpf } = req.params;
+
+  const cpfLimpo = cpf.replace(/\D/g, "");
+
+  if (cpfLimpo.length !== 11) {
+    return errorResponse(res, "CPF inválido", 400);
+  }
+
+  const colaborador = await prisma.colaborador.findFirst({
+    where: { cpf: cpfLimpo },
+    include: {
+      empresa: true,
+      setor: true,
+      cargo: true,
+      turno: true,
+      escala: true,
+      lider: true,
+    },
+  });
+
+  if (!colaborador) {
+    return notFoundResponse(res, "Colaborador não encontrado");
+  }
+
+  return successResponse(res, colaborador);
+};
 
 /* ================= GET BY ID ================= */
 const getColaboradorById = async (req, res) => {
@@ -735,6 +762,7 @@ const getColaboradorHistorico = async (req, res) => {
 
 module.exports = {
   getAllColaboradores,
+  getColaboradorByCpf,
   getColaboradorById,
   getByOpsId,
   getColaboradorStats,
