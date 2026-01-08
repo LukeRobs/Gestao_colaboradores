@@ -4,7 +4,7 @@ import {
   XCircle,
   Download
 } from "lucide-react";
-import { Badge, Button } from   "./UIComponents";
+import { Badge, Button } from "./UIComponents";
 import { formatDateBR } from "../utils/date";
 
 export default function AtestadoCard({
@@ -13,9 +13,13 @@ export default function AtestadoCard({
   onCancelar,
   onDownload,
 }) {
+  const isAtivo = atestado.status === "ATIVO";
+  const isFinalizado = atestado.status === "FINALIZADO";
+  const isCancelado = atestado.status === "CANCELADO";
+
   return (
     <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-5 flex items-center justify-between">
-      
+
       {/* ================= INFO ================= */}
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-xl bg-[#2A2A2C] flex items-center justify-center">
@@ -33,18 +37,24 @@ export default function AtestadoCard({
             {atestado.diasAfastamento} dias
           </p>
 
+          {/* INFO EXTRA (opcional / futuro) */}
+          {isFinalizado && (
+            <p className="text-[11px] text-[#9CA3AF] italic mt-0.5">
+              Atestado encerrado
+            </p>
+          )}
         </div>
       </div>
 
       {/* ================= AÇÕES ================= */}
       <div className="flex items-center gap-3">
-        
+
         {/* STATUS */}
         <Badge.Status
           variant={
-            atestado.status === "ATIVO"
+            isAtivo
               ? "warning"
-              : atestado.status === "FINALIZADO"
+              : isFinalizado
               ? "success"
               : "danger"
           }
@@ -52,22 +62,22 @@ export default function AtestadoCard({
           {atestado.status}
         </Badge.Status>
 
-        {/* DOWNLOAD PDF */}
+        {/* DOWNLOAD PDF (sempre permitido se existir) */}
         {onDownload && (
           <Button.IconButton
-            onClick={() => onDownload(atestado)}
+            onClick={() => onDownload(atestado.idAtestado)}
             title="Download do PDF"
           >
             <Download size={16} />
           </Button.IconButton>
         )}
 
-        {/* AÇÕES DE STATUS */}
-        {atestado.status === "ATIVO" && (
+        {/* AÇÕES DE STATUS (APENAS SE ATIVO) */}
+        {isAtivo && (
           <>
             <Button.IconButton
               variant="success"
-              onClick={() => onFinalizar(atestado)}
+              onClick={() => onFinalizar(atestado.idAtestado)}
               title="Finalizar atestado"
             >
               <CheckCircle size={16} />
@@ -75,7 +85,7 @@ export default function AtestadoCard({
 
             <Button.IconButton
               variant="danger"
-              onClick={() => onCancelar(atestado)}
+              onClick={() => onCancelar(atestado.idAtestado)}
               title="Cancelar atestado"
             >
               <XCircle size={16} />
