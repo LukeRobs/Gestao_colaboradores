@@ -35,6 +35,21 @@ function isCargoElegivel(cargo) {
   );
 }
 
+function isAusenciaValida(status) {
+  const s = status.toUpperCase();
+
+  const invalidos = [
+    "PRESENTE",
+    "PRESENÇA",
+    "DSR",
+    "DESCANSO",
+    "FOLGA",
+    "BANCO DE HORAS",
+    "TREINAMENTO",
+  ];
+
+  return !invalidos.some((v) => s.includes(v));
+}
 
 function isDiaDSR(dataOperacional, nomeEscala) {
   // 0 = domingo ... 6 = sábado
@@ -99,13 +114,36 @@ const initTurnoMap = () => ({
 ===================================================== */
 const carregarDashboard = async (req, res) => {
   try {
-    const agora = agoraBrasil();
-    const {
-      dataOperacional,
-      dataOperacionalStr,
-      turnoAtual,
-    } = getDateOperacional(agora);
+    /* ===============================
+       1️⃣ FILTROS DE DATA
+    =============================== */
+    const { data, dataInicio, dataFim } = req.query;
 
+    const agora = agoraBrasil();
+    const { dataOperacional, dataOperacionalStr, turnoAtual } =
+      getDateOperacional(agora);
+
+    /* ===============================
+       📅 RANGE DE DATA (SEGURO)
+    =============================== */
+    let inicio;
+    let fim;
+
+    if (dataInicio && dataFim) {
+      inicio = new Date(`${dataInicio}T00:00:00.000Z`);
+      fim = new Date(`${dataFim}T23:59:59.999Z`);
+    } else if (data) {
+      inicio = new Date(`${data}T00:00:00.000Z`);
+      fim = new Date(`${data}T23:59:59.999Z`);
+    } else {
+      const base = new Date(dataOperacional).toISOString().slice(0, 10);
+      inicio = new Date(`${base}T00:00:00.000Z`);
+      fim = new Date(`${base}T23:59:59.999Z`);
+    }
+
+    /* ===============================
+       2️⃣ QUERIES
+    =============================== */
     const [
       colaboradores,
       empresas,
@@ -118,51 +156,109 @@ const carregarDashboard = async (req, res) => {
           status: "ATIVO",
           dataDesligamento: null,
         },
-        include: { empresa: true, turno: true, setor: true, escala: true, cargo: true, },
+        include: {
+          empresa: true,
+          turno: true,
+          setor: true,
+          escala: true,
+          cargo: true,
+          lider: true,
+        },
       }),
+
       prisma.empresa.findMany(),
       prisma.turno.findMany(),
       prisma.escala.findMany({ where: { ativo: true } }),
+
       prisma.frequencia.findMany({
-        where: { dataReferencia: dataOperacional },
+        where: {
+          dataReferencia: {
+            gte: inicio,
+            lte: fim,
+          },
+        },
         include: {
           colaborador: { include: { turno: true, setor: true } },
           tipoAusencia: true,
           setor: true,
         },
+        orderBy: { dataReferencia: "asc" },
       }),
     ]);
 
-    const freqMap = new Map(frequenciasHoje.map((f) => [f.opsId, f]));
+    /* ===============================
+       3️⃣ MAPA DE FREQUÊNCIAS
+    =============================== */
+    const freqMap = new Map();
 
+    frequenciasHoje.forEach((f) => {
+      if (!freqMap.has(f.opsId)) freqMap.set(f.opsId, []);
+      freqMap.get(f.opsId).push(f);
+    });
+
+    /* ===============================
+       4️⃣ AGREGADORES
+    =============================== */
     const turnoSetorAgg = {};
     const generoPorTurno = initTurnoMap();
     const statusPorTurno = initTurnoMap();
     const empresaPorTurno = initTurnoMap();
     const ausenciasHoje = [];
+    const tendenciaPorDia = {};
 
+    const dataSnapshotStr = fim.toISOString().slice(0, 10);
+
+    /* ===============================
+       5️⃣ LOOP PRINCIPAL
+    =============================== */
     colaboradores.forEach((c) => {
-        // 🔒 1. ignora desligados / inativos
-      if (c.status !== "ATIVO" || c.dataDesligamento) {
-        return;
-      }
-      if (!isCargoElegivel(c.cargo?.nomeCargo)) {
-        return;
-      }
-      
-      const registro = freqMap.get(c.opsId);
+      if (!isCargoElegivel(c.cargo?.nomeCargo)) return;
+
       const turno = normalizeTurno(c.turno?.nomeTurno);
       if (turno === "Sem turno") return;
+
       const genero = normalize(c.genero) || "N/I";
       const empresa = normalize(c.empresa?.razaoSocial) || "Sem empresa";
 
-      const estaEmDSR = isDiaDSR(
-        dataOperacional,
-        c.escala?.nomeEscala
-      );
-      if( estaEmDSR) {
+      const registros = freqMap.get(c.opsId) || [];
+
+      /* ========= 5.1 TENDÊNCIA ========= */
+      registros.forEach((reg) => {
+        const dataRef = reg.dataReferencia
+          ?.toISOString()
+          .slice(0, 10);
+        if (!dataRef) return;
+
+        if (
+          c.escala?.nomeEscala &&
+          isDiaDSR(reg.dataReferencia, c.escala.nomeEscala)
+        )
+          return;
+
+        if (!tendenciaPorDia[dataRef]) {
+          tendenciaPorDia[dataRef] = {
+            data: dataRef,
+            presentes: 0,
+            ausentes: 0,
+          };
+        }
+
+        const { status } = getStatusDoDia(reg);
+
+        if (status === "PRESENTE") {
+          tendenciaPorDia[dataRef].presentes++;
+        } else if (isAusenciaValida(status)) {
+          tendenciaPorDia[dataRef].ausentes++;
+        }
+      });
+
+      /* ========= 5.2 SNAPSHOT ========= */
+      if (
+        c.escala?.nomeEscala &&
+        isDiaDSR(fim, c.escala.nomeEscala)
+      )
         return;
-      }
+
       if (!turnoSetorAgg[turno]) {
         turnoSetorAgg[turno] = {
           turno,
@@ -172,30 +268,45 @@ const carregarDashboard = async (req, res) => {
           setores: {},
         };
       }
-      turnoSetorAgg[turno].totalEscalados++;
 
+      turnoSetorAgg[turno].totalEscalados++;
       generoPorTurno[turno][genero] =
         (generoPorTurno[turno][genero] || 0) + 1;
-
       empresaPorTurno[turno][empresa] =
         (empresaPorTurno[turno][empresa] || 0) + 1;
-      const setor = getSetor(registro, c);
+
+      const registroSnapshot =
+        registros.find(
+          (r) =>
+            r.dataReferencia
+              ?.toISOString()
+              .slice(0, 10) === dataSnapshotStr
+        ) || null;
+
+      const setor = getSetor(registroSnapshot, c);
       turnoSetorAgg[turno].setores[setor] =
         (turnoSetorAgg[turno].setores[setor] || 0) + 1;
 
-      const { status, origem } = getStatusDoDia(registro);
-      statusPorTurno[turno][status] =
-        (statusPorTurno[turno][status] || 0) + 1;
+      const { status, origem } = getStatusDoDia(registroSnapshot);
 
       if (status === "PRESENTE") {
         turnoSetorAgg[turno].presentes++;
-      } else {
+        statusPorTurno[turno][status] =
+          (statusPorTurno[turno][status] || 0) + 1;
+      } else if (isAusenciaValida(status)) {
         turnoSetorAgg[turno].ausentes++;
+        statusPorTurno[turno][status] =
+          (statusPorTurno[turno][status] || 0) + 1;
+
         ausenciasHoje.push({
           colaboradorId: c.opsId,
           nome: c.nomeCompleto,
           turno,
           motivo: status,
+          setor: normalize(c.setor?.nomeSetor),
+          empresa: normalize(c.empresa?.razaoSocial),
+          admissao: c.dataAdmissao,
+          lider: normalize(c.lider?.nomeCompleto),
           origem,
           categoria: getCategoria(status, origem),
           criticidade: getCriticidade(
@@ -206,10 +317,13 @@ const carregarDashboard = async (req, res) => {
       }
     });
 
+    /* ===============================
+       6️⃣ RESPONSE
+    =============================== */
     return res.json({
       success: true,
       data: {
-        dataOperacional: dataOperacionalStr, // ✅ STRING
+        dataOperacional: dataOperacionalStr,
         turnoAtual,
 
         distribuicaoTurnoSetor: Object.values(turnoSetorAgg).map((t) => ({
@@ -248,6 +362,18 @@ const carregarDashboard = async (req, res) => {
 
         ausenciasHoje,
 
+        tendenciaPorDia: Object.values(tendenciaPorDia)
+          .sort((a, b) => a.data.localeCompare(b.data))
+          .map((d) => ({
+            ...d,
+            percentual: Number(
+              (
+                (d.ausentes / (d.ausentes + d.presentes)) *
+                100
+              ).toFixed(2)
+            ),
+          })),
+
         empresas: empresas.map((e) => ({
           id: e.idEmpresa,
           nome: e.razaoSocial,
@@ -269,5 +395,6 @@ const carregarDashboard = async (req, res) => {
     res.status(500).json({ success: false });
   }
 };
+
 
 module.exports = { carregarDashboard };
