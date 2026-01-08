@@ -2,8 +2,8 @@
 import api from "./api";
 
 export const AcidentesAPI = {
-  async listar() {
-    const res = await api.get("/acidentes");
+  async listar(params = {}) {
+    const res = await api.get("/acidentes", { params });
     return res.data.data || [];
   },
 
@@ -12,17 +12,19 @@ export const AcidentesAPI = {
     return res.data.data;
   },
 
-  async presignUpload({ opsId, files }) {
+  async presignUpload({ cpf, files }) {
+    const cpfLimpo = cpf.replace(/\D/g, "");
+
     const res = await api.post("/acidentes/presign-upload", {
-      opsId,
+      cpf: cpfLimpo,
       files,
     });
-    return res.data.data; // Array de { uploadUrl, key }
+
+    return res.data.data; // [{ uploadUrl, key }]
   },
 
-  // tenta pegar usuário logado (quem registrou)
   async me() {
     const res = await api.get("/auth/me");
-    return res.data.data; // { name, email, ... }
+    return res.data.data;
   },
 };

@@ -6,16 +6,19 @@ export default function AcidenteCard({ acidente }) {
     ? new Date(acidente.dataOcorrencia).toLocaleDateString("pt-BR")
     : "-";
 
+  // horarioOcorrencia vem como "HH:mm"
   const hora = acidente.horarioOcorrencia
-    ? new Date(acidente.horarioOcorrencia).toLocaleTimeString("pt-BR", { 
-        hour: "2-digit", 
-        minute: "2-digit" 
-      })
+    ? acidente.horarioOcorrencia.slice(0, 5)
     : "-";
-  
-  const nome = acidente.colaborador?.nomeCompleto || acidente.opsIdColaborador || "-";
+
+  const nome = acidente.colaborador?.nomeCompleto || "-";
   const fotosCount = acidente.evidencias?.length || 0;
-  const registradoPor = acidente.registradoPor || "Sistema";
+
+  // alinhado com backend (nomeRegistrante)
+  const registradoPor =
+    acidente.nomeRegistrante ||
+    acidente.registradoPor ||
+    "Sistema";
 
   return (
     <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-5">
@@ -27,13 +30,16 @@ export default function AcidenteCard({ acidente }) {
 
           <div>
             <p className="font-medium text-white">{nome}</p>
+
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#BFBFC3] mt-1">
               <span className="inline-flex items-center gap-1">
                 <Calendar size={14} /> {dt} • {hora}
               </span>
+
               <span className="inline-flex items-center gap-1">
                 <MapPin size={14} /> {acidente.localOcorrencia || "-"}
               </span>
+
               <span className="inline-flex items-center gap-1">
                 <Camera size={14} /> {fotosCount} foto{fotosCount !== 1 ? "s" : ""}
               </span>
@@ -53,16 +59,14 @@ export default function AcidenteCard({ acidente }) {
           <p className="text-white/90 font-medium">
             {registradoPor}
           </p>
-          {/* Se precisar de setor/cargo do registrador, adicione uma query no backend e inclua no include */}
-          {/* <p className="mt-1">
-            {acidente.registradoPorSetor || "-"} • {acidente.registradoPorCargo || "-"}
-          </p> */}
         </div>
       </div>
 
-      {/* resumo */}
+      {/* RESUMO */}
       <div className="mt-4 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4">
-        <p className="text-xs uppercase text-[#BFBFC3]">Descrição / Ações imediatas</p>
+        <p className="text-xs uppercase text-[#BFBFC3]">
+          Descrição / Ações imediatas
+        </p>
         <p className="text-sm text-white mt-1 line-clamp-3">
           {acidente.acoesImediatas || "-"}
         </p>

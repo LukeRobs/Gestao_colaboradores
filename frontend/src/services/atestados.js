@@ -12,6 +12,7 @@ export const AtestadosAPI = {
   },
 
   criar: async (payload) => {
+    // payload agora DEVE conter cpf
     const res = await api.post("/atestados-medicos", payload);
     return res.data.data;
   },
@@ -28,6 +29,21 @@ export const AtestadosAPI = {
 
   cancelar: async (id) => {
     const res = await api.patch(`/atestados-medicos/${id}/cancelar`);
+    return res.data.data;
+  },
+
+  presignUpload: async ({ cpf }) => {
+    const res = await api.post(
+      "/atestados-medicos/presign-upload",
+      { cpf }
+    );
+    return res.data.data;
+  },
+
+  presignDownload: async (id) => {
+    const res = await api.get(
+      `/atestados-medicos/${id}/presign-download`
+    );
     return res.data.data;
   },
 };

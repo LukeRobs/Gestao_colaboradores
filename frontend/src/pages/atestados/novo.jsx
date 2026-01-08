@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Upload } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
@@ -8,11 +8,10 @@ import api from "../../services/api";
 
 export default function NovoAtestado() {
   const navigate = useNavigate();
-  const { opsId } = useParams(); // opcional (quando vem do perfil)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [form, setForm] = useState({
-    opsId: opsId || "",
+    cpf: "",
     dataInicio: "",
     dataFim: "",
     cid: "",
@@ -48,8 +47,15 @@ export default function NovoAtestado() {
   async function handleSave() {
     if (saving) return;
 
-    if (!form.opsId || !form.dataInicio || !form.dataFim) {
-      alert("Preencha OPS ID e o período do atestado.");
+    const cpfLimpo = form.cpf.replace(/\D/g, "");
+
+    if (!cpfLimpo || cpfLimpo.length !== 11) {
+      alert("Informe um CPF válido do colaborador.");
+      return;
+    }
+
+    if (!form.dataInicio || !form.dataFim) {
+      alert("Informe o período do atestado.");
       return;
     }
 
@@ -69,12 +75,7 @@ export default function NovoAtestado() {
       /* 1️⃣ Presign upload */
       const presignRes = await api.post(
         "/atestados-medicos/presign-upload",
-        {
-          opsId: form.opsId,
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }
+        { cpf: cpfLimpo }
       );
 
       const { uploadUrl, key } = presignRes.data.data;
@@ -83,28 +84,27 @@ export default function NovoAtestado() {
       const upload = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": file.type, // application/pdf
+          "Content-Type": "application/pdf",
         },
         body: file,
       });
 
-
       if (!upload.ok) {
-        console.error("Erro PUT:", upload.status);
-        alert("Falha ao enviar o PDF para o armazenamento.");
+        alert("Falha ao enviar o PDF.");
         return;
       }
 
-      /* 3️⃣ Criação do atestado no backend */
+      /* 3️⃣ Criação do atestado */
       await api.post("/atestados-medicos", {
         ...form,
+        cpf: cpfLimpo,
         diasAfastamento,
         documentoKey: key,
       });
 
       navigate("/atestados");
     } catch (err) {
-      console.error("Erro ao salvar atestado:", err);
+      console.error(err);
       alert("Erro ao salvar atestado médico.");
     } finally {
       setSaving(false);
@@ -128,7 +128,7 @@ export default function NovoAtestado() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 rounded-lg bg-[#1A1A1C] hover:bg-[#2A2A2C]"
+                className="p-2 rounded-lg bg-[#1A1A1C]"
               >
                 <ArrowLeft size={18} />
               </button>
@@ -138,7 +138,7 @@ export default function NovoAtestado() {
                   Novo Atestado Médico
                 </h1>
                 <p className="text-sm text-[#BFBFC3]">
-                  Upload de PDF obrigatório + registro de afastamento
+                  Upload de PDF obrigatório
                 </p>
               </div>
             </div>
@@ -146,14 +146,7 @@ export default function NovoAtestado() {
             <button
               disabled={saving}
               onClick={handleSave}
-              className={`
-                flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium
-                ${
-                  saving
-                    ? "bg-[#FA4C00]/50 cursor-not-allowed"
-                    : "bg-[#FA4C00] hover:bg-[#ff5a1a]"
-                }
-              `}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#FA4C00] rounded-xl"
             >
               <Save size={16} />
               {saving ? "Salvando..." : "Salvar"}
@@ -163,11 +156,11 @@ export default function NovoAtestado() {
           {/* FORM */}
           <Section title="Informações do Atestado">
             <Input
-              name="opsId"
-              label="OPS ID do Colaborador"
-              value={form.opsId}
+              name="cpf"
+              label="CPF do Colaborador"
+              value={form.cpf}
               onChange={handleChange}
-              placeholder="Ex: OPS001"
+              placeholder="000.000.000-00"
             />
 
             <Input
@@ -196,7 +189,6 @@ export default function NovoAtestado() {
               label="CID (opcional)"
               value={form.cid}
               onChange={handleChange}
-              placeholder="Ex: M54.5"
             />
 
             <Textarea
@@ -207,29 +199,20 @@ export default function NovoAtestado() {
             />
 
             {/* PDF */}
-            <div className="flex flex-col gap-1 md:col-span-2">
+            <div className="md:col-span-2">
               <label className="text-xs text-[#BFBFC3]">
-                PDF do Atestado (obrigatório)
+                PDF do Atestado
               </label>
-
-              <label className="flex items-center gap-3 px-4 py-3 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl cursor-pointer hover:bg-[#242426]">
-                <Upload size={16} className="text-[#BFBFC3]" />
-                <span className="text-sm">
-                  {file ? file.name : "Selecionar arquivo PDF"}
-                </span>
+              <label className="flex items-center gap-3 px-4 py-3 bg-[#2A2A2C] rounded-xl cursor-pointer">
+                <Upload size={16} />
+                <span>{file ? file.name : "Selecionar PDF"}</span>
                 <input
                   type="file"
                   accept="application/pdf"
                   className="hidden"
-                  onChange={(e) =>
-                    setFile(e.target.files?.[0] || null)
-                  }
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
               </label>
-
-              <p className="text-xs text-[#BFBFC3] mt-1">
-                Apenas PDF. Recomendado até 5MB.
-              </p>
             </div>
           </Section>
         </main>
@@ -237,6 +220,7 @@ export default function NovoAtestado() {
     </div>
   );
 }
+
 
 /* ================= UI ================= */
 

@@ -34,8 +34,8 @@ export default function NovoAcidente() {
   const [erroOps, setErroOps] = useState("");
 
   const [form, setForm] = useState({
-    opsIdColaborador: "",
-    participouIntegracao: "false", // string p/ select
+    cpf: "",
+    participouIntegracao: "false",
     tipoOcorrencia: "",
     dataOcorrencia: "",
     horarioOcorrencia: "",
@@ -48,6 +48,7 @@ export default function NovoAcidente() {
     tipoLesao: "",
     acoesImediatas: "",
   });
+
 
   const [fotos, setFotos] = useState([]); // File[]
   const fotosCount = fotos.length;
@@ -77,15 +78,17 @@ export default function NovoAcidente() {
 
   // 🔎 busca colaborador ao sair do campo (onBlur) e também se apertar Enter
   async function buscarColaborador() {
-    const ops = String(form.opsIdColaborador || "").trim();
-    if (!ops) {
+    const cpfLimpo = form.cpf.replace(/\D/g, "");
+    if (cpfLimpo.length !== 11) {
       setColaborador(null);
-      setErroOps("");
+      setErroOps("CPF inválido");
       return;
     }
 
     try {
-      const res = await api.get(`/colaboradores/${ops}`);
+      const res = await api.get(`/colaboradores`, {
+        params: { cpf: cpfLimpo },
+      });
       setColaborador(res.data.data);
       setErroOps("");
     } catch {
@@ -93,6 +96,7 @@ export default function NovoAcidente() {
       setErroOps("Colaborador não encontrado");
     }
   }
+
 
   function handleFotosChange(filesList) {
     const files = Array.from(filesList || []);
@@ -111,9 +115,10 @@ export default function NovoAcidente() {
   }
 
   const podeSalvar = useMemo(() => {
-    if (!form.opsIdColaborador.trim()) return false;
+    const cpfLimpo = form.cpf.replace(/\D/g, "");
+    if (cpfLimpo.length !== 11) return false;
     if (!colaborador) return false;
-    if (colaborador.opsId !== form.opsIdColaborador.trim()) return false;
+
     if (!form.tipoOcorrencia) return false;
     if (!form.dataOcorrencia) return false;
     if (!form.horarioOcorrencia) return false;
@@ -126,41 +131,40 @@ export default function NovoAcidente() {
     if (!form.tipoLesao) return false;
     if (!form.acoesImediatas) return false;
     if (fotos.length < 1) return false;
+
     return true;
   }, [colaborador, form, fotos.length]);
 
-  async function handleSave() {
-    if (!podeSalvar) {
-      alert("Preencha todos os campos obrigatórios e envie de 1 a 5 fotos.");
-      return;
-    }
 
-    try {
-      setSaving(true);
+    async function handleSave() {
+      if (!podeSalvar) {
+        alert("Preencha todos os campos obrigatórios e envie de 1 a 5 fotos.");
+        return;
+      }
 
-      // Log para debug (remova após testar)
-      console.log("Salvando com opsId:", form.opsIdColaborador.trim());
+      const cpfLimpo = form.cpf.replace(/\D/g, "");
+
+      try {
+        setSaving(true);
+
+
 
       // 1) Presign + upload de cada foto
       const uploadedKeys = [];
 
       for (const file of fotos) {
-        // ✅ CORREÇÃO: Envie como { opsId, files: [{ filename, contentType, size }] }
+
         const fileInfo = {
           filename: file.name,
           contentType: file.type,
           size: file.size,
         };
 
-        const presignBody = {
-          opsId: form.opsIdColaborador.trim(),
+        const presignResponse = await AcidentesAPI.presignUpload({
+          cpf: cpfLimpo,
           files: [fileInfo],
-        };
+        });
 
-        // Log para debug (remova após testar)
-        console.log("Enviando presign para arquivo:", file.name, "com body:", presignBody);
-
-        const presignResponse = await AcidentesAPI.presignUpload(presignBody);
 
         const { uploadUrl, key } = presignResponse[0];
 
@@ -181,8 +185,8 @@ export default function NovoAcidente() {
 
       // 2) cria acidente no backend
       await AcidentesAPI.criar({
-        opsId: form.opsIdColaborador.trim(),
-        nomeRegistrante: registrador?.name || registrador?.nome || "Sistema",
+        cpf: cpfLimpo,
+        nomeRegistrante: registrador?.name || "Sistema",
         setor: colaborador?.setor?.nomeSetor || "",
         cargo: colaborador?.cargo?.nomeCargo || "",
         participouIntegracao: form.participouIntegracao === "true",
@@ -199,6 +203,7 @@ export default function NovoAcidente() {
         acoesImediatas: form.acoesImediatas,
         evidencias: uploadedKeys,
       });
+
 
       navigate("/acidentes");
     } catch (err) {
@@ -254,21 +259,19 @@ export default function NovoAcidente() {
 
           {/* Seção 1: Identificação */}
           <Section title="Identificação">
-            <Input
-              label="OPS ID do Colaborador Acidentado *"
-              name="opsIdColaborador"
-              value={form.opsIdColaborador}
-              onChange={(e) => {
-                const value = e.target.value;
-                setForm((p) => ({ ...p, opsIdColaborador: value }));
-                setErroOps("");
-                if (!value.trim()) {
-                  setColaborador(null);
-                }
-              }}
-              onBlur={buscarColaborador}
-              placeholder="Ex: OPS001"
-            />
+          <Input
+            label="CPF do Colaborador Acidentado *"
+            name="cpf"
+            value={form.cpf}
+            onChange={(e) => {
+              setForm((p) => ({ ...p, cpf: e.target.value }));
+              setErroOps("");
+              setColaborador(null);
+            }}
+            onBlur={buscarColaborador}
+            placeholder="000.000.000-00"
+          />
+
 
             {erroOps ? (
               <div className="md:col-span-2 text-sm text-red-400">{erroOps}</div>
@@ -277,7 +280,10 @@ export default function NovoAcidente() {
             {/* Dados do colaborador acidentado */}
             {colaborador ? (
               <div className="md:col-span-2 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4">
-                <p className="text-xs uppercase text-[#BFBFC3]">Dados do colaborador</p>
+                <p className="text-xs uppercase text-[#BFBFC3]">
+                  Dados do colaborador
+                </p>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                   <Info label="Nome" value={colaborador.nomeCompleto} />
                   <Info label="Matrícula" value={colaborador.matricula} />
@@ -287,15 +293,16 @@ export default function NovoAcidente() {
                   <Info label="Turno" value={colaborador.turno?.nomeTurno} />
                 </div>
               </div>
-            ) : form.opsIdColaborador.trim() ? (
+            ) : form.cpf.replace(/\D/g, "").length === 11 ? (
               <div className="md:col-span-2 text-sm text-yellow-400">
                 Carregando dados do colaborador...
               </div>
             ) : (
               <div className="md:col-span-2 text-xs text-[#BFBFC3]">
-                Digite o OPS ID e saia do campo para carregar os dados.
+                Digite o CPF e saia do campo para carregar os dados do colaborador.
               </div>
             )}
+
 
             <Select
               label="Participou da Integração? *"
