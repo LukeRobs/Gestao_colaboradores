@@ -43,9 +43,15 @@ export default function NovoColaborador() {
         const [e, s, c, t, esc] = await Promise.all([
           api.get("/empresas"),
           api.get("/setores"),
-          api.get("/cargos"),
+          api.get("/cargos", {
+            params: {
+              page: 1,
+              limit: 1000,
+              ativo: true,
+            },
+          }),
           api.get("/turnos"),
-          api.get("/escalas")
+          api.get("/escalas"),
         ]);
 
         setEmpresas(e.data.data || []);

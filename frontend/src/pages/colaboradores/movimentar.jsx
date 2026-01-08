@@ -12,6 +12,10 @@ export default function MovimentarColaborador() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  function normalize(res) {
+  return res?.data?.data ?? res?.data ?? [];
+}
+
   /* ================= FORM ================= */
   const [form, setForm] = useState({
     idEmpresa: "",
@@ -34,58 +38,65 @@ export default function MovimentarColaborador() {
   const [estacoes, setEstacoes] = useState([]);
 
   /* ================= LOAD ================= */
-  useEffect(() => {
-    let mounted = true;
+useEffect(() => {
+  let mounted = true;
 
-    (async () => {
-      try {
-        const [
-          empRes,
-          setRes,
-          carRes,
-          turRes,
-          estRes,
-          colabRes,
-        ] = await Promise.all([
-          api.get("/empresas"),
-          api.get("/setores"),
-          api.get("/cargos"),
-          api.get("/turnos"),
-          api.get("/estacoes"),
-          api.get(`/colaboradores/${opsId}`),
-        ]);
+  (async () => {
+    try {
+      const [
+        empRes,
+        setRes,
+        carRes,
+        turRes,
+        estRes,
+        colabRes,
+      ] = await Promise.all([
+        api.get("/empresas"),
+        api.get("/setores"),
+        api.get("/cargos", {
+          params: { page: 1, limit: 1000, ativo: true },
+        }),
+        api.get("/turnos"),
+        api.get("/estacoes"),
+        api.get(`/colaboradores/${opsId}`),
+      ]);
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        setEmpresas(empRes.data.data || empRes.data);
-        setSetores(setRes.data.data || setRes.data);
-        setCargos(carRes.data.data || carRes.data);
-        setTurnos(turRes.data.data || turRes.data);
-        setEstacoes(estRes.data.data || estRes.data);
+      setEmpresas(normalize(empRes));
+      setSetores(normalize(setRes));
+      setCargos(normalize(carRes));
+      setTurnos(normalize(turRes));
+      setEstacoes(normalize(estRes));
 
-        const payload = colabRes.data.data;
+      const payload = colabRes?.data?.data;
 
-        setForm((prev) => ({
-          ...prev,
-          idEmpresa: payload.colaborador.idEmpresa || "",
-          idSetor: payload.colaborador.idSetor || "",
-          idCargo: payload.colaborador.idCargo || "",
-          idTurno: payload.colaborador.idTurno || "",
-          idEstacao: payload.colaborador.idEstacao || "",
-          idLider: payload.colaborador.idLider || "",
-        }));
-
-        setRegional(payload.vinculoOrganizacional?.regional || "");
-      } catch (err) {
-        console.error("Erro ao carregar dados", err);
-        alert("Erro ao carregar dados do colaborador");
+      if (!payload?.colaborador) {
+        throw new Error("Colaborador não encontrado");
       }
-    })();
 
-    return () => {
-      mounted = false;
-    };
-  }, [opsId]);
+      setForm((prev) => ({
+        ...prev,
+        idEmpresa: payload.colaborador.idEmpresa ?? "",
+        idSetor: payload.colaborador.idSetor ?? "",
+        idCargo: payload.colaborador.idCargo ?? "",
+        idTurno: payload.colaborador.idTurno ?? "",
+        idEstacao: payload.colaborador.idEstacao ?? "",
+        idLider: payload.colaborador.idLider ?? "",
+      }));
+
+      setRegional(payload.vinculoOrganizacional?.regional ?? "");
+    } catch (err) {
+      console.error("Erro ao carregar dados", err);
+      alert("Erro ao carregar dados do colaborador");
+    }
+  })();
+
+  return () => {
+    mounted = false;
+  };
+}, [opsId]);
+
 
   /* ================= HANDLERS ================= */
   function handleChange(e) {
