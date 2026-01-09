@@ -61,7 +61,12 @@ export default function ColaboradoresPage() {
     load();
   }, [load]);
 
-  const turnos = ["Turnos", "T1", "T2", "T3"];
+  const turnos = [
+    { label: "Turnos", value: "TODOS" },
+    { label: "T1", value: "T1" },
+    { label: "T2", value: "T2" },
+    { label: "T3", value: "T3" },
+  ];
 
   // Handlers para paginação
   const handlePageChange = (newPage) => {
@@ -143,11 +148,12 @@ export default function ColaboradoresPage() {
                 "
               >
                 {turnos.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                  <option key={t.value} value={t.value}>
+                    {t.label}
                   </option>
                 ))}
               </select>
+              
               {/* ESCALA */}
               <select
                 value={escalaSelecionada}

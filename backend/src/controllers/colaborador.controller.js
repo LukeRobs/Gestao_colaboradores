@@ -38,6 +38,7 @@ const getAllColaboradores = async (req, res) => {
     idEmpresa,
     idLider,
     escala,
+    turno,
   } = req.query;
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -58,6 +59,11 @@ const getAllColaboradores = async (req, res) => {
   if (idEmpresa) where.idEmpresa = Number(idEmpresa);
   if (idLider) where.idLider = idLider;
   if (escala) { where.escala = { nomeEscala: escala};} // A | B | C
+  if (turno) {
+    where.turno = {
+      nomeTurno: turno, // "T1" | "T2" | "T3"
+    };
+  }
 
 
   try {

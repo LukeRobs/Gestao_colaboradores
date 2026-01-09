@@ -1,39 +1,48 @@
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
 
+function formatYMD(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function addDays(date, delta) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + delta);
+  return d;
+}
 
 function getDateOperacional(baseDate) {
   const d = new Date(baseDate);
   const minutos = d.getHours() * 60 + d.getMinutes();
 
-  const inRange = (s, e) =>
-    s <= e ? minutos >= s && minutos <= e : minutos >= s || minutos <= e;
+  const T1_START = 5 * 60 + 25;   // 05:25
+  const T2_START = 13 * 60 + 20;  // 13:20
+  const T3_START = 21 * 60;       // 21:00
 
-  let turno;
-  let diaOperacional = new Date(d);
+  let turnoAtual;
 
-  if (inRange(21 * 60, 5 * 60 + 24)) {
-    turno = "T3";
-  } else if (inRange(13 * 60 + 20, 23 * 60)) {
-    turno = "T2";
-  } else if (inRange(5 * 60 + 25, 13 * 60 + 19)) {
-    turno = "T1";
+  if (minutos >= T1_START && minutos < T2_START) {
+    turnoAtual = "T1";
+  } else if (minutos >= T2_START && minutos < T3_START) {
+    turnoAtual = "T2";
   } else {
-    turno = "T1";
+    turnoAtual = "T3";
   }
 
-  // 🔑 REGRA DE VIRADA DO DIA
-  // O dia só muda quando começa o T1
-  if (turno === "T1" && minutos < 13 * 60 + 20) {
-    // novo dia (já está correto)
-  } else {
-    // mantém o mesmo dia
-  }
+  // 🔑 REGRA CORRETA DO DIA OPERACIONAL
+  // Se for T3 e ainda não chegou 05:25 → dia operacional = ontem
+  const diaOperacional =
+    turnoAtual === "T3" && minutos < T1_START
+      ? addDays(d, -1)
+      : d;
 
-  diaOperacional.setHours(0, 0, 0, 0);
+  const dataOperacionalStr = formatYMD(diaOperacional);
 
   return {
-    turnoAtual: turno,
+    turnoAtual,
     dataOperacional: diaOperacional,
-    dataOperacionalStr: diaOperacional.toISOString().slice(0, 10),
+    dataOperacionalStr,
   };
 }
 
