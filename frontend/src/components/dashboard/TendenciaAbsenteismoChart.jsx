@@ -6,6 +6,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  LabelList,
 } from "recharts";
 
 export default function TendenciaAbsenteismoChart({ title, data }) {
@@ -17,17 +18,20 @@ export default function TendenciaAbsenteismoChart({ title, data }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid stroke="#2A2A2C" strokeDasharray="3 3" />
+
             <XAxis
               dataKey="data"
               stroke="#BFBFC3"
               tick={{ fontSize: 12 }}
             />
+
             <YAxis
               stroke="#BFBFC3"
               tick={{ fontSize: 12 }}
               domain={[0, "auto"]}
               tickFormatter={(v) => `${v}%`}
             />
+
             <Tooltip
               contentStyle={{
                 backgroundColor: "#1A1A1C",
@@ -37,6 +41,7 @@ export default function TendenciaAbsenteismoChart({ title, data }) {
               labelStyle={{ color: "#fff" }}
               formatter={(v) => [`${v}%`, "Absenteísmo"]}
             />
+
             <Line
               type="monotone"
               dataKey="percentual"
@@ -44,7 +49,16 @@ export default function TendenciaAbsenteismoChart({ title, data }) {
               strokeWidth={3}
               dot={{ r: 3 }}
               activeDot={{ r: 6 }}
-            />
+              isAnimationActive={false}
+            >
+              <LabelList
+                dataKey="percentual"
+                position="top"
+                formatter={(v) => `${v}%`}
+                fill="#FFFFFF"
+                fontSize={11}
+              />
+            </Line>
           </LineChart>
         </ResponsiveContainer>
       </div>
