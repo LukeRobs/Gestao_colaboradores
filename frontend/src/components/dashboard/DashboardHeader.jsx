@@ -9,34 +9,34 @@ export default function DashboardHeader({
   ===================================================== */
 
   const formatDateBR = (value) => {
-    if (!value) return "-";
+  if (!value) return "-";
 
-    // YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const [y, m, d] = value.split("-");
-      return `${d}/${m}/${y}`;
-    }
+  // Se já vier no formato YYYY-MM-DD
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-");
+    return `${d}/${m}/${y}`;
+  }
 
-    // ISO completo
-    const iso = String(value).slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-      const [y, m, d] = iso.split("-");
-      return `${d}/${m}/${y}`;
-    }
+  // Qualquer Date ou ISO → força locale BR (SEM UTC)
+  const d = new Date(value);
 
-    return value;
+    if (isNaN(d.getTime())) return "-";
+
+    return d.toLocaleDateString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+    });
   };
 
   const renderPeriodo = () => {
     if (!date) return "-";
 
-    // Caso já venha como string com →
+    // String já no formato "inicio → fim"
     if (typeof date === "string" && date.includes("→")) {
-      const [inicio, fim] = date.split("→").map((v) => v.trim());
+      const [inicio, fim] = date.split("→").map(v => v.trim());
       return `${formatDateBR(inicio)} → ${formatDateBR(fim)}`;
     }
 
-    // Caso venha como objeto { inicio, fim }
+    // Objeto { inicio, fim }
     if (typeof date === "object" && date.inicio && date.fim) {
       return `${formatDateBR(date.inicio)} → ${formatDateBR(date.fim)}`;
     }
@@ -44,6 +44,7 @@ export default function DashboardHeader({
     // Data única
     return formatDateBR(date);
   };
+
 
   /* =====================================================
      RENDER

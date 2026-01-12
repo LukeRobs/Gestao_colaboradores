@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   FileText,
   ShieldAlert,
+  Clock,
+  User,
 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
@@ -24,40 +26,44 @@ import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 
 /* =====================================================
-   ESTADO INICIAL SEGURO
+   ESTADO INICIAL (ALINHADO AO BACKEND)
 ===================================================== */
 const INITIAL_DATA = {
   periodo: { inicio: "", fim: "" },
 
-  totalColaboradores: 0,
-
-  indicadores: {
+  kpis: {
+    totalColaboradores: 0,
+    presentes: 0,
     absenteismo: 0,
     turnover: 0,
     atestados: 0,
     medidasDisciplinares: 0,
     acidentes: 0,
+    idadeMedia: 0,
+    tempoMedioEmpresaDias: 0,
+  },
+
+  statusColaboradores: {
+    ativos: 0,
+    afastadosCurto: 0,
+    inss: 0,
+    ferias: 0,
+    inativos: 0,
+    indisponiveis: 0,
+    percentualIndisponivel: 0,
   },
 
   genero: [],
-  status: [],
   empresasResumo: [],
   eventos: [],
 };
 
 export default function DashboardAdmin() {
-  /* =====================================================
-     STATES
-  ===================================================== */
+  /* ================= STATES ================= */
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dados, setDados] = useState(INITIAL_DATA);
   const [turno, setTurno] = useState("ALL");
-
-  // 📅 filtro de período (simples e limpo)
-  const [dateRange, setDateRange] = useState({
-    dataInicio: "",
-    dataFim: "",
-  });
+  const [dateRange, setDateRange] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
@@ -65,18 +71,13 @@ export default function DashboardAdmin() {
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
 
-  /* =====================================================
-     LOAD DASHBOARD ADMIN
-  ===================================================== */
+  /* ================= LOAD ================= */
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
         const res = await api.get("/dashboard/admin", {
-          params: {
-            turno,
-            ...dateRange,
-          },
+          params: { turno, ...dateRange },
         });
 
         setDados({
@@ -98,66 +99,87 @@ export default function DashboardAdmin() {
     load();
   }, [turno, dateRange, logout, navigate]);
 
-  /* =====================================================
-     📊 KPIs (UMA ÚNICA LINHA)
-  ===================================================== */
-  const kpis = useMemo(() => {
-    const i = dados.indicadores;
+ /* ================= KPIs ================= */
+const kpis = useMemo(() => {
+  const k = dados.kpis;
+
+  const idadeMedia = Number.isFinite(k.idadeMedia)
+    ? Math.round(k.idadeMedia)
+    : 0;
+
+  // conversão correta: dias → meses reais
+  const mesesEmpresa = Number.isFinite(k.tempoMedioEmpresaDias)
+    ? Math.max(
+        0,
+        Math.round(k.tempoMedioEmpresaDias / 30.44)
+      )
+    : 0;
+
+  return [
+    {
+      icon: Users,
+      label: "Colaboradores",
+      value: k.totalColaboradores || 0,
+    },
+    {
+      icon: TrendingUp,
+      label: "Absenteísmo",
+      value: k.absenteismo || 0,
+      suffix: "%",
+      color: k.absenteismo > 10 ? "#FF453A" : "#34C759",
+    },
+    {
+      icon: TrendingUp,
+      label: "Turnover",
+      value: k.turnover || 0,
+      suffix: "%",
+      color: k.turnover > 5 ? "#FF9F0A" : "#34C759",
+    },
+    {
+      icon: FileText,
+      label: "Atestados",
+      value: k.atestados || 0,
+    },
+    {
+      icon: ShieldAlert,
+      label: "Medidas Disciplinares",
+      value: k.medidasDisciplinares || 0,
+    },
+    {
+      icon: AlertTriangle,
+      label: "Acidentes",
+      value: k.acidentes || 0,
+      color: "#FFD60A",
+    },
+    {
+      icon: User,
+      label: "Idade Média",
+      value: idadeMedia,
+      suffix: " anos",
+    },
+    {
+      icon: Clock,
+      label: "Tempo Médio de Empresa",
+      value: mesesEmpresa,
+      suffix: " meses",
+    },
+  ];
+}, [dados.kpis]);
+
+  /* ================= STATUS ================= */
+  const statusItems = useMemo(() => {
+    const s = dados.statusColaboradores;
 
     return [
-      {
-        icon: Users,
-        label: "Colaboradores",
-        value: dados.totalColaboradores,
-      },
-      {
-        icon: TrendingUp,
-        label: "Absenteísmo",
-        value: i.absenteismo,
-        suffix: "%",
-        color: i.absenteismo > 10 ? "#FF453A" : "#34C759",
-      },
-      {
-        icon: TrendingUp,
-        label: "Turnover",
-        value: i.turnover,
-        suffix: "%",
-        color: i.turnover > 5 ? "#FF9F0A" : "#34C759",
-      },
-      {
-        icon: FileText,
-        label: "Atestados",
-        value: i.atestados,
-      },
-      {
-        icon: ShieldAlert,
-        label: "Medidas Disciplinares",
-        value: i.medidasDisciplinares,
-      },
-      {
-        icon: AlertTriangle,
-        label: "Acidentes",
-        value: i.acidentes,
-        color: "#FFD60A",
-      },
+      { label: "Ativos", value: s.ativos },
+      { label: "Férias", value: s.ferias },
+      { label: "Afastados (≤15d)", value: s.afastadosCurto },
+      { label: "INSS (≥16d)", value: s.inss },
+      { label: "Inativos", value: s.inativos },
     ];
-  }, [dados]);
+  }, [dados.statusColaboradores]);
 
-  /* =====================================================
-     STATUS DOS COLABORADORES
-  ===================================================== */
-  const statusItems = useMemo(
-    () =>
-      (dados.status || []).map((s) => ({
-        label: s.label,
-        value: s.quantidade,
-      })),
-    [dados]
-  );
-
-  /* =====================================================
-     EVENTOS
-  ===================================================== */
+  /* ================= EVENTOS ================= */
   const tableColumns = useMemo(
     () => [
       { key: "nome", label: "Colaborador" },
@@ -174,9 +196,7 @@ export default function DashboardAdmin() {
     []
   );
 
-  /* =====================================================
-     RENDER STATES
-  ===================================================== */
+  /* ================= RENDER ================= */
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center text-[#BFBFC3]">
@@ -205,7 +225,6 @@ export default function DashboardAdmin() {
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 space-y-10">
-          {/* HEADER */}
           <DashboardHeader
             title="Dashboard Administrativo"
             subtitle="Período"
@@ -217,7 +236,6 @@ export default function DashboardAdmin() {
             badges={[`Turno: ${turno === "ALL" ? "Todos" : turno}`]}
           />
 
-          {/* FILTROS */}
           <div className="flex flex-wrap gap-6 items-center">
             <TurnoSelector
               value={turno}
@@ -225,19 +243,11 @@ export default function DashboardAdmin() {
               options={["ALL", "T1", "T2", "T3"]}
             />
 
-            <DateFilter
-              value={dateRange}
-              onApply={(range) => {
-                setDateRange(range);
-              }}
-            />
-
+            <DateFilter value={dateRange} onApply={setDateRange} />
           </div>
 
-          {/* KPIs */}
           <KpiCardsRow items={kpis} />
 
-          {/* GRÁFICOS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <DistribuicaoGeneroChart
               title="Distribuição por Gênero"
@@ -247,13 +257,12 @@ export default function DashboardAdmin() {
             <StatusColaboradoresSection
               title="Status dos Colaboradores"
               items={statusItems}
+              footer={`Indisponíveis: ${dados.statusColaboradores.percentualIndisponivel}%`}
             />
           </div>
 
-          {/* EMPRESAS */}
           <EmpresasResumoSection empresas={dados.empresasResumo} />
 
-          {/* EVENTOS */}
           <AusentesHojeTable
             title="Eventos no período"
             data={dados.eventos}

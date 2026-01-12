@@ -1,53 +1,68 @@
-function startOfDay(d) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+function parseLocalDate(iso) {
+  // iso = "YYYY-MM-DD"
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
-function endOfDay(d) {
-  const x = new Date(d);
-  x.setHours(23, 59, 59, 999);
-  return x;
+function startOfDayLocal(iso) {
+  const d = parseLocalDate(iso);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
+
+function endOfDayLocal(iso) {
+  const d = parseLocalDate(iso);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 
 function getPeriodoFiltro(query = {}) {
-  const hoje = startOfDay(new Date());
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
 
-  // 📅 DATA ÚNICA
+  // 📅 DIA ÚNICO
   if (query.data) {
-    const d = startOfDay(new Date(query.data));
-    return { inicio: d, fim: endOfDay(d) };
+    return {
+      inicio: startOfDayLocal(query.data),
+      fim: endOfDayLocal(query.data),
+    };
   }
 
   // 📅 INTERVALO MANUAL
   if (query.dataInicio && query.dataFim) {
     return {
-      inicio: startOfDay(new Date(query.dataInicio)),
-      fim: endOfDay(new Date(query.dataFim)),
+      inicio: startOfDayLocal(query.dataInicio),
+      fim: endOfDayLocal(query.dataFim),
     };
   }
 
-  // ⚡ PRESET PADRÃO (compatibilidade)
+  // ⚡ PRESET (ex: 7d, 30d)
   if (query.periodo) {
     const dias = Number(query.periodo.replace("d", ""));
     if (!isNaN(dias) && dias > 0) {
       const inicio = new Date(hoje);
       inicio.setDate(inicio.getDate() - (dias - 1));
       return {
-        inicio: startOfDay(inicio),
-        fim: endOfDay(hoje),
+        inicio,
+        fim: endOfDayLocal(
+          `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`
+        ),
       };
     }
   }
 
-  // ✅ DEFAULT REAL — ÚLTIMOS 30 DIAS
+  // ✅ DEFAULT — últimos 30 dias
   const inicio = new Date(hoje);
   inicio.setDate(inicio.getDate() - 29);
 
+  const fimISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+
   return {
-    inicio: startOfDay(inicio),
-    fim: endOfDay(hoje),
+    inicio,
+    fim: endOfDayLocal(fimISO),
   };
 }
+
 
 module.exports = { getPeriodoFiltro };

@@ -38,6 +38,24 @@ function getStatusDoDia(f) {
   return { code: "F", impactaAbsenteismo: true };
 }
 
+function calcularTempoMedioEmpresa(colaboradores, refDate = new Date()) {
+  const ref = new Date(refDate);
+  ref.setHours(0, 0, 0, 0);
+
+  const tempos = colaboradores
+    .filter(c => c.dataAdmissao)
+    .map(c => {
+      const adm = new Date(c.dataAdmissao);
+      adm.setHours(0, 0, 0, 0);
+      return Math.max(0, Math.floor((ref - adm) / 86400000));
+    });
+
+  if (!tempos.length) return 0;
+
+  return Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length);
+}
+
+
 /* =====================================================
    BUILDERS
 ===================================================== */
@@ -52,58 +70,245 @@ function buildGenero(colaboradores) {
   return Object.entries(map).map(([name, value]) => ({ name, value }));
 }
 
-/* ---------- STATUS ---------- */
-function buildStatus(frequencias) {
-  const map = {};
-  frequencias.forEach((f) => {
-    const s = getStatusDoDia(f);
-    map[s.code] = (map[s.code] || 0) + 1;
-  });
+/* ---------- Média de Idade ---------- */
+function buildIdadeMedia(colaboradores) {
+  const hoje = new Date();
+  const idades = colaboradores
+    .filter(c => c.dataNascimento)
+    .map(c => {
+      const nasc = new Date(c.dataNascimento);
+      let idade = hoje.getFullYear() - nasc.getFullYear();
+      const m = hoje.getMonth() - nasc.getMonth();
+      if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) {
+        idade--;
+      }
+      return idade;
+    });
 
-  return Object.entries(map).map(([code, quantidade]) => ({
-    code,
-    label:
-      code === "P"
-        ? "Presente"
-        : code === "F"
-        ? "Falta"
-        : code,
-    quantidade,
-  }));
+  if (!idades.length) return 0;
+
+  return Math.round(
+    idades.reduce((a, b) => a + b, 0) / idades.length
+  );
 }
 
-/* ---------- OVERVIEW ---------- */
-function buildOverview({ colaboradores, frequencias, inicio, fim }) {
-  const totalColaboradores = colaboradores.length;
-  const diasPeriodo = Math.max(0, daysInclusive(inicio, fim));
-  const diasEsperados = totalColaboradores * diasPeriodo;
+/* ---------- Tempo Médio de empresa ---------- */
+function buildTempoMedioEmpresa(colaboradores) {
+  const hoje = new Date();
 
-  let diasAbsenteismo = 0;
-  const presentesSet = new Set();
+  const tempos = colaboradores
+    .filter(c => c.dataAdmissao)
+    .map(c => {
+      const adm = new Date(c.dataAdmissao);
+      return Math.floor((hoje - adm) / 86400000);
+    });
 
-  frequencias.forEach((f) => {
-    const s = getStatusDoDia(f);
-    if (s.impactaAbsenteismo) diasAbsenteismo++;
-    if (s.code === "P") presentesSet.add(f.opsId);
+  if (!tempos.length) return 0;
+
+  return Math.round(
+    tempos.reduce((a, b) => a + b, 0) / tempos.length
+  );
+}
+
+/* ---------- STATUS dos COLABORADORES ---------- */
+function buildStatusColaboradores({
+  colaboradores,
+  atestados,
+}) {
+  const status = {
+    ativos: 0,
+    afastadosCurto: 0,
+    inss: 0,
+    ferias: 0,
+    inativos: 0,
+  };
+
+  /* ===============================
+     MAPA DE ATESTADOS (DIAS)
+  =============================== */
+  const atestadosMap = new Map();
+  atestados.forEach(a => {
+    const dias = daysInclusive(a.dataInicio, a.dataFim);
+    atestadosMap.set(a.opsId, dias);
   });
 
+  /* ===============================
+     CLASSIFICAÇÃO FINAL
+  =============================== */
+  colaboradores.forEach(c => {
+    const statusColab = String(c.status).toUpperCase();
+
+    // 1️⃣ INATIVO
+    if (statusColab === "INATIVO") {
+      status.inativos++;
+      return;
+    }
+
+    // 2️⃣ FÉRIAS
+    if (statusColab === "FERIAS") {
+      status.ferias++;
+      return;
+    }
+
+    // 3️⃣ AFASTADO (refinado por atestado)
+    if (statusColab === "AFASTADO") {
+      const diasAtestado = atestadosMap.get(c.opsId) || 0;
+
+      if (diasAtestado >= 16) {
+        status.inss++;
+      } else {
+        status.afastadosCurto++;
+      }
+      return;
+    }
+
+    // 4️⃣ ATIVO
+    status.ativos++;
+  });
+
+  const indisponiveis =
+    status.afastadosCurto + status.inss + status.ferias;
+
   return {
-    totalColaboradores,
-    presentes: presentesSet.size,
-    absenteismo:
-      diasEsperados > 0
-        ? Number(((diasAbsenteismo / diasEsperados) * 100).toFixed(2))
+    ...status,
+    indisponiveis,
+    percentualIndisponivel:
+      colaboradores.length > 0
+        ? Number(
+            ((indisponiveis / colaboradores.length) * 100).toFixed(2)
+          )
         : 0,
   };
 }
 
+
+
+/* ---------- ESCALAS ---------- */
+function buildEscalas(colaboradores, frequencias, colaboradoresMap) {
+  const map = {};
+
+  colaboradores.forEach(c => {
+    const esc = c.escala?.nomeEscala || "N/I";
+    if (!map[esc]) {
+      map[esc] = {
+        escala: esc,
+        total: 0,
+        absDias: 0,
+      };
+    }
+    map[esc].total++;
+  });
+
+  frequencias.forEach(f => {
+    const s = getStatusDoDia(f);
+    if (!s.impactaAbsenteismo) return;
+
+    const c = colaboradoresMap.get(f.opsId);
+    if (!c) return;
+
+    const esc = c.escala?.nomeEscala || "N/I";
+    if (map[esc]) map[esc].absDias++;
+  });
+
+  return Object.values(map).map(e => ({
+    escala: e.escala,
+    total: e.total,
+    absenteismo:
+      e.total > 0
+        ? Number((e.absDias / e.total).toFixed(2))
+        : 0,
+  }));
+}
+
+
+/* ---------- Lideres ---------- */
+function buildLideres(colaboradores, frequencias, colaboradoresMap) {
+  const map = {};
+
+  colaboradores.forEach(c => {
+    const lider = c.lider?.nomeCompleto || "Sem líder";
+    if (!map[lider]) {
+      map[lider] = {
+        lider,
+        total: 0,
+        absDias: 0,
+      };
+    }
+    map[lider].total++;
+  });
+
+  frequencias.forEach(f => {
+    const s = getStatusDoDia(f);
+    if (!s.impactaAbsenteismo) return;
+
+    const c = colaboradoresMap.get(f.opsId);
+    if (!c) return;
+
+    const lider = c.lider?.nomeCompleto || "Sem líder";
+    if (map[lider]) map[lider].absDias++;
+  });
+
+  return Object.values(map)
+    .map(l => ({
+      lider: l.lider,
+      totalColaboradores: l.total,
+      absenteismo:
+        l.total > 0
+          ? Number((l.absDias / l.total).toFixed(2))
+          : 0,
+    }))
+    .sort((a, b) => b.absenteismo - a.absenteismo);
+}
+
+/* ---------- OVERVIEW ---------- */
+function buildOverview({ frequencias }) {
+  if (!frequencias.length) {
+    return {
+      totalColaboradores: 0,
+      presentes: 0,
+      absenteismo: 0,
+    };
+  }
+
+  const colaboradoresSet = new Set();
+  const presentesSet = new Set();
+  let faltas = 0;
+
+  frequencias.forEach(f => {
+    colaboradoresSet.add(f.opsId);
+
+    const s = getStatusDoDia(f);
+
+    if (s.code === "P") presentesSet.add(f.opsId);
+    if (s.impactaAbsenteismo) faltas++;
+  });
+
+  return {
+    totalColaboradores: colaboradoresSet.size,
+    presentes: presentesSet.size,
+    absenteismo: Number(
+      ((faltas / frequencias.length) * 100).toFixed(2)
+    ),
+  };
+}
+
+
 /* ---------- TURNOVER GLOBAL ---------- */
-function buildTurnoverGlobal({ totalAtivosInicio, desligadosPeriodo }) {
-  if (!totalAtivosInicio) return 0;
+function buildTurnoverGlobal({
+  totalColaboradores,
+  admitidosPeriodo,
+  desligadosPeriodo,
+}) {
+  if (!totalColaboradores) return 0;
+
+  const mediaMovimentacao =
+    (admitidosPeriodo + desligadosPeriodo) / 2;
+
   return Number(
-    ((desligadosPeriodo / totalAtivosInicio) * 100).toFixed(2)
+    ((mediaMovimentacao / totalColaboradores) * 100).toFixed(2)
   );
 }
+
 
 /* ---------- EVENTOS ---------- */
 function buildEventos({ colaboradoresMap, atestados, acidentes, medidas }) {
@@ -145,10 +350,24 @@ function buildEventos({ colaboradoresMap, atestados, acidentes, medidas }) {
     });
   });
 
+  /* 🔁 REINCIDÊNCIA */
+  const contador = {};
+  eventos.forEach(e => {
+    const key = `${e.nome}-${e.evento}`;
+    contador[key] = (contador[key] || 0) + 1;
+  });
+
+  eventos.forEach(e => {
+    const key = `${e.nome}-${e.evento}`;
+    e.reincidente = contador[key] > 1;
+    e.qtdeEventos = contador[key];
+  });
+
   return eventos.sort(
     (a, b) => new Date(b.data) - new Date(a.data)
   );
 }
+
 
 /* ---------- EMPRESAS RESUMO + TURNOVER + ABSENTEÍSMO ---------- */
 function buildEmpresasResumo({
@@ -159,21 +378,24 @@ function buildEmpresasResumo({
   medidas,
   acidentes,
   desligados,
+  admitidos,
   inicio,
   fim,
 }) {
   const diasPeriodo = daysInclusive(inicio, fim);
   const map = {};
+  const colaboradoresAtivosPeriodo = {};
 
   /* ===============================
      BASE: COLABORADORES POR EMPRESA
   =============================== */
-  colaboradores.forEach((c) => {
+  colaboradores.forEach(c => {
     const emp = c.empresa?.razaoSocial || "Sem empresa";
 
     if (!map[emp]) {
       map[emp] = {
         empresa: emp,
+        colaboradores: [],
         totalColaboradores: 0,
         presentes: new Set(),
         absDias: 0,
@@ -181,21 +403,28 @@ function buildEmpresasResumo({
         medidasDisciplinares: 0,
         acidentes: 0,
         desligados: 0,
+        admitidos: 0,
       };
     }
 
     map[emp].totalColaboradores++;
+    map[emp].colaboradores.push(c);
   });
 
   /* ===============================
-     FREQUÊNCIAS (PRESENÇA / ABS)
+     FREQUÊNCIAS
   =============================== */
-  frequencias.forEach((f) => {
+  frequencias.forEach(f => {
     const c = colaboradoresMap.get(f.opsId);
     if (!c) return;
 
     const emp = c.empresa?.razaoSocial || "Sem empresa";
     const s = getStatusDoDia(f);
+
+    if (!colaboradoresAtivosPeriodo[emp]) {
+      colaboradoresAtivosPeriodo[emp] = new Set();
+    }
+    colaboradoresAtivosPeriodo[emp].add(f.opsId);
 
     if (s.code === "P") {
       map[emp].presentes.add(f.opsId);
@@ -206,72 +435,123 @@ function buildEmpresasResumo({
     }
   });
 
+
   /* ===============================
      EVENTOS
   =============================== */
-  atestados.forEach((a) => {
+  atestados.forEach(a => {
     const c = colaboradoresMap.get(a.opsId);
-    if (c) {
-      map[c.empresa?.razaoSocial || "Sem empresa"].atestados++;
-    }
+    if (c) map[c.empresa?.razaoSocial || "Sem empresa"].atestados++;
   });
 
-  medidas.forEach((m) => {
+  medidas.forEach(m => {
     const c = colaboradoresMap.get(m.opsId);
-    if (c) {
-      map[c.empresa?.razaoSocial || "Sem empresa"]
-        .medidasDisciplinares++;
-    }
+    if (c) map[c.empresa?.razaoSocial || "Sem empresa"].medidasDisciplinares++;
   });
 
-  acidentes.forEach((a) => {
+  acidentes.forEach(a => {
     const c = colaboradoresMap.get(a.opsIdColaborador);
-    if (c) {
-      map[c.empresa?.razaoSocial || "Sem empresa"].acidentes++;
-    }
+    if (c) map[c.empresa?.razaoSocial || "Sem empresa"].acidentes++;
   });
 
-  desligados.forEach((c) => {
+  desligados.forEach(c => {
     const emp = c.empresa?.razaoSocial || "Sem empresa";
-    if (map[emp]) {
-      map[emp].desligados++;
-    }
+    if (map[emp]) map[emp].desligados++;
+  });
+
+  admitidos.forEach(c => {
+    const emp = c.empresa?.razaoSocial || "Sem empresa";
+    if (map[emp]) map[emp].admitidos++;
   });
 
   /* ===============================
-     CÁLCULOS FINAIS
+     CALCULA EMPRESAS
   =============================== */
-  return Object.values(map).map((e) => {
-    const diasEsperados = e.totalColaboradores * diasPeriodo;
+  const empresas = Object.values(map).map(e => {
+    const totalPeriodo = 
+      colaboradoresAtivosPeriodo[e.empresa]?.size || 0;
+
+    const diasEsperados = totalPeriodo * diasPeriodo
 
     const absenteismo =
       diasEsperados > 0
         ? Number(((e.absDias / diasEsperados) * 100).toFixed(2))
         : 0;
 
+    const mediaMovimentacao = (e.admitidos + e.desligados) / 2;
+
     const turnover =
-      e.totalColaboradores > 0
-        ? Number(
-            ((e.desligados / e.totalColaboradores) * 100).toFixed(2)
+      totalPeriodo > 0
+        ? Number(((mediaMovimentacao / totalPeriodo) * 100).toFixed(2)
           )
         : 0;
 
     return {
       empresa: e.empresa,
-      totalColaboradores: e.totalColaboradores,
+      totalColaboradores: totalPeriodo,
       presentes: e.presentes.size,
 
-      atestados: e.atestados,
+      absenteismo,
       medidasDisciplinares: e.medidasDisciplinares,
+      atestados: e.atestados,
       acidentes: e.acidentes,
 
-      absenteismo,
-      desligados: e.desligados,
       turnover,
+      tempoMedioEmpresaDias: calcularTempoMedioEmpresa(e.colaboradores),
     };
   });
-}
 
+  /* ===============================
+     TOTAL BPO
+  =============================== */
+  const bpoEmpresas = ["ADECCO", "ADILIS", "LUANDRE"];
+  const bpo = empresas.filter(e =>
+    bpoEmpresas.includes(e.empresa.toUpperCase())
+  );
+
+  if (bpo.length) {
+    const totalColaboradores = bpo.reduce((s, e) => s + e.totalColaboradores, 0);
+    const presentes = bpo.reduce((s, e) => s + e.presentes, 0);
+    const atestadosTot = bpo.reduce((s, e) => s + e.atestados, 0);
+    const medidasTot = bpo.reduce((s, e) => s + e.medidasDisciplinares, 0);
+    const acidentesTot = bpo.reduce((s, e) => s + e.acidentes, 0);
+
+
+    const mediaMov = (admitidos.length + desligados.length) / 2;
+
+    const turnover =
+      totalColaboradores > 0
+        ? Number(((mediaMov / totalColaboradores) * 100).toFixed(2))
+        : 0;
+
+    empresas.push({
+      empresa: "TOTAL BPO",
+      totalColaboradores,
+      presentes,
+      absenteismo:
+        totalColaboradores > 0
+          ? Number(
+              (
+                bpo.reduce((s, e) => s + e.absenteismo * e.totalColaboradores, 0) /
+                totalColaboradores
+              ).toFixed(2)
+            )
+          : 0,
+      medidasDisciplinares: medidasTot,
+      atestados: atestadosTot,
+      acidentes: acidentesTot,
+      turnover,
+      tempoMedioEmpresaDias: Math.round(
+        bpo.reduce(
+          (s, e) => s + e.tempoMedioEmpresaDias * e.totalColaboradores,
+          0
+        ) / totalColaboradores
+      ),
+    });
+  }
+
+  return empresas;
+}
 
 /* =====================================================
    CONTROLLER — DASHBOARD ADMIN
@@ -280,52 +560,51 @@ const carregarDashboardAdmin = async (req, res) => {
   try {
     const { inicio, fim } = getPeriodoFiltro(req.query);
     const { turno } = req.query;
-    
+
+    /* ===============================
+       COLABORADORES BASE
+    =============================== */
     const colaboradores = await prisma.colaborador.findMany({
       where: {
-        status: "ATIVO",
+        status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
         ...(turno && turno !== "ALL" && {
-          turno: {
-            nomeTurno: turno,
-          },
+          turno: { nomeTurno: turno },
         }),
       },
       include: {
         empresa: true,
         setor: true,
         turno: true,
+        escala: true,
+        lider: true,
       },
     });
 
-
-    const opsIds = colaboradores.map((c) => c.opsId);
+    const opsIds = colaboradores.map(c => c.opsId);
 
     if (!opsIds.length) {
       return res.json({
         success: true,
         data: {
           periodo: { inicio: isoDate(inicio), fim: isoDate(fim) },
-          totalColaboradores: 0,
-          indicadores: {
-            absenteismo: 0,
-            presentes: 0,
-            atestados: 0,
-            medidasDisciplinares: 0,
-            acidentes: 0,
-            turnover: 0,
-          },
+          kpis: {},
+          statusColaboradores: {},
           genero: [],
-          status: [],
-          eventos: [],
           empresasResumo: [],
+          escalas: [],
+          lideres: [],
+          eventos: [],
         },
       });
     }
 
     const colaboradoresMap = new Map(
-      colaboradores.map((c) => [c.opsId, c])
+      colaboradores.map(c => [c.opsId, c])
     );
 
+    /* ===============================
+       DADOS AUXILIARES
+    =============================== */
     const frequencias = await prisma.frequencia.findMany({
       where: {
         opsId: { in: opsIds },
@@ -333,6 +612,18 @@ const carregarDashboardAdmin = async (req, res) => {
       },
       include: { tipoAusencia: true },
     });
+    /* ===============================
+      BASE REAL DO PERÍODO (ESCALADOS)
+    =============================== */
+    // opsIds que realmente trabalharam / faltaram no período
+    const opsIdsPeriodo = Array.from(
+      new Set(frequencias.map(f => f.opsId))
+    );
+
+    // colaboradores reais do dashboard (escala)
+    const colaboradoresPeriodo = colaboradores.filter(c =>
+      opsIdsPeriodo.includes(c.opsId)
+    );
 
     const atestados = await prisma.atestadoMedico.findMany({
       where: {
@@ -361,44 +652,48 @@ const carregarDashboardAdmin = async (req, res) => {
         status: "INATIVO",
         dataDesligamento: { gte: inicio, lte: fim },
       },
-      include: { empresa: true },
     });
 
-    const overview = buildOverview({
-      colaboradores,
-      frequencias,
-      inicio,
-      fim,
+    const admitidos = await prisma.colaborador.findMany({
+      where: {
+        dataAdmissao: { gte: inicio, lte: fim },
+      },
     });
 
+    const overview = buildOverview({ frequencias });
+
+    /* ===============================
+       RESPONSE FINAL
+    =============================== */
     return res.json({
       success: true,
       data: {
         periodo: { inicio: isoDate(inicio), fim: isoDate(fim) },
 
-        totalColaboradores: overview.totalColaboradores,
-
-        indicadores: {
-          absenteismo: overview.absenteismo,
+        kpis: {
+          totalColaboradores: overview.totalColaboradores,
           presentes: overview.presentes,
-          atestados: atestados.length,
-          medidasDisciplinares: medidas.length,
-          acidentes: acidentes.length,
+          absenteismo: overview.absenteismo,
           turnover: buildTurnoverGlobal({
-            totalAtivosInicio: overview.totalColaboradores,
+            totalColaboradores: overview.totalColaboradores,
+            admitidosPeriodo: admitidos.length,
             desligadosPeriodo: desligados.length,
           }),
+          atestados: atestados.filter(a =>
+            opsIdsPeriodo.includes(a.opsId)
+          ).length,
+          medidasDisciplinares: medidas.length,
+          acidentes: acidentes.length,
+          idadeMedia: buildIdadeMedia(colaboradoresPeriodo),
+          tempoMedioEmpresaDias: calcularTempoMedioEmpresa(colaboradoresPeriodo, fim),
         },
 
-        genero: buildGenero(colaboradores),
-        status: buildStatus(frequencias),
-
-        eventos: buildEventos({
-          colaboradoresMap,
+        statusColaboradores: buildStatusColaboradores({
+          colaboradores: colaboradoresPeriodo,
           atestados,
-          acidentes,
-          medidas,
         }),
+
+        genero: buildGenero(colaboradoresPeriodo),
 
         empresasResumo: buildEmpresasResumo({
           colaboradores,
@@ -408,8 +703,28 @@ const carregarDashboardAdmin = async (req, res) => {
           medidas,
           acidentes,
           desligados,
+          admitidos,
           inicio,
           fim,
+        }),
+
+        escalas: buildEscalas(
+          colaboradoresPeriodo,
+          frequencias,
+          colaboradoresMap
+        ),
+
+        lideres: buildLideres(
+          colaboradoresPeriodo,
+          frequencias,
+          colaboradoresMap
+        ),
+
+        eventos: buildEventos({
+          colaboradoresMap,
+          atestados,
+          acidentes,
+          medidas,
         }),
       },
     });
