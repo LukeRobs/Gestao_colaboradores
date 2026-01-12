@@ -526,7 +526,7 @@ function buildEmpresasResumo({
       acidentes: e.acidentes,
 
       turnover,
-      tempoMedioEmpresaDias: calcularTempoMedioEmpresa(e.colaboradores),
+      tempoMedioEmpresaDias: buildTempoMedioEmpresa(e.colaboradores),
     };
   });
 
@@ -718,7 +718,7 @@ const carregarDashboardAdmin = async (req, res) => {
           medidasDisciplinares: medidas.length,
           acidentes: acidentes.length,
           idadeMedia: buildIdadeMedia(colaboradoresPeriodo),
-          tempoMedioEmpresaDias: calcularTempoMedioEmpresa(colaboradoresPeriodo, fim),
+          tempoMedioEmpresaDias: buildTempoMedioEmpresa(colaboradoresPeriodo, fim),
         },
 
         statusColaboradores: buildStatusColaboradores({
