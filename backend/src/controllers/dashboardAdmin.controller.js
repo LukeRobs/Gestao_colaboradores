@@ -276,7 +276,7 @@ function buildLideres(colaboradores, frequencias, colaboradoresMap) {
 }
 
 /* ---------- OVERVIEW ---------- */
-function buildOverview({ frequencias }) {
+function buildOverview({ frequencias, inicio, fim }) {
   if (!frequencias.length) {
     return {
       totalColaboradores: 0,
@@ -285,39 +285,42 @@ function buildOverview({ frequencias }) {
     };
   }
 
+  const diasPeriodo = daysInclusive(inicio, fim);
+
+  let absDias = 0;
+
   const escaladosSet = new Set();
   const presentesSet = new Set();
-  const ausentesSet = new Set();
 
   frequencias.forEach(f => {
     const s = getStatusDoDia(f);
 
-    if (s.contaComoEscalado) {
-      escaladosSet.add(f.opsId);
-    }
+    // só quem estava escalado no dia
+    if (!s.contaComoEscalado) return;
+
+    escaladosSet.add(f.opsId);
 
     if (s.code === "P") {
       presentesSet.add(f.opsId);
     }
 
     if (s.impactaAbsenteismo) {
-      ausentesSet.add(f.opsId);
+      absDias++;
     }
-
   });
 
-  const total = escaladosSet.size;
+  const totalEscalados = escaladosSet.size;
+  const diasEsperados = totalEscalados * diasPeriodo;
 
   return {
-    totalColaboradores: total,
+    totalColaboradores: totalEscalados,
     presentes: presentesSet.size,
     absenteismo:
-      total > 0
-        ? Number(((ausentesSet.size / total) * 100).toFixed(2))
+      diasEsperados > 0
+        ? Number(((absDias / diasEsperados) * 100).toFixed(2))
         : 0,
   };
 }
-
 
 
 /* ---------- TURNOVER GLOBAL ---------- */
@@ -693,7 +696,7 @@ const carregarDashboardAdmin = async (req, res) => {
       },
     });
 
-    const overview = buildOverview({ frequencias });
+    const overview = buildOverview({ frequencias, inicio, fim });
 
     /* ===============================
        RESPONSE FINAL
