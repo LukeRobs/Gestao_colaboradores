@@ -64,7 +64,161 @@ function getStatusDoDia(f) {
 /* =====================================================
    BUILDERS
 ===================================================== */
+  function buildEscalasResumo({ frequencias, colaboradoresMap, inicio, fim }) {
+  const diasPeriodo = daysInclusive(inicio, fim);
+  const map = {};
 
+  frequencias.forEach((f) => {
+    const s = getStatusDoDia(f);
+    if (!s.contaComoEscalado) return;
+
+    const c = colaboradoresMap.get(f.opsId);
+    if (!c) return;
+
+    const esc = c.escala?.nomeEscala || "N/I";
+
+    if (!map[esc]) {
+      map[esc] = { escala: esc, ops: new Set(), absDias: 0 };
+    }
+
+    map[esc].ops.add(f.opsId);
+
+    if (s.impactaAbsenteismo) {
+      map[esc].absDias++;
+    }
+  });
+
+  return Object.values(map).map((e) => {
+    const totalColaboradores = e.ops.size;
+    const diasEsperados = totalColaboradores * diasPeriodo;
+
+    return {
+      escala: e.escala,
+      totalColaboradores,
+      absenteismo:
+        diasEsperados > 0
+          ? Number(((e.absDias / diasEsperados) * 100).toFixed(2))
+          : 0,
+    };
+  });
+}
+
+  function buildSetoresResumo({ frequencias, colaboradoresMap, inicio, fim }) {
+    const diasPeriodo = daysInclusive(inicio, fim);
+    const map = {};
+
+    frequencias.forEach((f) => {
+      const s = getStatusDoDia(f);
+      if (!s.contaComoEscalado) return;
+
+      const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+
+      const setor = c.setor?.nomeSetor || "Sem setor";
+
+      if (!map[setor]) {
+        map[setor] = { setor, ops: new Set(), absDias: 0 };
+      }
+
+      map[setor].ops.add(f.opsId);
+
+      if (s.impactaAbsenteismo) {
+        map[setor].absDias++;
+      }
+    });
+
+    return Object.values(map).map((x) => {
+      const totalColaboradores = x.ops.size;
+      const diasEsperados = totalColaboradores * diasPeriodo;
+
+      return {
+        setor: x.setor,
+        totalColaboradores,
+        absenteismo:
+          diasEsperados > 0
+            ? Number(((x.absDias / diasEsperados) * 100).toFixed(2))
+            : 0,
+      };
+    });
+  }
+
+  function buildLideresResumo({ frequencias, colaboradoresMap, inicio, fim }) {
+    const diasPeriodo = daysInclusive(inicio, fim);
+    const map = {};
+
+    frequencias.forEach((f) => {
+      const s = getStatusDoDia(f);
+      if (!s.contaComoEscalado) return;
+
+      const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+
+      const lider = c.lider?.nomeCompleto || "Sem líder";
+
+      if (!map[lider]) {
+        map[lider] = { lider, ops: new Set(), absDias: 0 };
+      }
+
+      map[lider].ops.add(f.opsId);
+
+      if (s.impactaAbsenteismo) {
+        map[lider].absDias++;
+      }
+    });
+
+    return Object.values(map).map((x) => {
+      const totalColaboradores = x.ops.size;
+      const diasEsperados = totalColaboradores * diasPeriodo;
+
+      return {
+        lider: x.lider,
+        totalColaboradores,
+        absenteismo:
+          diasEsperados > 0
+            ? Number(((x.absDias / diasEsperados) * 100).toFixed(2))
+            : 0,
+      };
+    });
+  }
+
+  function buildSetores(colaboradoresPeriodo, frequencias, colaboradoresMap) {
+    const map = {};
+
+    frequencias.forEach(f => {
+      const s = getStatusDoDia(f);
+
+      // 🔑 só quem estava escalado
+      if (!s.contaComoEscalado) return;
+
+      const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+
+      const setor = c.setor?.nomeSetor || "Sem setor";
+
+      if (!map[setor]) {
+        map[setor] = {
+          setor,
+          total: 0,
+          absDias: 0,
+        };
+      }
+
+      map[setor].total++;
+
+      if (s.impactaAbsenteismo) {
+        map[setor].absDias++;
+      }
+    });
+
+    return Object.values(map).map(s => ({
+      setor: s.setor,
+      totalColaboradores: s.total,
+      absenteismo:
+        s.total > 0
+          ? Number(((s.absDias / s.total) * 100).toFixed(2))
+          : 0,
+    }));
+  }
 /* ---------- GÊNERO ---------- */
 function buildGenero(colaboradores) {
   const map = {};
@@ -582,8 +736,31 @@ function buildEmpresasResumo({
     });
   }
 
+  const ORDEM_EMPRESAS = [
+    "SPX",
+    "TOTAL BPO",
+    "ADECCO",
+    "ADILIS",
+    "LUANDRE",
+  ];
+
+  empresas.sort((a, b) => {
+    const ia = ORDEM_EMPRESAS.indexOf(a.empresa.toUpperCase());
+    const ib = ORDEM_EMPRESAS.indexOf(b.empresa.toUpperCase());
+
+    // quem não estiver na lista vai para o final
+    if (ia === -1 && ib === -1) {
+      return a.empresa.localeCompare(b.empresa);
+    }
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+
+    return ia - ib;
+  });
+
   return empresas;
 }
+
 
 /* =====================================================
    CONTROLLER — DASHBOARD ADMIN
@@ -625,6 +802,7 @@ const carregarDashboardAdmin = async (req, res) => {
           empresasResumo: [],
           escalas: [],
           lideres: [],
+          setores: [],
           eventos: [],
         },
       });
@@ -743,18 +921,10 @@ const carregarDashboardAdmin = async (req, res) => {
           inicio,
           fim,
         }),
-
-        escalas: buildEscalas(
-          colaboradoresPeriodo,
-          frequencias,
-          colaboradoresMap
-        ),
-
-        lideres: buildLideres(
-          colaboradoresPeriodo,
-          frequencias,
-          colaboradoresMap
-        ),
+        
+        escalas: buildEscalasResumo({ frequencias, colaboradoresMap, inicio, fim }),
+        setores: buildSetoresResumo({ frequencias, colaboradoresMap, inicio, fim }),
+        lideres: buildLideresResumo({ frequencias, colaboradoresMap, inicio, fim }),
 
         eventos: buildEventos({
           colaboradoresMap,

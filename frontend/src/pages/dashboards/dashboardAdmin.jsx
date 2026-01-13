@@ -21,6 +21,7 @@ import DistribuicaoGeneroChart from "../../components/dashboard/DistribuicaoGene
 import StatusColaboradoresSection from "../../components/dashboard/StatusColaboradoresSection";
 import AusentesHojeTable from "../../components/dashboard/AusentesHojeTable";
 import EmpresasResumoSection from "../../components/dashboard/EmpresasResumoSection";
+import ResumoOperacaoCard from "../../components/dashboard/ResumoOperacaoCard";
 
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -55,6 +56,9 @@ const INITIAL_DATA = {
 
   genero: [],
   empresasResumo: [],
+  escalas: [], 
+  setores: [],   
+  lideres: [],   
   eventos: [],
 };
 
@@ -262,6 +266,26 @@ const kpis = useMemo(() => {
           </div>
 
           <EmpresasResumoSection empresas={dados.empresasResumo} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <ResumoOperacaoCard
+              title="Escala × Colaborador"
+              data={dados.escalas}
+              labelKey="escala"
+            />
+
+            <ResumoOperacaoCard
+              title="Setor × Colaborador"
+              data={dados.setores}
+              labelKey="setor"
+            />
+
+            <ResumoOperacaoCard
+              title="Líder × Colaborador"
+              data={dados.lideres}
+              labelKey="lider"
+            />
+          </div>
 
           <AusentesHojeTable
             title="Eventos no período"

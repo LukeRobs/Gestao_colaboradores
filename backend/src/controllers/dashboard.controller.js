@@ -129,6 +129,7 @@ const carregarDashboard = async (req, res) => {
     const agora = agoraBrasil();
     const { dataOperacional, dataOperacionalStr, turnoAtual } =
       getDateOperacional(agora);
+    const { turno: turnoFiltro } = req.query;
 
     /* ===============================
        📅 RANGE DE DATA (SEGURO)
@@ -217,6 +218,7 @@ const carregarDashboard = async (req, res) => {
 
       const turno = normalizeTurno(c.turno?.nomeTurno);
       if (turno === "Sem turno") return;
+      if (turnoFiltro && turno !== turnoFiltro) return;
 
       const genero = normalize(c.genero) || "N/I";
       const empresa = normalize(c.empresa?.razaoSocial) || "Sem empresa";
@@ -322,8 +324,13 @@ const carregarDashboard = async (req, res) => {
     const presentesSet = new Set();
 
     frequenciasPeriodo.forEach((f) => {
-      const s = getStatusDoDiaOperacional(f);
+      const c = colaboradores.find(col => col.opsId === f.opsId);
+      if (!c) return;
 
+      const turnoColab = normalizeTurno(c.turno?.nomeTurno);
+      if (turnoFiltro && turnoColab !== turnoFiltro) return;
+
+      const s = getStatusDoDiaOperacional(f);
       if (!s.contaComoEscalado) return;
 
       escaladosSet.add(f.opsId);
@@ -336,6 +343,7 @@ const carregarDashboard = async (req, res) => {
         absDias++;
       }
     });
+
 
     const totalEscaladosPeriodo = escaladosSet.size;
     const diasEsperados = totalEscaladosPeriodo * diasPeriodo;
