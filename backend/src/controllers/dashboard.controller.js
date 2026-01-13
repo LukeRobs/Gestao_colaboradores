@@ -26,115 +26,22 @@ const normalizeTurno = (t) => {
   return "Sem turno";
 };
 
-function isFolgaCompensatoria(status) {
-  const s = String(status || "").toUpperCase();
-  return (
-    s === "FO" ||
-    s.includes("FOLGA")
-  );
-}
+const isoDate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-function isDiaNaoTrabalhavel({ registro, data, colaborador }) {
-  // DSR pela escala
-  if (
-    colaborador.escala?.nomeEscala &&
-    isDiaDSR(data, colaborador.escala.nomeEscala)
-  ) {
-    return true;
-  }
-
-  // FO explícito
-  if (registro) {
-    const { status } = getStatusDoDia(registro);
-    if (isFolgaCompensatoria(status)) return true;
-  }
-
-  return false;
-}
-function isStatusNeutro(status = "") {
-  const s = String(status).toUpperCase();
-
-    const neutros = [
-      "DSR",
-      "DESCANSO",
-      "FOLGA",
-      "FO",
-      "BANCO DE HORAS",
-      "BH",
-      "TREINAMENTO",
-      "SINERGIA",
-      "S1",
-    ];
-
-    return neutros.some((v) => s.includes(v));
-}
+const daysInclusive = (inicio, fim) => {
+  const a = new Date(inicio);
+  const b = new Date(fim);
+  a.setHours(0, 0, 0, 0);
+  b.setHours(0, 0, 0, 0);
+  return Math.floor((b - a) / 86400000) + 1;
+};
 
 function isCargoElegivel(cargo) {
   const nome = String(cargo || "").toUpperCase();
-
   return (
     nome.includes("AUXILIAR DE LOGÍSTICA I") ||
     nome.includes("AUXILIAR DE LOGÍSTICA II")
   );
-}
-
-function isAusenciaValida(status) {
-  const s = status.toUpperCase();
-
-  const invalidos = [
-    "PRESENTE",
-    "PRESENÇA",
-    "DSR",
-    "DESCANSO",
-    "FOLGA",
-    "BANCO DE HORAS",
-    "TREINAMENTO",
-  ];
-
-  return !invalidos.some((v) => s.includes(v));
-}
-
-function isDiaDSR(dataOperacional, nomeEscala) {
-  // 0 = domingo ... 6 = sábado
-  const dow = new Date(dataOperacional).getDay();
-
-  const dsrMap = {
-    A: [0, 3], // domingo, quarta
-    B: [1, 2], // segunda, terça
-    C: [4, 5], // quinta, sexta
-  };
-
-  const dias = dsrMap[String(nomeEscala || "").toUpperCase()];
-  return !!dias?.includes(dow);
-}
-
-function getStatusDoDia(registro) {
-  if (registro?.horaEntrada)
-    return { status: "PRESENTE", origem: "horaEntrada" };
-
-  if (registro?.idTipoAusencia)
-    return {
-      status: normalize(registro.tipoAusencia?.descricao || "AUSÊNCIA"),
-      origem: "tipoAusencia",
-    };
-
-  return { status: "FALTA", origem: "semRegistro" };
-}
-
-function getCategoria(status, origem) {
-  const s = status.toUpperCase();
-  if (origem === "semRegistro") return "ausencia";
-  if (s.includes("ATESTADO")) return "atestado";
-  if (s.includes("ACIDENT")) return "acidente";
-  if (s.includes("FERIA")) return "ferias";
-  if (s.includes("DISCIPLIN")) return "disciplinar";
-  return "ausencia";
-}
-
-function getCriticidade(categoria, origem) {
-  if (categoria === "acidente" || origem === "semRegistro") return "alta";
-  if (categoria === "disciplinar") return "media";
-  return "baixa";
 }
 
 function getSetor(registro, colaborador) {
@@ -151,6 +58,63 @@ const initTurnoMap = () => ({
   T3: {},
   "Sem turno": {},
 });
+
+/* =====================================================
+   STATUS DO DIA — PADRÃO ADMIN (COM 4 ESTADOS OPERACIONAIS)
+===================================================== */
+function getStatusDoDiaOperacional(f) {
+  // Presença
+  if (f?.horaEntrada) {
+    return {
+      label: "Presente",
+      contaComoEscalado: true,
+      impactaAbsenteismo: false,
+      origem: "horaEntrada",
+    };
+  }
+
+  // Ausência registrada (tipoAusencia)
+  if (f?.tipoAusencia) {
+    const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
+    const desc = String(f.tipoAusencia.descricao || "").toUpperCase();
+
+    // FO / DSR -> não escalado (igual Admin)
+    if (codigo === "FO" || codigo === "DSR") {
+      return {
+        label: codigo === "FO" ? "Folga" : "Folga",
+        contaComoEscalado: false,
+        impactaAbsenteismo: false,
+        origem: "tipoAusencia",
+      };
+    }
+
+    // Atestado médico (preferência por código AM; fallback por descrição)
+    if (codigo === "AM" || desc.includes("ATEST")) {
+      return {
+        label: "Atestado Médico",
+        contaComoEscalado: true,
+        impactaAbsenteismo: true,
+        origem: "tipoAusencia",
+      };
+    }
+
+    // Qualquer outra ausência conta como falta operacional
+    return {
+      label: "Falta",
+      contaComoEscalado: true,
+      impactaAbsenteismo: true,
+      origem: "tipoAusencia",
+    };
+  }
+
+  // fallback (igual Admin: F)
+  return {
+    label: "Falta",
+    contaComoEscalado: true,
+    impactaAbsenteismo: true,
+    origem: "semRegistro",
+  };
+}
 
 /* =====================================================
    CONTROLLER
@@ -184,57 +148,53 @@ const carregarDashboard = async (req, res) => {
       fim = new Date(`${base}T23:59:59.999Z`);
     }
 
+    const dataSnapshotStr = isoDate(fim);
+
     /* ===============================
        2️⃣ QUERIES
     =============================== */
-    const [
-      colaboradores,
-      empresas,
-      turnos,
-      escalasAtivas,
-      frequenciasHoje,
-    ] = await Promise.all([
-      prisma.colaborador.findMany({
-        where: {
-          status: "ATIVO",
-          dataDesligamento: null,
-        },
-        include: {
-          empresa: true,
-          turno: true,
-          setor: true,
-          escala: true,
-          cargo: true,
-          lider: true,
-        },
-      }),
-
-      prisma.empresa.findMany(),
-      prisma.turno.findMany(),
-      prisma.escala.findMany({ where: { ativo: true } }),
-
-      prisma.frequencia.findMany({
-        where: {
-          dataReferencia: {
-            gte: inicio,
-            lte: fim,
+    const [colaboradores, empresas, turnos, escalasAtivas, frequenciasPeriodo] =
+      await Promise.all([
+        prisma.colaborador.findMany({
+          where: {
+            status: "ATIVO",
+            dataDesligamento: null,
           },
-        },
-        include: {
-          colaborador: { include: { turno: true, setor: true } },
-          tipoAusencia: true,
-          setor: true,
-        },
-        orderBy: { dataReferencia: "asc" },
-      }),
-    ]);
+          include: {
+            empresa: true,
+            turno: true,
+            setor: true,
+            escala: true,
+            cargo: true,
+            lider: true,
+          },
+        }),
+
+        prisma.empresa.findMany(),
+        prisma.turno.findMany(),
+        prisma.escala.findMany({ where: { ativo: true } }),
+
+        prisma.frequencia.findMany({
+          where: {
+            dataReferencia: {
+              gte: inicio,
+              lte: fim,
+            },
+          },
+          include: {
+            colaborador: { include: { turno: true, setor: true } },
+            tipoAusencia: true,
+            setor: true,
+          },
+          orderBy: { dataReferencia: "asc" },
+        }),
+      ]);
 
     /* ===============================
-       3️⃣ MAPA DE FREQUÊNCIAS
+       3️⃣ MAPA DE FREQUÊNCIAS (por opsId)
     =============================== */
     const freqMap = new Map();
-
-    frequenciasHoje.forEach((f) => {
+    frequenciasPeriodo.forEach((f) => {
       if (!freqMap.has(f.opsId)) freqMap.set(f.opsId, []);
       freqMap.get(f.opsId).push(f);
     });
@@ -247,12 +207,10 @@ const carregarDashboard = async (req, res) => {
     const statusPorTurno = initTurnoMap();
     const empresaPorTurno = initTurnoMap();
     const ausenciasHoje = [];
-    const tendenciaPorDia = {};
-
-    const dataSnapshotStr = fim.toISOString().slice(0, 10);
+    const tendenciaPorDia = {}; // { data: { presentes, ausentes, escalados } }
 
     /* ===============================
-       5️⃣ LOOP PRINCIPAL
+       5️⃣ LOOP PRINCIPAL (ALINHADO AO ADMIN)
     =============================== */
     colaboradores.forEach((c) => {
       if (!isCargoElegivel(c.cargo?.nomeCargo)) return;
@@ -265,149 +223,154 @@ const carregarDashboard = async (req, res) => {
 
       const registros = freqMap.get(c.opsId) || [];
 
-      /* ========= 5.1 TENDÊNCIA ========= */
+      /* ========= 5.1 TENDÊNCIA (por dia, com escalados/dias esperados) ========= */
       registros.forEach((reg) => {
-        const dataRef = reg.dataReferencia
-          ?.toISOString()
-          .slice(0, 10);
+        const dataRef = isoDate(reg.dataReferencia);
         if (!dataRef) return;
 
-        const { status } = getStatusDoDia(reg);
-
-        if (
-          (c.escala?.nomeEscala &&
-            isDiaDSR(reg.dataReferencia, c.escala.nomeEscala)) ||
-          isFolgaCompensatoria(status)
-        ) {
-          return;
-        }
-
+        const s = getStatusDoDiaOperacional(reg);
 
         if (!tendenciaPorDia[dataRef]) {
           tendenciaPorDia[dataRef] = {
             data: dataRef,
             presentes: 0,
             ausentes: 0,
+            escalados: 0,
           };
         }
 
-        if (status === "PRESENTE") {
-          tendenciaPorDia[dataRef].presentes++;
-        } else if (isAusenciaValida(status)) {
-          tendenciaPorDia[dataRef].ausentes++;
+        // só conta dias em que estava escalado (FO/DSR fora)
+        if (s.contaComoEscalado) {
+          tendenciaPorDia[dataRef].escalados++;
+
+          if (s.label === "Presente") {
+            tendenciaPorDia[dataRef].presentes++;
+          } else if (s.impactaAbsenteismo) {
+            // Falta / Atestado Médico
+            tendenciaPorDia[dataRef].ausentes++;
+          }
         }
       });
 
-    /* ========= 5.2 SNAPSHOT ========= */
-    const registroSnapshot =
-      registros.find(
-        (r) =>
-          r.dataReferencia?.toISOString().slice(0, 10) === dataSnapshotStr
-      ) || null;
+      /* ========= 5.2 SNAPSHOT (dia fim) ========= */
+      const registroSnapshot =
+        registros.find((r) => isoDate(r.dataReferencia) === dataSnapshotStr) ||
+        null;
 
-    // ❌ sem registro no dia → não escalado
-    if (!registroSnapshot) return;
+      // Igual ao Admin: se não tem frequência no dia, ele não entra no snapshot do dia
+      // (evita inventar escalado sem base)
+      if (!registroSnapshot) return;
 
-    const { status: statusSnapshot, origem } =
-      getStatusDoDia(registroSnapshot);
+      const sSnap = getStatusDoDiaOperacional(registroSnapshot);
 
-    // ❌ DSR por escala
-    if (
-      c.escala?.nomeEscala &&
-      isDiaDSR(fim, c.escala.nomeEscala)
-    ) {
-      return;
-    }
+      // Só entra na base do dia se estava escalado (FO/DSR fora)
+      if (!sSnap.contaComoEscalado) return;
 
-    // ❌ folga compensatória (FO)
-    if (isFolgaCompensatoria(statusSnapshot)) {
-      return;
-    }
+      if (!turnoSetorAgg[turno]) {
+        turnoSetorAgg[turno] = {
+          turno,
+          totalEscalados: 0,
+          presentes: 0,
+          ausentes: 0,
+          setores: {},
+        };
+      }
 
-    // ❌ dia não trabalhável (sua regra central)
-    if (
-      isDiaNaoTrabalhavel({
-        registro: registroSnapshot,
-        data: fim,
-        colaborador: c,
-      })
-    ) {
-      return;
-    }
+      turnoSetorAgg[turno].totalEscalados++;
 
-    // ❌ status neutro (SINERGIA, BH, TREINAMENTO etc.)
-    if (isStatusNeutro(statusSnapshot)) {
-      return;
-    }
+      generoPorTurno[turno][genero] =
+        (generoPorTurno[turno][genero] || 0) + 1;
 
-    // ✅ somente AGORA entra na base de escalados
-    if (!turnoSetorAgg[turno]) {
-      turnoSetorAgg[turno] = {
-        turno,
-        totalEscalados: 0,
-        presentes: 0,
-        ausentes: 0,
-        setores: {},
-      };
-    }
+      empresaPorTurno[turno][empresa] =
+        (empresaPorTurno[turno][empresa] || 0) + 1;
 
-    turnoSetorAgg[turno].totalEscalados++;
+      const setor = getSetor(registroSnapshot, c);
+      turnoSetorAgg[turno].setores[setor] =
+        (turnoSetorAgg[turno].setores[setor] || 0) + 1;
 
-    generoPorTurno[turno][genero] =
-      (generoPorTurno[turno][genero] || 0) + 1;
+      // Status do snapshot (4 estados)
+      statusPorTurno[turno][sSnap.label] =
+        (statusPorTurno[turno][sSnap.label] || 0) + 1;
 
-    empresaPorTurno[turno][empresa] =
-      (empresaPorTurno[turno][empresa] || 0) + 1;
+      if (sSnap.label === "Presente") {
+        turnoSetorAgg[turno].presentes++;
+      } else if (sSnap.impactaAbsenteismo) {
+        turnoSetorAgg[turno].ausentes++;
 
-    const setor = getSetor(registroSnapshot, c);
-    turnoSetorAgg[turno].setores[setor] =
-      (turnoSetorAgg[turno].setores[setor] || 0) + 1;
-
-    // ✅ presença / ausência válida
-    if (statusSnapshot === "PRESENTE") {
-      turnoSetorAgg[turno].presentes++;
-      statusPorTurno[turno][statusSnapshot] =
-        (statusPorTurno[turno][statusSnapshot] || 0) + 1;
-    } else if (isAusenciaValida(statusSnapshot)) {
-      turnoSetorAgg[turno].ausentes++;
-      statusPorTurno[turno][statusSnapshot] =
-        (statusPorTurno[turno][statusSnapshot] || 0) + 1;
-
-      ausenciasHoje.push({
-        colaboradorId: c.opsId,
-        nome: c.nomeCompleto,
-        turno,
-        motivo: statusSnapshot,
-        setor: normalize(c.setor?.nomeSetor),
-        empresa: normalize(c.empresa?.razaoSocial),
-        admissao: c.dataAdmissao,
-        lider: normalize(c.lider?.nomeCompleto),
-        origem,
-        categoria: getCategoria(statusSnapshot, origem),
-        criticidade: getCriticidade(
-          getCategoria(statusSnapshot, origem),
-          origem
-        ),
-      });
-    }
-
-
+        // Lista de ausências do dia (Falta / Atestado)
+        ausenciasHoje.push({
+          colaboradorId: c.opsId,
+          nome: c.nomeCompleto,
+          turno,
+          motivo: sSnap.label, // "Falta" | "Atestado Médico"
+          setor: normalize(c.setor?.nomeSetor),
+          empresa: normalize(c.empresa?.razaoSocial),
+          admissao: c.dataAdmissao,
+          lider: normalize(c.lider?.nomeCompleto),
+          origem: sSnap.origem,
+        });
+      }
     });
 
     /* ===============================
-       6️⃣ RESPONSE
+       6️⃣ KPIs (absenteísmo no período igual Admin)
+    =============================== */
+    const diasPeriodo = daysInclusive(inicio, fim);
+
+    let absDias = 0;
+    const escaladosSet = new Set();
+    const presentesSet = new Set();
+
+    frequenciasPeriodo.forEach((f) => {
+      const s = getStatusDoDiaOperacional(f);
+
+      if (!s.contaComoEscalado) return;
+
+      escaladosSet.add(f.opsId);
+
+      if (s.label === "Presente") {
+        presentesSet.add(f.opsId);
+      }
+
+      if (s.impactaAbsenteismo) {
+        absDias++;
+      }
+    });
+
+    const totalEscaladosPeriodo = escaladosSet.size;
+    const diasEsperados = totalEscaladosPeriodo * diasPeriodo;
+
+    const absenteismoPeriodo =
+      diasEsperados > 0
+        ? Number(((absDias / diasEsperados) * 100).toFixed(2))
+        : 0;
+
+    /* ===============================
+       7️⃣ RESPONSE
     =============================== */
     return res.json({
       success: true,
       data: {
+        // mantém campos existentes
         dataOperacional: dataOperacionalStr,
         turnoAtual,
 
+        // adiciona período (padrão Admin)
+        periodo: { inicio: isoDate(inicio), fim: isoDate(fim) },
+
+        // KPIs alinhados ao Admin
+        kpis: {
+          totalColaboradores: totalEscaladosPeriodo,
+          presentes: presentesSet.size,
+          absenteismo: absenteismoPeriodo,
+        },
+
         distribuicaoTurnoSetor: Object.values(turnoSetorAgg).map((t) => ({
           ...t,
-          setores: Object.entries(t.setores).map(
-            ([setor, quantidade]) => ({ setor, quantidade })
-          ),
+          setores: Object.entries(t.setores).map(([setor, quantidade]) => ({
+            setor,
+            quantidade,
+          })),
         })),
 
         generoPorTurno: Object.fromEntries(
@@ -417,6 +380,8 @@ const carregarDashboard = async (req, res) => {
           ])
         ),
 
+        // agora só 4 categorias possíveis:
+        // "Presente", "Folga" (não entra pois não escalado), "Atestado Médico", "Falta"
         statusColaboradoresPorTurno: Object.fromEntries(
           Object.entries(statusPorTurno).map(([t, s]) => [
             t,
@@ -442,13 +407,14 @@ const carregarDashboard = async (req, res) => {
         tendenciaPorDia: Object.values(tendenciaPorDia)
           .sort((a, b) => a.data.localeCompare(b.data))
           .map((d) => ({
-            ...d,
-            percentual: Number(
-              (
-                (d.ausentes / (d.ausentes + d.presentes)) *
-                100
-              ).toFixed(2)
-            ),
+            data: d.data,
+            presentes: d.presentes,
+            ausentes: d.ausentes, // Falta + Atestado Médico
+            escalados: d.escalados,
+            percentual:
+              d.escalados > 0
+                ? Number(((d.ausentes / d.escalados) * 100).toFixed(2))
+                : 0,
           })),
 
         empresas: empresas.map((e) => ({
@@ -472,6 +438,5 @@ const carregarDashboard = async (req, res) => {
     res.status(500).json({ success: false });
   }
 };
-
 
 module.exports = { carregarDashboard };
