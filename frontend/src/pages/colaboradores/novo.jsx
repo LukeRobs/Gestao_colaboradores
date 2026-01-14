@@ -144,7 +144,7 @@ export default function NovoColaborador() {
               label="Gênero"
               name="genero"
               onChange={handleChange}
-              options={["Masculino", "Feminino"]}
+              options={["MASCULINO", "FEMININO"]}
             />
           </Section>
 
