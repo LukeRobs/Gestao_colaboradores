@@ -22,6 +22,8 @@ import StatusColaboradoresSection from "../../components/dashboard/StatusColabor
 import AusentesHojeTable from "../../components/dashboard/AusentesHojeTable";
 import EmpresasResumoSection from "../../components/dashboard/EmpresasResumoSection";
 import ResumoOperacaoCard from "../../components/dashboard/ResumoOperacaoCard";
+import DistribuicaoColaboradoresCadastradosChart from "../../components/dashboard/DistribuicaoColaboradoresCadastradosChart";
+
 
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -170,6 +172,30 @@ const kpis = useMemo(() => {
   ];
 }, [dados.kpis]);
 
+  /* ================= COLABORADORES CADASTRADOS ================= */
+  const colaboradoresCadastradosData = useMemo(() => {
+    const empresas = dados.empresasResumo || [];
+
+    const spx = empresas.find(
+      e => e.empresa?.toUpperCase() === "SPX"
+    );
+
+    const totalBpo = empresas.find(
+      e => e.empresa?.toUpperCase() === "TOTAL BPO"
+    );
+
+    return [
+      {
+        name: "SPX",
+        value: spx?.totalColaboradoresCadastrados || 0,
+      },
+      {
+        name: "BPO",
+        value: totalBpo?.totalColaboradoresCadastrados || 0,
+      },
+    ];
+  }, [dados.empresasResumo]);
+
   /* ================= STATUS ================= */
   const statusItems = useMemo(() => {
     const s = dados.statusColaboradores;
@@ -183,13 +209,33 @@ const kpis = useMemo(() => {
     ];
   }, [dados.statusColaboradores]);
 
-  /* ================= EVENTOS ================= */
+/* ================= EVENTOS ================= */
   const tableColumns = useMemo(
     () => [
       { key: "nome", label: "Colaborador" },
       { key: "empresa", label: "Empresa" },
       { key: "setor", label: "Setor" },
+      { key: "lider", label: "Líder" },
+      {
+        key: "tempoEmpresa",
+        label: "Tempo de Empresa",
+        render: (v) => v || "-",
+      },
       { key: "evento", label: "Evento" },
+      {
+        key: "reincidente",
+        label: "Status",
+        render: (_, row) =>
+          row.reincidente ? (
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[#FF453A]/20 text-[#FF453A]">
+              Reincidente ({row.qtdeEventos})
+            </span>
+          ) : (
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[#34C759]/20 text-[#34C759]">
+              Único
+            </span>
+          ),
+      },
       {
         key: "data",
         label: "Data",
@@ -252,16 +298,22 @@ const kpis = useMemo(() => {
 
           <KpiCardsRow items={kpis} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <DistribuicaoGeneroChart
               title="Distribuição por Gênero"
               data={dados.genero}
             />
 
+            <DistribuicaoColaboradoresCadastradosChart
+              title="Colaboradores Cadastrados"
+              data={colaboradoresCadastradosData}
+            />
+
             <StatusColaboradoresSection
               title="Status dos Colaboradores"
               items={statusItems}
-              footer={`Indisponíveis: ${dados.statusColaboradores.percentualIndisponivel}%`}
+              percentual={dados.statusColaboradores.percentualIndisponivel}
+              footer={`${dados.statusColaboradores.percentualIndisponivel}% do time está indisponível hoje (${dados.statusColaboradores.indisponiveis} colaboradores)`}
             />
           </div>
 
@@ -288,7 +340,7 @@ const kpis = useMemo(() => {
           </div>
 
           <AusentesHojeTable
-            title="Eventos no período"
+            title="Eventos no período (Atestados Médicos, Medidas Disciplinares e Acidentes)"
             data={dados.eventos}
             columns={tableColumns}
             getRowKey={(row) => row.id}

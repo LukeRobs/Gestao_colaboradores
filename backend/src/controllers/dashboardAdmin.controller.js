@@ -18,6 +18,24 @@ const daysInclusive = (inicio, fim) => {
   return Math.floor((b - a) / 86400000) + 1;
 };
 
+function formatTempoEmpresa(dataAdmissao) {
+  if (!dataAdmissao) return "-";
+
+  const hoje = new Date();
+  const adm = new Date(dataAdmissao);
+
+  let meses =
+    (hoje.getFullYear() - adm.getFullYear()) * 12 +
+    (hoje.getMonth() - adm.getMonth());
+
+  const anos = Math.floor(meses / 12);
+  meses = meses % 12;
+
+  if (anos > 0 && meses > 0) return `${anos}a ${meses}m`;
+  if (anos > 0) return `${anos}a`;
+  return `${meses}m`;
+}
+
 /* =====================================================
    STATUS DO DIA
 ===================================================== */
@@ -75,7 +93,10 @@ function getStatusDoDia(f) {
     const c = colaboradoresMap.get(f.opsId);
     if (!c) return;
 
-    const esc = c.escala?.nomeEscala || "N/I";
+    const escObj = c.escala;
+    const esc = escObj
+      ? `${escObj.nomeEscala} (${escObj.descricao})`
+      : "N/I";
 
     if (!map[esc]) {
       map[esc] = { escala: esc, ops: new Set(), absDias: 0 };
@@ -495,6 +516,7 @@ function buildTurnoverGlobal({
 
 
 /* ---------- EVENTOS ---------- */
+/* ---------- EVENTOS ---------- */
 function buildEventos({ colaboradoresMap, atestados, acidentes, medidas }) {
   const eventos = [];
 
@@ -505,6 +527,8 @@ function buildEventos({ colaboradoresMap, atestados, acidentes, medidas }) {
       nome: c?.nomeCompleto || "-",
       empresa: c?.empresa?.razaoSocial || "-",
       setor: c?.setor?.nomeSetor || "-",
+      lider: c?.lider?.nomeCompleto || "-",
+      tempoEmpresa: formatTempoEmpresa(c?.dataAdmissao),
       evento: "Atestado",
       data: a.dataInicio,
     });
@@ -517,6 +541,8 @@ function buildEventos({ colaboradoresMap, atestados, acidentes, medidas }) {
       nome: c?.nomeCompleto || "-",
       empresa: c?.empresa?.razaoSocial || "-",
       setor: c?.setor?.nomeSetor || "-",
+      lider: c?.lider?.nomeCompleto || "-",
+      tempoEmpresa: formatTempoEmpresa(c?.dataAdmissao),
       evento: "Medida Disciplinar",
       data: m.dataAplicacao,
     });
@@ -529,6 +555,8 @@ function buildEventos({ colaboradoresMap, atestados, acidentes, medidas }) {
       nome: c?.nomeCompleto || "-",
       empresa: c?.empresa?.razaoSocial || "-",
       setor: c?.setor?.nomeSetor || "-",
+      lider: c?.lider?.nomeCompleto || "-",
+      tempoEmpresa: formatTempoEmpresa(c?.dataAdmissao),
       evento: "Acidente",
       data: a.dataOcorrencia,
     });
@@ -580,6 +608,7 @@ function buildEmpresasResumo({
       map[emp] = {
         empresa: emp,
         colaboradores: [],
+        totalColaboradoresCadastrados: 0,
         totalColaboradores: 0,
         presentes: new Set(),
         absDias: 0,
@@ -591,7 +620,7 @@ function buildEmpresasResumo({
       };
     }
 
-    map[emp].totalColaboradores++;
+    map[emp].totalColaboradoresCadastrados++;
     map[emp].colaboradores.push(c);
   });
 
@@ -677,6 +706,8 @@ function buildEmpresasResumo({
       totalColaboradores: totalPeriodo,
       presentes: e.presentes.size,
 
+      totalColaboradoresCadastrados: e.totalColaboradoresCadastrados,
+
       absenteismo,
       medidasDisciplinares: e.medidasDisciplinares,
       atestados: e.atestados,
@@ -697,6 +728,8 @@ function buildEmpresasResumo({
 
   if (bpo.length) {
     const totalColaboradores = bpo.reduce((s, e) => s + e.totalColaboradores, 0);
+    const totalColaboradoresCadastrados = bpo.reduce((s, e) => s + (e.totalColaboradoresCadastrados || 0),
+    0);
     const presentes = bpo.reduce((s, e) => s + e.presentes, 0);
     const atestadosTot = bpo.reduce((s, e) => s + e.atestados, 0);
     const medidasTot = bpo.reduce((s, e) => s + e.medidasDisciplinares, 0);
@@ -713,6 +746,7 @@ function buildEmpresasResumo({
     empresas.push({
       empresa: "TOTAL BPO",
       totalColaboradores,
+      totalColaboradoresCadastrados,
       presentes,
       absenteismo:
         totalColaboradores > 0

@@ -23,10 +23,10 @@ export default function DistribuicaoGeneroChart({
 
   const total = data.reduce((acc, cur) => acc + cur.value, 0);
 
-  const renderPercentLabel = ({ percent }) =>
-    showPercentLabel
-      ? `${(percent * 100).toFixed(0)}%`
-      : "";
+  const renderPercentLabel = ({ value, percent }) =>
+  showPercentLabel && value
+    ? `${value} (${Math.round(percent * 100)}%)`
+    : "";
 
   return (
     <div className="bg-[#1A1A1C] rounded-2xl p-6">
