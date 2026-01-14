@@ -86,6 +86,27 @@ export default function ControlePresenca() {
     }
   }, [mes, turno, escala, busca, lider]);
 
+  function aplicarAjusteLocal({ opsId, dataReferencia, status, horaEntrada, horaSaida }) {
+  setColaboradores((prev) =>
+    prev.map((c) => {
+      if (c.opsId !== opsId) return c;
+
+      return {
+        ...c,
+        dias: {
+          ...c.dias,
+          [dataReferencia]: {
+            status,
+            horaEntrada,
+            horaSaida,
+            manual: true,
+          },
+        },
+      };
+    })
+  );
+}
+
 useEffect(() => {
   loadPresenca();
 }, [loadPresenca]);
@@ -169,12 +190,12 @@ useEffect(() => {
         dia={modalData?.dia}
         registro={modalData?.registro}
         onClose={() => setModalOpen(false)}
-        onSave={async (payload) => {
-          await api.post("/ponto/ajuste-manual", payload);
+        onSuccess={(payload) => {
+          aplicarAjusteLocal(payload); // 🔑 ATUALIZA NA HORA
           setModalOpen(false);
-          loadPresenca();
         }}
       />
+
     </div>
   );
 }

@@ -54,7 +54,8 @@ export default function EditarPresencaModal({
   registro,
   onSuccess, // opcional: recarregar grade
 }) {
-  const [status, setStatus] = useState("P");
+  const [status, setStatus] = useState(() => registro?.status || "P");
+  const [renderKey, setRenderKey] = useState(0);
   const [horaEntrada, setHoraEntrada] = useState("");
   const [horaSaida, setHoraSaida] = useState("");
   const [justificativa, setJustificativa] = useState("");
@@ -70,6 +71,9 @@ export default function EditarPresencaModal({
     setHoraEntrada(toHHMM(registro?.entrada));
     setHoraSaida(toHHMM(registro?.saida));
     setJustificativa("");
+
+    // 🔑 FORÇA REMOUNT DOS INPUTS
+    setRenderKey((k) => k + 1);
   }, [open, registro]);
 
   if (!open) return null;
@@ -89,14 +93,25 @@ export default function EditarPresencaModal({
       }
 
       if (horaEntrada && horaSaida) {
-        const [hE, mE] = horaEntrada.split(":").map(Number);
-        const [hS, mS] = horaSaida.split(":").map(Number);
+      const [hE, mE] = horaEntrada.split(":").map(Number);
+      const [hS, mS] = horaSaida.split(":").map(Number);
 
-        if (hS * 60 + mS < hE * 60 + mE) {
-          alert("Hora de saída não pode ser menor que a hora de entrada");
-          return;
-        }
+      let entradaMin = hE * 60 + mE;
+      let saidaMin = hS * 60 + mS;
+
+      let minutos = saidaMin - entradaMin;
+
+      // 🔑 VIRADA DE DIA (T3)
+      if (minutos < 0) {
+        minutos += 24 * 60;
       }
+
+      // 🔒 REGRA DE SEGURANÇA
+      if (minutos <= 0 || minutos > 16 * 60) {
+        alert("Jornada inválida. Verifique os horários informados.");
+        return;
+      }
+    }
     }
 
     try {
@@ -113,8 +128,16 @@ export default function EditarPresencaModal({
 
       alert("Presença ajustada com sucesso");
 
+      onSuccess?.({
+        opsId: colaborador.opsId,
+        dataReferencia: dia.date,
+        status,
+        horaEntrada: permiteHorario ? horaEntrada || null : null,
+        horaSaida: permiteHorario ? horaSaida || null : null,
+      });
+
       onClose();
-      onSuccess?.(); // recarrega a grade se existir
+
     } catch (err) {
       console.error(err);
       alert(
@@ -165,6 +188,7 @@ export default function EditarPresencaModal({
           <div>
             <label className="text-xs text-[#BFBFC3]">Hora Entrada</label>
             <input
+              key={`entrada-${renderKey}`}
               type="time"
               value={horaEntrada}
               disabled={!permiteHorario}
@@ -176,6 +200,7 @@ export default function EditarPresencaModal({
           <div>
             <label className="text-xs text-[#BFBFC3]">Hora Saída</label>
             <input
+              key={`saida-${renderKey}`}
               type="time"
               value={horaSaida}
               disabled={!permiteHorario}

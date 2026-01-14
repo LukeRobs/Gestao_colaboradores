@@ -430,7 +430,7 @@ const getControlePresenca = async (req, res) => {
 
       // 4️⃣ FALTA
       diasMap[dataISO] = {
-        status: "F",
+        status: "-",
         manual: false,
       };
 
@@ -516,13 +516,22 @@ const ajusteManualPresenca = async (req, res) => {
     const entradaMin = hE * 60 + mE;
     const saidaMin = hS * 60 + mS;
 
-    if (saidaMin < entradaMin) {
+    let minutosTrabalhados = saidaMin - entradaMin;
+
+    // 🔑 VIRADA DE DIA (T3)
+    if (minutosTrabalhados < 0) {
+      minutosTrabalhados += 24 * 60;
+    }
+
+    // 🔒 REGRA DE SEGURANÇA (ex: mais de 16h é erro)
+    if (minutosTrabalhados <= 0 || minutosTrabalhados > 16 * 60) {
       return errorResponse(
         res,
-        "Hora de saída não pode ser menor que a hora de entrada",
+        "Jornada inválida. Verifique os horários informados.",
         400
       );
     }
+
   }
 
 

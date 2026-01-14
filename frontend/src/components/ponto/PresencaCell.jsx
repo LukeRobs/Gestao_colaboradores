@@ -4,6 +4,7 @@ import PresencaTooltip from "./PresencaTooltip";
 
 /* ================= STATUS CONFIG ================= */
 const STATUS_CONFIG = {
+  "-": { label: "Sem registro", short: "-", bg: "bg-transparent", text: "text-zinc-500"},
   P:   { label: "Presente", short: "P", bg: "bg-emerald-600/20", text: "text-emerald-400" },
   F:   { label: "Falta", short: "F", bg: "bg-red-600/20", text: "text-red-400" },
   DSR: { label: "DSR", short: "DSR", bg: "bg-zinc-600/20", text: "text-zinc-400" },
@@ -80,7 +81,7 @@ export default function PresencaCell({
     }
 
     // 3️⃣ Fallback
-    return "F";
+    return "-";
   }, [registro, dia?.date, colaborador?.escala]);
 
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.F;
