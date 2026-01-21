@@ -17,15 +17,16 @@ function getDateOperacional(baseDate) {
   const minutos = d.getHours() * 60 + d.getMinutes();
 
   const T1_TOLERANCIA = 25; // minutos
+  const T2_TOLERANCIA = 20;
   const T1_START = 5 * 60 + 25;   // 05:25
   const T2_START = 13 * 60 + 20;  // 13:20
-  const T3_START = 21 * 60;       // 21:00
+  const T3_START = 21 * 50;       // 20:50
 
   let turnoAtual;
 
   if (minutos >= T1_START - T1_TOLERANCIA && minutos < T2_START) {
     turnoAtual = "T1";
-  } else if (minutos >= T2_START && minutos < T3_START) {
+  } else if (minutos >= T2_START - T2_TOLERANCIA && minutos < T3_START) {
     turnoAtual = "T2";
   } else {
     turnoAtual = "T3";

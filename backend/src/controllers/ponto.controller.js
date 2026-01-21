@@ -191,14 +191,17 @@ const registrarPontoCPF = async (req, res) => {
       );
     }
 
-    /* ==========================================
-       BUSCA FREQUÊNCIA DO DIA
+/* ==========================================
+       BUSCA FREQUÊNCIA EM ABERTO (QUALQUER DIA)
     ========================================== */
+    // 🔑 Busca ÚLTIMA frequência sem saída deste colaborador (independente do dia)
     const existente = await prisma.frequencia.findFirst({
       where: {
         opsId: colaborador.opsId,
-        dataReferencia,
         horaSaida: null,
+      },
+      orderBy: {
+        dataReferencia: 'desc', // pega a mais recente
       },
     });
 
@@ -208,6 +211,9 @@ const registrarPontoCPF = async (req, res) => {
        1ª BATIDA → ENTRADA
     ========================================== */
     if (!existente) {
+      // 🔑 Calcular data operacional apenas para NOVA entrada
+      const { dataOperacional } = getDateOperacional(agora);
+      
       const tipoPresenca = await prisma.tipoAusencia.findFirst({
         where: { codigo: "P" },
       });
@@ -215,7 +221,7 @@ const registrarPontoCPF = async (req, res) => {
       const registro = await prisma.frequencia.create({
         data: {
           opsId: colaborador.opsId,
-          dataReferencia,
+          dataReferencia: dataOperacional,
           horaEntrada: horaAgora,
           idTipoAusencia: tipoPresenca?.idTipoAusencia ?? null,
           registradoPor: colaborador.opsId,
@@ -223,7 +229,7 @@ const registrarPontoCPF = async (req, res) => {
         },
       });
 
-      console.log(`[${reqId}] ENTRADA registrada`, registro.idFrequencia);
+      console.log(`[${reqId}] ENTRADA registrada no dia ${ymd(dataOperacional)}`, registro.idFrequencia);
 
       return createdResponse(res, registro, "Entrada registrada com sucesso");
     }
@@ -237,7 +243,7 @@ const registrarPontoCPF = async (req, res) => {
 
       let minutosDecorridos = agoraMin - entradaMin;
 
-      // 🔑 VIRADA DE DIA (T3)
+      // 🔑 VIRADA DE DIA (T3 ou hora extra)
       if (minutosDecorridos < 0) {
         minutosDecorridos += 24 * 60;
       }
@@ -252,20 +258,29 @@ const registrarPontoCPF = async (req, res) => {
         );
       }
 
-      const horasTrabalhadas = Number(
-        (minutosDecorridos / 60).toFixed(2)
-      );
+      // 🔒 BLOQUEIO: máximo 24 horas (frequência aberta há muito tempo)
+      if (minutosDecorridos > 24 * 60) {
+        return errorResponse(
+          res,
+          `Frequência anterior está aberta há mais de 24h. Entre em contato com o RH para ajuste manual.`,
+          409
+        );
+      }
+
+      const horasTrabalhadas = Number((minutosDecorridos / 60).toFixed(2));
 
       /* =================================================
-        🔑 AJUSTE DA DATA/HORA DA SAÍDA (ALINHADO AO MANUAL)
+        🔑 AJUSTE DA DATA/HORA DA SAÍDA
+        - Usa a dataReferencia da frequência existente como base
+        - Se virou o dia, adiciona +1 dia
       ================================================= */
       const virouDia = agoraMin < entradaMin;
 
       let horaSaidaFinal;
 
       if (virouDia) {
-        // saída no dia seguinte (T3)
-        const base = new Date(dataReferencia);
+        // saída no dia seguinte (T3 ou hora extra)
+        const base = new Date(existente.dataReferencia);
         base.setDate(base.getDate() + 1);
 
         horaSaidaFinal = new Date(
@@ -279,12 +294,12 @@ const registrarPontoCPF = async (req, res) => {
       const atualizado = await prisma.frequencia.update({
         where: { idFrequencia: existente.idFrequencia },
         data: {
-          horaSaida: horaSaidaFinal, // ✅ agora correto
+          horaSaida: horaSaidaFinal,
           horasTrabalhadas,
         },
       });
 
-      console.log(`[${reqId}] SAÍDA registrada`, atualizado.idFrequencia);
+      console.log(`[${reqId}] SAÍDA registrada no dia ${ymd(existente.dataReferencia)}`, atualizado.idFrequencia);
 
       return successResponse(
         res,
@@ -292,7 +307,6 @@ const registrarPontoCPF = async (req, res) => {
         "Saída registrada com sucesso"
       );
     }
-
 
     /* ==========================================
        3ª BATIDA → BLOQUEIO
