@@ -436,13 +436,30 @@ const getControlePresenca = async (req, res) => {
       const dataISO = ymd(dataCalendario);
       const key = `${c.opsId}_${dataISO}`;
 
+      // 1️⃣ FREQUÊNCIA MANUAL TEM PRIORIDADE (independente de ausência)
+      if (freqMap[key]) {
+        const f = freqMap[key];
+
+        if (f.manual) {
+          diasMap[dataISO] = {
+            status: f.tipoAusencia?.codigo || "P",
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: !!f.validado,
+            manual: true,
+          };
+          continue;
+        }
+      }
+
+
       // 1️⃣ Status administrativo tem prioridade
       const statusAdmin = getStatusAdministrativo(c, dataCalendario);
       if (statusAdmin) {
         diasMap[dataISO] = {
           status: statusAdmin.status,
           origem: statusAdmin.origem,
-          manual: true,
+          manual: false,
         };
         continue;
       }
