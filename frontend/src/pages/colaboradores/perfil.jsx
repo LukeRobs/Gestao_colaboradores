@@ -43,7 +43,7 @@ export default function PerfilColaborador() {
         setMedidas(mdRes.data.data || []);
         setAcidentes(acRes.data.data || []);
         setVinculoOrganizacional(payload.vinculoOrganizacional || {});
-        + setIndicadores(payload.indicadores || null);
+        setIndicadores(payload.indicadores || null);
       } catch (err) {
         console.error("Erro perfil colaborador:", err);
         navigate("/colaboradores");
@@ -162,6 +162,18 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
             <Info label="Telefone" value={colaborador.telefone} />
             <Info label="Gênero" value={colaborador.genero} />
             <Info label="Matrícula" value={colaborador.matricula} />
+          </Section>
+          {/* CONTATO DE EMERGÊNCIA */}
+          <Section title="Contato de Emergência">
+            <Info
+              label="Nome do Contato"
+              value={colaborador.contatoEmergenciaNome}
+            />
+
+            <Info
+              label="Telefone do Contato"
+              value={colaborador.contatoEmergenciaTelefone}
+            />
           </Section>
 
           {/* 🔑 VÍNCULO ORGANIZACIONAL (AJUSTADO) */}

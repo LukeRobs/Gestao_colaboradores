@@ -223,6 +223,8 @@ model Colaborador {
   dataDesligamento       DateTime?                 @map("data_desligamento") @db.Date
   horarioInicioJornada   DateTime                  @map("horario_inicio_jornada") @db.Time(6)
   primeiroDiaPosDsr      DateTime?                 @map("primeiro_dia_pos_dsr") @db.Date
+  contatoEmergenciaNome        String? @map("contato_emergencia_nome") @db.VarChar(200)
+  contatoEmergenciaTelefone    String? @map("contato_emergencia_telefone") @db.VarChar(20)
   idSetor                Int?                      @map("id_setor")
   idCargo                Int?                      @map("id_cargo")
   idLider                String?                   @map("id_lider") @db.VarChar(50)

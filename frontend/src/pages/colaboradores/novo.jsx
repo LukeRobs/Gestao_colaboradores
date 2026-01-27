@@ -19,6 +19,8 @@ export default function NovoColaborador() {
     telefone: "",
     genero: "",
     matricula: "",
+    contatoEmergenciaNome: "",
+    contatoEmergenciaTelefone: "",
     idEmpresa: "",
     idSetor: "",
     idCargo: "",
@@ -145,6 +147,23 @@ export default function NovoColaborador() {
               name="genero"
               onChange={handleChange}
               options={["MASCULINO", "FEMININO"]}
+            />
+          </Section>
+          {/* ================= CONTATO DE EMERGÊNCIA ================= */}
+          <Section title="Contato de Emergência">
+            <Input
+              label="Nome do Contato"
+              name="contatoEmergenciaNome"
+              value={form.contatoEmergenciaNome}
+              onChange={handleChange}
+            />
+
+            <Input
+              label="Telefone do Contato"
+              name="contatoEmergenciaTelefone"
+              value={form.contatoEmergenciaTelefone}
+              onChange={handleChange}
+              placeholder="(81) 9xxxx-xxxx"
             />
           </Section>
 

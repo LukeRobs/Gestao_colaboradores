@@ -22,6 +22,8 @@ export default function EditarColaborador() {
     telefone: "",
     genero: "",
     matricula: "",
+    contatoEmergenciaNome: "",
+    contatoEmergenciaTelefone: "",
     idEscala: "",
     dataAdmissao: "",
     horarioInicioJornada: "",
@@ -48,6 +50,8 @@ export default function EditarColaborador() {
           telefone: c.telefone || "",
           genero: c.genero || "",
           matricula: c.matricula || "",
+          contatoEmergenciaNome: c.contatoEmergenciaNome || "",
+          contatoEmergenciaTelefone: c.contatoEmergenciaTelefone || "",
           idEscala: c.escala?.idEscala ?? "",
           dataAdmissao: c.dataAdmissao
             ? c.dataAdmissao.substring(0, 10)
@@ -83,6 +87,8 @@ export default function EditarColaborador() {
         telefone: form.telefone || null,
         genero: form.genero || null,
         matricula: form.matricula || null,
+        contatoEmergenciaNome: form.contatoEmergenciaNome || null,
+        contatoEmergenciaTelefone: form.contatoEmergenciaTelefone || null,
         idEscala: form.idEscala ? Number(form.idEscala) : null,
         dataAdmissao: form.dataAdmissao
           ? new Date(form.dataAdmissao)
@@ -162,6 +168,23 @@ export default function EditarColaborador() {
               value={form.genero}
               onChange={handleChange}
               options={["MASCULINO", "FEMININO"]}
+            />
+          </Section>
+
+          <Section title="Contato de Emergência">
+            <Input
+              name="contatoEmergenciaNome"
+              label="Nome do Contato"
+              value={form.contatoEmergenciaNome}
+              onChange={handleChange}
+            />
+
+            <Input
+              name="contatoEmergenciaTelefone"
+              label="Telefone do Contato"
+              value={form.contatoEmergenciaTelefone}
+              onChange={handleChange}
+              placeholder="(81) 9xxxx-xxxx"
             />
           </Section>
 

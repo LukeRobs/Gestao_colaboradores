@@ -241,6 +241,8 @@ const createColaborador = async (req, res) => {
       idTurno,
       idEscala,
       status,
+      contatoEmergenciaNome,
+      contatoEmergenciaTelefone,
     } = req.body;
 
     /* ===== VALIDAÇÕES BÁSICAS ===== */
@@ -282,6 +284,12 @@ const createColaborador = async (req, res) => {
       horario = new Date(`1970-01-01T05:25:00Z`); // Primeiro horário permitido
     }
 
+    const contatoEmergenciaNomeLimpo =
+      contatoEmergenciaNome?.trim() || null;
+
+    const contatoEmergenciaTelefoneLimpo =
+      contatoEmergenciaTelefone?.trim() || null;
+
     const data = {
       opsId,
       nomeCompleto,
@@ -289,6 +297,8 @@ const createColaborador = async (req, res) => {
       telefone: telefone || null,
       email: email || null,
       genero: genero || null,
+      contatoEmergenciaNome: contatoEmergenciaNomeLimpo,
+      contatoEmergenciaTelefone: contatoEmergenciaTelefoneLimpo,
       matricula,
       dataAdmissao: dataAdmissaoDate,
       horarioInicioJornada: horario,
@@ -336,6 +346,8 @@ const updateColaborador = async (req, res) => {
       idEscala,
       dataAdmissao,
       horarioInicioJornada,
+      contatoEmergenciaNome,
+      contatoEmergenciaTelefone,
     } = req.body;
 
     const data = {};
@@ -348,6 +360,15 @@ const updateColaborador = async (req, res) => {
     if (genero !== undefined) data.genero = genero || null;
     if (matricula !== undefined) data.matricula = matricula;
     if (status !== undefined) data.status = status;
+    if (contatoEmergenciaNome !== undefined) {
+      data.contatoEmergenciaNome =
+        contatoEmergenciaNome?.trim() || null;
+    }
+
+    if (contatoEmergenciaTelefone !== undefined) {
+      data.contatoEmergenciaTelefone =
+        contatoEmergenciaTelefone?.trim() || null;
+    }
 
     /* ===== ESCALA ===== */
     if (idEscala !== undefined) {
