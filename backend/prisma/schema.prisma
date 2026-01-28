@@ -129,6 +129,7 @@ model Empresa {
   colaboradores   Colaborador[]
   contratos       Contrato[]
   desligamentos   Desligamento[]
+  dwReais      DwReal[]
 
   @@map("empresa")
 }
@@ -196,6 +197,8 @@ model Turno {
   ativo         Boolean       @default(true)
   dataCriacao   DateTime      @default(now()) @map("data_criacao")
   colaboradores Colaborador[]
+  dwPlanejados DwPlanejado[]
+  dwReais      DwReal[]
 
   @@map("turno")
 }
@@ -454,6 +457,42 @@ model TreinamentoSetor {
   @@index([idSetor])
   @@index([idTreinamento])
   @@map("treinamento_setor")
+}
+
+model DwPlanejado {
+  id         Int      @id @default(autoincrement())
+
+  data       DateTime @map("data")
+  idTurno    Int      @map("id_turno")
+  quantidade Int
+
+  turno      Turno    @relation(fields: [idTurno], references: [idTurno])
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt      @map("updated_at")
+
+  @@unique([data, idTurno])
+  @@map("dw_planejado")
+}
+
+model DwReal {
+  id         Int      @id @default(autoincrement())
+
+  data       DateTime @map("data")
+  idTurno    Int      @map("id_turno")
+  idEmpresa  Int      @map("id_empresa")
+
+  quantidade Int
+  observacao String?
+
+  turno      Turno    @relation(fields: [idTurno], references: [idTurno])
+  empresa    Empresa  @relation(fields: [idEmpresa], references: [idEmpresa])
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt      @map("updated_at")
+
+  @@unique([data, idTurno, idEmpresa])
+  @@map("dw_real")
 }
 
 enum StatusTreinamento {

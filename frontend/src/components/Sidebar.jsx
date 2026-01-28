@@ -12,6 +12,7 @@ import {
   Upload,
   ChevronDown,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -40,10 +41,15 @@ export default function Sidebar({ isOpen, onClose }) {
     )
   );
 
+  const [dwOpen, setDwOpen] = useState(
+    location.pathname.startsWith("/dw")
+  );
+
   const [pontoOpen, setPontoOpen] = useState(
     location.pathname.startsWith("/ponto")
   );
 
+    
   /* =====================
      MENU PRINCIPAL
   ===================== */
@@ -274,6 +280,51 @@ export default function Sidebar({ isOpen, onClose }) {
               </button>
             );
           })}
+          {/* =====================
+              DAILY WORKS (DW)
+          ===================== */}
+          <div className="mt-2">
+            <button
+              onClick={() => setDwOpen(!dwOpen)}
+              className={`
+                w-full flex items-center justify-between
+                px-4 py-3 rounded-xl
+                text-sm font-medium transition
+                ${
+                  location.pathname.startsWith("/dw")
+                    ? "bg-[#2A2A2C] text-white"
+                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                }
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList
+                  size={18}
+                  className={
+                    location.pathname.startsWith("/dw")
+                      ? "text-[#FA4C00]"
+                      : "text-[#BFBFC3]"
+                  }
+                />
+                Daily Works
+              </div>
+
+              <ChevronDown
+                size={16}
+                className={`transition ${dwOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {dwOpen && (
+              <div className="ml-8 mt-1 space-y-1">
+                <SidebarSubItem
+                  label="Controle Diário"
+                  active={isActive("/dw")}
+                  onClick={() => go("/dw")}
+                />
+              </div>
+            )}
+          </div>
 
           {/* =====================
               PONTO

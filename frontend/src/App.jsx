@@ -42,6 +42,9 @@ import TreinamentosPage from "./pages/treinamentos";
 import DetalhesTreinamento from "./pages/treinamentos/detalhes";
 import NovoTreinamento from "./pages/treinamentos/novo";
 
+/* ================= DW ============================*/
+import DwListPage from "./pages/DailyWorks/dwList";
+import DwNovoPage from "./pages/DailyWorks/dwNovo";
 
 /* ================= PROTEÇÃO ================= */
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -220,6 +223,24 @@ export default function App() {
         element={
           <ProtectedRoute>
             <DetalhesTreinamento />
+          </ProtectedRoute>
+        }
+      />
+      {/* ================= DW ================= */}
+      <Route
+        path="/dw"
+        element={
+          <ProtectedRoute>
+            <DwListPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dw/novo"
+        element={
+          <ProtectedRoute>
+            <DwNovoPage />
           </ProtectedRoute>
         }
       />
