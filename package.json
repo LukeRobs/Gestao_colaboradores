@@ -6,21 +6,22 @@
     "install:backend": "cd backend && npm install",
     "install:frontend": "cd frontend && npm install",
     "install:all": "npm run install:backend && npm run install:frontend",
-    
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    
     "build:frontend": "cd frontend && npm run build",
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm start",
     "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
-    
     "prisma:generate": "cd backend && npx prisma generate",
     "prisma:migrate": "cd backend && npx prisma migrate dev",
     "prisma:studio": "cd backend && npx prisma studio"
   },
   "devDependencies": {
+    "baseline-browser-mapping": "^2.9.19",
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "googleapis": "^170.1.0"
   }
 }

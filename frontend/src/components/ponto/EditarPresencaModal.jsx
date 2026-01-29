@@ -92,6 +92,12 @@ export default function EditarPresencaModal({
     }
 
     if (permiteHorario) {
+      // 🔒 VALIDAÇÃO: Status P (Presente) OBRIGA horário de entrada
+      if (status === "P" && !horaEntrada) {
+        alert("Horário de entrada é obrigatório para status 'Presente'");
+        return;
+      }
+
       if (horaSaida && !horaEntrada) {
         alert("Hora de saída não pode existir sem hora de entrada");
         return;
@@ -193,14 +199,21 @@ export default function EditarPresencaModal({
         {/* HORÁRIOS */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-[#BFBFC3]">Hora Entrada</label>
+            <label className="text-xs text-[#BFBFC3]">
+              Hora Entrada
+              {status === "P" && <span className="text-red-400 ml-1">*</span>}
+            </label>
             <input
               key={`entrada-${renderKey}`}
               type="time"
               value={horaEntrada}
               disabled={!permiteHorario}
               onChange={(e) => setHoraEntrada(e.target.value)}
-              className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2 disabled:opacity-40"
+              className={`w-full bg-[#2A2A2C] border rounded-xl px-4 py-2 disabled:opacity-40 ${
+                status === "P" && !horaEntrada 
+                  ? "border-red-400" 
+                  : "border-[#3D3D40]"
+              }`}
             />
           </div>
 

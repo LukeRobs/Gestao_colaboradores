@@ -606,6 +606,15 @@ const ajusteManualPresenca = async (req, res) => {
       );
     }
 
+    // 🔒 VALIDAÇÃO: Status P (Presente) OBRIGA horário de entrada
+    if (status === "P" && !horaEntrada) {
+      return errorResponse(
+        res,
+        "Horário de entrada é obrigatório para status 'Presente'",
+        400
+      );
+    }
+
     if (horaEntrada && horaSaida) {
       const [hE, mE] = horaEntrada.split(":").map(Number);
       const [hS, mS] = horaSaida.split(":").map(Number);
