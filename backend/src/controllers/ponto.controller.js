@@ -579,6 +579,9 @@ const ajusteManualPresenca = async (req, res) => {
       horaSaida,
     } = req.body;
 
+    /* ===============================
+       VALIDAÇÕES BÁSICAS
+    =============================== */
     if (!opsId || !dataReferencia || !status || !justificativa) {
       return errorResponse(
         res,
@@ -595,16 +598,20 @@ const ajusteManualPresenca = async (req, res) => {
       "SINERGIA_ENVIADA",
       "HORA_EXTRA",
       "LICENCA",
+      "ON", // ✅ ONBOARDING
     ];
 
     const justificativaNormalizada = String(justificativa)
-    .trim()
-    .toUpperCase();
+      .trim()
+      .toUpperCase();
+
     if (!JUSTIFICATIVAS_PERMITIDAS.includes(justificativaNormalizada)) {
       return errorResponse(res, "Justificativa inválida", 400);
     }
 
-    // 🔒 Colaborador válido
+    /* ===============================
+       COLABORADOR
+    =============================== */
     const colaborador = await prisma.colaborador.findFirst({
       where: {
         opsId,
@@ -617,7 +624,70 @@ const ajusteManualPresenca = async (req, res) => {
       return notFoundResponse(res, "Colaborador não encontrado ou inativo");
     }
 
-    // 🔒 Regra de jornada
+    /* ===============================
+       DATA BASE (DIA CIVIL)
+    =============================== */
+    const [y, m, d] = dataReferencia.split("-").map(Number);
+    const dataRef = new Date(y, m - 1, d);
+    dataRef.setHours(0, 0, 0, 0);
+
+    /* ===============================
+       TIPO DE STATUS
+    =============================== */
+    const tipo = await prisma.tipoAusencia.findUnique({
+      where: { codigo: status },
+    });
+
+    if (!tipo) {
+      return errorResponse(res, `Status inválido: ${status}`, 400);
+    }
+
+    /* =====================================================
+       🟢 REGRA ESPECÍFICA: ONBOARDING (ON)
+       - ignora horários
+       - ignora jornada
+       - sempre manual e validado
+    ===================================================== */
+    if (status === "ON") {
+      const registro = await prisma.frequencia.upsert({
+        where: {
+          opsId_dataReferencia: {
+            opsId,
+            dataReferencia: dataRef,
+          },
+        },
+        update: {
+          idTipoAusencia: tipo.idTipoAusencia,
+          horaEntrada: null,
+          horaSaida: null,
+          justificativa: "ON",
+          manual: true,
+          validado: true,
+          registradoPor: req.user?.id || "GESTAO",
+        },
+        create: {
+          opsId,
+          dataReferencia: dataRef,
+          idTipoAusencia: tipo.idTipoAusencia,
+          horaEntrada: null,
+          horaSaida: null,
+          justificativa: "ON",
+          manual: true,
+          validado: true,
+          registradoPor: req.user?.id || "GESTAO",
+        },
+      });
+
+      return successResponse(
+        res,
+        registro,
+        "Onboarding registrado com sucesso"
+      );
+    }
+
+    /* ===============================
+       VALIDAÇÕES DE JORNADA (NÃO ON)
+    =============================== */
     if (horaSaida && !horaEntrada) {
       return errorResponse(
         res,
@@ -626,7 +696,6 @@ const ajusteManualPresenca = async (req, res) => {
       );
     }
 
-    // 🔒 VALIDAÇÃO: Status P (Presente) OBRIGA horário de entrada
     if (status === "P" && !horaEntrada) {
       return errorResponse(
         res,
@@ -641,12 +710,11 @@ const ajusteManualPresenca = async (req, res) => {
 
       let minutosTrabalhados = hS * 60 + mS - (hE * 60 + mE);
 
-      // 🔑 VIRADA DE DIA (T3)
+      // 🔑 virada de dia (T3)
       if (minutosTrabalhados < 0) {
         minutosTrabalhados += 24 * 60;
       }
 
-      // 🔒 REGRA DE SEGURANÇA
       if (minutosTrabalhados <= 0 || minutosTrabalhados > 16 * 60) {
         return errorResponse(
           res,
@@ -656,25 +724,12 @@ const ajusteManualPresenca = async (req, res) => {
       }
     }
 
-    // ✅ Data base (sempre a data da ENTRADA)
-    const [y, m, d] = dataReferencia.split("-").map(Number);
-    const dataRef = new Date(y, m - 1, d);
-    dataRef.setHours(0, 0, 0, 0);
-
-    // 🔍 Tipo de ausência
-    const tipo = await prisma.tipoAusencia.findUnique({
-      where: { codigo: status },
-    });
-
-    if (!tipo) {
-      return errorResponse(res, `Status inválido: ${status}`, 400);
-    }
-
-    // ⏰ Hora ENTRADA continua time-only
+    /* ===============================
+       CONVERSÃO DE HORAS
+    =============================== */
     const toTime = (t) =>
       t ? new Date(`1970-01-01T${t}:00.000Z`) : null;
 
-    // 🔑 AJUSTE DA HORA DE SAÍDA (RESOLVE T3)
     let horaSaidaFinal = null;
 
     if (horaSaida) {
@@ -684,15 +739,16 @@ const ajusteManualPresenca = async (req, res) => {
       const virouDia = hS * 60 + mS < hE * 60 + mE;
 
       const base = new Date(dataRef);
-      if (virouDia) {
-        base.setDate(base.getDate() + 1);
-      }
+      if (virouDia) base.setDate(base.getDate() + 1);
 
       horaSaidaFinal = new Date(
         `${base.toISOString().slice(0, 10)}T${horaSaida}:00`
       );
     }
 
+    /* ===============================
+       UPSERT FINAL
+    =============================== */
     const registro = await prisma.frequencia.upsert({
       where: {
         opsId_dataReferencia: {
@@ -703,8 +759,8 @@ const ajusteManualPresenca = async (req, res) => {
       update: {
         idTipoAusencia: tipo.idTipoAusencia,
         horaEntrada: toTime(horaEntrada),
-        horaSaida: horaSaidaFinal, // ✅ CORRETO
-        justificativa,
+        horaSaida: horaSaidaFinal,
+        justificativa: justificativaNormalizada,
         manual: true,
         validado: true,
         registradoPor: req.user?.id || "GESTAO",
@@ -714,8 +770,8 @@ const ajusteManualPresenca = async (req, res) => {
         dataReferencia: dataRef,
         idTipoAusencia: tipo.idTipoAusencia,
         horaEntrada: toTime(horaEntrada),
-        horaSaida: horaSaidaFinal, // ✅ CORRETO
-        justificativa,
+        horaSaida: horaSaidaFinal,
+        justificativa: justificativaNormalizada,
         manual: true,
         validado: true,
         registradoPor: req.user?.id || "GESTAO",
@@ -732,6 +788,7 @@ const ajusteManualPresenca = async (req, res) => {
     return errorResponse(res, "Erro ao realizar ajuste manual", 500);
   }
 };
+
 
 
 

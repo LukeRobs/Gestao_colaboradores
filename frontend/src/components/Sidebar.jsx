@@ -306,7 +306,7 @@ export default function Sidebar({ isOpen, onClose }) {
                       : "text-[#BFBFC3]"
                   }
                 />
-                Daily Works
+                Planejamento
               </div>
 
               <ChevronDown
@@ -318,7 +318,7 @@ export default function Sidebar({ isOpen, onClose }) {
             {dwOpen && (
               <div className="ml-8 mt-1 space-y-1">
                 <SidebarSubItem
-                  label="Controle Diário"
+                  label="Daily Works"
                   active={isActive("/dw")}
                   onClick={() => go("/dw")}
                 />
