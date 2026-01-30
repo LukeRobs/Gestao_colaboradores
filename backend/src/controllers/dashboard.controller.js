@@ -78,6 +78,26 @@ function getStatusDoDiaOperacional(f) {
     const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
     const desc = String(f.tipoAusencia.descricao || "").toUpperCase();
 
+    // ✅ NC -> não contratado (não escalado, não impacta abs)
+    if (codigo === "NC") {
+      return {
+        label: "Não contratado",
+        contaComoEscalado: false,
+        impactaAbsenteismo: false,
+        origem: "tipoAusencia",
+      };
+    }
+
+    // ✅ ON -> onboarding (não escalado, não impacta abs)
+    if (codigo === "ON") {
+      return {
+        label: "Onboarding",
+        contaComoEscalado: false,
+        impactaAbsenteismo: false,
+        origem: "tipoAusencia",
+      };
+    }
+    
     // FO / DSR -> não escalado (igual Admin)
     if (codigo === "FO" || codigo === "DSR") {
       return {
