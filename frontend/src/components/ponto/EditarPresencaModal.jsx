@@ -23,6 +23,7 @@ const STATUS_OPTIONS = [
   { code: "P", label: "Presente" },
   { code: "S1", label: "Sinergia enviada" },
   { code: "TR", label: "Transferido" },
+  { code: "ON", label: "Onboarding" },
 ];
 
 
@@ -65,7 +66,7 @@ export default function EditarPresencaModal({
   const [horaSaida, setHoraSaida] = useState("");
   const [justificativa, setJustificativa] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const isOnboarding = status === "ON";
   /* =============================
      INIT
   ============================= */
@@ -80,6 +81,15 @@ export default function EditarPresencaModal({
     // 🔑 FORÇA REMOUNT DOS INPUTS
     setRenderKey((k) => k + 1);
   }, [open, registro]);
+
+    useEffect(() => {
+    if (isOnboarding) {
+      setJustificativa("ON");
+      setHoraEntrada("");
+      setHoraSaida("");
+      setRenderKey((k) => k + 1);
+    }
+  }, [status]);
 
   if (!open) return null;
 
@@ -237,8 +247,9 @@ export default function EditarPresencaModal({
           </label>
           <select
             value={justificativa}
+            disabled={isOnboarding}
             onChange={(e) => setJustificativa(e.target.value)}
-            className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2"
+            className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2 disabled:opacity-50"
           >
             <option value="">Selecione uma justificativa</option>
             {JUSTIFICATIVAS.map((j) => (
