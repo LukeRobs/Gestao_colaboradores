@@ -109,6 +109,7 @@ export default function DashboardOperacional() {
         totalEscalados: 0,
         presentes: 0,
         ausentes: 0,
+        diaristasPresentes: 0,
         setores: [],
       }
     );
@@ -120,6 +121,7 @@ export default function DashboardOperacional() {
   const totalColaboradores = turnoData.totalEscalados;
   const presentes = turnoData.presentes;
   const ausentes = turnoData.ausentes;
+  const diaristasPresentes = turnoData.diaristasPresentes || 0;
 
   const absenteismo = useMemo(() => {
     if (!totalColaboradores) return 0;
@@ -130,6 +132,7 @@ export default function DashboardOperacional() {
     () => [
       { icon: Users, label: "Colaboradores", value: totalColaboradores },
       { icon: Clock, label: "Presentes no turno", value: presentes },
+      { icon: Users, label: "Diaristas presentes", value: diaristasPresentes },
       {
         icon: TrendingUp,
         label: "Absenteísmo",
@@ -143,7 +146,7 @@ export default function DashboardOperacional() {
         value: dados?.empresas?.length || 0,
       },
     ],
-    [totalColaboradores, presentes, absenteismo, dados]
+    [totalColaboradores, presentes, diaristasPresentes, absenteismo, dados]
   );
 
   /* =====================================================

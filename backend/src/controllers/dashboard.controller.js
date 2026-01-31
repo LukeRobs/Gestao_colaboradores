@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { getDateOperacional } = require("../utils/dateOperacional");
+const { buscarDwPlanejado } = require("../services/googleSheetsDW.service");
 
 /* =====================================================
    ⏰ TIMEZONE FIXO — BRASIL
@@ -363,7 +364,44 @@ const carregarDashboard = async (req, res) => {
         : 0;
 
     /* ===============================
-       7️⃣ RESPONSE
+       7️⃣ BUSCAR DIARISTAS PRESENTES (REAIS) POR TURNO
+    =============================== */
+    const diaristasReaisPromises = ["T1", "T2", "T3"].map(async (turno) => {
+      try {
+        // Mapear turno para ID (T1=1, T2=2, T3=3)
+        const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
+        
+        const diaristasReais = await prisma.dwReal.findMany({
+          where: {
+            data: new Date(dataSnapshotStr),
+            idTurno: turnoId
+          }
+        });
+
+        // Somar todas as quantidades das empresas para o turno
+        const totalPresentes = diaristasReais.reduce((total, dw) => total + dw.quantidade, 0);
+
+        return {
+          turno,
+          presentes: totalPresentes
+        };
+      } catch (error) {
+        console.warn(`⚠️ Erro ao buscar diaristas presentes para turno ${turno}:`, error.message);
+        return {
+          turno,
+          presentes: 0
+        };
+      }
+    });
+
+    const diaristasData = await Promise.all(diaristasReaisPromises);
+    const diaristasPresentes = {};
+    diaristasData.forEach(d => {
+      diaristasPresentes[d.turno] = d.presentes;
+    });
+
+    /* ===============================
+       8️⃣ RESPONSE
     =============================== */
     return res.json({
       success: true,
@@ -384,6 +422,7 @@ const carregarDashboard = async (req, res) => {
 
         distribuicaoTurnoSetor: Object.values(turnoSetorAgg).map((t) => ({
           ...t,
+          diaristasPresentes: diaristasPresentes[t.turno] || 0,
           setores: Object.entries(t.setores).map(([setor, quantidade]) => ({
             setor,
             quantidade,
