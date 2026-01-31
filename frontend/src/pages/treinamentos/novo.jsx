@@ -42,7 +42,8 @@ export default function NovoTreinamento() {
   useEffect(() => {
     async function loadBase() {
       try {
-        const [setoresRes, colaboradoresRes, estacoesRes, lideresRes] = await Promise.all([
+        // Carrega dados necessários para o formulário em paralelo
+        const [setoresRes, colaboradoresRes, estacoesRes] = await Promise.all([
           api.get("/setores"),
           api.get("/colaboradores", { 
             params: { 
@@ -50,13 +51,16 @@ export default function NovoTreinamento() {
                 limit: 1000,
             } }),
           api.get("/estacoes"),
-          ColaboradoresAPI.listarLideres(),
+          // CARREGAMENTO DOS LÍDERES REMOVIDO:
+          // Não é mais necessário carregar líderes pois o select de instrutor foi removido
+          // ColaboradoresAPI.listarLideres(),
         ]);
 
         setSetores(setoresRes.data.data || setoresRes.data);
         setColaboradores(colaboradoresRes.data.data || colaboradoresRes.data);
         setEstacoes(estacoesRes.data.data || estacoesRes.data || []);
-        setLideres(lideresRes || []);
+        // Lista de líderes não é mais necessária
+        // setLideres(lideresRes || []);
       } catch (e) {
         if (e.response?.status === 401) {
           logout();
@@ -102,8 +106,11 @@ export default function NovoTreinamento() {
   };
 
 const submit = async () => {
-  if (!form.dataTreinamento || !form.tema || !form.processo || !form.liderResponsavelOpsId) {
-    alert("Preencha os campos obrigatórios (Data, Tema, Processo e Instrutor)");
+  // VALIDAÇÃO DOS CAMPOS OBRIGATÓRIOS:
+  // Removida a validação do instrutor (liderResponsavelOpsId)
+  // Campos obrigatórios: data, tema e processo
+  if (!form.dataTreinamento || !form.tema || !form.processo) {
+    alert("Preencha os campos obrigatórios (Data, Tema e Processo)");
     return;
   }
 
@@ -114,6 +121,7 @@ const submit = async () => {
 
   setLoading(true);
   try {
+    // Envia o formulário sem o campo do instrutor
     const treinamento = await TreinamentosAPI.criar(form);
     navigate(`/treinamentos/${treinamento.idTreinamento}`);
   } catch (err) {
@@ -171,54 +179,60 @@ const colaboradoresFiltrados = colaboradores.filter((c) => {
               Dados do Treinamento
             </h3>
 
-            {/* LINHA 1 */}
+            {/* LINHA 1 - DATA E SOC */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* DATA */}
-            <div className="space-y-1">
+              {/* DATA */}
+              <div className="space-y-1">
                 <label className="text-xs text-[#BFBFC3]">
-                Data do Treinamento
+                  Data do Treinamento
                 </label>
 
                 <input
-                type="date"
-                className="input"
-                value={form.dataTreinamento}
-                onChange={(e) =>
+                  type="date"
+                  className="input"
+                  value={form.dataTreinamento}
+                  onChange={(e) =>
                     setForm({ ...form, dataTreinamento: e.target.value })
-                }
+                  }
                 />
-            </div>
+              </div>
 
-            {/* SOC */}
-            <div className="space-y-1">
+              {/* SOC */}
+              <div className="space-y-1">
                 <label className="text-xs text-[#BFBFC3]">
-                SOC
+                  SOC
                 </label>
 
                 <select
-                className="input"
-                value={form.soc}
-                onChange={(e) =>
+                  className="input"
+                  value={form.soc}
+                  onChange={(e) =>
                     setForm({ ...form, soc: e.target.value })
-                }
+                  }
                 >
-                <option value="">Selecione o SOC</option>
+                  <option value="">Selecione o SOC</option>
 
-                {estacoes.map((e) => (
+                  {estacoes.map((e) => (
                     <option
-                    key={e.idEstacao}
-                    value={e.stationCode || e.codigo}
+                      key={e.idEstacao}
+                      value={e.stationCode || e.codigo}
                     >
-                    {e.stationCode || e.codigo} — {e.nomeEstacao}
+                      {e.stationCode || e.codigo} — {e.nomeEstacao}
                     </option>
-                ))}
+                  ))}
                 </select>
-            </div>
+              </div>
             </div>
 
-            {/* LINHA 2 */}
+            {/* LINHA 2 - TEMA E PROCESSO */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* INSTRUTOR */}
+              {/* 
+                INSTRUTOR - CAMPO REMOVIDO TEMPORARIAMENTE
+                Este bloco continha o select para seleção do instrutor responsável pelo treinamento
+                O campo utilizava a lista de líderes carregada via ColaboradoresAPI.listarLideres()
+                e armazenava o opsId do líder selecionado em form.liderResponsavelOpsId
+              */}
+              {/* 
               <div className="space-y-1">
                 <label className="text-xs text-[#BFBFC3]">
                   Instrutor *
@@ -243,6 +257,24 @@ const colaboradoresFiltrados = colaboradores.filter((c) => {
                   ))}
                 </select>
               </div>
+              */}
+
+              {/* TEMA */}
+              <div className="space-y-1">
+                <label className="text-xs text-[#BFBFC3]">
+                  Tema do Treinamento
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Tema do Treinamento"
+                  className="input"
+                  value={form.tema}
+                  onChange={(e) =>
+                    setForm({ ...form, tema: e.target.value })
+                  }
+                />
+              </div>
 
               {/* PROCESSO */}
               <div className="space-y-1">
@@ -260,20 +292,6 @@ const colaboradoresFiltrados = colaboradores.filter((c) => {
                   }
                 />
               </div>
-            </div>
-
-
-            {/* LINHA 3 */}
-            <div className="grid grid-cols-1 gap-4">
-              <input
-                type="text"
-                placeholder="Tema do Treinamento"
-                className="input"
-                value={form.tema}
-                onChange={(e) =>
-                  setForm({ ...form, tema: e.target.value })
-                }
-              />
             </div>
 
             {/* SETORES */}
