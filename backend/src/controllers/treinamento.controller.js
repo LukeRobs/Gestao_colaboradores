@@ -11,6 +11,7 @@ exports.createTreinamento = async (req, res) => {
       processo,
       tema,
       soc,
+      liderResponsavelOpsId,
       setores = [],
       participantes = [],
     } = req.body;
@@ -22,10 +23,13 @@ exports.createTreinamento = async (req, res) => {
       });
     }
 
-    if (!req.user?.opsId) {
+    // Se não foi informado um instrutor específico, usa o usuário logado
+    const instrutorOpsId = liderResponsavelOpsId || req.user?.opsId;
+
+    if (!instrutorOpsId) {
       return res.status(400).json({
         success: false,
-        message: "Usuário logado sem opsId vinculado",
+        message: "Instrutor deve ser informado",
       });
     }
 
@@ -36,10 +40,10 @@ exports.createTreinamento = async (req, res) => {
         tema,
         soc,
 
-        // 🔗 vínculo correto com colaborador
+        // 🔗 vínculo correto com colaborador instrutor
         liderResponsavel: {
           connect: {
-            opsId: req.user.opsId,
+            opsId: instrutorOpsId,
           },
         },
 

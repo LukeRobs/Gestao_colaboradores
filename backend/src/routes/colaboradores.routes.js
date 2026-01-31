@@ -19,7 +19,7 @@ router.post(
 router.get(
   "/lideres",
   authenticate,
-  authorize("ADMIN"),
+  authorize("ADMIN", "GESTAO", "LIDERANCA"),
   asyncHandler(controller.listarLideres)
 );
 

@@ -458,13 +458,41 @@ const listarLideres = async (req, res) => {
     const lideres = await prisma.colaborador.findMany({
       where: {
         status: "ATIVO",
-        subordinados: {
-          some: {}, // tem pelo menos 1 subordinado
-        },
+        OR: [
+          {
+            // Líderes (que têm subordinados)
+            subordinados: {
+              some: {}, // tem pelo menos 1 subordinado
+            },
+          },
+          {
+            // Analistas de Logística JR (específico)
+            cargo: {
+              nomeCargo: {
+                contains: "Analista De Logística JR",
+                mode: "insensitive",
+              },
+            },
+          },
+          {
+            // Outras variações de Analista de Logística
+            cargo: {
+              nomeCargo: {
+                contains: "Analista de Logística",
+                mode: "insensitive",
+              },
+            },
+          },
+        ],
       },
       select: {
         opsId: true,
         nomeCompleto: true,
+        cargo: {
+          select: {
+            nomeCargo: true,
+          },
+        },
       },
       orderBy: { nomeCompleto: "asc" },
     });

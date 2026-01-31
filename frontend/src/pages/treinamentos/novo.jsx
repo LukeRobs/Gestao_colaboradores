@@ -6,6 +6,7 @@ import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 
 import { TreinamentosAPI } from "../../services/treinamentos";
+import { ColaboradoresAPI } from "../../services/colaboradores";
 import api from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 
@@ -16,6 +17,7 @@ export default function NovoTreinamento() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [estacoes, setEstacoes] = useState([]);
+  const [lideres, setLideres] = useState([]);
 
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
@@ -40,7 +42,7 @@ export default function NovoTreinamento() {
   useEffect(() => {
     async function loadBase() {
       try {
-        const [setoresRes, colaboradoresRes, estacoesRes] = await Promise.all([
+        const [setoresRes, colaboradoresRes, estacoesRes, lideresRes] = await Promise.all([
           api.get("/setores"),
           api.get("/colaboradores", { 
             params: { 
@@ -48,11 +50,13 @@ export default function NovoTreinamento() {
                 limit: 1000,
             } }),
           api.get("/estacoes"),
+          ColaboradoresAPI.listarLideres(),
         ]);
 
         setSetores(setoresRes.data.data || setoresRes.data);
         setColaboradores(colaboradoresRes.data.data || colaboradoresRes.data);
         setEstacoes(estacoesRes.data.data || estacoesRes.data || []);
+        setLideres(lideresRes || []);
       } catch (e) {
         if (e.response?.status === 401) {
           logout();
@@ -98,8 +102,8 @@ export default function NovoTreinamento() {
   };
 
 const submit = async () => {
-  if (!form.dataTreinamento || !form.tema || !form.processo) {
-    alert("Preencha os campos obrigatórios");
+  if (!form.dataTreinamento || !form.tema || !form.processo || !form.liderResponsavelOpsId) {
+    alert("Preencha os campos obrigatórios (Data, Tema, Processo e Instrutor)");
     return;
   }
 
@@ -212,19 +216,55 @@ const colaboradoresFiltrados = colaboradores.filter((c) => {
             </div>
             </div>
 
-
             {/* LINHA 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Processo"
-                className="input"
-                value={form.processo}
-                onChange={(e) =>
-                  setForm({ ...form, processo: e.target.value })
-                }
-              />
+              {/* INSTRUTOR */}
+              <div className="space-y-1">
+                <label className="text-xs text-[#BFBFC3]">
+                  Instrutor *
+                </label>
 
+                <select
+                  className="input"
+                  value={form.liderResponsavelOpsId}
+                  onChange={(e) =>
+                    setForm({ ...form, liderResponsavelOpsId: e.target.value })
+                  }
+                >
+                  <option value="">Selecione o instrutor</option>
+
+                  {lideres.map((lider) => (
+                    <option
+                      key={lider.opsId}
+                      value={lider.opsId}
+                    >
+                      {lider.nomeCompleto} ({lider.opsId}) {lider.cargo?.nomeCargo ? `- ${lider.cargo.nomeCargo}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* PROCESSO */}
+              <div className="space-y-1">
+                <label className="text-xs text-[#BFBFC3]">
+                  Processo
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Processo"
+                  className="input"
+                  value={form.processo}
+                  onChange={(e) =>
+                    setForm({ ...form, processo: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+
+            {/* LINHA 3 */}
+            <div className="grid grid-cols-1 gap-4">
               <input
                 type="text"
                 placeholder="Tema do Treinamento"
