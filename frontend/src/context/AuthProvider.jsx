@@ -1,4 +1,4 @@
-import { useState, useEffect, startTransition } from "react";
+import { useState, useEffect, startTransition, useMemo } from "react";
 import { AuthContext } from "./AuthContext";
 
 export function AuthProvider({ children }) {
@@ -61,8 +61,32 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("user");
   };
 
+  // 🔐 PERMISSÕES CENTRALIZADAS
+  const permissions = useMemo(() => {
+    return {
+      isAdmin: user?.role === "ADMIN",
+      isLideranca: user?.role === "LIDERANCA",
+      isOperacao: user?.role === "OPERACAO",
+    };
+  }, [user]);
+
+  // 🛡️ Helper de role
+  const hasRole = (...roles) => {
+    if (!user?.role) return false;
+    return roles.includes(user.role);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        permissions,
+        hasRole,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

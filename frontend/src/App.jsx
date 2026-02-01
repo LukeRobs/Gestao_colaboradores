@@ -66,7 +66,7 @@ export default function App() {
       <Route
         path="/dashboard/operacional"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <DashboardOperacional />
           </ProtectedRoute>
         }
@@ -75,7 +75,7 @@ export default function App() {
       <Route
         path="/dashboard/admin"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <DashboardAdmin />
           </ProtectedRoute>
         }
@@ -84,7 +84,7 @@ export default function App() {
       <Route
         path="/dashboard/colaboradores"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <DashboardColaborador />
             </ProtectedRoute>
         }
@@ -93,7 +93,7 @@ export default function App() {
       <Route
         path="/colaboradores"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <ColaboradoresPage />
           </ProtectedRoute>
         }
@@ -102,7 +102,7 @@ export default function App() {
       <Route
         path="/colaboradores/novo"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <NovoColaborador />
           </ProtectedRoute>
         }
@@ -112,8 +112,8 @@ export default function App() {
       <Route
         path="/colaboradores/import"
         element={
-          <ProtectedRoute>
-            <ImportarColaboradores />
+          <ProtectedRoute roles={["ADMIN"]}>
+            <ImportarColaboradores/>
           </ProtectedRoute>
         }
       />
@@ -121,7 +121,7 @@ export default function App() {
       <Route
         path="/colaboradores/:opsId/editar"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <EditarColaborador />
           </ProtectedRoute>
         }
@@ -130,7 +130,7 @@ export default function App() {
       <Route
         path="/colaboradores/:opsId/movimentar"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <MovimentarColaborador />
           </ProtectedRoute>
         }
@@ -139,7 +139,7 @@ export default function App() {
       <Route
         path="/colaboradores/:opsId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <PerfilColaborador />
           </ProtectedRoute>
         }
@@ -149,7 +149,7 @@ export default function App() {
       <Route
         path="/atestados"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <AtestadosPage />
           </ProtectedRoute>
         }
@@ -158,7 +158,7 @@ export default function App() {
       <Route
         path="/atestados/novo"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <NovoAtestado />
           </ProtectedRoute>
         }
@@ -167,7 +167,7 @@ export default function App() {
       <Route
         path="/medidas-disciplinares"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <MedidasDisciplinaresPage />
           </ProtectedRoute>
         }
@@ -176,7 +176,7 @@ export default function App() {
       <Route
         path="/medidas-disciplinares/novo"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <NovaMedidaDisciplinar />
           </ProtectedRoute>
         }
@@ -185,7 +185,7 @@ export default function App() {
       <Route
         path="/acidentes"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <AcidentesPage />
           </ProtectedRoute>
         }
@@ -194,7 +194,7 @@ export default function App() {
       <Route
         path="/acidentes/novo"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <NovoAcidente />
           </ProtectedRoute>
         }
@@ -203,7 +203,7 @@ export default function App() {
       <Route
         path="/treinamentos"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <TreinamentosPage />
           </ProtectedRoute>
         }
@@ -212,7 +212,7 @@ export default function App() {
       <Route
         path="/treinamentos/novo"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <NovoTreinamento />
           </ProtectedRoute>
         }
@@ -221,7 +221,7 @@ export default function App() {
       <Route
         path="/treinamentos/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <DetalhesTreinamento />
           </ProtectedRoute>
         }
@@ -230,7 +230,7 @@ export default function App() {
       <Route
         path="/dw"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <DwListPage />
           </ProtectedRoute>
         }
@@ -239,7 +239,7 @@ export default function App() {
       <Route
         path="/dw/novo"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <DwNovoPage />
           </ProtectedRoute>
         }
@@ -249,7 +249,7 @@ export default function App() {
       <Route
         path="/empresas"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <EmpresasPage />
           </ProtectedRoute>
         }
@@ -258,7 +258,7 @@ export default function App() {
       <Route
         path="/setores"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <SetoresPage />
           </ProtectedRoute>
         }
@@ -267,7 +267,7 @@ export default function App() {
       <Route
         path="/cargos"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <CargosPage />
           </ProtectedRoute>
         }
@@ -275,7 +275,7 @@ export default function App() {
       <Route
         path="/regionais"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <RegionaisList />
           </ProtectedRoute>
         }
@@ -284,7 +284,7 @@ export default function App() {
       <Route
         path="/estacoes"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN"]}>
             <EstacoesList />
           </ProtectedRoute>
         }
@@ -303,7 +303,7 @@ export default function App() {
       <Route
         path="/ponto/controle"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <ControlePresenca />
           </ProtectedRoute>
         }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { AuthContext } from "../../context/AuthContext";
+import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,6 +19,7 @@ import api from "../../services/api";
 export default function PerfilColaborador() {
   const { opsId } = useParams();
   const navigate = useNavigate();
+  const { permissions } = useContext(AuthContext);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -134,26 +136,28 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
           </div>
 
           {/* AÇÕES */}
-          <div className="flex gap-3">
-            <ActionButton
-              icon={<Pencil size={16} />}
-              label="Editar"
-              onClick={() => navigate(`/colaboradores/${opsId}/editar`)}
-            />
+          {permissions.isAdmin && (
+            <div className="flex gap-3">
+              <ActionButton
+                icon={<Pencil size={16} />}
+                label="Editar"
+                onClick={() => navigate(`/colaboradores/${opsId}/editar`)}
+              />
 
-            <ActionButton
-              icon={<Shuffle size={16} />}
-              label="Movimentar"
-              onClick={() => navigate(`/colaboradores/${opsId}/movimentar`)}
-            />
+              <ActionButton
+                icon={<Shuffle size={16} />}
+                label="Movimentar"
+                onClick={() => navigate(`/colaboradores/${opsId}/movimentar`)}
+              />
 
-            <ActionButton
-              icon={<Trash2 size={16} />}
-              label="Excluir"
-              danger
-              onClick={handleDelete}
-            />
-          </div>
+              <ActionButton
+                icon={<Trash2 size={16} />}
+                label="Excluir"
+                danger
+                onClick={handleDelete}
+              />
+            </div>
+          )}
 
           {/* DADOS PESSOAIS */}
           <Section title="Dados Pessoais">

@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useContext } from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -25,7 +26,7 @@ export default function ColaboradoresPage() {
 
 
   const navigate = useNavigate();
-
+  const { permissions } = useContext(AuthContext);
   /* ================= LOAD ================= */
   const load = useCallback(async () => {
   setLoading(true);
@@ -176,7 +177,8 @@ export default function ColaboradoresPage() {
             </div>
 
             {/* NOVO COLABORADOR */}
-            <button
+            {permissions.isAdmin && (
+              <button
               onClick={() => navigate("/colaboradores/novo")}
               className="
                 inline-flex items-center gap-2
@@ -191,6 +193,7 @@ export default function ColaboradoresPage() {
               <Plus size={16} />
               Novo Colaborador
             </button>
+            )}
           </div>
 
           {/* LISTA */}
@@ -211,16 +214,21 @@ export default function ColaboradoresPage() {
                   onView={(emp) =>
                     navigate(`/colaboradores/${emp.opsId}`)
                   }
-                  onDelete={async (emp) => {
-                    if (!window.confirm(`Excluir ${emp.nomeCompleto}?`)) return;
-                    try {
-                      await ColaboradoresAPI.excluir(emp.opsId);
-                      load();
-                    } catch {
-                      alert("Erro ao excluir colaborador.");
-                    }
-                  }}
+                  onDelete={
+                    permissions.isAdmin
+                      ? async (emp) => {
+                          if (!window.confirm(`Excluir ${emp.nomeCompleto}?`)) return;
+                          try {
+                            await ColaboradoresAPI.excluir(emp.opsId);
+                            load();
+                          } catch {
+                            alert("Erro ao excluir colaborador.");
+                          }
+                        }
+                      : null
+                  }
                 />
+
                 {/* PAGINAÇÃO - SEMPRE MOSTRADA, MESMO COM 1 PÁGINA */}
                 <Pagination
                   page={page}
