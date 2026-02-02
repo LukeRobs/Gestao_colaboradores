@@ -2,10 +2,7 @@ import {
   LayoutDashboard,
   Users,
   Clock,
-  Building2,
-  Briefcase,
   Layers,
-  MapPin,
   Network,
   FileText,
   Settings,
@@ -15,19 +12,22 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { useContext } from "react";
-import { AuthContext} from "../context/AuthContext"
+import { useState, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, permissions } = useContext(AuthContext);
 
-  if(user?.role === "OPERACAO") {
-    return null
+  // OPERACAO não vê sidebar
+  if (user?.role === "OPERACAO") {
+    return null;
   }
-  
+
+  const isAdmin = permissions?.isAdmin;
+  const isLideranca = permissions?.isLideranca;
+
   /* =====================
      SUBMENUS
   ===================== */
@@ -41,33 +41,10 @@ export default function Sidebar({ isOpen, onClose }) {
     )
   );
 
-  const [dwOpen, setDwOpen] = useState(
-    location.pathname.startsWith("/dw")
-  );
-
+  const [dwOpen, setDwOpen] = useState(location.pathname.startsWith("/dw"));
   const [pontoOpen, setPontoOpen] = useState(
     location.pathname.startsWith("/ponto")
   );
-
-    
-  /* =====================
-     MENU PRINCIPAL
-  ===================== */
-  const menuItems = [
-    { icon: Users, label: "Colaboradores", path: "/colaboradores" },
-    { icon: FileText, label: "Atestados Médicos", path: "/atestados" },
-    { icon: Settings, label: "Acidentes", path: "/acidentes" },
-    {
-      icon: FileText,
-      label: "Medidas Disciplinares",
-      path: "/medidas-disciplinares",
-    },
-    {
-      icon: Upload,
-      label: "Importar colaboradores",
-      path: "/colaboradores/import",
-    },
-  ];
 
   const isActive = (path) =>
     location.pathname === path ||
@@ -77,6 +54,39 @@ export default function Sidebar({ isOpen, onClose }) {
     navigate(path);
     onClose?.();
   };
+
+  /* =====================
+     MENU PRINCIPAL
+  ===================== */
+  const menuItems = [
+    { icon: Users, label: "Colaboradores", path: "/colaboradores" },
+
+    ...(isAdmin || isLideranca
+      ? [
+          {
+            icon: FileText,
+            label: "Atestados Médicos",
+            path: "/atestados",
+          },
+          { icon: Settings, label: "Acidentes", path: "/acidentes" },
+          {
+            icon: FileText,
+            label: "Medidas Disciplinares",
+            path: "/medidas-disciplinares",
+          },
+        ]
+      : []),
+
+    ...(isAdmin
+      ? [
+          {
+            icon: Upload,
+            label: "Importar colaboradores",
+            path: "/colaboradores/import",
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -111,7 +121,6 @@ export default function Sidebar({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Menu */}
         <nav className="px-3 py-4 space-y-1">
           {/* =====================
               DASHBOARDS
@@ -121,8 +130,7 @@ export default function Sidebar({ isOpen, onClose }) {
               onClick={() => setDashboardsOpen(!dashboardsOpen)}
               className={`
                 w-full flex items-center justify-between
-                px-4 py-3 rounded-xl
-                text-sm font-medium transition
+                px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/dashboard")
                     ? "bg-[#2A2A2C] text-white"
@@ -131,22 +139,12 @@ export default function Sidebar({ isOpen, onClose }) {
               `}
             >
               <div className="flex items-center gap-3">
-                <LayoutDashboard
-                  size={18}
-                  className={
-                    location.pathname.startsWith("/dashboard")
-                      ? "text-[#FA4C00]"
-                      : "text-[#BFBFC3]"
-                  }
-                />
+                <LayoutDashboard size={18} />
                 Dashboards
               </div>
-
               <ChevronDown
                 size={16}
-                className={`transition ${
-                  dashboardsOpen ? "rotate-180" : ""
-                }`}
+                className={`transition ${dashboardsOpen ? "rotate-180" : ""}`}
               />
             </button>
 
@@ -158,94 +156,70 @@ export default function Sidebar({ isOpen, onClose }) {
                   onClick={() => go("/dashboard/operacional")}
                 />
 
-                <SidebarSubItem
-                  label="Administrativo"
-                  active={isActive("/dashboard/admin")}
-                  onClick={() => go("/dashboard/admin")}
-                />
-
-                <SidebarSubItem
-                  label="Colaboradores"
-                  active={isActive("/dashboard/colaboradores")}
-                  onClick={() => go("/dashboard/colaboradores")}
-                />
-                {/* FUTURO */}
-                <SidebarSubItem
-                  label="Dashboard Indicadores (em breve)"
-                  disabled
-                />
+                {isAdmin && (
+                  <>
+                    <SidebarSubItem
+                      label="Administrativo"
+                      active={isActive("/dashboard/admin")}
+                      onClick={() => go("/dashboard/admin")}
+                    />
+                    <SidebarSubItem
+                      label="Colaboradores"
+                      active={isActive("/dashboard/colaboradores")}
+                      onClick={() => go("/dashboard/colaboradores")}
+                    />
+                  </>
+                )}
               </div>
             )}
-
           </div>
 
           {/* =====================
-              ORGANIZAÇÃO
+              ORGANIZAÇÃO (SÓ ADMIN)
           ===================== */}
-          <div>
-            <button
-              onClick={() => setOrganizacaoOpen(!organizacaoOpen)}
-              className={`
-                w-full flex items-center justify-between
-                px-4 py-3 rounded-xl
-                text-sm font-medium transition
-                ${
-                  organizacaoOpen
-                    ? "bg-[#2A2A2C] text-white"
-                    : "text-[#BFBFC3] hover:bg-[#242426]"
-                }
-              `}
-            >
-              <div className="flex items-center gap-3">
-                <Network
-                  size={18}
-                  className={
+          {isAdmin && (
+            <div>
+              <button
+                onClick={() => setOrganizacaoOpen(!organizacaoOpen)}
+                className={`
+                  w-full flex items-center justify-between
+                  px-4 py-3 rounded-xl text-sm font-medium transition
+                  ${
                     organizacaoOpen
-                      ? "text-[#FA4C00]"
-                      : "text-[#BFBFC3]"
+                      ? "bg-[#2A2A2C] text-white"
+                      : "text-[#BFBFC3] hover:bg-[#242426]"
                   }
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <Network size={18} />
+                  Organização
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={`transition ${
+                    organizacaoOpen ? "rotate-180" : ""
+                  }`}
                 />
-                Organização
-              </div>
+              </button>
 
-              <ChevronDown
-                size={16}
-                className={`transition ${
-                  organizacaoOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {organizacaoOpen && (
-              <div className="ml-8 mt-1 space-y-1">
-                <SidebarSubItem
-                  label="Empresas"
-                  active={isActive("/empresas")}
-                  onClick={() => go("/empresas")}
-                />
-                <SidebarSubItem
-                  label="Regionais"
-                  active={isActive("/regionais")}
-                  onClick={() => go("/regionais")}
-                />
-                <SidebarSubItem
-                  label="Estações"
-                  active={isActive("/estacoes")}
-                  onClick={() => go("/estacoes")}
-                />
-                <SidebarSubItem
-                  label="Setores"
-                  active={isActive("/setores")}
-                  onClick={() => go("/setores")}
-                />
-                <SidebarSubItem
-                  label="Cargos"
-                  active={isActive("/cargos")}
-                  onClick={() => go("/cargos")}
-                />
-              </div>
-            )}
-          </div>
+              {organizacaoOpen && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <SidebarSubItem label="Empresas" onClick={() => go("/empresas")} />
+                  <SidebarSubItem
+                    label="Regionais"
+                    onClick={() => go("/regionais")}
+                  />
+                  <SidebarSubItem
+                    label="Estações"
+                    onClick={() => go("/estacoes")}
+                  />
+                  <SidebarSubItem label="Setores" onClick={() => go("/setores")} />
+                  <SidebarSubItem label="Cargos" onClick={() => go("/cargos")} />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* =====================
               MENU PRINCIPAL
@@ -270,26 +244,21 @@ export default function Sidebar({ isOpen, onClose }) {
                 {active && (
                   <span className="absolute left-0 h-6 w-1 rounded-r bg-[#FA4C00]" />
                 )}
-
-                <item.icon
-                  size={18}
-                  className={active ? "text-[#FA4C00]" : "text-[#BFBFC3]"}
-                />
-
+                <item.icon size={18} />
                 <span className="text-sm font-medium">{item.label}</span>
               </button>
             );
           })}
+
           {/* =====================
-              DAILY WORKS (DW)
+              PLANEJAMENTO
           ===================== */}
           <div className="mt-2">
             <button
               onClick={() => setDwOpen(!dwOpen)}
               className={`
                 w-full flex items-center justify-between
-                px-4 py-3 rounded-xl
-                text-sm font-medium transition
+                px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/dw")
                     ? "bg-[#2A2A2C] text-white"
@@ -298,17 +267,9 @@ export default function Sidebar({ isOpen, onClose }) {
               `}
             >
               <div className="flex items-center gap-3">
-                <ClipboardList
-                  size={18}
-                  className={
-                    location.pathname.startsWith("/dw")
-                      ? "text-[#FA4C00]"
-                      : "text-[#BFBFC3]"
-                  }
-                />
+                <ClipboardList size={18} />
                 Planejamento
               </div>
-
               <ChevronDown
                 size={16}
                 className={`transition ${dwOpen ? "rotate-180" : ""}`}
@@ -334,8 +295,7 @@ export default function Sidebar({ isOpen, onClose }) {
               onClick={() => setPontoOpen(!pontoOpen)}
               className={`
                 w-full flex items-center justify-between
-                px-4 py-3 rounded-xl
-                text-sm font-medium transition
+                px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/ponto")
                     ? "bg-[#2A2A2C] text-white"
@@ -344,17 +304,9 @@ export default function Sidebar({ isOpen, onClose }) {
               `}
             >
               <div className="flex items-center gap-3">
-                <Clock
-                  size={18}
-                  className={
-                    location.pathname.startsWith("/ponto")
-                      ? "text-[#FA4C00]"
-                      : "text-[#BFBFC3]"
-                  }
-                />
+                <Clock size={18} />
                 Ponto
               </div>
-
               <ChevronDown
                 size={16}
                 className={`transition ${pontoOpen ? "rotate-180" : ""}`}
@@ -376,18 +328,12 @@ export default function Sidebar({ isOpen, onClose }) {
               </div>
             )}
           </div>
+
           {/* =====================
               GESTÃO & DESENVOLVIMENTO
           ===================== */}
           <div className="mt-2">
-            <div
-              className="
-                w-full flex items-center gap-3
-                px-4 py-3 rounded-xl
-                text-sm font-medium
-                text-[#BFBFC3]
-              "
-            >
+            <div className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#BFBFC3]">
               <Layers size={18} />
               Gestão & Desenvolvimento
             </div>
@@ -398,13 +344,10 @@ export default function Sidebar({ isOpen, onClose }) {
                 active={isActive("/treinamentos")}
                 onClick={() => go("/treinamentos")}
               />
-
               <SidebarSubItem label="Recrutamento (em breve)" disabled />
               <SidebarSubItem label="SPI (em breve)" disabled />
             </div>
           </div>
-
-
         </nav>
       </aside>
     </>
@@ -434,4 +377,3 @@ function SidebarSubItem({ label, active, onClick, disabled }) {
     </button>
   );
 }
-
