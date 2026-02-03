@@ -20,6 +20,9 @@ function getR2Client() {
       secretAccessKey: R2_SECRET_ACCESS_KEY,
     },
     forcePathStyle: true,
+
+    checksumCalculation: "NEVER",
+    checksumValidation: "NEVER",
   });
 }
 

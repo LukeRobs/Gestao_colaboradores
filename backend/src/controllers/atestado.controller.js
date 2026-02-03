@@ -136,21 +136,42 @@ const presignDownload = async (req, res) => {
       return notFoundResponse(res, "Documento não encontrado");
     }
 
+    let key = atestado.documentoAnexo;
+
+    const bucketPrefix = new RegExp(`^${BUCKET}/+`, "i");
+    key = key.replace(bucketPrefix, "");
+
+    key = key.replace(/^\/+/, "");
+
+    console.log("📄 Key FINAL usada no presign:", key);
     const r2 = getR2Client();
+    console.log("🔥 PROD R2_ENDPOINT:", process.env.R2_ENDPOINT);
+
     const command = new GetObjectCommand({
       Bucket: BUCKET,
-      Key: atestado.documentoAnexo,
+      Key: key,
       ResponseContentType: "application/pdf",
-      ResponseContentDisposition: `inline; filename="atestado-${id}.pdf"`,
+      ResponseContentDisposition: `attachment; filename="atestado-${id}.pdf"`,
     });
 
     const url = await getSignedUrl(r2, command, { expiresIn: 600 });
 
     return successResponse(res, { url, expiresIn: 600 });
   } catch (err) {
-    console.error("❌ presignDownload:", err);
-    return errorResponse(res, "Erro ao gerar URL de download", 500);
-  }
+  console.error("❌ presignDownload ERROR NAME:", err?.name);
+  console.error("❌ presignDownload ERROR MESSAGE:", err?.message);
+  console.error("❌ presignDownload ERROR STACK:", err?.stack);
+  console.error(
+    "❌ presignDownload FULL ERROR:",
+    JSON.stringify(err, null, 2)
+  );
+
+  return errorResponse(
+    res,
+    err?.message || "Erro ao gerar URL de download",
+    500
+  );
+}
 };
 
 /* =====================================================
