@@ -21,8 +21,8 @@ function getR2Client() {
     },
     forcePathStyle: true,
 
-    checksumCalculation: "NEVER",
-    checksumValidation: "NEVER",
+    requestChecksumCalculation: "NEVER",
+    responseChecksumValidation: "NEVER",
   });
 }
 

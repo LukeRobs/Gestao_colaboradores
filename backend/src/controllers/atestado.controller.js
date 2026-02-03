@@ -152,11 +152,14 @@ const presignDownload = async (req, res) => {
       Key: key,
       ResponseContentType: "application/pdf",
       ResponseContentDisposition: `attachment; filename="atestado-${id}.pdf"`,
-
-      ChecksumMode: "DISABLED",
     });
 
-    const url = await getSignedUrl(r2, command, { expiresIn: 600 });
+    const url = await getSignedUrl(r2, command, {
+      expiresIn: 600,
+      signingRegion: "auto",
+      signingService: "s3",
+    });
+
 
     return successResponse(res, { url, expiresIn: 600 });
   } catch (err) {
