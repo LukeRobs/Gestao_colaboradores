@@ -8,6 +8,7 @@ const {
 } = require("../utils/response");
 const { getDateOperacional } = require("../utils/dateOperacional");
 const { finalizarAtestadosVencidos } = require("../utils/atestadoAutoFinalize");
+const { exportarControlePresenca } = require("../services/googleSheetsPresenca.service");
 
 
 /* =====================================================
@@ -792,8 +793,201 @@ const ajusteManualPresenca = async (req, res) => {
 
 
 
+/* =====================================================
+   GET /ponto/exportar-sheets
+   (exportação manual para Google Sheets)
+===================================================== */
+const exportarPresencaSheets = async (req, res) => {
+  const reqId = `EXPORT-${Date.now()}`;
+
+  try {
+    const { mes, turno, escala, lider } = req.query;
+
+    console.log(`[${reqId}] /ponto/exportar-sheets query:`, req.query);
+
+    if (!mes) {
+      return errorResponse(res, "Parâmetro 'mes' é obrigatório (YYYY-MM)", 400);
+    }
+
+    const [ano, mesNum] = mes.split("-").map(Number);
+    if (!ano || !mesNum) {
+      return errorResponse(res, "Parâmetro 'mes' inválido (use YYYY-MM)", 400);
+    }
+
+    const inicioMes = new Date(ano, mesNum - 1, 1);
+    const fimMes = new Date(ano, mesNum, 0, 23, 59, 59);
+
+    // Filtros
+    const whereColaborador = {
+      status: "ATIVO",
+      dataDesligamento: null,
+      ...(turno && turno !== "TODOS" ? { turno: { nomeTurno: turno } } : {}),
+      ...(escala && escala !== "TODOS" ? { escala: { nomeEscala: escala } } : {}),
+      ...(lider && lider !== "TODOS" ? { idLider: lider } : {}),
+    };
+
+    const colaboradores = await prisma.colaborador.findMany({
+      where: whereColaborador,
+      include: {
+        turno: true,
+        escala: true,
+        ausencias: {
+          where: {
+            status: "ATIVO",
+            dataInicio: { lte: fimMes },
+            dataFim: { gte: inicioMes },
+          },
+          include: { tipoAusencia: true },
+        },
+        atestadosMedicos: {
+          where: {
+            status: "ATIVO",
+            dataInicio: { lte: fimMes },
+            dataFim: { gte: inicioMes },
+          },
+        },
+      },
+      orderBy: { nomeCompleto: "asc" },
+    });
+
+    if (!colaboradores.length) {
+      return errorResponse(res, "Nenhum colaborador encontrado para os filtros selecionados", 404);
+    }
+
+    const opsIds = colaboradores.map((c) => c.opsId);
+
+    const frequencias = await prisma.frequencia.findMany({
+      where: {
+        opsId: { in: opsIds },
+        dataReferencia: { gte: inicioMes, lte: fimMes },
+      },
+      include: { tipoAusencia: true },
+      orderBy: [
+        { dataReferencia: "asc" },
+        { manual: "asc" },
+        { idFrequencia: "asc" },
+      ],
+    });
+
+    // Processar dados (mesma lógica do getControlePresenca)
+    const freqMap = {};
+    for (const f of frequencias) {
+      const key = `${f.opsId}_${ymd(f.dataReferencia)}`;
+
+      if (!freqMap[key]) {
+        freqMap[key] = f;
+        continue;
+      }
+
+      if (f.manual && !freqMap[key].manual) {
+        freqMap[key] = f;
+        continue;
+      }
+
+      if (f.manual && freqMap[key].manual) {
+        if (f.idFrequencia > freqMap[key].idFrequencia) freqMap[key] = f;
+      }
+    }
+
+    const dias = Array.from(
+      { length: new Date(ano, mesNum, 0).getDate() },
+      (_, i) => i + 1
+    );
+
+    const resultado = colaboradores.map((c) => {
+      const diasMap = {};
+
+      for (let d = 1; d <= dias.length; d++) {
+        const dataCalendario = new Date(ano, mesNum - 1, d);
+        dataCalendario.setHours(0, 0, 0, 0);
+        const dataISO = ymd(dataCalendario);
+        const key = `${c.opsId}_${dataISO}`;
+
+        // Manual tem prioridade
+        if (freqMap[key]?.manual) {
+          const f = freqMap[key];
+          diasMap[dataISO] = {
+            status: f.tipoAusencia?.codigo,
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: !!f.validado,
+            manual: true,
+          };
+          continue;
+        }
+
+        // Status administrativo
+        const statusAdmin = getStatusAdministrativo(c, dataCalendario);
+        if (statusAdmin) {
+          diasMap[dataISO] = {
+            status: statusAdmin.status,
+            origem: statusAdmin.origem,
+            manual: false,
+          };
+          continue;
+        }
+
+        // Frequência
+        if (freqMap[key]) {
+          const f = freqMap[key];
+          diasMap[dataISO] = {
+            status: f.tipoAusencia?.codigo,
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: f.validado,
+            manual: f.manual ?? false,
+          };
+          continue;
+        }
+
+        // DSR
+        if (isDiaDSR(dataCalendario, c.escala?.nomeEscala)) {
+          diasMap[dataISO] = {
+            status: "DSR",
+            manual: false,
+          };
+          continue;
+        }
+
+        // Falta
+        diasMap[dataISO] = {
+          status: "-",
+          manual: false,
+        };
+      }
+
+      return {
+        opsId: c.opsId,
+        nome: c.nomeCompleto,
+        turno: c.turno?.nomeTurno,
+        escala: c.escala?.nomeEscala,
+        dias: diasMap,
+      };
+    });
+
+    // Exportar para Google Sheets
+    const resultadoExportacao = await exportarControlePresenca(mes, {
+      dias,
+      colaboradores: resultado,
+    });
+
+    console.log(`[${reqId}] ✅ Exportação concluída`);
+
+    return successResponse(res, resultadoExportacao.data, "Exportação realizada com sucesso");
+  } catch (err) {
+    console.error(`[${reqId}] ❌ ERRO /ponto/exportar-sheets:`, err);
+    return errorResponse(
+      res,
+      "Erro ao exportar para Google Sheets",
+      500,
+      err?.message || err
+    );
+  }
+};
+
 module.exports = {
   registrarPontoCPF,
   getControlePresenca,
   ajusteManualPresenca,
+  exportarPresencaSheets,
 };

@@ -1,5 +1,4 @@
-import { Search } from "lucide-react";
-// import { Download } from "lucide-react"; // COMENTADO - ÍCONE PARA EXPORTAR CSV
+import { Search, FileSpreadsheet } from "lucide-react";
 
 export default function PresencaToolbar({
   mes,
@@ -17,8 +16,8 @@ export default function PresencaToolbar({
   onEscalaChange,
   onBuscaChange,
   onLiderChange,
-  // onExportarCSV, // COMENTADO - FUNÇÃO EXPORTAR CSV
-  // loading = false, // COMENTADO - LOADING PARA EXPORTAR CSV
+  onExportarSheets,
+  loading = false,
 }) {
   const turnos = ["TODOS", "T1", "T2", "T3"];
 
@@ -26,10 +25,9 @@ export default function PresencaToolbar({
     <div className="flex flex-wrap items-center justify-between gap-4">
       {/* FILTROS */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* EXPORTAR CSV - COMENTADO */}
-        {/*
+        {/* EXPORTAR GOOGLE SHEETS */}
         <button
-          onClick={onExportarCSV}
+          onClick={onExportarSheets}
           disabled={loading}
           className="
             inline-flex items-center gap-2
@@ -42,12 +40,11 @@ export default function PresencaToolbar({
             rounded-xl
             transition
           "
-          title="Exportar controle de presença para CSV"
+          title="Exportar controle de presença para Google Sheets"
         >
-          <Download size={16} />
-          Exportar CSV
+          <FileSpreadsheet size={16} />
+          {loading ? 'Exportando...' : 'Exportar Sheets'}
         </button>
-        */}
 
         {/* MÊS */}
         <input

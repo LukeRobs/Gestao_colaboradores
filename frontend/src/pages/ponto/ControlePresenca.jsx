@@ -30,6 +30,7 @@ export default function ControlePresenca() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lideres, setLideres] = useState([]);
+  const [exportando, setExportando] = useState(false);
 
   /* ================== MODAL ================== */
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,107 +44,47 @@ export default function ControlePresenca() {
     setModalOpen(true);
   }
 
-  /* 
-  // FUNÇÃO EXPORTAR CSV - COMENTADA
-  // Função para exportar CSV do controle de presença
-  const exportarCSV = async () => {
+  /* ================== EXPORTAR GOOGLE SHEETS ================== */
+  const exportarSheets = async () => {
     try {
-      setLoading(true);
+      setExportando(true);
       
       if (colaboradores.length === 0) {
         alert("Nenhum dado de presença encontrado para exportar.");
         return;
       }
 
-      const [ano, mesNum] = mes.split("-").map(Number);
+      const params = {
+        mes,
+        ...(turno !== "TODOS" ? { turno } : {}),
+        ...(escala !== "TODOS" ? { escala } : {}),
+        ...(lider !== "TODOS" ? { lider } : {}),
+      };
 
-      // Criar cabeçalho CSV com dias do mês
-      const headers = [
-        "OPS ID",
-        "Nome Completo",
-        "Turno",
-        "Escala",
-        "Setor",
-        "Empresa",
-        "Líder",
-        ...dias.map(dia => `${String(dia).padStart(2, "0")}/${String(mesNum).padStart(2, "0")}`)
-      ];
+      const res = await api.get("/ponto/exportar-sheets", { params });
 
-      // Converter dados para CSV
-      const csvContent = [
-        headers.join(","),
-        ...colaboradores.map(colab => {
-          const dadosBasicos = [
-            colab.opsId || "",
-            `"${colab.nome || ""}"`,
-            `"${colab.turno || ""}"`,
-            `"${colab.escala || ""}"`,
-            "Setor", // Não disponível na estrutura atual
-            "Empresa", // Não disponível na estrutura atual  
-            "Líder" // Não disponível na estrutura atual
-          ];
-
-          // Adicionar status de cada dia
-          const statusDias = dias.map(dia => {
-            const dataISO = `${ano}-${String(mesNum).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-            const registro = colab.dias?.[dataISO];
-            
-            if (!registro) return '"-"'; // Sem registro
-            
-            let status = registro.status || "-";
-            
-            // Se tem entrada/saída, adicionar horários
-            if (registro.entrada || registro.saida) {
-              const entrada = registro.entrada ? 
-                new Date(`1970-01-01T${registro.entrada}`).toLocaleTimeString('pt-BR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                }) : "";
-              const saida = registro.saida ? 
-                new Date(`1970-01-01T${registro.saida}`).toLocaleTimeString('pt-BR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                }) : "";
-              
-              if (entrada || saida) {
-                status = `"${status} (${entrada}-${saida})"`;
-              } else {
-                status = `"${status}"`;
-              }
-            } else {
-              status = `"${status}"`;
-            }
-            
-            return status;
-          });
-
-          return [...dadosBasicos, ...statusDias].join(",");
-        })
-      ].join("\n");
-
-      // Criar e baixar arquivo
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      
-      const nomeArquivo = `controle_presenca_${ano}_${String(mesNum).padStart(2, "0")}.csv`;
-      
-      link.setAttribute("href", url);
-      link.setAttribute("download", nomeArquivo);
-      link.style.visibility = "hidden";
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (res.data?.success) {
+        const data = res.data.data;
+        alert(
+          `✅ Exportação concluída!\n\n` +
+          `📑 Aba: ${data.nomeAba}\n` +
+          `📊 ${data.colaboradores} colaboradores exportados\n` +
+          `📝 ${data.celulasAtualizadas} células atualizadas\n\n` +
+          `🔗 Acesse a planilha em:\n${data.spreadsheetUrl}`
+        );
+        
+        // Abrir planilha em nova aba
+        window.open(data.spreadsheetUrl, '_blank');
+      }
       
     } catch (error) {
-      console.error("Erro ao exportar CSV:", error);
-      alert("Erro ao exportar dados. Tente novamente.");
+      console.error("Erro ao exportar para Google Sheets:", error);
+      const mensagem = error.response?.data?.message || "Erro ao exportar dados. Tente novamente.";
+      alert(`❌ ${mensagem}`);
     } finally {
-      setLoading(false);
+      setExportando(false);
     }
   };
-  */
 
   /* ================== FETCH ================== */
   const loadPresenca = useCallback(async () => {
@@ -285,8 +226,8 @@ useEffect(() => {
             onEscalaChange={setEscala}
             onBuscaChange={setBusca}
             onLiderChange={setLider}
-            // onExportarCSV={exportarCSV} // COMENTADO - FUNÇÃO EXPORTAR CSV
-            // loading={loading} // COMENTADO - LOADING PARA EXPORTAR CSV
+            onExportarSheets={exportarSheets}
+            loading={exportando}
           />
 
 

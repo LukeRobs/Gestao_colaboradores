@@ -7,6 +7,7 @@ const app = require('./app');
 const config = require('./config/config');
 const { testConnection } = require('./config/database');
 const logger = require('./utils/logger');
+const { iniciarSyncPresencaSheets } = require('./jobs/syncPresencaSheets.job');
 
 // =====================================================
 // INICIALIZAÇÃO DO SERVIDOR
@@ -27,6 +28,10 @@ const startServer = async () => {
       logger.info(`📊 API: http://localhost:${config.port}/api`);
       logger.info(`❤️  Health Check: http://localhost:${config.port}/api/health`);
       logger.success('='.repeat(50));
+      
+      // Inicia job de sincronização de presença com Google Sheets
+      logger.info('🔄 Iniciando jobs automáticos...');
+      iniciarSyncPresencaSheets();
     });
 
     // Tratamento de erros não capturados

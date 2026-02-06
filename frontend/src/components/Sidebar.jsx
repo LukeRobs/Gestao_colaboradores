@@ -40,7 +40,6 @@ export default function Sidebar({ isOpen, onClose }) {
       location.pathname.startsWith(p)
     )
   );
-
   const [dwOpen, setDwOpen] = useState(location.pathname.startsWith("/dw"));
   const [pontoOpen, setPontoOpen] = useState(
     location.pathname.startsWith("/ponto")
