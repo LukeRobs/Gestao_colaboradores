@@ -153,13 +153,18 @@ export default function DwListPage() {
 
                     <th className="px-6 py-4 text-center">Total Planejado</th>
                     <th className="px-6 py-4 text-center">Total Real</th>
+                    <th className="px-6 py-4 text-center">% Aderência</th>
                     <th className="px-6 py-4 text-center">Turno</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {lista.map((row, idx) => {
-                    const atingiu = row.totalReal >= row.planejado;
+                    const planejado = row.planejado || 0;
+                    const real = row.totalReal || 0;
+
+                    const aderencia =
+                      planejado > 0 ? (real / planejado) * 100 : null;
 
                     return (
                       <tr
@@ -169,21 +174,42 @@ export default function DwListPage() {
                         <td className="px-6 py-4">{row.data}</td>
 
                         {EMPRESAS_FIXAS.map((emp) => (
-                          <td key={emp.id} className="px-6 py-4 text-center font-semibold">
+                          <td
+                            key={emp.id}
+                            className="px-6 py-4 text-center font-semibold"
+                          >
                             {row.empresas?.[emp.nome] || 0}
                           </td>
                         ))}
 
                         <td className="px-6 py-4 text-center font-semibold">
-                          {row.planejado}
+                          {planejado}
                         </td>
 
                         <td
                           className={`px-6 py-4 text-center font-semibold ${
-                            atingiu ? "text-green-400" : "text-red-400"
+                            real >= planejado
+                              ? "text-green-400"
+                              : "text-red-400"
                           }`}
                         >
-                          {row.totalReal}
+                          {real}
+                        </td>
+
+                        <td
+                          className={`px-6 py-4 text-center font-semibold ${
+                            aderencia === null
+                              ? "text-[#6B7280]"
+                              : aderencia >= 95
+                              ? "text-green-400"
+                              : aderencia >= 85
+                              ? "text-yellow-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {aderencia === null
+                            ? "-"
+                            : `${aderencia.toFixed(1)}%`}
                         </td>
 
                         <td className="px-6 py-4 text-center font-semibold">

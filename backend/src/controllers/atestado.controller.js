@@ -246,11 +246,18 @@ const createAtestado = async (req, res) => {
 ===================================================== */
 const getAllAtestados = async (req, res) => {
   try {
-    const { opsId, cpf } = req.query;
+    const { opsId, cpf, data, nome } = req.query;
 
     let where = {};
-    if(opsId) where.opsId = opsId;
-    
+
+    /* ===============================
+       FILTRO POR COLABORADOR
+    =============================== */
+
+    if (opsId) {
+      where.opsId = opsId;
+    }
+
     if (cpf) {
       const cpfLimpo = cpf.replace(/\D/g, "");
 
@@ -258,9 +265,28 @@ const getAllAtestados = async (req, res) => {
         return errorResponse(res, 400, "CPF inválido");
       }
 
-      const colab = await prisma.colaborador.findFirst({ where: { cpf: cpfLimpo }, });
-      if (!colab) return successResponse(res, []);
+      const colab = await prisma.colaborador.findFirst({
+        where: { cpf: cpfLimpo },
+      });
+
+      if (!colab) {
+        return successResponse(res, []);
+      }
+
       where.opsId = colab.opsId;
+    }
+
+    /* ===============================
+       FILTRO POR DATA (ATIVO + FINALIZADO)
+    =============================== */
+
+    if (data) {
+      const dataFiltro = dateOnlyBrasil(data);
+
+      where.AND = [
+        { dataInicio: { lte: dataFiltro } },
+        { dataFim: { gte: dataFiltro } },
+      ];
     }
 
     const atestados = await prisma.atestadoMedico.findMany({
@@ -276,12 +302,31 @@ const getAllAtestados = async (req, res) => {
         },
       },
     });
-    return successResponse(res, atestados);
+
+    /* ===============================
+       FILTRO POR NOME (pós include)
+       (Prisma não filtra relation assim direto)
+    =============================== */
+
+    let resultado = atestados;
+
+    if (nome) {
+      const nomeLower = nome.toLowerCase();
+
+      resultado = atestados.filter((a) =>
+        a.colaborador?.nomeCompleto
+          ?.toLowerCase()
+          .includes(nomeLower)
+      );
+    }
+
+    return successResponse(res, resultado);
   } catch (err) {
     console.error("❌ GET ATESTADOS:", err);
     return errorResponse(res, "Erro ao buscar atestados", 500);
   }
 };
+
 
 /* =====================================================
    UPDATE / FINALIZAR / CANCELAR
