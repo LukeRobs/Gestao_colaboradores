@@ -46,6 +46,9 @@ import NovoTreinamento from "./pages/treinamentos/novo";
 import DwListPage from "./pages/DailyWorks/dwList";
 import DwNovoPage from "./pages/DailyWorks/dwNovo";
 
+/* ================= SSO - SEGURANÇA E SAÚDE OCUPACIONAL ================= */
+import SafetyWalk from "./pages/safety-walk/SafetyWalk";
+
 /* ================= PROTEÇÃO ================= */
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -305,6 +308,16 @@ export default function App() {
         element={
           <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <ControlePresenca />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ================= SSO - SEGURANÇA E SAÚDE OCUPACIONAL ================= */}
+      <Route
+        path="/safety-walk"
+        element={
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA", "GESTAO"]}>
+            <SafetyWalk />
           </ProtectedRoute>
         }
       />

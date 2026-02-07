@@ -10,6 +10,7 @@ import {
   ChevronDown,
   X,
   ClipboardList,
+  Shield,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useContext } from "react";
@@ -43,6 +44,10 @@ export default function Sidebar({ isOpen, onClose }) {
   const [dwOpen, setDwOpen] = useState(location.pathname.startsWith("/dw"));
   const [pontoOpen, setPontoOpen] = useState(
     location.pathname.startsWith("/ponto")
+  );
+  const [ssoOpen, setSsoOpen] = useState(
+    location.pathname.startsWith("/safety-walk") ||
+    location.pathname.startsWith("/sso")
   );
 
   const isActive = (path) =>
@@ -104,10 +109,11 @@ export default function Sidebar({ isOpen, onClose }) {
           z-50
           transform transition-transform duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          flex flex-col
         `}
       >
         {/* Header */}
-        <div className="h-16 flex items-center justify-between px-6">
+        <div className="h-16 flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#FA4C00]" />
             <span className="font-semibold text-white tracking-wide">
@@ -120,7 +126,7 @@ export default function Sidebar({ isOpen, onClose }) {
           </button>
         </div>
 
-        <nav className="px-3 py-4 space-y-1">
+        <nav className="px-3 py-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide">
           {/* =====================
               DASHBOARDS
           ===================== */}
@@ -344,8 +350,48 @@ export default function Sidebar({ isOpen, onClose }) {
                 onClick={() => go("/treinamentos")}
               />
               <SidebarSubItem label="Recrutamento (em breve)" disabled />
-              <SidebarSubItem label="SPI (em breve)" disabled />
             </div>
+          </div>
+
+          {/* =====================
+              SPI - SEGURANÇA E PREVENÇÃO DE INCIDENTES
+          ===================== */}
+          <div className="mt-2">
+            <button
+              onClick={() => setSsoOpen(!ssoOpen)}
+              className={`
+                w-full flex items-center justify-between
+                px-4 py-3 rounded-xl text-sm font-medium transition
+                ${
+                  location.pathname.startsWith("/safety-walk") ||
+                  location.pathname.startsWith("/sso")
+                    ? "bg-[#2A2A2C] text-white"
+                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                }
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <Shield size={18} />
+                SPI
+              </div>
+              <ChevronDown
+                size={16}
+                className={`transition ${ssoOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {ssoOpen && (
+              <div className="ml-8 mt-1 space-y-1">
+                <SidebarSubItem
+                  label="Safety Walk"
+                  active={isActive("/safety-walk")}
+                  onClick={() => go("/safety-walk")}
+                />
+                <SidebarSubItem label="DDSMA (em breve)" disabled />
+                <SidebarSubItem label="Ginástica Laboral (em breve)" disabled />
+                <SidebarSubItem label="OPAs (em breve)" disabled />
+              </div>
+            )}
           </div>
         </nav>
       </aside>

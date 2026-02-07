@@ -33,6 +33,7 @@ const dashboardColaboradores = require("./dashboardColaboradores.routes");
 const treinamentoRoutes = require("./treinamento.routes");
 const dwRoutes = require("./dw.routes");
 const usersRoutes = require("./users.routes");
+const safetyWalkRoutes = require("./safetyWalk.routes");
 /* =========================
    HEALTH
 ========================= */
@@ -86,5 +87,7 @@ router.use("/regionais", regionalRoutes);
 router.use("/dashboard/colaboradores", dashboardColaboradores);
 router.use("/treinamentos", treinamentoRoutes);
 router.use("/dw", dwRoutes);
-router.use("/users", usersRoutes)
+router.use("/users", usersRoutes);
+router.use("/safety-walk", safetyWalkRoutes);
+
 module.exports = router;
