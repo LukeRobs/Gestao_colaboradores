@@ -182,6 +182,29 @@ const exportarControlePresenca = async (mes, dadosPresenca) => {
 
     console.log(`✅ Dados escritos: ${response.data.updatedCells} células`);
 
+    // 🕐 Adicionar hora da última atualização na célula AL1
+    const agora = new Date();
+    const horaAtualizacao = agora.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: PRESENCA_SPREADSHEET_ID,
+      range: `${nomeAba}!AL1`,
+      valueInputOption: 'RAW',
+      resource: {
+        values: [[`Última atualização: ${horaAtualizacao}`]]
+      },
+    });
+
+    console.log(`🕐 Hora de atualização registrada: ${horaAtualizacao}`);
+
     // 🎯 Obter sheetId da aba para formatação
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId: PRESENCA_SPREADSHEET_ID,
@@ -214,6 +237,30 @@ const exportarControlePresenca = async (mes, dadosPresenca) => {
                     bold: true,
                   },
                   horizontalAlignment: 'CENTER',
+                },
+              },
+              fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+          {
+            // 🕐 Formatar célula de última atualização (AL1)
+            repeatCell: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 0,
+                endRowIndex: 1,
+                startColumnIndex: 37, // Coluna AL (A=0, B=1, ..., AL=37)
+                endColumnIndex: 38,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: { red: 0.2, green: 0.6, blue: 0.9 }, // Azul
+                  textFormat: {
+                    foregroundColor: { red: 1, green: 1, blue: 1 },
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'RIGHT',
                 },
               },
               fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
