@@ -98,15 +98,27 @@ function getStatusDoDiaOperacional(f) {
       };
     }
     
-    // FO / DSR -> não escalado (igual Admin)
-    if (codigo === "FO" || codigo === "DSR") {
+    // FO -> conta como HC Apto, não impacta absenteísmo
+    if (codigo === "FO") {
       return {
-        label: codigo === "FO" ? "Folga" : "Folga",
-        contaComoEscalado: false,
+        label: "Folga",
+        contaComoEscalado: true,       // ✅ entra no HC APTO
+        impactaAbsenteismo: false,    // ✅ não é ausência
+        origem: "tipoAusencia",
+      };
+    }
+
+    // DSR -> não escalado
+    if (codigo === "DSR") {
+      return {
+        label: "Folga",
+        contaComoEscalado: false,     // ❌ fora do HC
         impactaAbsenteismo: false,
         origem: "tipoAusencia",
       };
     }
+
+    
         // FE -> Férias (não escalado, não impacta abs)
     if (codigo === "FE" || desc.includes("FÉRIAS")) {
       return {
@@ -126,13 +138,13 @@ function getStatusDoDiaOperacional(f) {
       };
     }
 
-    if (codigo === "S1" || desc.includes("Sinergia")) {
+    if (codigo === "S1" || desc.includes("SINERGIA")) {
       return {
         label: "Sinergia Enviada",
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
+        contaComoEscalado: true,      // ✅ entra no HC APTO
+        impactaAbsenteismo: false,   // ✅ NÃO conta como ausência
         origem: "tipoAusencia",
-      }
+      };
     }
     
     // Qualquer outra ausência conta como falta operacional
@@ -354,78 +366,150 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        6️⃣ KPIs (absenteísmo no período igual Admin)
     =============================== */
-    const diasPeriodo = daysInclusive(inicio, fim);
-
-    let absDias = 0;
-    const escaladosSet = new Set();
-    const presentesSet = new Set();
+    let totalHcAptoDias = 0;
+    let totalAusenciasDias = 0;
 
     frequenciasPeriodo.forEach((f) => {
       const c = colaboradores.find(col => col.opsId === f.opsId);
       if (!c) return;
 
+      if (!isCargoElegivel(c.cargo?.nomeCargo)) return;
+
       const turnoColab = normalizeTurno(c.turno?.nomeTurno);
       if (turnoFiltro && turnoColab !== turnoFiltro) return;
 
       const s = getStatusDoDiaOperacional(f);
-      if (!s.contaComoEscalado) return;
 
-      escaladosSet.add(f.opsId);
-
-      if (s.label === "Presente") {
-        presentesSet.add(f.opsId);
+      // HC APTO por dia
+      if (s.contaComoEscalado) {
+        totalHcAptoDias++;
       }
 
+      // AUSÊNCIAS por dia (F, FJ, AM)
       if (s.impactaAbsenteismo) {
-        absDias++;
+        totalAusenciasDias++;
       }
     });
-
-
-    const totalEscaladosPeriodo = escaladosSet.size;
-    const diasEsperados = totalEscaladosPeriodo * diasPeriodo;
 
     const absenteismoPeriodo =
-      diasEsperados > 0
-        ? Number(((absDias / diasEsperados) * 100).toFixed(2))
+      totalHcAptoDias > 0
+        ? Number(((totalAusenciasDias / totalHcAptoDias) * 100).toFixed(2))
         : 0;
 
-    /* ===============================
-       7️⃣ BUSCAR DIARISTAS PRESENTES (REAIS) POR TURNO
-    =============================== */
-    const diaristasReaisPromises = ["T1", "T2", "T3"].map(async (turno) => {
-      try {
-        // Mapear turno para ID (T1=1, T2=2, T3=3)
-        const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
-        
-        const diaristasReais = await prisma.dwReal.findMany({
-          where: {
-            data: new Date(dataSnapshotStr),
-            idTurno: turnoId
-          }
-        });
 
-        // Somar todas as quantidades das empresas para o turno
-        const totalPresentes = diaristasReais.reduce((total, dw) => total + dw.quantidade, 0);
+/* ===============================
+   7️⃣ DIARISTAS PRESENTES (REAIS)
+=============================== */
+const diaristasPresentes = { T1: 0, T2: 0, T3: 0 };
 
-        return {
-          turno,
-          presentes: totalPresentes
-        };
-      } catch (error) {
-        console.warn(`⚠️ Erro ao buscar diaristas presentes para turno ${turno}:`, error.message);
-        return {
-          turno,
-          presentes: 0
-        };
-      }
-    });
+await Promise.all(
+  ["T1", "T2", "T3"].map(async (turno) => {
+    try {
+      const turnoId =
+        turno === "T1" ? 1 :
+        turno === "T2" ? 2 : 3;
 
-    const diaristasData = await Promise.all(diaristasReaisPromises);
-    const diaristasPresentes = {};
-    diaristasData.forEach(d => {
-      diaristasPresentes[d.turno] = d.presentes;
-    });
+      const diaristasReais = await prisma.dwReal.findMany({
+        where: {
+          data: new Date(dataSnapshotStr),
+          idTurno: turnoId,
+        },
+      });
+
+      diaristasPresentes[turno] = diaristasReais.reduce(
+        (total, dw) => total + Number(dw.quantidade || 0),
+        0
+      );
+    } catch (error) {
+      console.warn(
+        `⚠️ Erro ao buscar diaristas presentes para ${turno}:`,
+        error.message
+      );
+      diaristasPresentes[turno] = 0;
+    }
+  })
+);
+
+/* ===============================
+   7️⃣.1 DIARISTAS PLANEJADOS (Sheets)
+=============================== */
+const diaristasPlanejadosPorTurno = { T1: 0, T2: 0, T3: 0 };
+
+for (const turno of ["T1", "T2", "T3"]) {
+  try {
+    const resultado = await buscarDwPlanejado(turno, dataSnapshotStr);
+
+    // 🔥 ÚNICA FONTE VÁLIDA
+    diaristasPlanejadosPorTurno[turno] = Number(
+      resultado?.data?.dwPlanejado || 0
+    );
+  } catch (err) {
+    console.warn(`⚠️ DW Planejado falhou para ${turno}:`, err.message);
+    diaristasPlanejadosPorTurno[turno] = 0;
+  }
+}
+
+console.log("📌 diaristasPlanejadosPorTurno:", diaristasPlanejadosPorTurno);
+
+/* ===============================
+   7️⃣.2 KPIs DIARISTAS (TOTAIS)
+=============================== */
+const totalDiaristasPlanejados = Object.values(
+  diaristasPlanejadosPorTurno
+).reduce((a, b) => a + b, 0);
+
+const totalDiaristasPresentes = Object.values(
+  diaristasPresentes
+).reduce((a, b) => a + b, 0);
+
+/* ===============================
+   7️⃣.3 ADERÊNCIA DW
+=============================== */
+const aderenciaDwPorTurno = {
+  T1:
+    diaristasPlanejadosPorTurno.T1 > 0
+      ? Number(
+          (
+            (diaristasPresentes.T1 /
+              diaristasPlanejadosPorTurno.T1) *
+            100
+          ).toFixed(2)
+        )
+      : 0,
+
+  T2:
+    diaristasPlanejadosPorTurno.T2 > 0
+      ? Number(
+          (
+            (diaristasPresentes.T2 /
+              diaristasPlanejadosPorTurno.T2) *
+            100
+          ).toFixed(2)
+        )
+      : 0,
+
+  T3:
+    diaristasPlanejadosPorTurno.T3 > 0
+      ? Number(
+          (
+            (diaristasPresentes.T3 /
+              diaristasPlanejadosPorTurno.T3) *
+            100
+          ).toFixed(2)
+        )
+      : 0,
+};
+
+const aderenciaDW =
+  totalDiaristasPlanejados > 0
+    ? Number(
+        (
+          (totalDiaristasPresentes / totalDiaristasPlanejados) *
+          100
+        ).toFixed(2)
+      )
+    : 0;
+
 
     /* ===============================
        8️⃣ RESPONSE
@@ -442,14 +526,20 @@ const carregarDashboard = async (req, res) => {
 
         // KPIs alinhados ao Admin
         kpis: {
-          totalColaboradores: totalEscaladosPeriodo,
-          presentes: presentesSet.size,
+          totalColaboradores: totalHcAptoDias,
+          presentes: totalHcAptoDias - totalAusenciasDias,
+          ausencias: totalAusenciasDias,
+          diaristasPlanejados: totalDiaristasPlanejados,
+          diaristasPresentes: totalDiaristasPresentes,
+          aderenciaDW,
           absenteismo: absenteismoPeriodo,
         },
 
         distribuicaoTurnoSetor: Object.values(turnoSetorAgg).map((t) => ({
           ...t,
+          diaristasPlanejados: diaristasPlanejadosPorTurno[t.turno] || 0,
           diaristasPresentes: diaristasPresentes[t.turno] || 0,
+          aderenciaDW: aderenciaDwPorTurno[t.turno] || 0,
           setores: Object.entries(t.setores).map(([setor, quantidade]) => ({
             setor,
             quantidade,
@@ -499,11 +589,6 @@ const carregarDashboard = async (req, res) => {
                 ? Number(((d.ausentes / d.escalados) * 100).toFixed(2))
                 : 0,
           })),
-
-        empresas: empresas.map((e) => ({
-          id: e.idEmpresa,
-          nome: e.razaoSocial,
-        })),
 
         turnos: turnos.map((t) => ({
           id: t.idTurno,

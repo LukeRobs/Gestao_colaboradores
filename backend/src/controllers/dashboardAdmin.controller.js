@@ -36,6 +36,14 @@ function formatTempoEmpresa(dataAdmissao) {
   return `${meses}m`;
 }
 
+function isCargoElegivel(cargo) {
+  const nome = String(cargo || "").toUpperCase();
+  return (
+    nome.includes("AUXILIAR DE LOGÍSTICA I") ||
+    nome.includes("AUXILIAR DE LOGÍSTICA II")
+  );
+}
+
 /* =====================================================
    STATUS DO DIA
 ===================================================== */
@@ -49,20 +57,65 @@ function getStatusDoDia(f) {
     };
   }
 
-  // Ausências registradas
   if (f?.tipoAusencia) {
-    const codigo = f.tipoAusencia.codigo;
+    const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
+    const desc = String(f.tipoAusencia.descricao || "").toUpperCase();
 
-    // FO / DSR → registro administrativo
-    if (codigo === "FO" || codigo === "DSR") {
+    // NC / ON → fora do HC
+    if (codigo === "NC" || codigo === "ON") {
       return {
         code: codigo,
-        contaComoEscalado: false,  // 🔑
-        impactaAbsenteismo: false, // 🔑
+        contaComoEscalado: false,
+        impactaAbsenteismo: false,
       };
     }
 
-    // F, FJ, AM → ausência real
+    // FO → HC APTO, não é ausência
+    if (codigo === "FO") {
+      return {
+        code: "FO",
+        contaComoEscalado: true,
+        impactaAbsenteismo: false,
+      };
+    }
+
+    // DSR → fora do HC
+    if (codigo === "DSR") {
+      return {
+        code: "DSR",
+        contaComoEscalado: false,
+        impactaAbsenteismo: false,
+      };
+    }
+
+    // Férias
+    if (codigo === "FE" || desc.includes("FÉRIAS")) {
+      return {
+        code: "FE",
+        contaComoEscalado: false,
+        impactaAbsenteismo: false,
+      };
+    }
+
+    // Sinergia
+    if (codigo === "S1" || desc.includes("SINERGIA")) {
+      return {
+        code: "S1",
+        contaComoEscalado: true,
+        impactaAbsenteismo: false,
+      };
+    }
+
+    // Atestado
+    if (codigo === "AM" || desc.includes("ATEST")) {
+      return {
+        code: "AM",
+        contaComoEscalado: true,
+        impactaAbsenteismo: true,
+      };
+    }
+
+    // F / FJ
     return {
       code: codigo,
       contaComoEscalado: true,
@@ -70,13 +123,14 @@ function getStatusDoDia(f) {
     };
   }
 
-  // fallback
+  // fallback = falta
   return {
     code: "F",
     contaComoEscalado: true,
     impactaAbsenteismo: true,
   };
 }
+
 
 
 /* =====================================================
@@ -820,10 +874,15 @@ const carregarDashboardAdmin = async (req, res) => {
         turno: true,
         escala: true,
         lider: true,
+        cargo: true,
       },
     });
 
-    const opsIds = colaboradores.map(c => c.opsId);
+    const colaboradoresFiltrados = colaboradores.filter(c =>
+      isCargoElegivel(c.cargo?.nomeCargo)
+    );
+
+    const opsIds = colaboradoresFiltrados.map(c => c.opsId);
 
     if (!opsIds.length) {
       return res.json({
@@ -843,7 +902,7 @@ const carregarDashboardAdmin = async (req, res) => {
     }
 
     const colaboradoresMap = new Map(
-      colaboradores.map(c => [c.opsId, c])
+      colaboradoresFiltrados.map(c => [c.opsId, c])
     );
 
     /* ===============================
@@ -869,7 +928,7 @@ const carregarDashboardAdmin = async (req, res) => {
     );
 
     // colaboradores realmente escalados no período
-    const colaboradoresPeriodo = colaboradores.filter(c =>
+    const colaboradoresPeriodo = colaboradoresFiltrados.filter(c =>
       opsIdsEscaladosPeriodo.includes(c.opsId)
     );
 
@@ -944,7 +1003,7 @@ const carregarDashboardAdmin = async (req, res) => {
         genero: buildGenero(colaboradoresPeriodo),
 
         empresasResumo: buildEmpresasResumo({
-          colaboradores,
+          colaboradores: colaboradoresFiltrados,
           colaboradoresMap,
           frequencias,
           atestados,

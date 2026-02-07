@@ -116,38 +116,77 @@ export default function DashboardOperacional() {
   }, [dados, turnoSelecionado]);
 
   /* =====================================================
-     KPIs
+    KPIs — POR TURNO (FONTE ÚNICA)
   ===================================================== */
-  const totalColaboradores = turnoData.totalEscalados;
-  const presentes = turnoData.presentes;
-  const ausentes = turnoData.ausentes;
+  const totalColaboradores = turnoData.totalEscalados || 0;
+  const presentes = turnoData.presentes || 0;
+  const ausencias = turnoData.ausentes || 0;
+
+  const diaristasPlanejados = turnoData.diaristasPlanejados || 0;
   const diaristasPresentes = turnoData.diaristasPresentes || 0;
 
-  const absenteismo = useMemo(() => {
-    if (!totalColaboradores) return 0;
-    return ((ausentes / totalColaboradores) * 100).toFixed(2);
-  }, [ausentes, totalColaboradores]);
+  const aderenciaDW = Number(turnoData.aderenciaDW || 0);
+
+  const absenteismoTurno =
+  totalColaboradores > 0
+    ? Number(((ausencias / totalColaboradores) * 100).toFixed(2))
+    : 0;
+
 
   const kpis = useMemo(
     () => [
-      { icon: Users, label: "Colaboradores", value: totalColaboradores },
-      { icon: Clock, label: "Presentes no turno", value: presentes },
-      { icon: Users, label: "Diaristas presentes", value: diaristasPresentes },
+      {
+        icon: Users,
+        label: "Colaboradores Planejados",
+        value: totalColaboradores,
+      },
+      {
+        icon: Clock,
+        label: "Colaboradores Presentes",
+        value: presentes,
+      },
+      {
+        icon: Users,
+        label: "Ausências",
+        value: ausencias,
+        color: "#d6000e",
+      },
       {
         icon: TrendingUp,
         label: "Absenteísmo",
-        value: absenteismo,
+        value: absenteismoTurno,
         suffix: "%",
-        color: absenteismo > 10 ? "#FF453A" : "#34C759",
+        color: absenteismoTurno <= 3.4 ? "#34C759" : "#d6000e",
       },
       {
-        icon: Building2,
-        label: "Empresas",
-        value: dados?.empresas?.length || 0,
+        icon: Users,
+        label: "Diaristas Planejados",
+        value: diaristasPlanejados,
+      },
+      {
+        icon: Users,
+        label: "Diaristas Presentes",
+        value: diaristasPresentes,
+      },
+      {
+        icon: TrendingUp,
+        label: "Aderência DW",
+        value: aderenciaDW,
+        suffix: "%",
+        color: aderenciaDW >= 95 ? "#34C759" : "#FF9F0A",
       },
     ],
-    [totalColaboradores, presentes, diaristasPresentes, absenteismo, dados]
+    [
+      totalColaboradores,
+      presentes,
+      ausencias,
+      absenteismoTurno,
+      diaristasPlanejados,
+      diaristasPresentes,
+      aderenciaDW,
+    ]
   );
+
 
   /* =====================================================
      DADOS AUXILIARES
