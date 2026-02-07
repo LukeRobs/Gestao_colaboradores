@@ -127,6 +127,12 @@ export default function DashboardOperacional() {
 
   const aderenciaDW = Number(turnoData.aderenciaDW || 0);
 
+  const absenteismoTurno =
+  totalColaboradores > 0
+    ? Number(((ausencias / totalColaboradores) * 100).toFixed(2))
+    : 0;
+
+
   const kpis = useMemo(
     () => [
       {
@@ -143,7 +149,14 @@ export default function DashboardOperacional() {
         icon: Users,
         label: "Ausências",
         value: ausencias,
-        color: "#FF453A",
+        color: "#d6000e",
+      },
+      {
+        icon: TrendingUp,
+        label: "Absenteísmo",
+        value: absenteismoTurno,
+        suffix: "%",
+        color: absenteismoTurno <= 3.4 ? "#34C759" : "#d6000e",
       },
       {
         icon: Users,
@@ -167,6 +180,7 @@ export default function DashboardOperacional() {
       totalColaboradores,
       presentes,
       ausencias,
+      absenteismoTurno,
       diaristasPlanejados,
       diaristasPresentes,
       aderenciaDW,
