@@ -125,7 +125,7 @@ export default function DashboardOperacional() {
 
   const absenteismo = useMemo(() => {
     if (!totalColaboradores) return 0;
-    return ((ausentes / totalColaboradores) * 100).toFixed(1);
+    return ((ausentes / totalColaboradores) * 100).toFixed(2);
   }, [ausentes, totalColaboradores]);
 
   const kpis = useMemo(

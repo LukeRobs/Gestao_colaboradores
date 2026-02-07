@@ -190,6 +190,34 @@ const getColaboradorById = async (req, res) => {
     ]);
 
     /* =====================================================
+      INDICADORES — TREINAMENTOS
+    ===================================================== */
+
+    const treinamentosParticipados =
+      await prisma.treinamentoParticipante.findMany({
+        where: {
+          opsId,
+          presente: true, // apenas quem realmente participou
+        },
+        include: {
+          treinamento: {
+            select: {
+              tema: true,
+              dataTreinamento: true,
+            },
+          },
+        },
+        orderBy: {
+          treinamento: { dataTreinamento: "desc" },
+        },
+      });
+
+    const treinamentosDTO = treinamentosParticipados.map((t) => ({
+      tema: t.treinamento.tema,
+      data: t.treinamento.dataTreinamento,
+    }));
+
+    /* =====================================================
        RESPOSTA FINAL (SEM QUEBRAR O FRONT)
     ===================================================== */
     return successResponse(res, {
@@ -210,6 +238,10 @@ const getColaboradorById = async (req, res) => {
           total: totalAtestados,
           ativos,
           finalizados,
+        },
+        treinamentos: {
+          total: treinamentosDTO.length,
+          itens: treinamentosDTO,
         },
       },
     });

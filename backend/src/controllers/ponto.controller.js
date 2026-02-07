@@ -366,6 +366,20 @@ const getControlePresenca = async (req, res) => {
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
+      NOT: {
+        cargo: {
+          nomeCargo: {
+            in: [
+              "Líder de logística",
+              "Analista De Logística JR",
+              "Assistente COP",
+              "Supervisor Operações",
+              "Supervisor COP",
+            ],
+            mode: "insensitive",
+          },
+        },
+      },
       ...(turno && turno !== "TODOS" ? { turno: { nomeTurno: turno } } : {}),
       ...(escala && escala !== "TODOS" ? { escala: { nomeEscala: escala } } : {}),
       ...(lider && lider !== "TODOS" ? { idLider: lider } : {}),
@@ -821,6 +835,20 @@ const exportarPresencaSheets = async (req, res) => {
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
+      NOT: {
+        cargo: {
+          nomeCargo: {
+            in: [
+              "Líder de logística",
+              "Analista De Logística JR",
+              "Assistente COP",
+              "Supervisor Operações",
+              "Supervisor COP",
+            ],
+            mode: "insensitive",
+          },
+        },
+      },
       ...(turno && turno !== "TODOS" ? { turno: { nomeTurno: turno } } : {}),
       ...(escala && escala !== "TODOS" ? { escala: { nomeEscala: escala } } : {}),
       ...(lider && lider !== "TODOS" ? { idLider: lider } : {}),

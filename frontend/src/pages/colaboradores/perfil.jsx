@@ -86,6 +86,11 @@ export default function PerfilColaborador() {
     ativos: 0,
     finalizados: 0,
   };
+  const indicadoresTreinamentos = indicadores?.treinamentos || {
+    total: 0,
+    itens: [],
+  };
+
 console.log("INDICADORES ATESTADO:", indicadoresAtestado);
 
   return (
@@ -321,6 +326,40 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                 </div>
               ))}
             </div>
+          </Section>
+          {/* TREINAMENTOS */}
+          <Section title="Treinamentos">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Indicator
+                label="Total de Treinamentos"
+                value={indicadoresTreinamentos.total}
+                color="text-blue-400"
+              />
+            </div>
+
+            {indicadoresTreinamentos.total === 0 ? (
+              <p className="text-sm text-[#BFBFC3] mt-4">
+                Nenhum treinamento registrado para este colaborador.
+              </p>
+            ) : (
+              <div className="md:col-span-2 space-y-3 mt-4">
+                {indicadoresTreinamentos.itens.map((t, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-4 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4"
+                  >
+                    <FileText size={18} className="text-blue-400 mt-1" />
+
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold">{t.tema}</p>
+                      <p className="text-xs text-[#BFBFC3]">
+                        {new Date(t.data).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
         </main>
       </div>
