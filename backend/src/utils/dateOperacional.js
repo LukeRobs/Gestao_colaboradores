@@ -14,19 +14,20 @@ function addDays(date, delta) {
 
 function getDateOperacional(baseDate) {
   const d = new Date(baseDate);
-  const minutos = d.getHours() * 60 + d.getMinutes();
+  const horas = d.getHours();
+  const minutosTotais = horas * 60 + d.getMinutes();
 
   const T1_TOLERANCIA = 25; // minutos
   const T2_TOLERANCIA = 20;
   const T1_START = 5 * 60 + 25;   // 05:25
   const T2_START = 13 * 60 + 20;  // 13:20
-  const T3_START = 21 * 50;       // 20:50
+  const T3_START = 20 * 60 + 50;       // 20:50
 
   let turnoAtual;
 
-  if (minutos >= T1_START - T1_TOLERANCIA && minutos < T2_START) {
+  if (minutosTotais >= T1_START - T1_TOLERANCIA && minutosTotais < T2_START) {
     turnoAtual = "T1";
-  } else if (minutos >= T2_START - T2_TOLERANCIA && minutos < T3_START) {
+  } else if (minutosTotais >= T2_START - T2_TOLERANCIA && minutosTotais < T3_START) {
     turnoAtual = "T2";
   } else {
     turnoAtual = "T3";
@@ -35,7 +36,7 @@ function getDateOperacional(baseDate) {
   // 🔑 REGRA CORRETA DO DIA OPERACIONAL
   // Se for T3 e ainda não chegou 05:25 → dia operacional = ontem
   const diaOperacional =
-    turnoAtual === "T3" && minutos < T1_START
+    turnoAtual === "T3" && minutosTotais < T1_START
       ? addDays(d, -1)
       : d;
 
