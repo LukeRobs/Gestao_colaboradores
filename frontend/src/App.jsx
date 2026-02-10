@@ -51,6 +51,7 @@ import SafetyWalk from "./pages/safety-walk/SafetyWalk";
 
 /* ================= PROTEÇÃO ================= */
 import ProtectedRoute from "./routes/ProtectedRoute";
+import ReportRoute from "./routes/report";
 
 export default function App() {
   return (
@@ -318,6 +319,14 @@ export default function App() {
         element={
           <ProtectedRoute roles={["ADMIN", "LIDERANCA", "GESTAO"]}>
             <SafetyWalk />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report"
+        element={
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA", "GESTAO"]}>
+            <ReportRoute />
           </ProtectedRoute>
         }
       />

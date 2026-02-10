@@ -23,3 +23,52 @@
   placeholder:text-[#6F6F73]
   focus:outline-none focus:ring-2 focus:ring-[#FA4C00];
 }
+/* ================= EXPORT MODE ================= */
+
+/* Esconde botões de ação no export */
+body.exporting-report .export-hide,
+body.exporting-report [data-export-hide] {
+  display: none !important;
+}
+
+/* Garante que elementos não sejam cortados */
+body.exporting-report #operational-report,
+body.exporting-report #operational-report-clone {
+  overflow: visible !important;
+  min-height: auto !important;
+}
+
+/* Remove TODAS bordas, transformações e filtros */
+body.exporting-report *,
+body.exporting-report #operational-report *,
+body.exporting-report #operational-report-clone * {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+
+/* Garante que SVGs sejam renderizados corretamente */
+body.exporting-report svg {
+  overflow: visible !important;
+  display: block !important;
+  border: none !important;
+}
+
+/* Remove bordas dos gráficos Recharts */
+body.exporting-report .recharts-wrapper,
+body.exporting-report .recharts-surface,
+body.exporting-report .recharts-cartesian-grid,
+body.exporting-report .recharts-pie {
+  border: none !important;
+  outline: none !important;
+}
+
+/* Modo normal - mostra botões */
+.export-hide,
+[data-export-hide] {
+  display: flex;
+}
