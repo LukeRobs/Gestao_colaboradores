@@ -394,6 +394,15 @@ export default function Sidebar({ isOpen, onClose }) {
             )}
           </div>
         </nav>
+         {/* Footer com créditos */}
+        <div className="px-6 py-4 border-t border-white/5 flex-shrink-0">
+          <p className="text-xs text-[#BFBFC3]">
+            Desenvolvido por:{" "}
+            <span className="text-[#FA4C00] font-medium">
+              Lucas e Thiago - SOC-PE2
+            </span>
+          </p>
+        </div>
       </aside>
     </>
   );
