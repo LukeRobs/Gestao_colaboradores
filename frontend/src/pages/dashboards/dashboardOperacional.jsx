@@ -18,6 +18,8 @@ import AusentesHojeTable from "../../components/dashboard/AusentesHojeTable";
 import SetorDistribuicaoSection from "../../components/dashboard/SetorDistribuicaoSection";
 import TendenciaAbsenteismoChart from "../../components/dashboard/TendenciaAbsenteismoChart";
 import DistribuicaoVinculoChart from "../../components/dashboard/DistribuicaoVinculoChart";
+import { exportOperationalReport } from "../../reports/exportOperationalReport";
+import { Download } from "lucide-react";
 
 
 import { AuthContext } from "../../context/AuthContext";
@@ -72,6 +74,36 @@ export default function DashboardOperacional() {
       }
     } finally {
       setLoading(false);
+    }
+  }
+  async function handleExportReport() {
+    try {
+      const params = {
+        turno: turnoSelecionado,
+      };
+
+      if (appliedRange?.from) {
+        params.dataInicio = appliedRange.from
+          .toISOString()
+          .slice(0, 10);
+
+        params.dataFim = (appliedRange.to || appliedRange.from)
+          .toISOString()
+          .slice(0, 10);
+      }
+
+      const res = await api.get("/dashboard", { params });
+
+      navigate("/report", {
+        state: {
+          dashboardData: res.data.data, // 🔥 payload completo
+          turno: turnoSelecionado,
+          periodo: appliedRange,
+        },
+      });
+    } catch (err) {
+      console.error("Erro ao exportar relatório:", err);
+      alert("Erro ao gerar relatório");
     }
   }
 
@@ -264,7 +296,10 @@ export default function DashboardOperacional() {
       <div className="flex-1 lg:ml-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="p-8 space-y-10">
+          <main
+            id="dashboard-operacional-export"
+            className="p-8 space-y-10"
+          >
           <DashboardHeader
             title="Dashboard Operacional"
             subtitle="Dia operacional"
@@ -325,11 +360,31 @@ export default function DashboardOperacional() {
             )}
           </div>
 
-          <TurnoSelector
-            value={turnoSelecionado}
-            onChange={setTurnoSelecionado}
-            options={["T1", "T2", "T3"]}
-          />
+          <div className="flex items-center gap-3">
+            <TurnoSelector
+              value={turnoSelecionado}
+              onChange={setTurnoSelecionado}
+              options={["T1", "T2", "T3"]}
+            />
+          <button
+            type="button"
+            onClick={handleExportReport}
+            className="
+              flex items-center gap-2
+              bg-[#1A1A1C]
+              border border-[#2A2A2C]
+              px-4 py-2
+              rounded-lg
+              text-sm
+              hover:bg-[#222]
+              transition
+            "
+          >
+            <Download size={16} />
+            Exportar relatório
+          </button>
+          </div>
+
 
           <KpiCardsRow items={kpis} />
 
