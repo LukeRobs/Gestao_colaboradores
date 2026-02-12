@@ -211,7 +211,7 @@ return (
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-5">
           <KpiCard label="Atestados (Período)" value={kpis?.totalPeriodo} loading={loading} />
-          <KpiCard label="Total Geral" value={kpis?.totalGeral} loading={loading} highlight="warning" />
+          <KpiCard label="Recorrência" value={kpis?.recorrencia !== undefined ? `${kpis.recorrencia}%`: "0%"} loading={loading} />
           <KpiCard label="Colaboradores Impactados" value={kpis?.colaboradoresImpactados} loading={loading} />
           <KpiCard label="% sobre HC" value={kpis ? `${kpis.percentualHC}%` : null} loading={loading} highlight="error" />
           <KpiCard label="Atestados Hoje" value={kpis?.hoje} loading={loading} />

@@ -39,52 +39,71 @@ const getResumoAtestados = async (req, res) => {
       0
     );
 
-    const colaboradoresImpactados = new Set(
-      atestadosPeriodo.map((a) => a.opsId)
-    ).size;
+    /* =========================================
+       COLABORADORES IMPACTADOS + RECORRÊNCIA
+    ========================================= */
+
+    const mapaColaboradores = {};
+
+    for (const a of atestadosPeriodo) {
+      if (!mapaColaboradores[a.opsId]) {
+        mapaColaboradores[a.opsId] = 0;
+      }
+      mapaColaboradores[a.opsId] += 1;
+    }
+
+    const colaboradoresImpactados = Object.keys(mapaColaboradores).length;
+
+    const colaboradoresRecorrentes = Object.values(mapaColaboradores)
+      .filter((qtd) => qtd >= 2).length;
+
+    const recorrencia =
+      colaboradoresImpactados > 0
+        ? Number(
+            (
+              (colaboradoresRecorrentes / colaboradoresImpactados) *
+              100
+            ).toFixed(2)
+          )
+        : 0;
 
     /* =========================================
-       TOTAL GERAL (INDEPENDENTE DO PERÍODO)
+       HC ATIVO + % SOBRE HC
     ========================================= */
-    const totalGeral = await prisma.atestadoMedico.count({
-      where: {
-        status: { not: "CANCELADO" },
-      },
-    });
-
     const hcTotal = await prisma.colaborador.count({
       where: { status: "ATIVO" },
     });
 
     const percentualHC =
       hcTotal > 0
-        ? Number(((colaboradoresImpactados / hcTotal) * 100).toFixed(2))
+        ? Number(
+            ((colaboradoresImpactados / hcTotal) * 100).toFixed(2)
+          )
         : 0;
 
     /* =========================================
        HOJE
     ========================================= */
-const hoje = new Date();
-hoje.setHours(0, 0, 0, 0);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
 
-const amanha = new Date(hoje);
-amanha.setDate(hoje.getDate() + 1);
+    const amanha = new Date(hoje);
+    amanha.setDate(hoje.getDate() + 1);
 
-const atestadosHoje = await prisma.atestadoMedico.count({
-  where: {
-    dataInicio: {
-      gte: hoje,
-      lt: amanha,
-    },
-    status: { not: "CANCELADO" },
-  },
-});
-
+    const atestadosHoje = await prisma.atestadoMedico.count({
+      where: {
+        dataInicio: {
+          gte: hoje,
+          lt: amanha,
+        },
+        status: { not: "CANCELADO" },
+      },
+    });
 
     /* =========================================
-       SEMANA ATUAL (SEGUNDA → HOJE)
+       SEMANA ATUAL (SEG → HOJE)
     ========================================= */
-    const diaSemana = hoje.getDay(); // 0=Dom
+    const diaSemana = hoje.getDay();
     const diff = diaSemana === 0 ? 6 : diaSemana - 1;
 
     const inicioSemana = new Date(hoje);
@@ -116,8 +135,8 @@ const atestadosHoje = await prisma.atestadoMedico.count({
     return successResponse(res, {
       kpis: {
         totalPeriodo,
-        totalGeral,
-        diasAfastados, // 🔥 MANTIDO PARA USO FUTURO
+        recorrencia, // 🔥 NOVO KPI
+        diasAfastados,
         colaboradoresImpactados,
         percentualHC,
         hoje: atestadosHoje,
@@ -125,12 +144,12 @@ const atestadosHoje = await prisma.atestadoMedico.count({
         mes: mesAtual,
       },
     });
-
   } catch (err) {
     console.error("❌ RESUMO ATESTADOS:", err);
     return errorResponse(res, "Erro ao gerar resumo", 500);
   }
 };
+
 
 
 /* ===================================================== */
