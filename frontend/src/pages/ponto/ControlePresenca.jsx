@@ -72,9 +72,6 @@ export default function ControlePresenca() {
           `📝 ${data.celulasAtualizadas} células atualizadas\n\n` +
           `🔗 Acesse a planilha em:\n${data.spreadsheetUrl}`
         );
-        
-        // Abrir planilha em nova aba
-        window.open(data.spreadsheetUrl, '_blank');
       }
       
     } catch (error) {
