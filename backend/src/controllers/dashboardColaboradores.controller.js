@@ -84,6 +84,10 @@ function calcIdade(nascimento, ref) {
 
 function isCargoElegivel(cargo) {
   const nome = String(cargo || "").toUpperCase();
+  // Exclui PCD da contagem
+  if (nome.includes("PCD")) {
+    return false;
+  }
   // use a mesma regra do dashboard operacional (I e II)
   return nome.includes("AUXILIAR DE LOGÍSTICA I") || nome.includes("AUXILIAR DE LOGÍSTICA II") || nome.includes("AUXILIAR DE LOGÍSTICA");
 }
