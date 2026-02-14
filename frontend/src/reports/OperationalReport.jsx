@@ -37,8 +37,87 @@ export default function OperationalReport({ report }) {
     if (typeof document === "undefined") return false
     return document.body.classList.contains("exporting-report")
   }, [])
-  function handleExportSeatalk() {
-    console.log("Exportar relatório no SeaTalk", report)
+
+  async function handleExportSeatalkReal() {
+    const original = document.getElementById("operational-report")
+    if (!original) {
+      console.error("❌ Elemento #operational-report não encontrado")
+      alert("Erro: Elemento do relatório não encontrado")
+      return
+    }
+
+    console.log("📸 Iniciando captura do relatório...")
+    document.body.classList.add("exporting-report")
+    await new Promise(r => setTimeout(r, 50))
+
+    const clone = original.cloneNode(true)
+    clone.id = "operational-report-clone"
+    
+    Object.assign(clone.style, {
+      width: "1280px",
+      maxWidth: "1280px",
+      minHeight: "auto",
+      margin: "0",
+      padding: "24px",
+      position: "fixed",
+      top: "0",
+      left: "-99999px",
+      background: "#232323",
+      overflow: "visible",
+      transform: "none",
+      filter: "none",
+      border: "none",
+      outline: "none",
+      boxShadow: "none",
+    })
+
+    clone.querySelectorAll(".export-hide, [data-export-hide]").forEach(el => el.remove())
+    document.body.appendChild(clone)
+
+    await new Promise(r => setTimeout(r, 100))
+    clone.offsetHeight
+    await new Promise(r => setTimeout(r, 400))
+
+    try {
+      console.log("🖼️ Convertendo para imagem...")
+      const dataUrl = await domtoimage.toPng(clone, {
+        bgcolor: "#232323",
+        width: 1280,
+        height: clone.scrollHeight,
+        cacheBust: true,
+        quality: 1,
+        style: {
+          transform: "scale(1)",
+          transformOrigin: "top left",
+          border: "none",
+          outline: "none",
+        },
+      })
+
+      console.log("✅ Imagem capturada:", Math.round(dataUrl.length / 1024), "KB")
+      console.log("📤 Enviando para backend...")
+      console.log("🔗 URL:", "/reports/seatalk")
+
+      const response = await api.post("/reports/seatalk", {
+        image: dataUrl,
+        periodo: report.header.periodo,
+        turno: report.header.turno,
+      })
+
+      console.log("✅ Resposta do backend:", response.data)
+      alert("Relatório enviado para o Seatalk com sucesso ✅")
+    } catch (err) {
+      console.error("❌ Erro completo:", err)
+      console.error("❌ Resposta do servidor:", err.response?.data)
+      console.error("❌ Status:", err.response?.status)
+      console.error("❌ URL chamada:", err.config?.url)
+      
+      const errorMsg = err.response?.data?.message || err.message || "Erro desconhecido"
+      alert(`Erro ao enviar relatório para o Seatalk: ${errorMsg}`)
+    } finally {
+      document.body.removeChild(clone)
+      document.body.classList.remove("exporting-report")
+    }
   }
   async function handleExportEmail() {
     const original = document.getElementById("operational-report")
@@ -134,7 +213,7 @@ export default function OperationalReport({ report }) {
             </div>
             <div className="flex gap-2 export-hide" data-export-hide>
               <ExportButton variant="email" label="Enviar por e-mail" onClick={handleExportEmail} />
-              <ExportButton variant="seatalk" label="Enviar no SeaTalk" onClick={handleExportSeatalk} />
+              <ExportButton variant="seatalk" label="Enviar no SeaTalk" onClick={handleExportSeatalkReal} />
             </div>
           </div>
         </Card>
