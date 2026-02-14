@@ -47,6 +47,8 @@ export default function Sidebar({ isOpen, onClose }) {
   );
   const [ssoOpen, setSsoOpen] = useState(
     location.pathname.startsWith("/safety-walk") ||
+    location.pathname.startsWith("/ddsma") ||
+    location.pathname.startsWith("/opas") ||
     location.pathname.startsWith("/sso")
   );
 
@@ -372,6 +374,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/safety-walk") ||
+                  location.pathname.startsWith("/ddsma") ||
+                  location.pathname.startsWith("/opas") ||
                   location.pathname.startsWith("/sso")
                     ? "bg-[#2A2A2C] text-white"
                     : "text-[#BFBFC3] hover:bg-[#242426]"
@@ -395,9 +399,13 @@ export default function Sidebar({ isOpen, onClose }) {
                   active={isActive("/safety-walk")}
                   onClick={() => go("/safety-walk")}
                 />
-                <SidebarSubItem label="DDSMA (em breve)" disabled />
-                <SidebarSubItem label="Ginástica Laboral (em breve)" disabled />
+                <SidebarSubItem
+                  label="DDSMA"
+                  active={isActive("/ddsma")}
+                  onClick={() => go("/ddsma")}
+                />
                 <SidebarSubItem label="OPAs (em breve)" disabled />
+                <SidebarSubItem label="Ginástica Laboral (em breve)" disabled />
               </div>
             )}
           </div>
