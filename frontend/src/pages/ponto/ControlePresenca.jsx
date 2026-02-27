@@ -54,11 +54,9 @@ export default function ControlePresenca() {
         return;
       }
 
+      // Exporta sempre completo, sem filtros
       const params = {
         mes,
-        ...(turno !== "TODOS" ? { turno } : {}),
-        ...(escala !== "TODOS" ? { escala } : {}),
-        ...(lider !== "TODOS" ? { lider } : {}),
       };
 
       const res = await api.get("/ponto/exportar-sheets", { params });

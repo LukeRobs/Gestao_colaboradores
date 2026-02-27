@@ -61,8 +61,30 @@ const calcularSemanaAtual = () => {
   const diasPassados = Math.floor((hoje - inicioAno) / (1000 * 60 * 60 * 24));
   const semanaAtual = Math.ceil((diasPassados + inicioAno.getDay() + 1) / 7);
   
-  // Retornar SEM zero à esquerda para compatibilidade com a planilha (W7 ao invés de W07)
-  return `W${semanaAtual}`;
+  // ✅ PADRÃO: Sempre retornar COM zero à esquerda (W07 ao invés de W7)
+  return `W${String(semanaAtual).padStart(2, '0')}`;
+};
+
+/**
+ * 📅 Normalizar formato de semana para padrão W07 (com zero à esquerda)
+ * @param {string} semana - Semana no formato W7 ou W07
+ * @returns {string} - Semana normalizada no formato W07
+ */
+const normalizarSemana = (semana) => {
+  if (!semana || typeof semana !== 'string') return semana;
+  
+  // Se já está no formato correto (W07), retornar
+  if (semana.match(/^W\d{2}$/)) return semana;
+  
+  // Se está no formato W7 (sem zero), adicionar zero
+  const match = semana.match(/^W(\d+)$/);
+  if (match) {
+    const numero = match[1];
+    return `W${numero.padStart(2, '0')}`;
+  }
+  
+  // Se não reconhecer o formato, retornar como está
+  return semana;
 };
 
 /**
@@ -191,7 +213,7 @@ const buscarDadosOPA = async (filtros = {}) => {
 
       const pilar = row[1] || ''; // Coluna B
       const dataInicio = row[2] || ''; // Coluna C
-      const semana = row[0] || ''; // Coluna A = Semana (W2, W3, etc.)
+      const semana = normalizarSemana(row[0] || ''); // Coluna A = Semana (W2 → W02)
       const numeroSemana = row[7] || ''; // Coluna H = Número da semana
       const descricaoSemana = row[9] || ''; // Coluna J = Descrição
       

@@ -56,12 +56,11 @@ function isWeekend(dateISO) {
 function isDSR(dateISO, escala) {
   if (!dateISO || !escala) return false;
 
-  // força data local (evita bug de UTC)
   const date = new Date(`${dateISO}T00:00:00`);
-  const day = date.getDay(); // 0=Dom, 3=Qua
+  const day = date.getDay();
 
   const DSR_BY_ESCALA = {
-    A: [0, 3], // Domingo e Quarta
+    A: [0, 3],
     B: [1, 4],
     C: [2, 5],
   };
@@ -82,28 +81,28 @@ export default function PresencaCell({
 
   /* ================= STATUS ================= */
   const status = useMemo(() => {
-    // 1️⃣ Registro explícito sempre vence
     if (registro?.status) return registro.status;
-
-    // 2️⃣ DSR automático pela escala
-    if (isDSR(dia?.date, colaborador?.escala)) {
-      return "DSR";
-    }
-
-    // 3️⃣ Fallback
+    if (isDSR(dia?.date, colaborador?.escala)) return "DSR";
     return "-";
   }, [registro, dia?.date, colaborador?.escala]);
 
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.F;
   const disabled = status === "DSR" && !canEdit;
 
+  /* ================= PENDÊNCIA DE SAÍDA ================= */
+  const semSaida =
+    status === "P" &&
+    (registro?.entrada || registro?.horaEntrada) &&
+    !registro?.saida &&
+    !registro?.horaSaida;
+
   function handleClick() {
     if (!canEdit) return;
     onEdit?.({ colaborador, dia, registro });
   }
 
-  const horaEntrada = fmtHora(registro?.horaEntrada);
-  const horaSaida = fmtHora(registro?.horaSaida);
+  const horaEntrada = fmtHora(registro?.entrada || registro?.horaEntrada);
+  const horaSaida = fmtHora(registro?.saida || registro?.horaSaida);
   const showTooltip = hover && (canEdit || registro);
 
   return (
@@ -122,6 +121,13 @@ export default function PresencaCell({
         onMouseLeave={() => setHover(false)}
       >
         <span className="text-xs font-semibold whitespace-nowrap">{cfg.short}</span>
+
+        {/* ⚠ WARNING: entrada sem saída */}
+        {semSaida && (
+          <span className="absolute top-0 right-0 text-[12px] leading-none text-red-900">
+            ⚠
+          </span>
+        )}
 
         <PresencaTooltip open={showTooltip}>
           <div className="space-y-2">
@@ -146,6 +152,13 @@ export default function PresencaCell({
                   {horaEntrada ? `Entrada ${horaEntrada}` : ""}
                   {horaEntrada && horaSaida ? " • " : ""}
                   {horaSaida ? `Saída ${horaSaida}` : ""}
+                </div>
+              )}
+
+              {/* ⚠ Aviso no tooltip */}
+              {semSaida && (
+                <div className="text-amber-400 text-[11px] font-medium">
+                  ⚠ Saída não registrada
                 </div>
               )}
 

@@ -78,10 +78,33 @@ const calcularSemanaAtual = () => {
     diasPassados,
     diaSemanaInicioAno: inicioAno.getDay(),
     semanaCalculada: semanaAtual,
-    resultado: `W${semanaAtual}`
+    resultado: `W${String(semanaAtual).padStart(2, '0')}`
   });
   
-  return `W${semanaAtual}`;
+  // ✅ PADRÃO: Sempre retornar COM zero à esquerda (W07 ao invés de W7)
+  return `W${String(semanaAtual).padStart(2, '0')}`;
+};
+
+/**
+ * 📅 Normalizar formato de semana para padrão W07 (com zero à esquerda)
+ * @param {string} semana - Semana no formato W7 ou W07
+ * @returns {string} - Semana normalizada no formato W07
+ */
+const normalizarSemana = (semana) => {
+  if (!semana || typeof semana !== 'string') return semana;
+  
+  // Se já está no formato correto (W07), retornar
+  if (semana.match(/^W\d{2}$/)) return semana;
+  
+  // Se está no formato W7 (sem zero), adicionar zero
+  const match = semana.match(/^W(\d+)$/);
+  if (match) {
+    const numero = match[1];
+    return `W${numero.padStart(2, '0')}`;
+  }
+  
+  // Se não reconhecer o formato, retornar como está
+  return semana;
 };
 
 /**
@@ -215,7 +238,7 @@ const buscarDadosSafetyWalk = async (filtros = {}) => {
       // Pular linhas vazias
       if (!row || row.length === 0 || !row[0]) continue;
 
-      const semana = row[0] || ''; // Ex: W2
+      const semana = normalizarSemana(row[0] || ''); // Ex: W2 → W02
       const pilar = row[1] || '';  // Ex: Safety Walk
       const dataInicio = row[2] || '';
       const dataFim = row[3] || '';

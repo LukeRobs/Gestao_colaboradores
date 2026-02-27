@@ -921,7 +921,7 @@ const exportarPresencaSheets = async (req, res) => {
   const reqId = `EXPORT-${Date.now()}`;
 
   try {
-    const { mes, turno, escala, lider } = req.query;
+    const { mes } = req.query;
 
     console.log(`[${reqId}] /ponto/exportar-sheets query:`, req.query);
 
@@ -937,7 +937,7 @@ const exportarPresencaSheets = async (req, res) => {
     const inicioMes = new Date(ano, mesNum - 1, 1);
     const fimMes = new Date(ano, mesNum, 0, 23, 59, 59);
 
-    // Filtros
+    // Exporta sempre completo, sem filtros de turno/escala/lider
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
@@ -955,9 +955,6 @@ const exportarPresencaSheets = async (req, res) => {
           },
         },
       },
-      ...(turno && turno !== "TODOS" ? { turno: { nomeTurno: turno } } : {}),
-      ...(escala && escala !== "TODOS" ? { escala: { nomeEscala: escala } } : {}),
-      ...(lider && lider !== "TODOS" ? { idLider: lider } : {}),
     };
 
     const colaboradores = await prisma.colaborador.findMany({
