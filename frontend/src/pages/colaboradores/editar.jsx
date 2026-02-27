@@ -8,6 +8,23 @@ import api from "../../services/api";
 
 const HORARIOS = ["05:25", "13:20", "21:00"];
 
+const MOTIVOS_DESLIGAMENTO = [
+  { value: "SEGURANCA", label: "Segurança" },
+  { value: "ALTO_INDICE_ABS", label: "Alto índice de ABS" },
+  { value: "ABANDONADO", label: "Abandonado" },
+  { value: "DESEMPENHO_BAIXO", label: "Desempenho baixo" },
+  { value: "DESVIO_COMPORTAMENTAL", label: "Desvio comportamental" },
+  { value: "TERMINO_CONTRATO", label: "Término de contrato" },
+  { value: "SEM_EXIBICAO", label: "Sem exibição" },
+  { value: "DECLINIO", label: "Declínio" },
+  { value: "CONFORMIDADE", label: "Conformidade" },
+  { value: "PEDIDO_DEMISSAO", label: "Pedido de demissão" },
+  { value: "DESLIGAMENTO_AUTOMATICO", label: "Desligamento automático" },
+  { value: "REDUCAO_QUADRO", label: "Redução de quadro" },
+  { value: "VOLUNTARIO", label: "Voluntário" },
+  { value: "INVOLUNTARIO", label: "Involuntário" },
+];
+
 export default function EditarColaborador() {
   const { opsId } = useParams();
   const navigate = useNavigate();
@@ -29,6 +46,7 @@ export default function EditarColaborador() {
     horarioInicioJornada: "",
     status: "ATIVO",
     dataDemissao: "",
+    motivoDesligamento: "",
     dataInicioStatus: "",
     dataFimStatus: "",
   });
@@ -63,7 +81,8 @@ export default function EditarColaborador() {
             ? c.horarioInicioJornada.substring(11, 16)
             : "",
           status: c.status || "ATIVO",
-          dataDemissao: c.dataDemissao ? c.dataDemissao.substring(0, 10) : "",
+          dataDemissao: c.dataDesligamento ? c.dataDesligamento.substring(0, 10) : "",
+          motivoDesligamento: c.motivoDesligamento || "",
           dataInicioStatus: c.dataInicioStatus ? c.dataInicioStatus.substring(0, 10) : "",
           dataFimStatus: c.dataFimStatus ? c.dataFimStatus.substring(0, 10) : "",
         });
@@ -81,7 +100,41 @@ export default function EditarColaborador() {
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "status") {
+      if (value === "INATIVO") {
+        setForm(prev => ({
+          ...prev,
+          status: value,
+          dataInicioStatus: "",
+          dataFimStatus: ""
+        }));
+        return;
+      }
+
+      if (value === "FERIAS" || value === "AFASTADO") {
+        setForm(prev => ({
+          ...prev,
+          status: value,
+          dataDemissao: "",
+          motivoDesligamento: ""
+        }));
+        return;
+      }
+
+      // ATIVO
+      setForm(prev => ({
+        ...prev,
+        status: value,
+        dataDemissao: "",
+        motivoDesligamento: "",
+        dataInicioStatus: "",
+        dataFimStatus: ""
+      }));
+      return;
+    }
+
+    setForm(prev => ({ ...prev, [name]: value }));
   }
 
   async function handleSave() {
@@ -90,6 +143,17 @@ export default function EditarColaborador() {
       // 🔥 ===== VALIDAÇÃO FRONT =====
       if (form.status === "INATIVO" && !form.dataDemissao) {
         return alert("Informe a data de demissão.");
+      }
+      if (form.status === "INATIVO" && !form.motivoDesligamento) {
+        return alert("Informe o motivo do desligamento.");
+      }
+      if (
+        form.status === "INATIVO" &&
+        form.dataAdmissao &&
+        form.dataDemissao &&
+        form.dataDemissao < form.dataAdmissao
+      ) {
+        return alert("Data de demissão não pode ser anterior à admissão.");
       }
 
       if (
@@ -112,6 +176,7 @@ export default function EditarColaborador() {
         horarioInicioJornada: form.horarioInicioJornada || null,
         status: form.status,
         dataDesligamento: form.dataDemissao || null,
+        motivoDesligamento: form.motivoDesligamento || null,
         dataInicioStatus: form.dataInicioStatus || null,
         dataFimStatus: form.dataFimStatus || null,
       };
@@ -218,7 +283,7 @@ export default function EditarColaborador() {
             />
           </Section>
 
-          <Section title="Jornada">
+          <Section title="Jornada" className={form.status === "INATIVO" ? "border-red-500" : ""}>
             <Input
               type="date"
               name="dataAdmissao"
@@ -243,15 +308,25 @@ export default function EditarColaborador() {
               options={["ATIVO", "INATIVO", "AFASTADO", "FERIAS"]}
             />
           
-           {form.status === "INATIVO" && (
-            <Input
-              type="date"
-              name="dataDemissao"
-              label="Data de Demissão *"
-              value={form.dataDemissao}
-              onChange={handleChange}
-            />
-          )}
+            {form.status === "INATIVO" && (
+              <>
+                <Input
+                  type="date"
+                  name="dataDemissao"
+                  label="Data de Demissão *"
+                  value={form.dataDemissao}
+                  onChange={handleChange}
+                />
+
+                <Select
+                  name="motivoDesligamento"
+                  label="Motivo do Desligamento *"
+                  value={form.motivoDesligamento}
+                  onChange={handleChange}
+                  options={MOTIVOS_DESLIGAMENTO}
+                />
+              </>
+            )}
 
           {(form.status === "FERIAS" || form.status === "AFASTADO") && (
             <>

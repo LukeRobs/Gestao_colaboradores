@@ -224,6 +224,7 @@ model Colaborador {
   matricula                 String                    @unique @db.VarChar(50)
   dataAdmissao              DateTime                  @map("data_admissao") @db.Date
   dataDesligamento          DateTime?                 @map("data_desligamento") @db.Date
+  motivoDesligamento        MotivoDesligamento?       @map("motivo_desligamento")
   dataInicioStatus          DateTime?                 @map("data_inicio_status") @db.Date
   dataFimStatus             DateTime?                 @map("data_fim_status") @db.Date
   horarioInicioJornada      DateTime                  @map("horario_inicio_jornada") @db.Time(6)
@@ -547,6 +548,23 @@ model stg_colaboradores_sheet {
   turno         String?   @db.VarChar(10)
 
   @@ignore
+}
+
+enum MotivoDesligamento {
+  SEGURANCA
+  ALTO_INDICE_ABS
+  ABANDONADO
+  DESEMPENHO_BAIXO
+  DESVIO_COMPORTAMENTAL
+  TERMINO_CONTRATO
+  SEM_EXIBICAO
+  DECLINIO
+  CONFORMIDADE
+  PEDIDO_DEMISSAO
+  DESLIGAMENTO_AUTOMATICO
+  REDUCAO_QUADRO
+  VOLUNTARIO
+  INVOLUNTARIO
 }
 
 enum StatusTreinamento {

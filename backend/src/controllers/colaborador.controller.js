@@ -85,7 +85,7 @@ const getAllColaboradores = async (req, res) => {
     ];
   }
 
-  if (status) {
+  if (status !== undefined && status !== "") {
     if (status === "ATIVO") {
         where.status = { in: ["ATIVO", "FERIAS", "AFASTADO"] };
       } else {
@@ -423,8 +423,8 @@ const updateColaborador = async (req, res) => {
       contatoEmergenciaNome,
       contatoEmergenciaTelefone,
 
-      // 🔥 NOVOS CAMPOS
       dataDesligamento,
+      motivoDesligamento,
       dataInicioStatus,
       dataFimStatus,
     } = req.body;
@@ -454,28 +454,63 @@ const updateColaborador = async (req, res) => {
     /* =============================
        VALIDAÇÕES POR STATUS
     ============================== */
-    if (status) {
+    if (status !== undefined) {
       // 🔴 INATIVO → obrigatória dataDesligamento
-      if (status === "INATIVO") {
-        if (!dataDesligamento) {
-          return errorResponse(
-            res,
-            "Data de demissão é obrigatória para status INATIVO",
-            400
-          );
-        }
-
-        const dt = new Date(dataDesligamento);
-        if (isNaN(dt.getTime())) {
-          return errorResponse(res, "Data de demissão inválida", 400);
-        }
-
-        data.dataDesligamento = dt;
-
-        // limpa campos de período
-        data.dataInicioStatus = null;
-        data.dataFimStatus = null;
+    if (status === "INATIVO") {
+      if (!dataDesligamento) {
+        return errorResponse(
+          res,
+          "Data de desligamento é obrigatória para INATIVO",
+          400
+        );
       }
+
+      if (!motivoDesligamento) {
+        return errorResponse(
+          res,
+          "Motivo do desligamento é obrigatório para INATIVO",
+          400
+        );
+      }
+
+      // 🔒 VALIDA ENUM
+      const MOTIVOS_VALIDOS = [
+        "SEGURANCA",
+        "ALTO_INDICE_ABS",
+        "ABANDONADO",
+        "DESEMPENHO_BAIXO",
+        "DESVIO_COMPORTAMENTAL",
+        "TERMINO_CONTRATO",
+        "SEM_EXIBICAO",
+        "DECLINIO",
+        "CONFORMIDADE",
+        "PEDIDO_DEMISSAO",
+        "DESLIGAMENTO_AUTOMATICO",
+        "REDUCAO_QUADRO",
+        "VOLUNTARIO",
+        "INVOLUNTARIO",
+      ];
+
+      if (!MOTIVOS_VALIDOS.includes(motivoDesligamento)) {
+        return errorResponse(
+          res,
+          "Motivo de desligamento inválido",
+          400
+        );
+      }
+
+      const dt = new Date(dataDesligamento);
+      if (isNaN(dt.getTime())) {
+        return errorResponse(res, "Data de desligamento inválida", 400);
+      }
+
+      data.dataDesligamento = dt;
+      data.motivoDesligamento = motivoDesligamento;
+
+      // limpa status temporário
+      data.dataInicioStatus = null;
+      data.dataFimStatus = null;
+    }
 
       // 🟡 FERIAS ou AFASTADO
       if (status === "FERIAS" || status === "AFASTADO") {
@@ -507,11 +542,13 @@ const updateColaborador = async (req, res) => {
 
         // limpa demissão
         data.dataDesligamento = null;
+        data.motivoDesligamento = null;
       }
 
       // 🟢 ATIVO → limpa todos os campos de status temporário
       if (status === "ATIVO") {
         data.dataDesligamento = null;
+        data.motivoDesligamento = null;
         data.dataInicioStatus = null;
         data.dataFimStatus = null;
       }
