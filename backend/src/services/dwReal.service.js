@@ -41,7 +41,9 @@ const listarDwRealPorTurno = async ({ data, idTurno }) => {
       empresa: true
     },
     orderBy: {
-      empresa: { nome: 'asc' }
+      empresa: {
+        razaoSocial: "asc"
+      }
     }
   });
 };

@@ -1,6 +1,6 @@
 // src/pages/DailyWorks/dwList.jsx
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
@@ -28,6 +28,18 @@ export default function DwListPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  function handleEditar(row) {
+
+    const turnoNumero = Number(row.turno.replace("T", ""));
+
+    navigate("/dw/novo", {
+      state: {
+        data: row.data,
+        turno: turnoNumero
+      }
+    });
+
+  }
   /* ================= LOAD ================= */
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,6 +167,7 @@ export default function DwListPage() {
                     <th className="px-6 py-4 text-center">Total Real</th>
                     <th className="px-6 py-4 text-center">% Aderência</th>
                     <th className="px-6 py-4 text-center">Turno</th>
+                    <th className="px-6 py-4 text-center">Ações</th>
                   </tr>
                 </thead>
 
@@ -214,6 +227,14 @@ export default function DwListPage() {
 
                         <td className="px-6 py-4 text-center font-semibold">
                           {row.turno}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => handleEditar(row)}
+                            className="p-2 rounded-lg hover:bg-[#2A2A2C] transition"
+                          >
+                            <Pencil size={16} className="text-[#FA4C00]" />
+                          </button>
                         </td>
                       </tr>
                     );

@@ -1,6 +1,6 @@
 // src/pages/DailyWorks/dwNovo.jsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
@@ -18,12 +18,16 @@ const EMPRESAS = [
 
 export default function DwNovoPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadingDw, setLoadingDw] = useState(false);
 
   const [form, setForm] = useState({
-    data: "",
-    idTurno: "",
+    data: editData?.data || "",
+    idTurno: editData?.turno || "",
     observacao: "",
     quantidades: {
       12: "",
@@ -32,11 +36,49 @@ export default function DwNovoPage() {
     },
   });
 
+  /* ==============================
+     CARREGAR DW EXISTENTE (EDIÇÃO)
+  ===============================*/
+  useEffect(() => {
+    if (!editData?.data || !editData?.turno) return;
+
+    async function loadDwReal() {
+      try {
+        setLoadingDw(true);
+
+        const res = await api.get("/dw/real", {
+          params: {
+            data: editData.data,
+            idTurno: editData.turno,
+          },
+        });
+
+        const registros = res.data.data || [];
+
+        const novasQuantidades = { 12: "", 13: "", 14: "" };
+        let obs = "";
+
+        registros.forEach((r) => {
+          novasQuantidades[r.idEmpresa] = r.quantidade;
+          if (r.observacao) obs = r.observacao;
+        });
+
+        setForm((prev) => ({
+          ...prev,
+          quantidades: novasQuantidades,
+          observacao: obs,
+        }));
+      } catch (error) {
+        console.error("Erro ao carregar DW:", error);
+      } finally {
+        setLoadingDw(false);
+      }
+    }
+
+    loadDwReal();
+  }, [editData]);
+
   /* ================= HANDLERS ================= */
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleQuantidade = (idEmpresa, value) => {
     setForm((prev) => ({
@@ -63,7 +105,6 @@ export default function DwNovoPage() {
     try {
       setSaving(true);
 
-      // 🔁 cria 3 lançamentos (1 por empresa)
       await Promise.all(
         EMPRESAS.map((e) =>
           api.post("/dw/real", {
@@ -85,7 +126,10 @@ export default function DwNovoPage() {
     }
   };
 
+  const isEdit = !!editData;
+
   /* ================= UI ================= */
+
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
       <Sidebar
@@ -109,7 +153,9 @@ export default function DwNovoPage() {
               </button>
 
               <div>
-                <h1 className="text-2xl font-semibold">Novo Daily Work</h1>
+                <h1 className="text-2xl font-semibold">
+                  {isEdit ? "Editar Daily Work" : "Novo Daily Work"}
+                </h1>
                 <p className="text-sm text-[#BFBFC3]">
                   Lançamento de DW Real por empresa e turno
                 </p>
@@ -119,18 +165,10 @@ export default function DwNovoPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="
-                flex items-center gap-2
-                px-5 py-2.5
-                bg-[#FA4C00]
-                hover:bg-[#ff5a1a]
-                rounded-xl
-                font-medium
-                disabled:opacity-60
-              "
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#FA4C00] hover:bg-[#ff5a1a] rounded-xl font-medium disabled:opacity-60"
             >
               <Save size={16} />
-              Salvar
+              {saving ? "Salvando..." : "Salvar"}
             </button>
           </div>
 
@@ -212,14 +250,7 @@ function Input({ label, ...props }) {
       <label className="text-xs text-[#BFBFC3]">{label}</label>
       <input
         {...props}
-        className="
-          px-4 py-2.5
-          bg-[#2A2A2C]
-          border border-[#3D3D40]
-          rounded-xl
-          outline-none
-          focus:ring-1 focus:ring-[#FA4C00]
-        "
+        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
   );
@@ -231,14 +262,7 @@ function Select({ label, options, ...props }) {
       <label className="text-xs text-[#BFBFC3]">{label}</label>
       <select
         {...props}
-        className="
-          px-4 py-2.5
-          bg-[#2A2A2C]
-          border border-[#3D3D40]
-          rounded-xl
-          outline-none
-          focus:ring-1 focus:ring-[#FA4C00]
-        "
+        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       >
         <option value="">Selecione</option>
         {options.map((o) => (
@@ -258,14 +282,7 @@ function Textarea({ label, ...props }) {
       <textarea
         rows={4}
         {...props}
-        className="
-          px-4 py-2.5
-          bg-[#2A2A2C]
-          border border-[#3D3D40]
-          rounded-xl
-          outline-none
-          focus:ring-1 focus:ring-[#FA4C00]
-        "
+        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
   );
