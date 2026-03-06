@@ -8,6 +8,7 @@ const config = require('./config/config');
 const { testConnection } = require('./config/database');
 const logger = require('./utils/logger');
 const { iniciarSyncPresencaSheets } = require('./jobs/syncPresencaSheets.job');
+const { iniciarJobsProducao } = require('./jobs/salvarProducaoHistorico.job');
 
 // =====================================================
 // INICIALIZAÇÃO DO SERVIDOR
@@ -32,6 +33,9 @@ const startServer = async () => {
       // Inicia job de sincronização de presença com Google Sheets
       logger.info('🔄 Iniciando jobs automáticos...');
       iniciarSyncPresencaSheets();
+      
+      // Inicia jobs de salvamento automático de produção
+      iniciarJobsProducao();
     });
 
     // Tratamento de erros não capturados

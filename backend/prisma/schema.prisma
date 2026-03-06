@@ -485,6 +485,23 @@ model FolgaDominical {
   @@index([ano, mes])
 }
 
+model ProducaoHoraHistorico {
+  id             Int      @id @default(autoincrement())
+  dataReferencia DateTime @map("data_referencia") @db.Date
+  turno          String   @db.VarChar(10)
+  hora           Int
+  meta           Int
+  realizado      Int
+  percentual     Decimal  @db.Decimal(5, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@unique([dataReferencia, turno, hora], map: "uq_producao_hora")
+  @@index([dataReferencia, turno], map: "idx_producao_data_turno")
+  @@index([dataReferencia], map: "idx_producao_data")
+  @@map("producao_hora_historico")
+}
+
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model colaborador_backup_202601 {
   ops_id                 String?            @db.VarChar(50)

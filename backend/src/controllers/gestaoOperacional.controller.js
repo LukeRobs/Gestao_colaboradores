@@ -239,4 +239,153 @@ const carregarGestaoOperacional = async (req, res) => {
   }
 };
 
-module.exports = { carregarGestaoOperacional };
+const consultarHistoricoProducao = async (req, res) => {
+  try {
+    const { dataInicio, dataFim, turno } = req.query;
+    
+    console.log("📊 Consultando histórico:", { dataInicio, dataFim, turno });
+    
+    if (!dataInicio || !dataFim) {
+      return res.status(400).json({
+        success: false,
+        message: "dataInicio e dataFim são obrigatórios"
+      });
+    }
+
+    const where = {
+      dataReferencia: {
+        gte: new Date(dataInicio),
+        lte: new Date(dataFim)
+      }
+    };
+
+    if (turno) {
+      where.turno = turno;
+    }
+
+    const historico = await prisma.producaoHoraHistorico.findMany({
+      where,
+      orderBy: [
+        { dataReferencia: 'desc' },
+        { turno: 'asc' },
+        { hora: 'asc' }
+      ]
+    });
+
+    console.log("✅ Histórico carregado:", historico.length, "registros");
+
+    // Agrupar por data e turno
+    const agrupado = historico.reduce((acc, item) => {
+      const key = `${item.dataReferencia.toISOString().slice(0, 10)}_${item.turno}`;
+      if (!acc[key]) {
+        acc[key] = {
+          data: item.dataReferencia.toISOString().slice(0, 10),
+          turno: item.turno,
+          producaoPorHora: []
+        };
+      }
+      acc[key].producaoPorHora.push({
+        hora: item.hora.toString().padStart(2, '0'),
+        meta: Number(item.meta),
+        realizado: Number(item.realizado),
+        percentual: Number(item.percentual)
+      });
+      return acc;
+    }, {});
+
+    return res.json({
+      success: true,
+      data: Object.values(agrupado)
+    });
+  } catch (error) {
+    console.error("❌ Erro ao consultar histórico:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Erro ao consultar histórico",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Verifica se os turnos foram salvos no horário esperado
+ * Retorna lista de turnos que falharam e precisam de salvamento manual
+ */
+const verificarStatusSalvamentos = async () => {
+  try {
+    const agora = agoraBrasil();
+    const horaAtual = agora.getHours();
+    const minutoAtual = agora.getMinutes();
+    const dataHoje = agora.toISOString().slice(0, 10);
+    
+    // Definir horários esperados de salvamento (com margem de 10 minutos)
+    const horariosSalvamento = {
+      T1: { hora: 15, minutos: 10 }, // Deve salvar às 15:00, verificar após 15:10
+      T2: { hora: 23, minutos: 10 }, // Deve salvar às 23:00, verificar após 23:10
+      T3: { hora: 5, minutos: 10 }   // Deve salvar às 05:00, verificar após 05:10
+    };
+    
+    const turnosPendentes = [];
+    
+    // Verificar cada turno
+    for (const [turno, horario] of Object.entries(horariosSalvamento)) {
+      // Verificar se já passou do horário esperado + margem
+      let deveriaTerSalvo = false;
+      let dataVerificar = dataHoje;
+      
+      if (turno === 'T3') {
+        // T3 salva às 05:00 com data de ontem
+        if (horaAtual > horario.hora || (horaAtual === horario.hora && minutoAtual >= horario.minutos)) {
+          deveriaTerSalvo = true;
+          // Usar data de ontem para T3
+          const ontem = new Date(agora);
+          ontem.setDate(ontem.getDate() - 1);
+          dataVerificar = ontem.toISOString().slice(0, 10);
+        }
+      } else {
+        // T1 e T2 salvam com data de hoje
+        if (horaAtual > horario.hora || (horaAtual === horario.hora && minutoAtual >= horario.minutos)) {
+          deveriaTerSalvo = true;
+        }
+      }
+      
+      if (deveriaTerSalvo) {
+        // Verificar se existe registro no banco
+        const count = await prisma.producaoHoraHistorico.count({
+          where: {
+            dataReferencia: new Date(dataVerificar),
+            turno: turno
+          }
+        });
+        
+        if (count === 0) {
+          turnosPendentes.push({
+            turno,
+            data: dataVerificar,
+            horarioEsperado: `${horario.hora.toString().padStart(2, '0')}:00`,
+            mensagem: `Dados do ${turno} não foram salvos automaticamente`
+          });
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      temPendencias: turnosPendentes.length > 0,
+      turnosPendentes,
+      horaAtual: `${horaAtual.toString().padStart(2, '0')}:${minutoAtual.toString().padStart(2, '0')}`
+    };
+  } catch (error) {
+    console.error("❌ Erro ao verificar status dos salvamentos:", error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};
+
+module.exports = { 
+  carregarGestaoOperacional, 
+  consultarHistoricoProducao,
+  verificarStatusSalvamentos
+};
