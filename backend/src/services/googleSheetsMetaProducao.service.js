@@ -6,6 +6,7 @@ const { google } = require("googleapis");
 
 const META_SPREADSHEET_ID = "17Dpmr1Kn6ybvK3rah2JvoCBsAeOvotvM6k_7uaATPz0";
 const META_SHEET = "Meta";
+const ATUALIZACAO_SHEET = "Atualização_colaborador";
 
 /* =====================================================
    CACHE
@@ -13,7 +14,9 @@ const META_SHEET = "Meta";
 
 let sheetCache = null;
 let cacheTimestamp = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 min
+let atualizacaoCache = null;
+let atualizacaoCacheTimestamp = null;
+const CACHE_TTL = 1 * 60 * 1000; // 1 min (reduzido de 5 min)
 
 function isCacheValid() {
   return (
@@ -23,9 +26,19 @@ function isCacheValid() {
   );
 }
 
+function isAtualizacaoCacheValid() {
+  return (
+    atualizacaoCache &&
+    atualizacaoCacheTimestamp &&
+    Date.now() - atualizacaoCacheTimestamp < CACHE_TTL
+  );
+}
+
 function limparCache() {
   sheetCache = null;
   cacheTimestamp = null;
+  atualizacaoCache = null;
+  atualizacaoCacheTimestamp = null;
   console.log("🗑️ Cache limpo");
 }
 
@@ -93,6 +106,40 @@ async function carregarPlanilha() {
   cacheTimestamp = Date.now();
 
   console.log("✅ Meta armazenada em cache");
+
+  return rows;
+}
+
+/* =====================================================
+   CARREGAR PLANILHA ATUALIZAÇÃO
+===================================================== */
+
+async function carregarAtualizacaoColaborador() {
+  if (isAtualizacaoCacheValid()) {
+    console.log("📦 Atualização_colaborador retornada do cache");
+    return atualizacaoCache;
+  }
+
+  console.log("🌎 Buscando Atualização_colaborador no Google Sheets...");
+
+  const sheets = getGoogleSheetsClient();
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: META_SPREADSHEET_ID,
+    range: `${ATUALIZACAO_SHEET}!A:ZZ`,
+    valueRenderOption: "FORMATTED_VALUE",
+  });
+
+  const rows = response.data.values;
+
+  if (!rows || rows.length === 0) {
+    throw new Error("Aba Atualização_colaborador vazia");
+  }
+
+  atualizacaoCache = rows;
+  atualizacaoCacheTimestamp = Date.now();
+
+  console.log("✅ Atualização_colaborador armazenada em cache");
 
   return rows;
 }
@@ -227,7 +274,99 @@ async function buscarMetasProducao(turno, dataISO) {
   }
 }
 
+/* =====================================================
+   BUSCAR QUANTIDADE REALIZADA POR HORA
+===================================================== */
+
+async function buscarQuantidadeRealizada(dataISO) {
+  try {
+    console.log("🔍 Iniciando busca de quantidade realizada:", { dataISO });
+    
+    const rows = await carregarAtualizacaoColaborador();
+    const dataBusca = formatarData(dataISO);
+
+    console.log("📊 Planilha Atualização carregada:", rows.length, "linhas");
+
+    if (!rows || rows.length < 5) {
+      console.warn("⚠️ Planilha vazia ou sem dados suficientes");
+      return { success: false, data: {} };
+    }
+
+    // Estrutura da planilha:
+    // Linha 0: "Atualização Automatica da sheets"
+    // Linha 1: "Soma Total Por Hora" | valor_hora1 | valor_hora2 | ...
+    // Linha 2: "" | timestamp1 | timestamp2 | ...
+    // Linha 3: "" | data1 | data2 | ...
+    // Linha 4: "" | hora1 | hora2 | ...
+    // Linha 5+: colaboradores com suas quantidades
+
+    const linhaSomaTotalPorHora = rows[1]; // Linha com "Soma Total Por Hora"
+    const linhaDatas = rows[3]; // Linha com as datas
+    const linhaHoras = rows[4]; // Linha com as horas
+
+    console.log("📋 Total de colunas:", linhaSomaTotalPorHora.length);
+    console.log("📋 Primeira coluna da linha 1:", linhaSomaTotalPorHora[0]);
+    console.log("📋 Primeiras 10 datas:", linhaDatas.slice(0, 10));
+    console.log("📋 Primeiras 10 horas:", linhaHoras.slice(0, 10));
+
+    // Extrair quantidades por hora
+    const quantidadePorHora = {};
+    
+    // Começar da coluna 1 (coluna 0 é o label)
+    for (let colIndex = 1; colIndex < linhaSomaTotalPorHora.length; colIndex++) {
+      const dataColuna = normalizar(linhaDatas[colIndex]);
+      const horaColuna = normalizar(linhaHoras[colIndex]);
+      const valorColuna = linhaSomaTotalPorHora[colIndex];
+
+      // Verificar se a data corresponde
+      if (dataColuna !== dataBusca) {
+        continue;
+      }
+
+      // Extrair hora (formato: "09:00", "08:00", etc)
+      const horaMatch = horaColuna.match(/^(\d{1,2})/);
+      if (!horaMatch) {
+        continue;
+      }
+
+      const hora = parseInt(horaMatch[1]);
+      
+      if (hora < 0 || hora > 23) {
+        continue;
+      }
+
+      // Converter valor para número
+      if (valorColuna && valorColuna !== "") {
+        const valorStr = String(valorColuna).trim().replace(/\./g, '').replace(',', '.');
+        const quantidade = parseFloat(valorStr) || 0;
+
+        if (quantidade > 0) {
+          quantidadePorHora[hora] = (quantidadePorHora[hora] || 0) + quantidade;
+          
+          // Log apenas das primeiras 15 horas encontradas
+          if (Object.keys(quantidadePorHora).length <= 15) {
+            console.log(`  ✅ Hora ${hora.toString().padStart(2, '0')} (col ${colIndex}): ${quantidade}`);
+          }
+        }
+      }
+    }
+
+    console.log("\n📊 RESUMO - Quantidades por hora extraídas:");
+    console.log(JSON.stringify(quantidadePorHora, null, 2));
+
+    return {
+      success: true,
+      data: quantidadePorHora
+    };
+  } catch (error) {
+    console.error("❌ Erro ao buscar quantidade realizada:", error.message);
+    console.error("Stack:", error.stack);
+    return { success: false, data: {} };
+  }
+}
+
 module.exports = {
   buscarMetasProducao,
+  buscarQuantidadeRealizada,
   limparCache,
 };

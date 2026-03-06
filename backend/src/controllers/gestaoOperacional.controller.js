@@ -1,6 +1,9 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const { buscarMetasProducao } = require("../services/googleSheetsMetaProducao.service");
+const { 
+  buscarMetasProducao, 
+  buscarQuantidadeRealizada 
+} = require("../services/googleSheetsMetaProducao.service");
 
 function agoraBrasil() {
   const now = new Date();
@@ -40,9 +43,19 @@ const carregarGestaoOperacional = async (req, res) => {
 
     const { metaDia, metasPorHora } = metasResult.data;
     console.log("✅ Metas carregadas:", { metaDia, horasComMeta: Object.keys(metasPorHora).length });
+    console.log("📋 Detalhamento das metas por hora:");
+    for (const [hora, meta] of Object.entries(metasPorHora)) {
+      console.log(`   Hora ${hora}: ${meta}`);
+    }
 
-    // Buscar dados de produção por hora do banco
-    console.log("🔍 Buscando produção do banco...");
+    // Buscar quantidade realizada da aba Atualização_colaborador
+    console.log("🔍 Buscando quantidade realizada da planilha...");
+    const quantidadeResult = await buscarQuantidadeRealizada(dataStr);
+    const quantidadePorHora = quantidadeResult.success ? quantidadeResult.data : {};
+    console.log("✅ Quantidade realizada carregada:", Object.keys(quantidadePorHora).length, "horas");
+
+    // Buscar dados de produção por hora do banco (fallback)
+    console.log("🔍 Buscando produção do banco (fallback)...");
     const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
     
     const producaoPorHora = await prisma.$queryRaw`
@@ -64,20 +77,47 @@ const carregarGestaoOperacional = async (req, res) => {
     let realizado = 0;
     const producaoComMeta = [];
 
+    console.log("⏰ Hora atual:", horaAtual);
+    console.log("📊 Quantidade por hora da planilha:", quantidadePorHora);
+    console.log("📊 Produção por hora do banco:", producaoPorHora);
+
     // Processar todas as horas que têm meta
     for (const [horaStr, meta] of Object.entries(metasPorHora)) {
       const h = parseInt(horaStr);
       
-      // Somar meta projetada até a hora atual
-      if (h <= horaAtual) {
+      console.log(`\n🔍 Processando hora ${h}:`);
+      console.log(`  - Meta: ${meta}`);
+      console.log(`  - Hora atual: ${horaAtual}, Hora ${h} < Hora atual? ${h < horaAtual}`);
+      
+      // Somar meta projetada apenas das horas COMPLETAS (antes da hora atual)
+      if (h < horaAtual) {
         metaHoraProjetada += meta;
+        console.log(`  - Meta projetada acumulada: ${metaHoraProjetada}`);
       }
 
-      const prod = producaoPorHora.find(p => Number(p.hora) === h);
-      const realizadoHora = prod ? Number(prod.realizado) : 0;
+      // Priorizar quantidade da planilha, usar banco como fallback
+      let realizadoHora = 0;
+      let origem = "nenhum";
       
-      if (h <= horaAtual) {
+      if (quantidadePorHora[h] !== undefined && quantidadePorHora[h] > 0) {
+        realizadoHora = Math.round(quantidadePorHora[h]);
+        origem = "planilha";
+        console.log(`  ✅ Usando quantidade da planilha: ${realizadoHora}`);
+      } else {
+        const prod = producaoPorHora.find(p => Number(p.hora) === h);
+        realizadoHora = prod ? Number(prod.realizado) : 0;
+        origem = realizadoHora > 0 ? "banco" : "zero";
+        if (realizadoHora > 0) {
+          console.log(`  ⚠️ Usando quantidade do banco: ${realizadoHora}`);
+        } else {
+          console.log(`  ❌ Sem dados para esta hora`);
+        }
+      }
+      
+      // Somar realizado de TODAS as horas que têm dados (não apenas completas)
+      if (realizadoHora > 0) {
         realizado += realizadoHora;
+        console.log(`  - Realizado acumulado: ${realizado}`);
       }
 
       const percentual = meta > 0 ? ((realizadoHora / meta) * 100).toFixed(1) : 0;
@@ -88,21 +128,37 @@ const carregarGestaoOperacional = async (req, res) => {
         realizado: realizadoHora,
         percentual: Number(percentual)
       });
+      
+      console.log(`  - Percentual: ${percentual}%`);
+      console.log(`  - Origem dos dados: ${origem}`);
     }
 
     // Ordenar por hora
     producaoComMeta.sort((a, b) => parseInt(a.hora) - parseInt(b.hora));
 
     // Calcular médias e produtividade
-    const horasComMeta = Object.keys(metasPorHora).filter(h => parseInt(h) <= horaAtual).length;
-    const mediaHoraRealizado = horasComMeta > 0 ? Math.round(realizado / horasComMeta) : 0;
+    // Contar apenas horas que têm realizado > 0
+    const horasComDados = producaoComMeta.filter(p => p.realizado > 0).length;
+    const mediaHoraRealizado = horasComDados > 0 ? Math.round(realizado / horasComDados) : 0;
     
     // Produtividade = (realizado / meta projetada) * 770
     const produtividade = metaHoraProjetada > 0 ? Math.round((realizado / metaHoraProjetada) * 770) : 0;
 
-    const performance = metaHoraProjetada > 0 
-      ? ((realizado / metaHoraProjetada) * 100).toFixed(2)
+    // Performance = (realizado / meta do dia) * 100
+    const performance = metaDia > 0 
+      ? ((realizado / metaDia) * 100).toFixed(2)
       : 0;
+
+    console.log("\n📊 TOTAIS FINAIS:");
+    console.log(`  - Meta Dia: ${metaDia}`);
+    console.log(`  - Meta Hora Projetada: ${metaHoraProjetada}`);
+    console.log(`  - Realizado Total: ${realizado}`);
+    console.log(`  - Horas com Dados: ${horasComDados}`);
+
+    console.log(`\n📊 CÁLCULOS:`);
+    console.log(`  - Performance: (${realizado} / ${metaDia}) * 100 = ${performance}%`);
+    console.log(`  - Produtividade: (${realizado} / ${metaHoraProjetada}) * 770 = ${produtividade}`);
+    console.log(`  - Média Hora: ${realizado} / ${horasComDados} = ${mediaHoraRealizado}`);
 
     // Capacidade por hora (mesma estrutura das metas)
     const capacidadePorHora = Object.entries(metasPorHora).map(([hora, capacidade]) => ({
@@ -112,6 +168,18 @@ const carregarGestaoOperacional = async (req, res) => {
     }));
 
     console.log("✅ Resposta preparada com sucesso");
+    console.log("\n📤 DADOS ENVIADOS AO FRONTEND:");
+    console.log(JSON.stringify({
+      kpis: {
+        metaDia: Math.round(metaDia),
+        metaHoraProjetada: Math.round(metaHoraProjetada),
+        realizado,
+        mediaHoraRealizado,
+        produtividade,
+        performance: Number(performance)
+      },
+      producaoPorHora: producaoComMeta.slice(0, 3) // Mostrar apenas primeiras 3 horas
+    }, null, 2));
 
     return res.json({
       success: true,
