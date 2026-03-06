@@ -4,6 +4,7 @@ import api from "../../services/api";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import ProducaoChart from "../../components/gestaoOperacional/ProducaoChart";
+import AlertaSalvamentoPendente from "../../components/gestaoOperacional/AlertaSalvamentoPendente";
 import domtoimage from "dom-to-image-more";
 import toast from "react-hot-toast";
 // import CapacidadeTable from "../../components/gestaoOperacional/CapacidadeTable"; // Comentado - será usado futuramente
@@ -228,6 +229,9 @@ export default function GestaoOperacional() {
     <div className="flex min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      {/* Alerta de Salvamento Pendente */}
+      <AlertaSalvamentoPendente />
+
       <div className="flex-1 lg:ml-64 min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
@@ -307,7 +311,7 @@ export default function GestaoOperacional() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 divide-x divide-[#2A2A2C]">
               {/* Meta do Dia */}
-              <div className="bg-[#E8491D] text-white p-6 text-center">
+              <div className="bg-[#1a1a1c] text-white p-6 text-center">
                 <div className="text-sm font-semibold mb-2">META DO DIA</div>
                 <div className="text-4xl font-bold">
                   {kpis.metaDia?.toLocaleString("pt-BR") || "0"}
@@ -315,7 +319,7 @@ export default function GestaoOperacional() {
               </div>
 
               {/* Meta Hora Atual */}
-              <div className="bg-[#E8491D] text-white p-6 text-center">
+              <div className="bg-[#1a1a1c] text-white p-6 text-center">
                 <div className="text-sm font-semibold mb-2">
                   META HORA ATUAL {kpis.horaAtual !== undefined && `(${kpis.horaAtual}h)`}
                 </div>
@@ -325,7 +329,7 @@ export default function GestaoOperacional() {
               </div>
 
               {/* Meta de Produtividade */}
-              <div className="bg-[#E8491D] text-white p-6 text-center">
+              <div className="bg-[#1a1a1c] text-white p-6 text-center">
                 <div className="text-sm font-semibold mb-2">META DE PRODUTIVIDADE</div>
                 <div className="text-4xl font-bold">
                   {kpis.produtividade?.toLocaleString("pt-BR") || "0"}
