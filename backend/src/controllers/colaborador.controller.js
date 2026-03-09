@@ -693,6 +693,8 @@ const updateColaborador = async (req, res) => {
     console.log("📦 DATA FINAL:", data);
 
     const colaborador = await prisma.$transaction(async (tx) => {
+    
+      const hoje = startOfDayBR();
 
     const atual = await tx.colaborador.findUnique({
       where: { opsId },
@@ -708,6 +710,16 @@ const updateColaborador = async (req, res) => {
       where: { codigo: "DSR" },
       select: { idTipoAusencia: true }
     });
+    if (tipoDSR) {
+      await tx.frequencia.deleteMany({
+        where: {
+          opsId,
+          dataReferencia: { gte: hoje },
+          idTipoAusencia: tipoDSR.idTipoAusencia,
+          manual: false
+        }
+      });
+    }
 
     const escalaMudou =
       novaEscalaId !== null &&
@@ -715,9 +727,7 @@ const updateColaborador = async (req, res) => {
 
     if (escalaMudou) {
 
-      const hoje = startOfDayBR();
-
-      /* FECHAR HISTORICO ATUAL */
+      /* FECHAR HISTÓRICO ATUAL */
 
       await tx.colaboradorEscalaHistorico.updateMany({
         where: {
@@ -729,7 +739,7 @@ const updateColaborador = async (req, res) => {
         },
       });
 
-      /* CRIAR NOVO HISTORICO */
+      /* CRIAR NOVO HISTÓRICO */
 
       await tx.colaboradorEscalaHistorico.create({
         data: {
@@ -738,6 +748,8 @@ const updateColaborador = async (req, res) => {
           dataInicio: hoje,
         },
       });
+
+      /* REMOVER DSR FUTURO (SERÁ CALCULADO DINAMICAMENTE NO PONTO) */
 
       await tx.frequencia.deleteMany({
         where: {
@@ -750,22 +762,10 @@ const updateColaborador = async (req, res) => {
         }
       });
 
-      const novaEscala = await tx.escala.findUnique({
-        where: { idEscala: novaEscalaId },
-        select: { nomeEscala: true },
-      });
-
-      if (novaEscala?.nomeEscala) {
-        await gerarDSRFuturo({
-          opsId,
-          escala: novaEscala.nomeEscala,
-          dataInicio: hoje,
-        });
-      }
-
     }
 
     return atualizado;
+
   });
 
     return successResponse(
@@ -778,8 +778,6 @@ const updateColaborador = async (req, res) => {
     return errorResponse(res, "Erro ao atualizar colaborador", 400, err);
   }
 };
-
-
 
 
 /* ================= DELETE ================= */
