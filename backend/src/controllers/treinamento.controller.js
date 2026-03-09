@@ -206,3 +206,70 @@ exports.finalizarTreinamento = async (req, res) => {
     return res.status(500).json({ success: false });
   }
 };
+
+/* ===========================
+   LISTAR COLABORADORES POR SETOR
+=========================== */
+exports.listParticipantesPorSetor = async (req, res) => {
+  try {
+
+    const { idSetor, busca } = req.query;
+
+    const where = {
+      status: "ATIVO",
+    };
+
+    if (idSetor) {
+      where.idSetor = Number(idSetor);
+    }
+
+    if (busca) {
+      where.OR = [
+        {
+          nomeCompleto: {
+            contains: busca,
+            mode: "insensitive",
+          },
+        },
+        {
+          cpf: {
+            contains: busca,
+          },
+        },
+        {
+          opsId: {
+            contains: busca,
+            mode: "insensitive",
+          },
+        },
+      ];
+    }
+
+    const colaboradores = await prisma.colaborador.findMany({
+      where,
+      select: {
+        opsId: true,
+        nomeCompleto: true,
+        cpf: true,
+        idSetor: true,
+      },
+      orderBy: {
+        nomeCompleto: "asc",
+      },
+    });
+
+    return res.json({
+      success: true,
+      data: colaboradores,
+    });
+
+  } catch (err) {
+
+    console.error("❌ listParticipantesPorSetor:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao buscar participantes",
+    });
+  }
+};

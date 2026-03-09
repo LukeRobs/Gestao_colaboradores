@@ -98,8 +98,8 @@ export default function PresencaToolbar({
           "
         >
           <option value="TODOS">Escala • Todas</option>
-          <option value="A">Escala A</option>
-          <option value="B">Escala B</option>
+          <option value="E">Escala E</option>
+          <option value="G">Escala G</option>
           <option value="C">Escala C</option>
         </select>
 

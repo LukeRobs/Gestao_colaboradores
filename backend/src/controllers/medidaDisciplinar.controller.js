@@ -162,9 +162,30 @@ const createMedida = async (req, res) => {
 ===================================================== */
 const getAllMedidas = async (req, res) => {
   try {
-    const { cpf, opsId } = req.query;
+    const { cpf, opsId, data, nome } = req.query;
     const where = {};
 
+    if (data) {
+
+      const inicio = new Date(`${data}T00:00:00`);
+      const fim = new Date(`${data}T23:59:59`);
+
+      where.dataAplicacao = {
+        gte: inicio,
+        lte: fim
+      };
+    }
+
+    if (nome) {
+      where.colaborador = {
+        is: {
+          nomeCompleto: {
+            contains: nome,
+            mode: "insensitive",
+          },
+        },
+      };
+    }
     if (cpf) {
       const cpfLimpo = cpf.replace(/\D/g, "");
       if (cpfLimpo.length !== 11) {

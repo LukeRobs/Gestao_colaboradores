@@ -7,7 +7,7 @@ export default function PresencaTooltip({ open, children }) {
         absolute z-50
         left-1/2 -translate-x-1/2
         top-full mt-2
-        w-64 max-w-[calc(100vw-16px)]
+        w-64 max-w-[260px]
         rounded-xl
         border border-[#3D3D40]
         bg-[#121214]
@@ -16,6 +16,7 @@ export default function PresencaTooltip({ open, children }) {
         text-xs
         text-[#EDEDED]
         wrap-break-words whitespace-normal
+        pointer-events-none
       "
       role="tooltip"
     >
@@ -29,6 +30,7 @@ export default function PresencaTooltip({ open, children }) {
           border-b-8 border-b-[#121214]
         "
       />
+
       {children}
     </div>
   );

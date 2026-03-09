@@ -319,7 +319,10 @@ const createColaborador = async (req, res) => {
       contatoEmergenciaTelefone,
     } = req.body;
 
-    /* ===== VALIDAÇÕES BÁSICAS ===== */
+    /* ===============================
+       VALIDAÇÕES BÁSICAS
+    =============================== */
+
     if (!opsId || !nomeCompleto || !matricula || !dataAdmissao) {
       return errorResponse(
         res,
@@ -327,23 +330,39 @@ const createColaborador = async (req, res) => {
         400
       );
     }
+
     if (!idEscala) {
       return errorResponse(res, "Escala é obrigatória", 400);
-}
+    }
 
+    const escalaId = Number(idEscala);
 
-    /* ===== DATA ADMISSÃO ===== */
+    if (isNaN(escalaId)) {
+      return errorResponse(res, "Escala inválida", 400);
+    }
+
+    /* ===============================
+       DATA ADMISSÃO
+    =============================== */
+
     let dataAdmissaoDate = null;
+
     if (dataAdmissao) {
       const dt = new Date(`${dataAdmissao}T00:00:00`);
+
       if (isNaN(dt.getTime())) {
         return errorResponse(res, "Data de admissão inválida", 400);
       }
+
       dataAdmissaoDate = dt;
     }
 
-    /* ===== HORÁRIO ===== */
+    /* ===============================
+       HORÁRIO
+    =============================== */
+
     let horario = null;
+
     if (horarioInicioJornada) {
       if (!HORARIOS_PERMITIDOS.includes(horarioInicioJornada)) {
         return errorResponse(
@@ -352,17 +371,25 @@ const createColaborador = async (req, res) => {
           400
         );
       }
+
       horario = new Date(`1970-01-01T${horarioInicioJornada}:00Z`);
     } else {
-      // Default se não fornecido (baseado em schema required)
-      horario = new Date(`1970-01-01T05:25:00Z`); // Primeiro horário permitido
+      horario = new Date(`1970-01-01T05:25:00Z`);
     }
+
+    /* ===============================
+       CONTATO EMERGÊNCIA
+    =============================== */
 
     const contatoEmergenciaNomeLimpo =
       contatoEmergenciaNome?.trim() || null;
 
     const contatoEmergenciaTelefoneLimpo =
       contatoEmergenciaTelefone?.trim() || null;
+
+    /* ===============================
+       DATA COLABORADOR
+    =============================== */
 
     const data = {
       opsId,
@@ -377,23 +404,73 @@ const createColaborador = async (req, res) => {
       dataAdmissao: dataAdmissaoDate,
       horarioInicioJornada: horario,
       status: status || "ATIVO",
-      // Relações nested: connect se ID existe
-      ...(idEmpresa ? { empresa: { connect: { idEmpresa: Number(idEmpresa) } } } : {}),
-      ...(idSetor ? { setor: { connect: { idSetor: Number(idSetor) } } } : {}),
-      ...(idCargo ? { cargo: { connect: { idCargo: Number(idCargo) } } } : {}),
-      ...(idTurno ? { turno: { connect: { idTurno: Number(idTurno) } } } : {}),
-      ...(idEscala ? { escala: { connect: { idEscala: Number(idEscala) } } } : {}),
 
+      ...(idEmpresa
+        ? { empresa: { connect: { idEmpresa: Number(idEmpresa) } } }
+        : {}),
+
+      ...(idSetor
+        ? { setor: { connect: { idSetor: Number(idSetor) } } }
+        : {}),
+
+      ...(idCargo
+        ? { cargo: { connect: { idCargo: Number(idCargo) } } }
+        : {}),
+
+      ...(idTurno
+        ? { turno: { connect: { idTurno: Number(idTurno) } } }
+        : {}),
+
+      ...(escalaId
+        ? { escala: { connect: { idEscala: escalaId } } }
+        : {}),
     };
 
-    const colaborador = await prisma.colaborador.create({
-      data,
+    /* ===============================
+       TRANSACTION
+    =============================== */
+
+    const colaborador = await prisma.$transaction(async (tx) => {
+
+      /* CRIA COLABORADOR */
+
+      const novo = await tx.colaborador.create({
+        data,
+      });
+
+      /* CRIA HISTÓRICO DE ESCALA INICIAL */
+
+      await tx.colaboradorEscalaHistorico.create({
+        data: {
+          opsId: novo.opsId,
+          idEscala: escalaId,
+          dataInicio: startOfDayBR(),
+        },
+      });
+
+      return novo;
     });
 
-    return createdResponse(res, colaborador, "Colaborador criado com sucesso");
+    /* ===============================
+       RESPONSE
+    =============================== */
+
+    return createdResponse(
+      res,
+      colaborador,
+      "Colaborador criado com sucesso"
+    );
+
   } catch (err) {
+
     console.error("❌ ERRO CREATE:", err);
-    return errorResponse(res, "Erro ao criar colaborador", 500, err);
+
+    return errorResponse(
+      res,
+      "Erro ao criar colaborador",
+      500,
+      err
+    );
   }
 };
 
@@ -557,7 +634,9 @@ const updateColaborador = async (req, res) => {
     /* =============================
        ESCALA
     ============================== */
-    if (idEscala !== undefined) {
+    let novaEscalaId = null;
+
+    if (idEscala !== undefined && idEscala !== "") {
       const parsed =
         idEscala === null || idEscala === "" ? null : Number(idEscala);
 
@@ -566,6 +645,7 @@ const updateColaborador = async (req, res) => {
       }
 
       data.idEscala = parsed;
+      novaEscalaId = parsed;
     }
 
     /* =============================
@@ -612,10 +692,81 @@ const updateColaborador = async (req, res) => {
 
     console.log("📦 DATA FINAL:", data);
 
-    const colaborador = await prisma.colaborador.update({
+    const colaborador = await prisma.$transaction(async (tx) => {
+
+    const atual = await tx.colaborador.findUnique({
+      where: { opsId },
+      select: { idEscala: true }
+    });
+
+    const atualizado = await tx.colaborador.update({
       where: { opsId },
       data,
     });
+
+    const tipoDSR = await tx.tipoAusencia.findFirst({
+      where: { codigo: "DSR" },
+      select: { idTipoAusencia: true }
+    });
+
+    const escalaMudou =
+      novaEscalaId !== null &&
+      Number(novaEscalaId) !== Number(atual?.idEscala);
+
+    if (escalaMudou) {
+
+      const hoje = startOfDayBR();
+
+      /* FECHAR HISTORICO ATUAL */
+
+      await tx.colaboradorEscalaHistorico.updateMany({
+        where: {
+          opsId,
+          dataFim: null,
+        },
+        data: {
+          dataFim: new Date(hoje.getTime() - 86400000),
+        },
+      });
+
+      /* CRIAR NOVO HISTORICO */
+
+      await tx.colaboradorEscalaHistorico.create({
+        data: {
+          opsId,
+          idEscala: novaEscalaId,
+          dataInicio: hoje,
+        },
+      });
+
+      await tx.frequencia.deleteMany({
+        where: {
+          opsId,
+          dataReferencia: {
+            gte: hoje
+          },
+          idTipoAusencia: tipoDSR.idTipoAusencia,
+          manual: false
+        }
+      });
+
+      const novaEscala = await tx.escala.findUnique({
+        where: { idEscala: novaEscalaId },
+        select: { nomeEscala: true },
+      });
+
+      if (novaEscala?.nomeEscala) {
+        await gerarDSRFuturo({
+          opsId,
+          escala: novaEscala.nomeEscala,
+          dataInicio: hoje,
+        });
+      }
+
+    }
+
+    return atualizado;
+  });
 
     return successResponse(
       res,
@@ -882,11 +1033,21 @@ const importColaboradores = async (req, res) => {
 
           };
 
-          await prisma.colaborador.upsert({
-            where: { opsId },
-            update: data,
-            create: data,
-          });
+          const colab = await prisma.colaborador.upsert({
+              where: { opsId },
+              update: data,
+              create: data,
+            });
+
+            if (!existing && data.idEscala) {
+              await prisma.colaboradorEscalaHistorico.create({
+                data: {
+                  opsId: colab.opsId,
+                  idEscala: data.idEscala,
+                  dataInicio: startOfDayBR(),
+                },
+              });
+            }
 
           existing ? atualizados++ : criados++;
 

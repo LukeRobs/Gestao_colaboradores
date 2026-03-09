@@ -53,17 +53,17 @@ function isWeekend(dateISO) {
 }
 
 
+const DSR_BY_ESCALA = {
+  E: [0, 1], // domingo segunda
+  G: [2, 3], // terça quarta
+  C: [4, 5], // quinta sexta
+};
+
 function isDSR(dateISO, escala) {
   if (!dateISO || !escala) return false;
 
   const date = new Date(`${dateISO}T00:00:00`);
   const day = date.getDay();
-
-  const DSR_BY_ESCALA = {
-    A: [0, 3],
-    B: [1, 4],
-    C: [2, 5],
-  };
 
   return DSR_BY_ESCALA[escala]?.includes(day);
 }
@@ -81,8 +81,14 @@ export default function PresencaCell({
 
   /* ================= STATUS ================= */
   const status = useMemo(() => {
-    if (registro?.status) return registro.status;
-    if (isDSR(dia?.date, colaborador?.escala)) return "DSR";
+    if (registro?.status && registro.status !== "-") {
+      return registro.status;
+    }
+
+    if (isDSR(dia?.date, colaborador?.escala)) {
+      return "DSR";
+    }
+
     return "-";
   }, [registro, dia?.date, colaborador?.escala]);
 
@@ -103,7 +109,7 @@ export default function PresencaCell({
 
   const horaEntrada = fmtHora(registro?.entrada || registro?.horaEntrada);
   const horaSaida = fmtHora(registro?.saida || registro?.horaSaida);
-  const showTooltip = hover && (canEdit || registro);
+  const showTooltip = hover && (canEdit || registro?.status);
 
   return (
     <td className="border-r border-[#2A2A2C] min-w-12 sm:min-w-14">
