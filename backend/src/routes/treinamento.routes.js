@@ -8,10 +8,15 @@ const { authenticate, authorize } = require("../middlewares/auth.middleware");
    TREINAMENTOS
 ===================================================== */
 
-/**
- * CRIAR TREINAMENTO
- * POST /api/treinamentos
- */
+/* LISTAR PARTICIPANTES POR SETOR */
+router.get(
+  "/participantes",
+  authenticate,
+  authorize("ADMIN", "GESTAO", "LIDERANCA"),
+  treinamentoController.listParticipantesPorSetor
+);
+
+/* CRIAR TREINAMENTO */
 router.post(
   "/",
   authenticate,
@@ -19,10 +24,7 @@ router.post(
   treinamentoController.createTreinamento
 );
 
-/**
- * LISTAR TREINAMENTOS
- * GET /api/treinamentos
- */
+/* LISTAR TREINAMENTOS */
 router.get(
   "/",
   authenticate,
@@ -30,10 +32,7 @@ router.get(
   treinamentoController.listTreinamentos
 );
 
-/**
- * GERAR URL DE UPLOAD DA ATA (PDF)
- * POST /api/treinamentos/:id/presign-ata
- */
+/* PRESIGN ATA */
 router.post(
   "/:id/presign-ata",
   authenticate,
@@ -41,18 +40,7 @@ router.post(
   treinamentoController.presignUploadAta
 );
 
-/**
- * FINALIZAR TREINAMENTO
- * POST /api/treinamentos/:id/finalizar
- *
- * body:
- * {
- *   documentoKey,
- *   nome,
- *   mime,
- *   size
- * }
- */
+/* FINALIZAR TREINAMENTO */
 router.post(
   "/:id/finalizar",
   authenticate,
