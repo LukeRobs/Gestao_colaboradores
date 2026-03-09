@@ -185,6 +185,7 @@ model Escala {
   ativo           Boolean       @default(true)
   dataCriacao     DateTime      @default(now()) @map("data_criacao")
   colaboradores   Colaborador[]
+  historicoEscalas ColaboradorEscalaHistorico[]
 
   @@map("escala")
 }
@@ -483,6 +484,18 @@ model FolgaDominical {
 
   @@unique([opsId, ano, mes])
   @@index([ano, mes])
+}
+model ColaboradorEscalaHistorico {
+  id         Int      @id @default(autoincrement())
+  opsId      String   @map("ops_id")
+  idEscala   Int      @map("id_escala")
+  dataInicio DateTime @map("data_inicio")
+  dataFim    DateTime? @map("data_fim")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  escala     Escala   @relation(fields: [idEscala], references: [idEscala])
+
+  @@map("colaborador_escala_historico")
 }
 
 model ProducaoHoraHistorico {

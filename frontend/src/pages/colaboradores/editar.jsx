@@ -78,8 +78,8 @@ export default function EditarColaborador() {
             ? c.dataAdmissao.substring(0, 10)
             : "",
           horarioInicioJornada: c.horarioInicioJornada
-            ? c.horarioInicioJornada.substring(11, 16)
-            : "",
+          ? new Date(c.horarioInicioJornada).toISOString().substring(11,16)
+          : "",
           status: c.status || "ATIVO",
           dataDemissao: c.dataDesligamento ? c.dataDesligamento.substring(0, 10) : "",
           motivoDesligamento: c.motivoDesligamento || "",

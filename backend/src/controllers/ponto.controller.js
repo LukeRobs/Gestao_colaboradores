@@ -11,7 +11,7 @@ const { finalizarAtestadosVencidos } = require("../utils/atestadoAutoFinalize");
 const { exportarControlePresenca } = require("../services/googleSheetsPresenca.service");
 const { error } = require("../utils/logger");
 
-
+let tipoDSRCache = null;
 /* =====================================================
    HELPERS
 ===================================================== */
@@ -56,6 +56,31 @@ function getStatusAdministrativo(c, dataCalendario) {
   return null;
 }
 
+function getEscalaNoDia(opsId, data, historicoMap) {
+  const registros = historicoMap[opsId];
+  if (!registros) return null;
+
+  const d = new Date(data);
+
+  const registro = registros.find((r) => {
+    const inicio = new Date(r.dataInicio);
+    const fim = r.dataFim ? new Date(r.dataFim) : null;
+
+    return d >= inicio && (!fim || d <= fim);
+  });
+
+  return registro?.escala?.nomeEscala || null;
+}
+
+async function getTipoDSR() {
+  if (!tipoDSRCache) {
+    tipoDSRCache = await prisma.tipoAusencia.findFirst({
+      where: { codigo: "DSR" },
+    });
+  }
+  return tipoDSRCache;
+}
+
 // "âncora" pra salvar time-only no Postgres (campo @db.Time)
 function toTimeOnly(dateObj) {
   const d = new Date(dateObj);
@@ -87,14 +112,16 @@ function isDiaDSR(dataOperacional, nomeEscala) {
   const dow = new Date(dataOperacional).getDay();
 
   const dsrMap = {
-    A: [0, 3], // domingo, quarta
-    B: [1, 2], // segunda, terça
+    E: [0, 1], // domingo, segunda
+    G: [2, 3], // terça, quarta
     C: [4, 5], // quinta, sexta
   };
 
   const dias = dsrMap[String(nomeEscala || "").toUpperCase()];
   return !!dias?.includes(dow);
 }
+
+
 
 /* =====================================================
    POST /ponto/registrar  (colaborador bate ponto via CPF)
@@ -106,6 +133,7 @@ const registrarPontoCPF = async (req, res) => {
     await finalizarAtestadosVencidos();
 
     const { cpf } = req.body;
+
     console.log(`[${reqId}] registrarPontoCPF body:`, { cpf });
 
     if (!cpf) return errorResponse(res, "CPF não informado", 400);
@@ -115,6 +143,7 @@ const registrarPontoCPF = async (req, res) => {
     /* ==========================================
        BUSCA COLABORADOR
     ========================================== */
+
     const colaborador = await prisma.colaborador.findFirst({
       where: { cpf },
       include: {
@@ -138,28 +167,21 @@ const registrarPontoCPF = async (req, res) => {
       },
     });
 
-    if (!colaborador) return notFoundResponse(res, "Colaborador não encontrado");
-
-    if (colaborador.dataDesligamento) {
-      return errorResponse(
-        res,
-        "Colaborador desligado não pode registrar ponto.",
-        403
-      );
-    }
+    if (!colaborador)
+      return notFoundResponse(res, "Colaborador não encontrado");
 
     if (colaborador.status !== "ATIVO" || colaborador.dataDesligamento) {
       return errorResponse(res, "Colaborador não está ativo", 403);
     }
 
     /* ==========================================
-       DIA OPERACIONAL (SEU getDateOperacional)
-       -> serve para ENTRADA (quando não existe aberta)
+       DIA OPERACIONAL
     ========================================== */
+
     const { dataOperacional, turnoAtual } = getDateOperacional(agora);
     const dataReferenciaOperacional = startOfDay(dataOperacional);
 
-        const frequenciaDia = await prisma.frequencia.findUnique({
+    const frequenciaDia = await prisma.frequencia.findUnique({
       where: {
         opsId_dataReferencia: {
           opsId: colaborador.opsId,
@@ -171,7 +193,10 @@ const registrarPontoCPF = async (req, res) => {
       },
     });
 
-    // 🔒 BLOQUEIO ABSOLUTO S1
+    /* ==========================================
+       BLOQUEIO S1
+    ========================================== */
+
     if (frequenciaDia?.tipoAusencia?.codigo === "S1") {
       return errorResponse(
         res,
@@ -183,13 +208,11 @@ const registrarPontoCPF = async (req, res) => {
     console.log(
       `[${reqId}] opsId=${colaborador.opsId} turnoColab=${colaborador.turno?.nomeTurno} turnoAtual=${turnoAtual}`
     );
-    console.log(
-      `[${reqId}] agora=${agora.toISOString()} dataRefOperacional=${ymd(dataReferenciaOperacional)}`
-    );
+
     /* ==========================================
-       1) SEMPRE PRIORIZE FECHAR FREQUÊNCIA ABERTA
-       (isso resolve T3 saindo após 05:25)
+       FREQUÊNCIA ABERTA
     ========================================== */
+
     const aberta = await prisma.frequencia.findFirst({
       where: {
         opsId: colaborador.opsId,
@@ -202,12 +225,13 @@ const registrarPontoCPF = async (req, res) => {
         dataReferencia: "desc",
       },
     });
+
     /* ==========================================
-      BLOQUEIO DE ANTECIPAÇÃO – TURNO T3
-      ⚠️ SOMENTE PARA ENTRADA (sem frequência aberta)
+       BLOQUEIO ANTECIPAÇÃO T3
     ========================================== */
+
     if (
-      !aberta && // 🔑 NÃO existe frequência aberta → é ENTRADA
+      !aberta &&
       colaborador.turno?.nomeTurno === "T3" &&
       turnoAtual !== "T3"
     ) {
@@ -218,62 +242,99 @@ const registrarPontoCPF = async (req, res) => {
       );
     }
 
+    /* ==========================================
+       ESCALA DO DIA (HISTÓRICO)
+    ========================================== */
+
+    const escalaDia = await prisma.colaboradorEscalaHistorico.findFirst({
+      where: {
+        opsId: colaborador.opsId,
+        dataInicio: { lte: dataReferenciaOperacional },
+        OR: [
+          { dataFim: null },
+          { dataFim: { gte: dataReferenciaOperacional } },
+        ],
+      },
+      include: { escala: true },
+      orderBy: {
+        dataInicio: "desc",
+      },
+    });
 
     /* ==========================================
-       BLOQUEIOS (DSR / AUSÊNCIA / ATESTADO)
-       -> bloqueia entrada/saída normal
+       BLOQUEIOS ADMINISTRATIVOS (ENTRADA)
     ========================================== */
-// 🔒 BLOQUEIO DSR SOMENTE PARA ENTRADA
-    if (!aberta && isDiaDSR(dataReferenciaOperacional, colaborador.escala?.nomeEscala)) {
-      return errorResponse(
-        res,
-        "Hoje é DSR. Se for hora extra, solicite ajuste manual.",
-        400
-      );
+
+    if (!aberta) {
+
+      if (isDiaDSR(dataReferenciaOperacional, escalaDia?.escala?.nomeEscala)) {
+        return errorResponse(
+          res,
+          "Hoje é DSR do colaborador",
+          400
+        );
+      }
+
+      if (colaborador.ausencias?.length > 0) {
+        const cod = colaborador.ausencias[0]?.tipoAusencia?.codigo || "AUS";
+        return errorResponse(
+          res,
+          `Colaborador possui ausência ativa (${cod})`,
+          400
+        );
+      }
+
+      if (colaborador.atestadosMedicos?.length > 0) {
+        return errorResponse(
+          res,
+          "Colaborador possui atestado médico ativo",
+          400
+        );
+      }
+
     }
 
-    if (!aberta && colaborador.ausencias?.length > 0) {
-      const cod = colaborador.ausencias[0]?.tipoAusencia?.codigo || "AUS";
-      return errorResponse(res, `Colaborador possui ausência ativa (${cod})`, 400);
-    }
-
-    if (!aberta && colaborador.atestadosMedicos?.length > 0) {
-      return errorResponse(res, "Colaborador possui atestado médico ativo", 400);
-    }
+    /* ==========================================
+       FECHAR FREQUÊNCIA ABERTA (SAÍDA)
+    ========================================== */
 
     const horaAgora = toTimeOnly(agora);
 
     if (aberta?.horaEntrada && !aberta?.horaSaida) {
+
       const entradaMin = timeToMinutes(aberta.horaEntrada);
       const agoraMin = nowToMinutes(agora);
 
       let minutosDecorridos = agoraMin - entradaMin;
 
-      // 🔑 virada de dia (T3 / saída depois da meia-noite)
       if (minutosDecorridos < 0) minutosDecorridos += 24 * 60;
 
-      // 🔒 mínimo 60 min
       if (minutosDecorridos < 60) {
+
         const faltam = 60 - minutosDecorridos;
+
         return errorResponse(
           res,
           `Saída permitida somente após 1h da entrada. Aguarde mais ${faltam} min.`,
           409
         );
+
       }
 
-      // 🔒 segurança (evita frequencia travada dias)
       if (minutosDecorridos > 24 * 60) {
+
         return errorResponse(
           res,
-          `Frequência anterior está aberta há mais de 24h. Entre em contato com o RH para ajuste manual.`,
+          "Frequência anterior aberta há mais de 24h. Procure o RH.",
           409
         );
+
       }
 
-      const horasTrabalhadas = Number((minutosDecorridos / 60).toFixed(2));
+      const horasTrabalhadas = Number(
+        (minutosDecorridos / 60).toFixed(2)
+      );
 
-      // ✅ horaSaida é TIME(6) -> use time-only
       const atualizado = await prisma.frequencia.update({
         where: { idFrequencia: aberta.idFrequencia },
         data: {
@@ -282,20 +343,17 @@ const registrarPontoCPF = async (req, res) => {
         },
       });
 
-      console.log(
-        `[${reqId}] SAÍDA registrada (fecha aberta) dataRef=${ymd(aberta.dataReferencia)} freq=${atualizado.idFrequencia}`
+      return successResponse(
+        res,
+        atualizado,
+        "Saída registrada com sucesso"
       );
-
-      return successResponse(res, atualizado, "Saída registrada com sucesso");
     }
 
     /* ==========================================
-       2) NÃO HÁ ABERTA -> TRABALHA COM O DIA OPERACIONAL
-          - Se já existe jornada finalizada no dia -> 409
-          - Se não existe -> cria ENTRADA
+       VERIFICA JORNADA DUPLICADA
     ========================================== */
 
-    // 3ª batida real: já tem entrada e saída no dia operacional
     if (frequenciaDia?.horaEntrada && frequenciaDia?.horaSaida) {
       return errorResponse(
         res,
@@ -304,84 +362,62 @@ const registrarPontoCPF = async (req, res) => {
       );
     }
 
-    // Caso raro: existe registro no dia mas sem entrada (inconsistência)
+    /* ==========================================
+       CORRIGE REGISTRO INCONSISTENTE
+    ========================================== */
+
     if (frequenciaDia && !frequenciaDia.horaEntrada) {
+
       const atualizado = await prisma.frequencia.update({
         where: { idFrequencia: frequenciaDia.idFrequencia },
         data: { horaEntrada: horaAgora },
       });
 
-      console.log(
-        `[${reqId}] ENTRADA preenchida (registro existente) dia=${ymd(dataReferenciaOperacional)} freq=${atualizado.idFrequencia}`
+      return createdResponse(
+        res,
+        atualizado,
+        "Entrada registrada com sucesso"
       );
 
-      return createdResponse(res, atualizado, "Entrada registrada com sucesso");
     }
 
-    // ENTRADA normal
+    /* ==========================================
+       CRIA ENTRADA
+    ========================================== */
+
     const tipoPresenca = await prisma.tipoAusencia.findFirst({
       where: { codigo: "P" },
     });
 
-    try {
-      const registro = await prisma.frequencia.create({
-        data: {
-          opsId: colaborador.opsId,
-          dataReferencia: dataReferenciaOperacional,
-          horaEntrada: horaAgora,
-          idTipoAusencia: tipoPresenca?.idTipoAusencia ?? null,
-          registradoPor: colaborador.opsId,
-          validado: false,
-        },
-      });
+    const registro = await prisma.frequencia.create({
+      data: {
+        opsId: colaborador.opsId,
+        dataReferencia: dataReferenciaOperacional,
+        horaEntrada: horaAgora,
+        idTipoAusencia: tipoPresenca?.idTipoAusencia ?? null,
+        registradoPor: colaborador.opsId,
+        validado: false,
+      },
+    });
 
-      console.log(
-        `[${reqId}] ENTRADA registrada dia=${ymd(dataReferenciaOperacional)} freq=${registro.idFrequencia}`
-      );
+    return createdResponse(
+      res,
+      registro,
+      "Entrada registrada com sucesso"
+    );
 
-      return createdResponse(res, registro, "Entrada registrada com sucesso");
-
-    } catch (errCreate) {
-
-      if (errCreate?.code === "P2002") {
-
-        // Já foi criado por outro request
-        const registroExistente = await prisma.frequencia.findUnique({
-          where: {
-            opsId_dataReferencia: {
-              opsId: colaborador.opsId,
-              dataReferencia: dataReferenciaOperacional,
-            },
-          },
-        });
-
-        if (registroExistente?.horaEntrada && !registroExistente?.horaSaida) {
-
-          const atualizado = await prisma.frequencia.update({
-            where: { idFrequencia: registroExistente.idFrequencia },
-            data: {
-              horaSaida: horaAgora,
-            },
-          });
-
-          console.log(`[${reqId}] SAÍDA automática após P2002`);
-
-          return successResponse(res, atualizado, "Saída registrada com sucesso");
-        }
-      }
-
-      throw errCreate;
-    }
   } catch (err) {
+
     console.error(`[${reqId}] ❌ ERRO registrarPontoCPF:`, err);
 
-    // Se estourar unique (opsId,dataReferencia) por corrida/duplo clique
     if (err?.code === "P2002") {
+
       return errorResponse(
         res,
-        "Já existe registro de ponto para este dia operacional. Tente novamente.",
+        "Já existe registro de ponto para este dia operacional",
         409
       );
+
     }
 
     return errorResponse(
@@ -402,10 +438,17 @@ const getControlePresenca = async (req, res) => {
   const reqId = `CTRL-${Date.now()}`;
 
   try {
-    
     await finalizarAtestadosVencidos();
-    
-    const { mes, turno, escala, search, lider, pendenciaSaida, pendentesHoje } = req.query;
+
+    const {
+      mes,
+      turno,
+      escala,
+      search,
+      lider,
+      pendenciaSaida,
+      pendentesHoje,
+    } = req.query;
 
     console.log(`[${reqId}] /ponto/controle query:`, req.query);
 
@@ -414,14 +457,20 @@ const getControlePresenca = async (req, res) => {
     }
 
     const [ano, mesNum] = mes.split("-").map(Number);
+
     if (!ano || !mesNum) {
       return errorResponse(res, "Parâmetro 'mes' inválido (use YYYY-MM)", 400);
     }
 
     const inicioMes = new Date(ano, mesNum - 1, 1);
-    const fimMes = new Date(ano, mesNum, 0, 23, 59, 59);
+    inicioMes.setHours(0, 0, 0, 0);
 
-    // filtros (no front você manda "TODOS", então aqui trate bem)
+    const fimMes = new Date(ano, mesNum, 0);
+    fimMes.setHours(23, 59, 59, 999);
+
+    /* =====================================================
+       FILTROS COLABORADOR
+    ===================================================== */
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
@@ -439,43 +488,49 @@ const getControlePresenca = async (req, res) => {
           },
         },
       },
-      ...(turno && turno !== "TODOS" ? { turno: { nomeTurno: turno } } : {}),
-      ...(escala && escala !== "TODOS" ? { escala: { nomeEscala: escala } } : {}),
-      ...(lider && lider !== "TODOS" ? { idLider: lider } : {}),
+      ...(turno && turno !== "TODOS"
+        ? { turno: { nomeTurno: turno } }
+        : {}),
+      ...(escala && escala !== "TODOS"
+        ? { escala: { nomeEscala: escala } }
+        : {}),
+      ...(lider && lider !== "TODOS"
+        ? { idLider: lider }
+        : {}),
       ...(search
         ? { nomeCompleto: { contains: String(search), mode: "insensitive" } }
         : {}),
       ...(pendenciaSaida === "true"
         ? {
-          frequencias: {
-            some: {
-              dataReferencia: {gte: inicioMes, lte: fimMes },
-              horaEntrada: { not: null },
-              horaSaida: null,
+            frequencias: {
+              some: {
+                dataReferencia: { gte: inicioMes, lte: fimMes },
+                horaEntrada: { not: null },
+                horaSaida: null,
+              },
             },
-          },
-        }
-      : {}),
+          }
+        : {}),
     };
-    
+
     const colaboradores = await prisma.colaborador.findMany({
       where: whereColaborador,
-      include: { 
-        turno: true, 
+      include: {
+        turno: true,
         escala: true,
         ausencias: {
           where: {
             status: "ATIVO",
-            dataInicio: {lte: fimMes},
-            dataFim: {gte: inicioMes},
+            dataInicio: { lte: fimMes },
+            dataFim: { gte: inicioMes },
           },
-          include: { tipoAusencia: true},
+          include: { tipoAusencia: true },
         },
         atestadosMedicos: {
           where: {
             status: "ATIVO",
-            dataInicio: {lte: fimMes},
-            dataFim: { gte: inicioMes},
+            dataInicio: { lte: fimMes },
+            dataFim: { gte: inicioMes },
           },
         },
       },
@@ -488,8 +543,37 @@ const getControlePresenca = async (req, res) => {
       return successResponse(res, { dias: [], colaboradores: [] });
     }
 
+    /* =====================================================
+       OPS IDS
+    ===================================================== */
     const opsIds = colaboradores.map((c) => c.opsId);
 
+    /* =====================================================
+       HISTÓRICO DE ESCALA
+    ===================================================== */
+    const historicoEscalas = await prisma.colaboradorEscalaHistorico.findMany({
+      where: {
+        opsId: { in: opsIds },
+      },
+      include: {
+        escala: true,
+      },
+      orderBy: [
+        { opsId: "asc" },
+        { dataInicio: "asc" },
+      ],
+    });
+
+    const historicoMap = {};
+
+    for (const h of historicoEscalas) {
+      if (!historicoMap[h.opsId]) historicoMap[h.opsId] = [];
+      historicoMap[h.opsId].push(h);
+    }
+
+    /* =====================================================
+       FREQUÊNCIAS
+    ===================================================== */
     const frequencias = await prisma.frequencia.findMany({
       where: {
         opsId: { in: opsIds },
@@ -506,51 +590,58 @@ const getControlePresenca = async (req, res) => {
     console.log(`[${reqId}] frequencias do mês:`, frequencias.length);
 
     const freqMap = {};
+
     for (const f of frequencias) {
       const key = `${f.opsId}_${ymd(f.dataReferencia)}`;
 
-      // se não existe, coloca
       if (!freqMap[key]) {
         freqMap[key] = f;
         continue;
       }
 
-      // se o novo é manual, ele tem prioridade
       if (f.manual && !freqMap[key].manual) {
         freqMap[key] = f;
         continue;
       }
 
-      // se ambos são manuais, pega o mais recente
       if (f.manual && freqMap[key].manual) {
-        if (f.idFrequencia > freqMap[key].idFrequencia) freqMap[key] = f;
+        if (f.idFrequencia > freqMap[key].idFrequencia) {
+          freqMap[key] = f;
+        }
       }
     }
 
-
+    /* =====================================================
+       DIAS DO MÊS
+    ===================================================== */
     const dias = Array.from(
       { length: new Date(ano, mesNum, 0).getDate() },
       (_, i) => i + 1
     );
 
-    const resultado = colaboradores.map((c) => {
+    /* =====================================================
+       MONTAGEM DA GRADE
+    ===================================================== */
+    const resultado = [];
+
+    for (const c of colaboradores) {
       const diasMap = {};
 
-    for (let d = 1; d <= dias.length; d++) {
-      // 🔑 dia civil do calendário (SEM virada de turno)
-      const dataCalendario = new Date(ano, mesNum - 1, d);
-      dataCalendario.setHours(0, 0, 0, 0);
+      for (let d = 1; d <= dias.length; d++) {
+        const dataCalendario = new Date(ano, mesNum - 1, d);
+        dataCalendario.setHours(0, 0, 0, 0);
 
-      const dataISO = ymd(dataCalendario);
-      const key = `${c.opsId}_${dataISO}`;
+        const dataISO = ymd(dataCalendario);
+        const key = `${c.opsId}_${dataISO}`;
 
-      // 1️⃣ FREQUÊNCIA MANUAL TEM PRIORIDADE (independente de ausência)
-      if (freqMap[key]) {
-        const f = freqMap[key];
+        /* ===============================
+           MANUAL TEM PRIORIDADE
+        =============================== */
+        if (freqMap[key]?.manual) {
+          const f = freqMap[key];
 
-        if (f.manual) {
           diasMap[dataISO] = {
-            status: f.tipoAusencia?.codigo,
+            status: f.tipoAusencia?.codigo || "-",
             entrada: f.horaEntrada,
             saida: f.horaSaida,
             validado: !!f.validado,
@@ -558,82 +649,100 @@ const getControlePresenca = async (req, res) => {
           };
           continue;
         }
-      }
 
+        /* ===============================
+           STATUS ADMINISTRATIVO
+        =============================== */
+        const statusAdmin = getStatusAdministrativo(c, dataCalendario);
 
-      // 1️⃣ Status administrativo tem prioridade
-      const statusAdmin = getStatusAdministrativo(c, dataCalendario);
-      if (statusAdmin) {
+        if (statusAdmin) {
+          diasMap[dataISO] = {
+            status: statusAdmin.status,
+            origem: statusAdmin.origem,
+            manual: false,
+          };
+          continue;
+        }
+
+        /* ===============================
+           FREQUÊNCIA
+        =============================== */
+        if (freqMap[key]) {
+          const f = freqMap[key];
+
+          diasMap[dataISO] = {
+            status: f.tipoAusencia?.codigo || "-",
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: !!f.validado,
+            manual: !!f.manual,
+          };
+          continue;
+        }
+
+        /* ===============================
+           DSR BASEADO NA ESCALA DO DIA
+           OBS: APENAS EXIBE, NÃO ESCREVE NO BANCO
+        =============================== */
+        const escalaDia = getEscalaNoDia(c.opsId, dataCalendario, historicoMap);
+
+        if (isDiaDSR(dataCalendario, escalaDia)) {
+          diasMap[dataISO] = {
+            status: "DSR",
+            manual: false,
+          };
+          continue;
+        }
+
+        /* ===============================
+           FALTA / SEM LANÇAMENTO
+        =============================== */
         diasMap[dataISO] = {
-          status: statusAdmin.status,
-          origem: statusAdmin.origem,
+          status: "-",
           manual: false,
         };
-        continue;
       }
 
-      // 2️⃣ Frequência
-      if (freqMap[key]) {
-        const f = freqMap[key];
-        diasMap[dataISO] = {
-          status: f.tipoAusencia?.codigo,
-          entrada: f.horaEntrada,
-          saida: f.horaSaida,
-          validado: f.validado,
-          manual: f.manual ?? false,
-        };
-        continue;
-      }
-
-      // 3️⃣ DSR
-      if (isDiaDSR(dataCalendario, c.escala?.nomeEscala)) {
-        diasMap[dataISO] = {
-          status: "DSR",
-          manual: false,
-        };
-        continue;
-      }
-
-      // 4️⃣ FALTA
-      diasMap[dataISO] = {
-        status: "-",
-        manual: false,
-      };
-
-      }
-
-      return {
+      resultado.push({
         opsId: c.opsId,
         nome: c.nomeCompleto,
-        turno: c.turno?.nomeTurno,
-        escala: c.escala?.nomeEscala,
+        turno: c.turno?.nomeTurno || null,
+        escala: c.escala?.nomeEscala || null,
         dias: diasMap,
-      };
-    });
+      });
+    }
 
-    // 🔑 FILTRO: Pendentes hoje (colaboradores sem presença marcada no dia atual)
+    /* =====================================================
+       FILTRO PENDENTES HOJE
+    ===================================================== */
     let colaboradoresFiltrados = resultado;
+
     if (pendentesHoje === "true") {
       const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+
       const diaHoje = hoje.getDate();
       const mesHoje = hoje.getMonth() + 1;
       const anoHoje = hoje.getFullYear();
-      
-      // Só aplica o filtro se estivermos visualizando o mês atual
+
       if (ano === anoHoje && mesNum === mesHoje) {
         const dataHojeISO = ymd(hoje);
-        
+
         colaboradoresFiltrados = resultado.filter((c) => {
           const registroHoje = c.dias[dataHojeISO];
-          // Considera pendente se não tem registro ou se o status é "-" (falta)
           return !registroHoje || registroHoje.status === "-";
         });
       }
     }
 
-    return successResponse(res, { dias, colaboradores: colaboradoresFiltrados });
+    return successResponse(res, {
+      dias,
+      colaboradores: colaboradoresFiltrados,
+    });
+
   } catch (err) {
     console.error(`[${reqId}] ❌ ERRO /ponto/controle:`, err);
+
     return errorResponse(
       res,
       "Erro ao buscar controle de presença",
@@ -642,6 +751,7 @@ const getControlePresenca = async (req, res) => {
     );
   }
 };
+
 const ajusteManualPresenca = async (req, res) => {
   try {
     const {
@@ -701,10 +811,6 @@ const ajusteManualPresenca = async (req, res) => {
         "Colaborador não está ativo",
         403
       );
-    }
-
-    if (!colaborador) {
-      return notFoundResponse(res, "Colaborador não encontrado ou inativo");
     }
 
     /* ===============================
@@ -987,6 +1093,27 @@ const exportarPresencaSheets = async (req, res) => {
 
     const opsIds = colaboradores.map((c) => c.opsId);
 
+    /* =====================================================
+      HISTÓRICO DE ESCALA
+    ===================================================== */
+
+    const historicoEscalas = await prisma.colaboradorEscalaHistorico.findMany({
+      where: {
+        opsId: { in: opsIds },
+      },
+      include: {
+        escala: true,
+      },
+    });
+
+    const historicoMap = {};
+
+    for (const h of historicoEscalas) {
+      if (!historicoMap[h.opsId]) historicoMap[h.opsId] = [];
+      historicoMap[h.opsId].push(h);
+    }
+    
+
     const frequencias = await prisma.frequencia.findMany({
       where: {
         opsId: { in: opsIds },
@@ -1072,7 +1199,8 @@ const exportarPresencaSheets = async (req, res) => {
         }
 
         // DSR
-        if (isDiaDSR(dataCalendario, c.escala?.nomeEscala)) {
+        const escalaDia = getEscalaNoDia(c.opsId, dataCalendario, historicoMap);
+        if (isDiaDSR(dataCalendario, escalaDia)) {
           diasMap[dataISO] = {
             status: "DSR",
             manual: false,

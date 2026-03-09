@@ -1,10 +1,11 @@
 import api from "./api";
 
 export const MedidasDisciplinaresAPI = {
-  listar: (opsId) =>
+
+  listar: (params = {}) =>
     api
       .get("/medidas-disciplinares", {
-        params: opsId ? { opsId } : {},
+        params,
       })
       .then((res) => res.data.data),
 
