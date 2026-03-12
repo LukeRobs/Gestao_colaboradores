@@ -155,6 +155,13 @@ const exportarControlePresenca = async (mes, dadosPresenca) => {
       return [...dadosBasicos, ...statusDias];
     });
 
+    // 🔍 LOG DE DEBUG: Mostrar amostra da primeira linha
+    if (rows.length > 0) {
+      console.log(`📋 Amostra da primeira linha de dados:`);
+      console.log(`   - Dados básicos: ${rows[0].slice(0, 4).join(' | ')}`);
+      console.log(`   - Primeiros 5 dias: ${rows[0].slice(4, 9).join(' | ')}`);
+    }
+
     // 📝 Preparar dados para envio
     const values = [headers, ...rows];
 

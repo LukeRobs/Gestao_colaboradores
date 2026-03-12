@@ -102,6 +102,7 @@ export default function OperationalReport({ report }) {
         image: dataUrl,
         periodo: report.header.periodo,
         turno: report.header.turno,
+        groupId: "iNCIam_zTSaCzvN8qLp0pg", // Grupo padrão para Relatório Operacional
       })
 
       console.log("✅ Resposta do backend:", response.data)

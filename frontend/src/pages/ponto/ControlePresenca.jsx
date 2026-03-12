@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
+import toast from "react-hot-toast";
 
 import PresencaToolbar from "../../components/ponto/PresencaToolbar";
 import PresencaGrid from "../../components/ponto/PresencaGrid";
@@ -50,9 +51,11 @@ export default function ControlePresenca() {
       setExportando(true);
       
       if (colaboradores.length === 0) {
-        alert("Nenhum dado de presença encontrado para exportar.");
+        toast.error("Nenhum dado de presença encontrado para exportar.");
         return;
       }
+
+      toast.loading("Exportando para Google Sheets...", { id: "exportar-sheets" });
 
       // Exporta sempre completo, sem filtros
       const params = {
@@ -63,19 +66,19 @@ export default function ControlePresenca() {
 
       if (res.data?.success) {
         const data = res.data.data;
-        alert(
-          `✅ Exportação concluída!\n\n` +
-          `📑 Aba: ${data.nomeAba}\n` +
-          `📊 ${data.colaboradores} colaboradores exportados\n` +
-          `📝 ${data.celulasAtualizadas} células atualizadas\n\n` +
-          `🔗 Acesse a planilha em:\n${data.spreadsheetUrl}`
+        toast.success(
+          `Exportação concluída! ${data.colaboradores} colaboradores e ${data.celulasAtualizadas} células atualizadas na aba "${data.nomeAba}"`,
+          { 
+            id: "exportar-sheets",
+            duration: 5000
+          }
         );
       }
       
     } catch (error) {
       console.error("Erro ao exportar para Google Sheets:", error);
       const mensagem = error.response?.data?.message || "Erro ao exportar dados. Tente novamente.";
-      alert(`❌ ${mensagem}`);
+      toast.error(mensagem, { id: "exportar-sheets" });
     } finally {
       setExportando(false);
     }

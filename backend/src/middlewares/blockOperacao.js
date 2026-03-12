@@ -1,8 +1,10 @@
 module.exports = function blockOperacao(req, res, next) {
   if (req.user && req.user.role === "OPERACAO") {
+    // Permitir acesso a rotas específicas
     if (
-      req.originalUrl.startsWith("/ponto") ||
-      req.originalUrl.startsWith("/auth")
+      req.originalUrl.startsWith("/api/ponto") ||
+      req.originalUrl.startsWith("/api/auth") ||
+      req.originalUrl.startsWith("/api/dashboard/gestao-operacional")
     ) {
       return next();
     }

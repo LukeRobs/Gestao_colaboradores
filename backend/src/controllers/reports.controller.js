@@ -34,7 +34,7 @@ async function sendReportToSeatalk(req, res, next) {
     console.log("📥 [SEATALK] Requisição recebida")
     console.log("📥 [SEATALK] User:", req.user?.email || "não autenticado")
     
-    const { image, periodo, turno } = req.body
+    const { image, periodo, turno, groupId: customGroupId } = req.body
 
     if (!image) {
       console.error("❌ [SEATALK] Imagem não enviada")
@@ -44,13 +44,14 @@ async function sendReportToSeatalk(req, res, next) {
       })
     }
 
-    const groupId = process.env.SEATALK_GROUP_ID || "iNCIam_zTSaCzvN8qLp0pg"
+    // Permite especificar groupId customizado ou usa o padrão do .env
+    const groupId = customGroupId || process.env.SEATALK_GROUP_ID || "iNCIam_zTSaCzvN8qLp0pg"
 
-    //console.log("📤 [SEATALK] Enviando via API REST")
-    //console.log("📍 [SEATALK] Group ID:", groupId)
-    //console.log("📏 [SEATALK] Tamanho da imagem:", Math.round(image.length / 1024), "KB")
-    //console.log("📅 [SEATALK] Período:", periodo)
-    //console.log("🕐 [SEATALK] Turno:", turno)
+    console.log("📤 [SEATALK] Enviando via API REST")
+    console.log("📍 [SEATALK] Group ID:", groupId)
+    console.log("📏 [SEATALK] Tamanho da imagem:", Math.round(image.length / 1024), "KB")
+    console.log("📅 [SEATALK] Período:", periodo)
+    console.log("🕐 [SEATALK] Turno:", turno)
 
     const result = await sendImageToGroup(image, groupId, { periodo, turno })
 

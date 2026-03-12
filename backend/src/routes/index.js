@@ -38,7 +38,8 @@ const reportRoutes = require("./reports.routes");
 const dashboardAtestados = require("./dashboardAtestados.routes");
 const ddsmaRoutes = require("./ddsma.routes");
 const opaRoutes = require("./opa.routes");
-const folgaDominical = require("./folgaDominical.routes")
+const folgaDominical = require("./folgaDominical.routes");
+const gestaoOperacionalRoutes = require("./gestaoOperacional.routes");
 const sugestaoRoutes = require("./sugestaoMedidaDisciplinar.routes");
 /* =========================
    HEALTH
@@ -50,6 +51,54 @@ router.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
+});
+
+/* =========================
+   DEBUG - TESTAR PLANILHA
+========================= */
+router.get("/debug/planilha", async (req, res) => {
+  try {
+    const { buscarQuantidadeRealizada } = require("../services/googleSheetsMetaProducao.service");
+    const { data = "2026-06-03" } = req.query;
+    
+    console.log("🔍 DEBUG - Testando leitura da planilha para data:", data);
+    const result = await buscarQuantidadeRealizada(data);
+    
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("❌ Erro no debug:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+/* =========================
+   LIMPAR CACHE DA PLANILHA
+========================= */
+router.post("/cache/limpar", async (req, res) => {
+  try {
+    const { limparCache } = require("../services/googleSheetsMetaProducao.service");
+    limparCache();
+    
+    res.json({
+      success: true,
+      message: "Cache limpo com sucesso",
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("❌ Erro ao limpar cache:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 /* =========================
@@ -101,6 +150,7 @@ router.use("/dashboard/atestados", dashboardAtestados);
 router.use("/ddsma", ddsmaRoutes);
 router.use("/opa", opaRoutes);
 router.use("/folga-dominical", folgaDominical);
+router.use("/dashboard/gestao-operacional", gestaoOperacionalRoutes);
 
 
 module.exports = router;

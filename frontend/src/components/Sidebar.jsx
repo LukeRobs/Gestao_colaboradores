@@ -160,6 +160,11 @@ export default function Sidebar({ isOpen, onClose }) {
                 {(isAdmin || isLideranca) && (
                   <>
                     <SidebarSubItem
+                      label="Gestão Operacional"
+                      active={isActive("/dashboard/gestao-operacional")}
+                      onClick={() => go("/dashboard/gestao-operacional")}
+                    />
+                    <SidebarSubItem
                       label="SPI"
                       active={isActive("/spi")}
                       onClick={() => go("/spi")}

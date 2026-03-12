@@ -1,24 +1,17 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-import html2pdf from "html2pdf.js";
-import QRCode from "qrcode";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
 
-import CartaAdvertenciaTemplate from "../../components/medidas_disciplinares/CartamedidaDisciplinarTemplate";
-
 export default function SugestoesMedidaDisciplinar() {
   const navigate = useNavigate();
-  const templateRef = useRef(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sugestoes, setSugestoes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dadosCarta, setDadosCarta] = useState(null);
   const [processingId, setProcessingId] = useState(null);
 
   async function load() {
@@ -39,68 +32,6 @@ export default function SugestoesMedidaDisciplinar() {
     load();
   }, []);
 
-  async function esperarRender() {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  async function gerarPdfCarta() {
-    const element = templateRef.current;
-
-    if (!element) {
-      throw new Error("Template da carta não renderizado");
-    }
-
-    const opt = {
-      margin: 0,
-      filename: "carta-advertencia.pdf",
-      image: {
-        type: "jpeg",
-        quality: 1,
-      },
-      html2canvas: {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        onclone: (clonedDoc) => {
-          const root = clonedDoc.querySelector(".pdf-carta-root");
-
-          if (!root) return;
-
-          const allLinks = Array.from(clonedDoc.querySelectorAll('link[rel="stylesheet"]'));
-          allLinks.forEach((el) => el.remove());
-
-          const allStyles = Array.from(clonedDoc.querySelectorAll("style"));
-          allStyles.forEach((styleEl) => {
-            const cssText = styleEl.textContent || "";
-
-            const isTemplateStyle =
-              cssText.includes(".md-page-root") ||
-              cssText.includes(".md-header") ||
-              cssText.includes(".md-box") ||
-              cssText.includes(".md-footer");
-
-            if (!isTemplateStyle) {
-              styleEl.remove();
-            }
-          });
-
-          clonedDoc.body.style.background = "#ffffff";
-          clonedDoc.documentElement.style.background = "#ffffff";
-        },
-      },
-      jsPDF: {
-        unit: "mm",
-        format: "a4",
-        orientation: "portrait",
-      },
-    };
-
-    const worker = html2pdf().set(opt).from(element).toPdf();
-    const blob = await worker.output("blob");
-
-    return blob;
-  }
   async function aprovar(sugestao) {
 
     if (processingId) return;
@@ -200,25 +131,6 @@ export default function SugestoesMedidaDisciplinar() {
             </div>
           )}
         </main>
-      </div>
-
-      {/* TEMPLATE INVISÍVEL */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          opacity: 0,
-          pointerEvents: "none",
-          zIndex: -1,
-        }}
-      >
-        {dadosCarta && (
-          <CartaAdvertenciaTemplate
-            ref={templateRef}
-            {...dadosCarta}
-          />
-        )}
       </div>
     </div>
   );

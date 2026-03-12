@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 /* ================= AUTH ================= */
 import Login from "./pages/login";
@@ -9,6 +10,7 @@ import DashboardOperacional from "./pages/dashboards/dashboardOperacional";
 import DashboardAdmin from "./pages/dashboards/dashboardAdmin";
 import DashboardColaborador from "./pages/dashboards/dashboardColaborador";
 import DashboardAtestados from "./pages/dashboards/dashboardAtestados";
+import GestaoOperacional from "./pages/dashboards/gestaoOperacional";
 
 /* ================= COLABORADORES ================= */
 import ColaboradoresPage from "./pages/colaboradores";
@@ -61,7 +63,31 @@ import ReportRoute from "./routes/report";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#1A1A1C",
+            color: "#fff",
+            border: "1px solid #2A2A2C",
+          },
+          success: {
+            iconTheme: {
+              primary: "#22c55e",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
+      <Routes>
       {/* ================= ROTAS PÚBLICAS ================= */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -104,6 +130,15 @@ export default function App() {
         element={
           <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
             <DashboardAtestados />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/gestao-operacional"
+        element={
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
+            <GestaoOperacional />
           </ProtectedRoute>
         }
       />
@@ -369,5 +404,6 @@ export default function App() {
         element={<Navigate to="/dashboard/operacional" replace />}
       />
     </Routes>
+    </>
   );
 }
