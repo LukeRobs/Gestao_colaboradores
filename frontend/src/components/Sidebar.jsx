@@ -191,6 +191,11 @@ export default function Sidebar({ isOpen, onClose }) {
                       onClick={() => go("/dashboard/gestao-operacional")}
                     />
                     <SidebarSubItem
+                      label="Produtividade por Colaborador"
+                      active={isActive("/dashboard/produtividade-colaborador")}
+                      onClick={() => go("/dashboard/produtividade-colaborador")}
+                    />
+                    <SidebarSubItem
                       label="SPI"
                       active={isActive("/spi")}
                       onClick={() => go("/spi")}
