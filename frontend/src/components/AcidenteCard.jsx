@@ -2,13 +2,10 @@
 // VERSÃO COM LOGS PARA DEBUG
 import {
   AlertTriangle,
-  Camera,
   MapPin,
   Calendar,
   Clock,
   User,
-  Image as ImageIcon,
-  ChevronRight,
 } from "lucide-react";
 
 export default function AcidenteCardCompact({ acidente }) {
@@ -108,118 +105,8 @@ export default function AcidenteCardCompact({ acidente }) {
         cursor-pointer
       "
     >
-      <div className="flex flex-col lg:flex-row">
+      <div className="flex flex-col">
         
-        {/* ================= THUMBNAIL ================= */}
-        <div className="relative lg:w-64 h-48 lg:h-auto shrink-0 overflow-hidden bg-[#0D0D0D]">
-        {primeiraFoto ? (
-          <>
-            {!isPdf ? (
-              // ✅ Se for imagem
-              <img
-                src={primeiraFoto}
-                alt="Evidência"
-                className="
-                  w-full h-full object-cover
-                  transition-transform duration-500
-                  group-hover:scale-110
-                "
-                onLoad={() => {
-                  console.log("✅ IMAGEM CARREGOU:", primeiraFoto);
-                }}
-                onError={(e) => {
-                  console.error("❌ ERRO AO CARREGAR IMAGEM");
-                  console.error("URL:", primeiraFoto);
-                  console.error("Erro:", e);
-                }}
-              />
-            ) : (
-            // ✅ Se for PDF
-            <div className="relative w-full h-full bg-black">
-              <iframe
-                src={primeiraFoto}
-                title="Preview PDF"
-                className="w-full h-full pointer-events-none"
-              />
-
-              {/* Overlay leve para manter visual elegante */}
-              <div className="absolute inset-0 bg-black/20" />
-
-              {/* Botão flutuante */}
-              <a
-                href={primeiraFoto}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="
-                  absolute bottom-3 right-3
-                  text-xs px-3 py-1.5
-                  bg-[#FA4C00]
-                  text-white
-                  rounded-lg
-                  hover:opacity-90
-                  transition
-                  shadow-lg
-                "
-              >
-                Abrir
-              </a>
-            </div>
-            )}
-
-            <div className="absolute inset-0 bg-linear-to-br from-black/20 to-transparent" />
-          </>
-        ) : (
-            /* Placeholder - Sem Foto */
-            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-              <ImageIcon size={48} className="text-[#3D3D40]" />
-              <p className="text-xs text-[#6B7280]">Sem evidência</p>
-            </div>
-          )}
-
-          {/* Contador de Fotos */}
-          {fotosCount > 0 && (
-            <div className="absolute bottom-3 left-3">
-              <div
-                className="
-                  flex items-center gap-1.5
-                  px-2.5 py-1.5
-                  rounded-lg
-                  bg-black/70
-                  backdrop-blur-sm
-                  border border-white/10
-                  text-xs font-semibold
-                  text-white
-                "
-              >
-                <Camera size={12} />
-                {fotosCount}
-              </div>
-            </div>
-          )}
-
-          {/* Badge Status */}
-          <div className="absolute top-3 right-3">
-              <span
-                className="
-                  inline-flex items-center gap-1
-                  px-2.5 py-1
-                  rounded-md
-                  bg-orange-500/10
-                  text-orange-400
-                  border border-orange-500/20
-                  text-[10px]
-                  font-semibold
-                  tracking-wide
-                  uppercase
-                "
-              >
-                <AlertTriangle size={12} />
-                Típica
-              </span>
-            </div>
-        </div>
-
         {/* ================= CONTEÚDO ================= */}
         <div className="flex-1 p-5 lg:p-6 flex flex-col justify-between">
           
@@ -229,10 +116,6 @@ export default function AcidenteCardCompact({ acidente }) {
               <h3 className="text-lg lg:text-xl font-bold text-white tracking-tight flex-1">
                 {nome}
               </h3>
-              <ChevronRight 
-                size={20} 
-                className="text-[#6B7280] group-hover:text-[#FA4C00] transition-colors shrink-0 mt-1"
-              />
             </div>
 
             {/* Meta info compacta */}

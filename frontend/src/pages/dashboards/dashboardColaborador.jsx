@@ -21,6 +21,7 @@ import {
 
 import Sidebar from "../../components/Sidebar"
 import Header from "../../components/Header"
+import LoadingScreen from "../../components/LoadingScreen"
 import api from "../../services/api"
 import TurnoSelector from "../../components/dashboard/TurnoSelector"
 import DateFilter from "../../components/dashboard/DateFilter"
@@ -52,11 +53,7 @@ export default function DashboardColaboradoresExecutivo() {
 
 
   if (loading || !dados) {
-    return (
-      <div className="h-screen flex items-center justify-center text-[#BFBFC3]">
-        Carregando...
-      </div>
-    )
+    return <LoadingScreen message="Carregando dashboard de colaboradores..." />;
   }
 
   const { kpis, series, donut, rankings, distribuicoes, hc } = dados

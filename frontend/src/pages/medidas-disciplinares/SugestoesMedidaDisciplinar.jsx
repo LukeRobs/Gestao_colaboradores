@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import MainLayout from "../../components/MainLayout";
 import api from "../../services/api";
 
 export default function SugestoesMedidaDisciplinar() {
@@ -95,7 +96,7 @@ export default function SugestoesMedidaDisciplinar() {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 max-w-5xl mx-auto space-y-6">
@@ -131,7 +132,7 @@ export default function SugestoesMedidaDisciplinar() {
             </div>
           )}
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

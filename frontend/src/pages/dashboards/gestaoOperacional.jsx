@@ -112,6 +112,10 @@ export default function GestaoOperacional() {
       // Capturar diretamente o elemento original
       const original = mainContentRef.current;
       
+      if (!original) {
+        throw new Error("Elemento não encontrado para captura");
+      }
+      
       // Salvar padding original
       const originalPadding = original.style.padding;
       
@@ -161,23 +165,24 @@ export default function GestaoOperacional() {
       });
       
       console.log("✅ Screenshot capturado com sucesso");
-      console.log("📦 Imagem convertida para base64, tamanho:", Math.round(imageBase64.length / 1024), "KB");
+      const imageSizeKB = Math.round(imageBase64.length / 1024);
+      const imageSizeMB = (imageSizeKB / 1024).toFixed(2);
+      console.log("📦 Imagem convertida para base64");
+      console.log("📏 Tamanho:", imageSizeKB, "KB (", imageSizeMB, "MB)");
+      
+      // Verificar tamanho da imagem
+      if (imageSizeKB > 10240) {
+        toast.error(`Imagem muito grande (${imageSizeMB}MB). Limite: 10MB`, { id: "screenshot" });
+        return;
+      }
       
       toast.loading("Enviando para Seatalk...", { id: "screenshot" });
       
       // Formatar período
       const dataFormatada = new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
-      const groupId = import.meta.env.VITE_SEATALK_GROUP_GESTAO_OPERACIONAL;
       
       console.log("📅 Data formatada:", dataFormatada);
       console.log("🕐 Turno:", turno);
-      console.log("👥 Group ID:", groupId);
-      
-      if (!groupId) {
-        console.error("❌ VITE_SEATALK_GROUP_GESTAO_OPERACIONAL não está definida no .env");
-        toast.error("Erro: Group ID não configurado", { id: "screenshot" });
-        return;
-      }
       
       // Enviar para o backend
       console.log("🌐 Enviando para API...");
@@ -185,7 +190,7 @@ export default function GestaoOperacional() {
         image: imageBase64,
         periodo: dataFormatada,
         turno: turno,
-        groupId: groupId,
+        reportType: "gestaoOperacional" // Identifica o tipo de relatório
       });
       
       console.log("✅ Resposta da API:", response.data);
@@ -193,16 +198,28 @@ export default function GestaoOperacional() {
       
     } catch (error) {
       console.error("❌ Erro ao enviar screenshot:", error);
-      console.error("� Detalhes do erro:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
       
-      toast.error(
-        error.response?.data?.message || error.message || "Erro ao enviar screenshot",
-        { id: "screenshot" }
-      );
+      // Log detalhado do erro
+      if (error.response) {
+        console.error("📋 Status:", error.response.status);
+        console.error("📋 Dados:", error.response.data);
+        console.error("📋 Headers:", error.response.headers);
+      } else if (error.request) {
+        console.error("📋 Nenhuma resposta recebida");
+      } else {
+        console.error("📋 Erro:", error.message);
+      }
+      
+      // Mensagem de erro mais descritiva
+      let errorMessage = "Erro ao enviar screenshot";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage, { id: "screenshot", duration: 5000 });
     } finally {
       // Mostrar o ranking novamente
       console.log("🔄 Restaurando elementos");

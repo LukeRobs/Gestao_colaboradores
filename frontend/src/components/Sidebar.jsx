@@ -10,16 +10,19 @@ import {
   ChevronDown,
   X,
   ClipboardList,
-  Shield,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { useSidebar } from "../context/SidebarContext";
 
 export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, permissions } = useContext(AuthContext);
+  const { isCollapsed, setIsCollapsed } = useSidebar();
 
   // OPERACAO não vê sidebar
   if (user?.role === "OPERACAO") {
@@ -45,11 +48,14 @@ export default function Sidebar({ isOpen, onClose }) {
   const [pontoOpen, setPontoOpen] = useState(
     location.pathname.startsWith("/ponto")
   );
-  const [ssoOpen, setSsoOpen] = useState(false);
 
   const [medidasOpen, setMedidasOpen] = useState(
   location.pathname.startsWith("/medidas-disciplinares")
 );
+
+  const [gestaoOpen, setGestaoOpen] = useState(
+    location.pathname.startsWith("/treinamentos")
+  );
 
   const isActive = (path) =>
     location.pathname === path ||
@@ -100,11 +106,13 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64
+          fixed top-0 left-0 h-full
           bg-[#1A1A1C]
           z-50
-          transform transition-transform duration-300
+          transform transition-all duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          ${isCollapsed ? "lg:w-20" : "lg:w-64"}
+          w-64
           flex flex-col
         `}
       >
@@ -112,14 +120,28 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="h-16 flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#FA4C00]" />
-            <span className="font-semibold text-white tracking-wide">
-              COPEOPLE
-            </span>
+            {!isCollapsed && (
+              <span className="font-semibold text-white tracking-wide">
+                COPEOPLE
+              </span>
+            )}
           </div>
 
-          <button onClick={onClose} className="lg:hidden text-[#BFBFC3]">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Toggle Button (Desktop only) */}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden lg:block p-2 rounded-lg text-[#BFBFC3] hover:bg-[#242426] transition"
+              title={isCollapsed ? "Expandir" : "Recolher"}
+            >
+              {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+
+            {/* Close button (Mobile only) */}
+            <button onClick={onClose} className="lg:hidden text-[#BFBFC3]">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <nav className="px-3 py-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide">
@@ -137,19 +159,23 @@ export default function Sidebar({ isOpen, onClose }) {
                     ? "bg-[#2A2A2C] text-white"
                     : "text-[#BFBFC3] hover:bg-[#242426]"
                 }
+                ${isCollapsed ? "lg:justify-center" : ""}
               `}
+              title={isCollapsed ? "Dashboards" : ""}
             >
               <div className="flex items-center gap-3">
                 <LayoutDashboard size={18} />
-                Dashboards
+                {!isCollapsed && <span>Dashboards</span>}
               </div>
-              <ChevronDown
-                size={16}
-                className={`transition ${dashboardsOpen ? "rotate-180" : ""}`}
-              />
+              {!isCollapsed && (
+                <ChevronDown
+                  size={16}
+                  className={`transition ${dashboardsOpen ? "rotate-180" : ""}`}
+                />
+              )}
             </button>
 
-            {dashboardsOpen && (
+            {dashboardsOpen && !isCollapsed && (
               <div className="ml-8 mt-1 space-y-1">
                 <SidebarSubItem
                   label="Operacional"
@@ -163,6 +189,11 @@ export default function Sidebar({ isOpen, onClose }) {
                       label="Gestão Operacional"
                       active={isActive("/dashboard/gestao-operacional")}
                       onClick={() => go("/dashboard/gestao-operacional")}
+                    />
+                    <SidebarSubItem
+                      label="Produtividade por Colaborador"
+                      active={isActive("/dashboard/produtividade-colaborador")}
+                      onClick={() => go("/dashboard/produtividade-colaborador")}
                     />
                     <SidebarSubItem
                       label="SPI"
@@ -210,21 +241,25 @@ export default function Sidebar({ isOpen, onClose }) {
                       ? "bg-[#2A2A2C] text-white"
                       : "text-[#BFBFC3] hover:bg-[#242426]"
                   }
+                  ${isCollapsed ? "lg:justify-center" : ""}
                 `}
+                title={isCollapsed ? "Organização" : ""}
               >
                 <div className="flex items-center gap-3">
                   <Network size={18} />
-                  Organização
+                  {!isCollapsed && <span>Organização</span>}
                 </div>
-                <ChevronDown
-                  size={16}
-                  className={`transition ${
-                    organizacaoOpen ? "rotate-180" : ""
-                  }`}
-                />
+                {!isCollapsed && (
+                  <ChevronDown
+                    size={16}
+                    className={`transition ${
+                      organizacaoOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                )}
               </button>
 
-              {organizacaoOpen && (
+              {organizacaoOpen && !isCollapsed && (
                 <div className="ml-8 mt-1 space-y-1">
                   <SidebarSubItem label="Empresas" onClick={() => go("/empresas")} />
                   <SidebarSubItem
@@ -260,13 +295,15 @@ export default function Sidebar({ isOpen, onClose }) {
                       ? "bg-[#2A2A2C] text-white"
                       : "text-[#BFBFC3] hover:bg-[#242426]"
                   }
+                  ${isCollapsed ? "lg:justify-center" : ""}
                 `}
+                title={isCollapsed ? item.label : ""}
               >
-                {active && (
+                {active && !isCollapsed && (
                   <span className="absolute left-0 h-6 w-1 rounded-r bg-[#FA4C00]" />
                 )}
                 <item.icon size={18} />
-                <span className="text-sm font-medium">{item.label}</span>
+                {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
               </button>
             );
           })}
@@ -285,20 +322,24 @@ export default function Sidebar({ isOpen, onClose }) {
                       ? "bg-[#2A2A2C] text-white"
                       : "text-[#BFBFC3] hover:bg-[#242426]"
                   }
+                  ${isCollapsed ? "lg:justify-center" : ""}
                 `}
+                title={isCollapsed ? "Medidas Disciplinares" : ""}
               >
                 <div className="flex items-center gap-3">
                   <FileText size={18} />
-                  Medidas Disciplinares
+                  {!isCollapsed && <span>Medidas Disciplinares</span>}
                 </div>
 
-                <ChevronDown
-                  size={16}
-                  className={`transition ${medidasOpen ? "rotate-180" : ""}`}
-                />
+                {!isCollapsed && (
+                  <ChevronDown
+                    size={16}
+                    className={`transition ${medidasOpen ? "rotate-180" : ""}`}
+                  />
+                )}
               </button>
 
-              {medidasOpen && (
+              {medidasOpen && !isCollapsed && (
                 <div className="ml-8 mt-1 space-y-1">
                   <SidebarSubItem
                     label="Listagem"
@@ -316,6 +357,47 @@ export default function Sidebar({ isOpen, onClose }) {
             </div>
           )}
           {/* =====================
+              GESTÃO & DESENVOLVIMENTO
+          ===================== */}
+          <div className="mt-2">
+            <button
+              onClick={() => setGestaoOpen(!gestaoOpen)}
+              className={`
+                w-full flex items-center justify-between
+                px-4 py-3 rounded-xl text-sm font-medium transition
+                ${
+                  location.pathname.startsWith("/treinamentos")
+                    ? "bg-[#2A2A2C] text-white"
+                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                }
+                ${isCollapsed ? "lg:justify-center" : ""}
+              `}
+              title={isCollapsed ? "Gestão & Desenvolvimento" : ""}
+            >
+              <div className="flex items-center gap-3">
+                <Layers size={18} />
+                {!isCollapsed && <span className="whitespace-nowrap">Gestão & Desenvolvimento</span>}
+              </div>
+              {!isCollapsed && (
+                <ChevronDown
+                  size={16}
+                  className={`transition ${gestaoOpen ? "rotate-180" : ""}`}
+                />
+              )}
+            </button>
+
+            {gestaoOpen && !isCollapsed && (
+              <div className="ml-8 mt-1 space-y-1">
+                <SidebarSubItem
+                  label="Treinamentos"
+                  active={isActive("/treinamentos")}
+                  onClick={() => go("/treinamentos")}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* =====================
               PLANEJAMENTO
           ===================== */}
           <div className="mt-2">
@@ -329,19 +411,23 @@ export default function Sidebar({ isOpen, onClose }) {
                     ? "bg-[#2A2A2C] text-white"
                     : "text-[#BFBFC3] hover:bg-[#242426]"
                 }
+                ${isCollapsed ? "lg:justify-center" : ""}
               `}
+              title={isCollapsed ? "Planejamento e Controle" : ""}
             >
               <div className="flex items-center gap-2">
                 <ClipboardList size={16} />
-                Planejamento e Controle
+                {!isCollapsed && <span>Planejamento e Controle</span>}
               </div>
-              <ChevronDown
-                size={16}
-                className={`transition ${dwOpen ? "rotate-180" : ""}`}
-              />
+              {!isCollapsed && (
+                <ChevronDown
+                  size={16}
+                  className={`transition ${dwOpen ? "rotate-180" : ""}`}
+                />
+              )}
             </button>
 
-            {dwOpen && (
+            {dwOpen && !isCollapsed && (
               <div className="ml-8 mt-1 space-y-1">
                 <SidebarSubItem
                   label="Daily Works"
@@ -371,19 +457,23 @@ export default function Sidebar({ isOpen, onClose }) {
                     ? "bg-[#2A2A2C] text-white"
                     : "text-[#BFBFC3] hover:bg-[#242426]"
                 }
+                ${isCollapsed ? "lg:justify-center" : ""}
               `}
+              title={isCollapsed ? "Ponto" : ""}
             >
               <div className="flex items-center gap-3">
                 <Clock size={18} />
-                Ponto
+                {!isCollapsed && <span>Ponto</span>}
               </div>
-              <ChevronDown
-                size={16}
-                className={`transition ${pontoOpen ? "rotate-180" : ""}`}
-              />
+              {!isCollapsed && (
+                <ChevronDown
+                  size={16}
+                  className={`transition ${pontoOpen ? "rotate-180" : ""}`}
+                />
+              )}
             </button>
 
-            {pontoOpen && (
+            {pontoOpen && !isCollapsed && (
               <div className="ml-8 mt-1 space-y-1">
                 <SidebarSubItem
                   label="Registrar Ponto"
@@ -399,68 +489,18 @@ export default function Sidebar({ isOpen, onClose }) {
             )}
           </div>
 
-          {/* =====================
-              GESTÃO & DESENVOLVIMENTO
-          ===================== */}
-          <div className="mt-2">
-            <div className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[#BFBFC3]">
-              <Layers size={18} />
-              Gestão & Desenvolvimento
-            </div>
-
-            <div className="ml-8 mt-1 space-y-1">
-              <SidebarSubItem
-                label="Treinamentos"
-                active={isActive("/treinamentos")}
-                onClick={() => go("/treinamentos")}
-              />
-              <SidebarSubItem label="Recrutamento (em breve)" disabled />
-            </div>
-          </div>
-
-          {/* =====================
-              SPI - SEGURANÇA E PREVENÇÃO DE INCIDENTES
-          ===================== */}
-          <div className="mt-2">
-            <button
-              onClick={() => setSsoOpen(!ssoOpen)}
-              className={`
-                w-full flex items-center justify-between
-                px-4 py-3 rounded-xl text-sm font-medium transition
-                ${
-                  ssoOpen
-                    ? "bg-[#2A2A2C] text-white"
-                    : "text-[#BFBFC3] hover:bg-[#242426]"
-                }
-              `}
-            >
-              <div className="flex items-center gap-3">
-                <Shield size={18} />
-                SPI
-              </div>
-              <ChevronDown
-                size={16}
-                className={`transition ${ssoOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {ssoOpen && (
-              <div className="ml-8 mt-1 space-y-1">
-                <SidebarSubItem label="OPAs (em breve)" disabled />
-                <SidebarSubItem label="Ginástica Laboral (em breve)" disabled />
-              </div>
-            )}
-          </div>
         </nav>
          {/* Footer com créditos */}
-        <div className="px-6 py-4 border-t border-white/5 shrink-0">
-          <p className="text-xs text-[#BFBFC3]">
-            Desenvolvido por:{" "}
-            <span className="text-[#FA4C00] font-medium">
-              Lucas e Thiago - SOC-PE2
-            </span>
-          </p>
-        </div>
+        {!isCollapsed && (
+          <div className="px-6 py-4 border-t border-white/5 shrink-0">
+            <p className="text-xs text-[#BFBFC3]">
+              Desenvolvido por:{" "}
+              <span className="text-[#FA4C00] font-medium">
+                Lucas e Thiago - SOC-PE2
+              </span>
+            </p>
+          </div>
+        )}
       </aside>
     </>
   );
