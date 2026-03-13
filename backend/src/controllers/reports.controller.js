@@ -33,6 +33,7 @@ async function sendReportToSeatalk(req, res, next) {
   try {
     console.log("📥 [SEATALK] Requisição recebida")
     console.log("📥 [SEATALK] User:", req.user?.email || "não autenticado")
+    console.log("📥 [SEATALK] Body keys:", Object.keys(req.body))
     
     const { image, periodo, turno, groupId: customGroupId } = req.body
 
@@ -44,8 +45,25 @@ async function sendReportToSeatalk(req, res, next) {
       })
     }
 
+    // Validar formato da imagem
+    if (!image.startsWith('data:image/')) {
+      console.error("❌ [SEATALK] Formato de imagem inválido")
+      return res.status(400).json({
+        success: false,
+        message: "Formato de imagem inválido. Esperado: data:image/...",
+      })
+    }
+
     // Permite especificar groupId customizado ou usa o padrão do .env
-    const groupId = customGroupId || process.env.SEATALK_GROUP_ID || "iNCIam_zTSaCzvN8qLp0pg"
+    const groupId = customGroupId || process.env.SEATALK_GROUP_ID_GESTAO || process.env.SEATALK_GROUP_ID
+
+    if (!groupId) {
+      console.error("❌ [SEATALK] Group ID não configurado")
+      return res.status(500).json({
+        success: false,
+        message: "Group ID não configurado no servidor. Configure SEATALK_GROUP_ID_GESTAO no .env",
+      })
+    }
 
     console.log("📤 [SEATALK] Enviando via API REST")
     console.log("📍 [SEATALK] Group ID:", groupId)
@@ -63,8 +81,15 @@ async function sendReportToSeatalk(req, res, next) {
       data: result.data,
     })
   } catch (err) {
-    console.error("❌ [SEATALK] Erro:", err.message)
-    next(err)
+    console.error("❌ [SEATALK] Erro capturado no controller:", err.message)
+    console.error("❌ [SEATALK] Stack:", err.stack)
+    
+    // Retornar erro mais descritivo
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Erro ao enviar relatório para o Seatalk",
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    })
   }
 }
 

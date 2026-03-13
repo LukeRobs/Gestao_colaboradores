@@ -85,11 +85,25 @@ async function getAccessToken() {
  */
 async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
   try {
+    console.log("🚀 [SEATALK] Iniciando envio de imagem...")
+    console.log("📍 [SEATALK] Group ID:", groupId)
+    
     // Obtém o token de acesso
+    console.log("🔑 [SEATALK] Obtendo token de acesso...")
     const accessToken = await getAccessToken()
+    console.log("✅ [SEATALK] Token obtido com sucesso")
 
     // Remove o prefixo data:image/png;base64, se existir
     const base64Content = imageBase64.replace(/^data:image\/\w+;base64,/, "")
+    const imageSizeKB = Math.round(base64Content.length / 1024)
+    const imageSizeMB = (imageSizeKB / 1024).toFixed(2)
+    
+    console.log("📏 [SEATALK] Tamanho da imagem:", imageSizeKB, "KB (", imageSizeMB, "MB)")
+    
+    // Verificar se a imagem não é muito grande (limite de 10MB)
+    if (imageSizeKB > 10240) {
+      throw new Error(`Imagem muito grande (${imageSizeMB}MB). Limite: 10MB`)
+    }
 
     // Endpoint da API do Seatalk
     const endpoint = "https://openapi.seatalk.io/messaging/v2/group_chat"
@@ -109,10 +123,10 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
       
       const textoInfo = `Report Hora x Hora\nData: ${periodoFormatado}\nTurno: ${metadata.turno || 'N/A'}`
       
-      console.log("💬 Enviando texto informativo...")
+      console.log("💬 [SEATALK] Enviando texto informativo...")
       
       try {
-        await axios.post(
+        const textResponse = await axios.post(
           endpoint,
           {
             group_id: groupId,
@@ -131,12 +145,20 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
             timeout: 10000,
           }
         )
-        console.log("✅ Texto enviado")
+        
+        if (textResponse.data.code !== 0) {
+          console.warn("⚠️ [SEATALK] Erro ao enviar texto:", textResponse.data)
+        } else {
+          console.log("✅ [SEATALK] Texto enviado com sucesso")
+        }
         
         // Aguardar um pouco antes de enviar a imagem
         await new Promise(r => setTimeout(r, 500))
       } catch (textError) {
-        console.warn("⚠️ Erro ao enviar texto (continuando com imagem):", textError.message)
+        console.warn("⚠️ [SEATALK] Erro ao enviar texto (continuando com imagem):", textError.message)
+        if (textError.response?.data) {
+          console.warn("⚠️ [SEATALK] Resposta do erro:", textError.response.data)
+        }
       }
     }
 
@@ -151,9 +173,7 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
       },
     }
 
-    console.log("📦 Enviando imagem...")
-    console.log("  - group_id:", payload.group_id)
-    console.log("  - Tamanho:", Math.round(base64Content.length / 1024), "KB")
+    console.log("📦 [SEATALK] Enviando imagem para o grupo...")
 
     // Faz a requisição POST com autenticação
     const response = await axios.post(endpoint, payload, {
@@ -161,31 +181,55 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`,
       },
-      timeout: 30000, // 30 segundos
+      timeout: 60000, // 60 segundos para imagens grandes
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
     })
 
-    console.log("✅ Resposta da API:", JSON.stringify(response.data, null, 2))
+    console.log("📨 [SEATALK] Resposta recebida:", JSON.stringify(response.data, null, 2))
 
     // Verifica se houve erro na resposta
     if (response.data.code !== 0) {
       const error = createSeatalkError(response.data)
-      console.error("❌ Erro da API Seatalk:", error.message)
-      console.error("💡 Solução:", getSolution(response.data.code))
+      console.error("❌ [SEATALK] Erro da API:", error.message)
+      console.error("💡 [SEATALK] Solução:", getSolution(response.data.code))
       throw error
     }
 
+    console.log("✅ [SEATALK] Imagem enviada com sucesso!")
     return {
       success: true,
       data: response.data,
     }
   } catch (error) {
-    console.error("❌ Erro ao enviar imagem para Seatalk:", error.response?.data || error.message)
+    console.error("❌ [SEATALK] Erro ao enviar imagem:", error.message)
     
-    throw new Error(
-      error.response?.data?.message || 
-      error.message ||
-      "Falha ao enviar imagem para o Seatalk"
-    )
+    // Log detalhado do erro
+    if (error.response) {
+      console.error("📋 [SEATALK] Status:", error.response.status)
+      console.error("📋 [SEATALK] Dados:", JSON.stringify(error.response.data, null, 2))
+      console.error("📋 [SEATALK] Headers:", error.response.headers)
+    } else if (error.request) {
+      console.error("📋 [SEATALK] Nenhuma resposta recebida")
+      console.error("📋 [SEATALK] Request:", error.request)
+    } else {
+      console.error("📋 [SEATALK] Erro na configuração:", error.message)
+    }
+    
+    // Criar mensagem de erro mais descritiva
+    let errorMessage = "Falha ao enviar imagem para o Seatalk"
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = "Timeout ao enviar imagem. A imagem pode estar muito grande."
+    }
+    
+    throw new Error(errorMessage)
   }
 }
 
