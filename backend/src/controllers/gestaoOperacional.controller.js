@@ -181,7 +181,7 @@ const carregarGestaoOperacional = async (req, res) => {
 
     // Buscar ranking de produtividade de colaboradores (Top 15)
     console.log("🔍 Buscando ranking de produtividade de colaboradores...");
-    const rankingResult = await buscarRankingColaboradores(dataStr, 15);
+    const rankingResult = await buscarRankingColaboradores(dataStr, turno, 15);
     const rankingProdutividade = rankingResult.success ? rankingResult.data : [];
     
     console.log("✅ Ranking carregado:", rankingProdutividade.length, "colaboradores");

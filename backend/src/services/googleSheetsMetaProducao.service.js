@@ -7,6 +7,7 @@ const { google } = require("googleapis");
 const META_SPREADSHEET_ID = "17Dpmr1Kn6ybvK3rah2JvoCBsAeOvotvM6k_7uaATPz0";
 const META_SHEET = "Meta";
 const ATUALIZACAO_SHEET = "Atualização_colaborador";
+const LOGIC_SHEET = "Logic";
 
 /* =====================================================
    CACHE
@@ -16,6 +17,8 @@ let sheetCache = null;
 let cacheTimestamp = null;
 let atualizacaoCache = null;
 let atualizacaoCacheTimestamp = null;
+let logicCache = null;
+let logicCacheTimestamp = null;
 const CACHE_TTL = 1 * 60 * 1000; // 1 min (reduzido de 5 min)
 
 function isCacheValid() {
@@ -34,11 +37,21 @@ function isAtualizacaoCacheValid() {
   );
 }
 
+function isLogicCacheValid() {
+  return (
+    logicCache &&
+    logicCacheTimestamp &&
+    Date.now() - logicCacheTimestamp < CACHE_TTL
+  );
+}
+
 function limparCache() {
   sheetCache = null;
   cacheTimestamp = null;
   atualizacaoCache = null;
   atualizacaoCacheTimestamp = null;
+  logicCache = null;
+  logicCacheTimestamp = null;
   console.log("🗑️ Cache limpo");
 }
 
@@ -140,6 +153,40 @@ async function carregarAtualizacaoColaborador() {
   atualizacaoCacheTimestamp = Date.now();
 
   console.log("✅ Atualização_colaborador armazenada em cache");
+
+  return rows;
+}
+
+/* =====================================================
+   CARREGAR PLANILHA LOGIC
+===================================================== */
+
+async function carregarLogic() {
+  if (isLogicCacheValid()) {
+    console.log("📦 Logic retornada do cache");
+    return logicCache;
+  }
+
+  console.log("🌎 Buscando Logic no Google Sheets...");
+
+  const sheets = getGoogleSheetsClient();
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: META_SPREADSHEET_ID,
+    range: `${LOGIC_SHEET}!A:B`,
+    valueRenderOption: "FORMATTED_VALUE",
+  });
+
+  const rows = response.data.values;
+
+  if (!rows || rows.length === 0) {
+    throw new Error("Aba Logic vazia");
+  }
+
+  logicCache = rows;
+  logicCacheTimestamp = Date.now();
+
+  console.log("✅ Logic armazenada em cache");
 
   return rows;
 }
@@ -369,19 +416,40 @@ async function buscarQuantidadeRealizada(dataISO) {
    BUSCAR RANKING DE COLABORADORES
 ===================================================== */
 
-async function buscarRankingColaboradores(dataISO, limite = 15) {
+async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
   try {
-    console.log("🔍 Iniciando busca de ranking de colaboradores:", { dataISO, limite });
+    console.log("🔍 Iniciando busca de ranking de colaboradores:", { dataISO, turno, limite });
     
     const rows = await carregarAtualizacaoColaborador();
+    const logicRows = await carregarLogic();
     const dataBusca = formatarData(dataISO);
 
     console.log("📊 Planilha Atualização carregada:", rows.length, "linhas");
+    console.log("📊 Planilha Logic carregada:", logicRows.length, "linhas");
 
     if (!rows || rows.length < 5) {
       console.warn("⚠️ Planilha vazia ou sem dados suficientes");
       return { success: false, data: [] };
     }
+
+    // Criar mapa de colaboradores por turno da aba Logic
+    // Estrutura: Nome | Turno
+    const colaboradoresPorTurno = new Map();
+    
+    for (let i = 1; i < logicRows.length; i++) { // Pular header
+      const row = logicRows[i];
+      if (!row || row.length < 2) continue;
+      
+      const nome = normalizar(row[0]);
+      const turnoColaborador = normalizar(row[1]);
+      
+      if (nome && turnoColaborador) {
+        colaboradoresPorTurno.set(nome.toLowerCase(), turnoColaborador);
+      }
+    }
+
+    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} colaboradores da aba Logic`);
+    console.log(`🔍 Filtrando por turno: ${turno}`);
 
     // Estrutura da planilha:
     // Linha 0: "Atualização Automatica da sheets"
@@ -427,6 +495,13 @@ async function buscarRankingColaboradores(dataISO, limite = 15) {
         continue;
       }
 
+      // Verificar se o colaborador pertence ao turno filtrado
+      const turnoColaborador = colaboradoresPorTurno.get(nomeColaborador.toLowerCase());
+      
+      if (!turnoColaborador || turnoColaborador !== turno) {
+        continue; // Pular colaboradores de outros turnos
+      }
+
       // Somar produção de todas as colunas da data
       let totalProducao = 0;
       
@@ -452,7 +527,7 @@ async function buscarRankingColaboradores(dataISO, limite = 15) {
     colaboradores.sort((a, b) => b.total - a.total);
     const ranking = colaboradores.slice(0, limite);
 
-    console.log(`✅ Ranking gerado: ${ranking.length} colaboradores`);
+    console.log(`✅ Ranking gerado para ${turno}: ${ranking.length} colaboradores`);
     if (ranking.length > 0) {
       console.log("🏆 Top 3:");
       ranking.slice(0, 3).forEach((c, i) => {

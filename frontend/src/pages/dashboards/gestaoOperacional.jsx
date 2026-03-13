@@ -206,8 +206,12 @@ export default function GestaoOperacional() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
-        Carregando…
+      <div className="h-screen flex flex-col items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
+        <div className="relative">
+          {/* Círculo animado */}
+          <div className="w-16 h-16 border-4 border-[#2A2A2C] border-t-[#E8491D] rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-4 text-lg">Carregando dados...</p>
       </div>
     );
   }
@@ -245,8 +249,14 @@ export default function GestaoOperacional() {
                 <span className="text-xl font-bold">PACKING</span>
               </div>
               {/* Indicador de filtros ativos */}
-              <div className="text-sm text-[#BFBFC3]">
+              <div className="text-sm text-[#BFBFC3] flex items-center gap-2">
                 <span className="font-semibold text-white">{turno}</span> | {new Date(data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                {loading && (
+                  <div className="flex items-center gap-2 ml-2">
+                    <div className="w-4 h-4 border-2 border-[#E8491D] border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-xs text-[#E8491D]">Atualizando...</span>
+                  </div>
+                )}
               </div>
             </div>
             
