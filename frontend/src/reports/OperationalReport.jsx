@@ -231,7 +231,7 @@ export default function OperationalReport({ report }) {
           <KpiCard label="Colaboradores Planejados" value={kpis.colaboradoresPlanejados} />
           <KpiCard label="Colaboradores Presentes" value={kpis.colaboradoresPresentes} />
           <KpiCard label="Ausências" value={kpis.ausencias} highlight="error" />
-          <KpiCard label="Absenteísmo" value={`${kpis.absenteismo}%`} highlight="warning" textColor={kpis.absenteismo > 3.4 ? "#FF453A" : "#FA4C00"} />
+          <KpiCard label="Absenteísmo" value={`${kpis.absenteismo}%`} highlight="warning" textColor={kpis.absenteismo < 2 ? "#34C759" : "#FF453A"} />
           <KpiCard label="Diaristas Planejados" value={kpis.diaristasPlanejados} />
           <KpiCard label="Diaristas Presentes" value={kpis.diaristasPresentes} />
           <KpiCard label="Aderência DW" value={`${kpis.aderenciaDW}%`} highlight="success" />
@@ -265,7 +265,7 @@ export default function OperationalReport({ report }) {
                     </div>
                     <div className="flex justify-between pt-2 border-t border-white/5">
                       <span className="text-[#BFBFC3]">Absenteísmo</span>
-                      <span className={e.absenteismo > 3.4 ? "text-[#FF453A]" : "text-[#34C759]"}>
+                      <span className={e.absenteismo < 2 ? "text-[#34C759]" : "text-[#FF453A]"}>
                         {e.absenteismo}%
                       </span>
                     </div>
