@@ -7,6 +7,7 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import EmployeeTable from "../components/EmployeeTable";
 import Pagination from "../components/Pagination";
+import LoadingScreen from "../components/LoadingScreen";
 import { ColaboradoresAPI } from "../services/colaboradores";
 
 export default function ColaboradoresPage() {
@@ -224,9 +225,7 @@ export default function ColaboradoresPage() {
           {/* LISTA */}
           <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden">
             {loading ? (
-              <div className="p-6 text-[#BFBFC3]">
-                Carregando colaboradores…
-              </div>
+              <LoadingScreen message="Carregando colaboradores..." />
             ) : employees.length === 0 ? (
               <div className="p-6 text-center text-[#BFBFC3]">
                 Nenhum colaborador encontrado. <br />

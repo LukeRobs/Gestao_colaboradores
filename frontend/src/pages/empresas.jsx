@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import LoadingScreen from "../components/LoadingScreen";
 import EmpresaModal from "../components/EmpresaModal";
 import EmpresaTable from "../components/EmpresaTable";
 import { EmpresasAPI } from "../services/empresas";
@@ -106,9 +107,7 @@ export default function EmpresasPage() {
           {/* ================= TABLE ================= */}
           <section className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl overflow-hidden">
             {loading ? (
-              <div className="p-10 text-center text-[#BFBFC3]">
-                Carregando empresas…
-              </div>
+              <LoadingScreen message="Carregando empresas..." />
             ) : empresas.length === 0 ? (
               <div className="p-10 text-center text-[#BFBFC3]">
                 Nenhuma empresa cadastrada

@@ -29,6 +29,7 @@ export default function EmployeeTable({ employees = [], onView }) {
                 "Setor",
                 "Empresa",
                 "Escala",
+                "Turno",
                 "Admissão",
                 "Status",
                 "",
@@ -93,6 +94,10 @@ export default function EmployeeTable({ employees = [], onView }) {
                   </td>
 
                   <td className="px-5 py-4 text-textSecondary">
+                    {emp.turno?.nomeTurno || "-"}
+                  </td>
+
+                  <td className="px-5 py-4 text-textSecondary">
                     {emp.dataAdmissao
                       ? new Date(emp.dataAdmissao).toLocaleDateString()
                       : "-"}
@@ -151,6 +156,7 @@ export default function EmployeeTable({ employees = [], onView }) {
               <div className="text-xs text-muted space-y-1">
                 <p>Setor: {emp.setor?.nomeSetor || "-"}</p>
                 <p>Empresa: {emp.empresa?.razaoSocial || "-"}</p>
+                <p>Turno: {emp.turno?.nomeTurno || "-"}</p>
 
                 <p>
                   Admissão:{" "}

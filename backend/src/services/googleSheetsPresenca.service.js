@@ -324,11 +324,16 @@ const sincronizarControlePresenca = async (prisma) => {
     const inicioMes = new Date(ano, mesNum - 1, 1);
     const fimMes = new Date(ano, mesNum, 0, 23, 59, 59);
 
-    // Buscar colaboradores ativos
+    // Buscar apenas Auxiliar de Logística I e II
     const colaboradores = await prisma.colaborador.findMany({
       where: {
         status: 'ATIVO',
         dataDesligamento: null,
+        cargo: {
+          nomeCargo: {
+            in: ["Auxiliar de Logística I", "Auxiliar de Logística II"]
+          }
+        },
       },
       include: { 
         turno: true, 

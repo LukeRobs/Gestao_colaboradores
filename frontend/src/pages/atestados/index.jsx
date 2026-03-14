@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import LoadingScreen from "../../components/LoadingScreen";
 import AtestadoCard from "../../components/AtestadoCard";
 import { AtestadosAPI } from "../../services/atestados";
 import api from "../../services/api";
@@ -130,7 +131,7 @@ export default function AtestadosPage() {
 
           {/* LISTA */}
           {loading ? (
-            <div className="text-[#BFBFC3]">Carregando atestados…</div>
+            <LoadingScreen message="Carregando atestados..." />
           ) : atestados.length === 0 ? (
             <div className="text-[#BFBFC3]">
               Nenhum atestado médico encontrado

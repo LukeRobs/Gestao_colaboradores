@@ -12,6 +12,7 @@ import {
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import LoadingScreen from "../../components/LoadingScreen";
 import { Badge } from "../../components/UIComponents";
 import api from "../../services/api";
 
@@ -66,11 +67,7 @@ export default function PerfilColaborador() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
-        Carregando perfil…
-      </div>
-    );
+    return <LoadingScreen message="Carregando perfil do colaborador..." />;
   }
 
   if (!colaborador) {

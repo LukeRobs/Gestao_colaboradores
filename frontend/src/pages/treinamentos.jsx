@@ -5,10 +5,12 @@ import {
   FileText,
   CheckCircle,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import LoadingScreen from "../components/LoadingScreen";
 
 import { TreinamentosAPI } from "../services/treinamentos";
 import { AuthContext } from "../context/AuthContext";
@@ -63,13 +65,15 @@ export default function TreinamentosPage() {
     );
   };
 
+  // Calcular estatísticas
+  const treinamentosFinalizados = treinamentos.filter(t => t.status === "FINALIZADO").length;
+  const treinamentosPendentes = treinamentos.filter(t => t.status !== "FINALIZADO").length;
+  const total = treinamentos.length;
+  const percentualRealizado = total > 0 ? Math.round((treinamentosFinalizados / total) * 100) : 0;
+
   /* ================= RENDER ================= */
   if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center text-[#BFBFC3]">
-        Carregando…
-      </div>
-    );
+    return <LoadingScreen message="Carregando treinamentos..." />;
   }
 
   if (erro) {
@@ -110,6 +114,77 @@ export default function TreinamentosPage() {
               <Plus size={16} />
               Novo Treinamento
             </button>
+          </div>
+
+          {/* ESTATÍSTICAS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card Total */}
+            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[#BFBFC3] mb-1">Total de Treinamentos</p>
+                  <p className="text-2xl font-bold text-white">{total}</p>
+                </div>
+                <div className="p-3 bg-[#FA4C00]/10 rounded-xl">
+                  <TrendingUp size={24} className="text-[#FA4C00]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Card Realizados */}
+            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[#BFBFC3] mb-1">Realizados</p>
+                  <p className="text-2xl font-bold text-[#34C759]">{treinamentosFinalizados}</p>
+                </div>
+                <div className="p-3 bg-[#34C759]/10 rounded-xl">
+                  <CheckCircle size={24} className="text-[#34C759]" />
+                </div>
+              </div>
+              
+              {/* Barra de progresso */}
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-[#BFBFC3] mb-2">
+                  <span>Progresso</span>
+                  <span>{percentualRealizado}%</span>
+                </div>
+                <div className="w-full bg-[#2A2A2C] rounded-full h-2">
+                  <div 
+                    className="bg-[#34C759] h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${percentualRealizado}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card Pendentes */}
+            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[#BFBFC3] mb-1">Pendentes</p>
+                  <p className="text-2xl font-bold text-[#FF9F0A]">{treinamentosPendentes}</p>
+                </div>
+                <div className="p-3 bg-[#FF9F0A]/10 rounded-xl">
+                  <Clock size={24} className="text-[#FF9F0A]" />
+                </div>
+              </div>
+              
+              {/* Indicador visual */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1 bg-[#2A2A2C] rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#FF9F0A] transition-all duration-500"
+                      style={{ width: `${total > 0 ? (treinamentosPendentes / total) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-xs text-[#BFBFC3]">
+                    {total > 0 ? Math.round((treinamentosPendentes / total) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* LISTAGEM */}

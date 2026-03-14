@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import LoadingScreen from "../components/LoadingScreen";
 import CargoModal from "../components/CargoModal";
 import CargoTable from "../components/CargoTable";
 import { CargosAPI } from "../services/cargos";
@@ -106,9 +107,7 @@ export default function CargosPage() {
           {/* TABLE */}
           <section className="bg-[#1A1A1C] rounded-xl border border-[#3D3D40] overflow-hidden">
             {loading ? (
-              <div className="p-8 text-center text-[#BFBFC3]">
-                Carregando cargos...
-              </div>
+              <LoadingScreen message="Carregando cargos..." />
             ) : (
               <CargoTable
                 cargos={filtered}

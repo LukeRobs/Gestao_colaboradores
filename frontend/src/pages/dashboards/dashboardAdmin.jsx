@@ -12,6 +12,7 @@ import {
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import LoadingScreen from "../../components/LoadingScreen";
 
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import TurnoSelector from "../../components/dashboard/TurnoSelector";
@@ -303,11 +304,7 @@ export default function DashboardAdmin() {
   }, [dados.eventos]);
   /* ================= RENDER ================= */
   if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center text-[#BFBFC3]">
-        Carregando…
-      </div>
-    );
+    return <LoadingScreen message="Carregando dashboard..." />;
   }
 
   if (erro) {

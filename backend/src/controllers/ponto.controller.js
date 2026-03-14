@@ -480,6 +480,12 @@ const getControlePresenca = async (req, res) => {
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
+      // Filtrar apenas Auxiliar de Logística I e II
+      cargo: {
+        nomeCargo: {
+          in: ["Auxiliar de Logística I", "Auxiliar de Logística II"]
+        }
+      },
       ...(turno && turno !== "TODOS"
         ? { turno: { nomeTurno: turno } }
         : {}),
@@ -1045,10 +1051,15 @@ const exportarPresencaSheets = async (req, res) => {
 
     console.log(`[${reqId}] Período: ${inicioMes.toISOString()} até ${fimMes.toISOString()}`);
 
-    // Exporta sempre completo, sem filtros de turno/escala/lider
+    // Exporta apenas Auxiliar de Logística I e II
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
+      cargo: {
+        nomeCargo: {
+          in: ["Auxiliar de Logística I", "Auxiliar de Logística II"]
+        }
+      },
     };
 
     console.log(`[${reqId}] Buscando colaboradores...`);

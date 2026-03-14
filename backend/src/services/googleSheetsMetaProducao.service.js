@@ -546,9 +546,150 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
   }
 }
 
+/* =====================================================
+   BUSCAR PRODUTIVIDADE DETALHADA POR COLABORADOR
+===================================================== */
+async function buscarProdutividadeDetalhada(dataISO, turno) {
+  try {
+    console.log("🔍 Iniciando busca de produtividade detalhada:", { dataISO, turno });
+    
+    const rows = await carregarAtualizacaoColaborador();
+    const logicRows = await carregarLogic();
+    const dataBusca = formatarData(dataISO);
+
+    if (!rows || rows.length < 5) {
+      console.warn("⚠️ Planilha vazia ou sem dados suficientes");
+      return { success: false, data: [] };
+    }
+
+    // Criar mapa de colaboradores por turno
+    const removerAcentos = (str) =>
+      String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+    const colaboradoresPorTurno = new Map();
+    for (let i = 1; i < logicRows.length; i++) {
+      const row = logicRows[i];
+      if (!row || row.length < 2) continue;
+      
+      const nome = normalizar(row[0]);
+      const turnoColaborador = normalizar(row[1]);
+      
+      if (nome && turnoColaborador) {
+        // Guardar com e sem acentos para melhor matching
+        colaboradoresPorTurno.set(nome.toLowerCase(), turnoColaborador);
+        colaboradoresPorTurno.set(removerAcentos(nome), turnoColaborador);
+      }
+    }
+
+    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} entradas na aba Logic`);
+
+    const linhaDatas = rows[3];
+    const linhaHoras = rows[4];
+
+    console.log("📋 Primeiras 5 datas da planilha:", linhaDatas?.slice(1, 6));
+    console.log("📋 Primeiras 5 horas da planilha:", linhaHoras?.slice(1, 6));
+    console.log("📋 Data buscada:", dataBusca);
+    
+    // Identificar colunas que correspondem à data buscada
+    const colunasData = [];
+    for (let colIndex = 1; colIndex < linhaDatas.length; colIndex++) {
+      const dataColuna = normalizar(linhaDatas[colIndex]);
+      if (dataColuna === dataBusca) {
+        colunasData.push(colIndex);
+      }
+    }
+
+    console.log(`📋 Colunas encontradas para ${dataBusca}: ${colunasData.length}`);
+
+    if (colunasData.length === 0) {
+      console.warn("⚠️ Nenhuma coluna encontrada para a data:", dataBusca);
+      // Retornar colaboradores sem dados (todos zerados) em vez de falhar
+      return { success: true, data: [] };
+    }
+
+    // Processar colaboradores com dados por hora
+    const colaboradores = [];
+    let totalLinhasProcessadas = 0;
+    let totalFiltradas = 0;
+    
+    for (let rowIndex = 5; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
+      
+      if (!row || row.length === 0) continue;
+      
+      const nomeColaborador = normalizar(row[0]);
+      
+      if (!nomeColaborador || 
+          nomeColaborador.toLowerCase().includes('total') ||
+          nomeColaborador.toLowerCase().includes('user email') ||
+          nomeColaborador === 'User Email') {
+        continue;
+      }
+
+      totalLinhasProcessadas++;
+
+      // Tentar matching com e sem acentos
+      const turnoColaborador = 
+        colaboradoresPorTurno.get(nomeColaborador.toLowerCase()) ||
+        colaboradoresPorTurno.get(removerAcentos(nomeColaborador));
+      
+      if (!turnoColaborador || turnoColaborador !== turno) {
+        continue;
+      }
+
+      totalFiltradas++;
+
+      // Coletar dados por hora
+      const dadosPorHora = {};
+      let totalProducao = 0;
+      
+      for (const colIndex of colunasData) {
+        const horaStr = normalizar(linhaHoras[colIndex]);
+        const valorColuna = row[colIndex];
+        
+        if (horaStr) {
+          const hora = parseInt(horaStr.split(':')[0]);
+          
+          if (!isNaN(hora)) {
+            let quantidade = 0;
+            if (valorColuna && valorColuna !== "") {
+              const valorStr = String(valorColuna).trim().replace(/\./g, '').replace(',', '.');
+              quantidade = Math.round(parseFloat(valorStr) || 0);
+            }
+            // Acumular por hora (pode ter múltiplas colunas para a mesma hora)
+            dadosPorHora[hora] = (dadosPorHora[hora] || 0) + quantidade;
+            totalProducao += quantidade;
+          }
+        }
+      }
+
+      colaboradores.push({
+        nome: nomeColaborador,
+        dadosPorHora,
+        total: totalProducao
+      });
+    }
+
+    console.log(`✅ Produtividade detalhada: ${colaboradores.length} colaboradores do ${turno}`);
+    console.log(`📊 Total linhas processadas: ${totalLinhasProcessadas}, filtradas por turno: ${totalFiltradas}`);
+    if (colaboradores.length > 0) {
+      console.log("📋 Primeiros 3:", colaboradores.slice(0, 3).map(c => `${c.nome}: ${c.total}`));
+    }
+
+    return {
+      success: true,
+      data: colaboradores
+    };
+  } catch (error) {
+    console.error("❌ Erro ao buscar produtividade detalhada:", error.message);
+    return { success: false, data: [] };
+  }
+}
+
 module.exports = {
   buscarMetasProducao,
   buscarQuantidadeRealizada,
   buscarRankingColaboradores,
+  buscarProdutividadeDetalhada,
   limparCache,
 };

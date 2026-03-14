@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import LoadingScreen from "../../components/LoadingScreen";
 import AcidenteCard from "../../components/AcidenteCard";
 import { AcidentesAPI } from "../../services/acidentes";
 
@@ -60,7 +61,7 @@ export default function AcidentesPage() {
           </div>
 
           {loading ? (
-            <div className="text-center text-[#BFBFC3] py-10">Carregando acidentes…</div>
+            <LoadingScreen message="Carregando acidentes..." />
           ) : acidentes.length === 0 ? (
             <div className="text-center text-[#BFBFC3] py-10">Nenhum acidente registrado.</div>
           ) : (
