@@ -19,7 +19,9 @@ export default function SugestoesMedidaDisciplinar() {
 
     try {
       const res = await api.get("/medidas-disciplinares/sugestoes");
-      setSugestoes(res.data.data || []);
+      setSugestoes(
+        (res.data.data || []).filter((s) => s.status !== "APROVADA")
+      );
     } catch (err) {
       console.error(err);
       alert("Erro ao carregar sugestões");
@@ -115,7 +117,7 @@ export default function SugestoesMedidaDisciplinar() {
             </div>
           ) : sugestoes.length === 0 ? (
             <div className="text-[#BFBFC3]">
-              Nenhuma sugestão pendente
+              Nenhuma sugestão disponível
             </div>
           ) : (
             <div className="space-y-4">
@@ -140,6 +142,8 @@ export default function SugestoesMedidaDisciplinar() {
 function SugestaoCard({ sugestao, onAprovar, onRejeitar, processing }) {
   const colaborador = sugestao.colaborador;
   const data = new Date(sugestao.dataReferencia).toLocaleDateString("pt-BR");
+
+  const status = sugestao.status;
 
   return (
     <div
@@ -167,45 +171,57 @@ function SugestaoCard({ sugestao, onAprovar, onRejeitar, processing }) {
         <p className="text-xs text-[#FA4C00]">
           Consequência sugerida: {sugestao.consequencia}
         </p>
+
+        {/* STATUS */}
+        {status === "REJEITADA" && (
+          <span className="inline-block mt-1 text-xs px-2 py-1 rounded bg-red-900 text-red-300">
+            Recusado
+          </span>
+        )}
       </div>
 
-      <div className="flex gap-3 shrink-0">
-        <button
-          onClick={() => onRejeitar(sugestao.idSugestao)}
-          disabled={processing}
-          className="
-            flex items-center gap-2
-            px-3 py-2
-            rounded-lg
-            bg-[#2A2A2C]
-            hover:bg-[#3A3A3C]
-            text-sm
-            disabled:opacity-50
-            disabled:cursor-not-allowed
-          "
-        >
-          <X size={16} />
-          {processing ? "Processando..." : "Rejeitar"}
-        </button>
+      {/* AÇÕES */}
+      {status === "PENDENTE" && (
+        <div className="flex gap-3 shrink-0">
 
-        <button
-          disabled={processing}
-          onClick={onAprovar}
-          className="
-            flex items-center gap-2
-            px-3 py-2
-            rounded-lg
-            bg-[#FA4C00]
-            hover:bg-[#ff5a1a]
-            text-sm
-            disabled:opacity-50
-            disabled:cursor-not-allowed
-          "
-        >
-          <Check size={16} />
-          {processing ? "Processando..." : "Aprovar"}
-        </button>
-      </div>
+          <button
+            onClick={() => onRejeitar(sugestao.idSugestao)}
+            disabled={processing}
+            className="
+              flex items-center gap-2
+              px-3 py-2
+              rounded-lg
+              bg-[#2A2A2C]
+              hover:bg-[#3A3A3C]
+              text-sm
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+            "
+          >
+            <X size={16} />
+            {processing ? "Processando..." : "Rejeitar"}
+          </button>
+
+          <button
+            disabled={processing}
+            onClick={onAprovar}
+            className="
+              flex items-center gap-2
+              px-3 py-2
+              rounded-lg
+              bg-[#FA4C00]
+              hover:bg-[#ff5a1a]
+              text-sm
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+            "
+          >
+            <Check size={16} />
+            {processing ? "Processando..." : "Aprovar"}
+          </button>
+
+        </div>
+      )}
     </div>
   );
 }
