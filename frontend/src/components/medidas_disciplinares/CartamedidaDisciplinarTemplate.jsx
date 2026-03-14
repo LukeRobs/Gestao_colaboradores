@@ -8,12 +8,13 @@ function fmtDateBR(dateLike) {
   return d.toLocaleDateString("pt-BR");
 }
 
-function fmtTimeBR(dateLike) {
-  if (!dateLike) return "";
+function fmtDateLong(dateLike) {
+  if (!dateLike) return "-";
   const d = new Date(dateLike);
-  return d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
+  return d.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
@@ -23,414 +24,257 @@ function normalizeCpf(cpf) {
   return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
+function getTipoAcao(tipoMedida) {
+  const t = (tipoMedida || "").toLowerCase();
+  if (t.includes("suspensão") || t.includes("suspensao")) return "suspenso(a)";
+  if (t.includes("demissão") || t.includes("demissao")) return "desligado(a)";
+  return "advertido(a)";
+}
+
 export default function CartaMedidaDisciplinarTemplate({
   medida,
   empresa = "SPX Express",
   unidade = "Operações",
 }) {
-
   if (!medida) return null;
 
-  const dataAplicacao = fmtDateBR(medida.dataAplicacao);
+  const dataAplicacaoLong = fmtDateLong(medida.dataAplicacao);
   const dataOcorrencia = fmtDateBR(medida.dataOcorrencia);
-  const horaGeracao = fmtTimeBR(new Date());
 
   const colaborador = medida.colaborador || {};
-
   const nomeColaborador = colaborador.nomeCompleto || "-";
   const cpfColaborador = normalizeCpf(colaborador.cpf);
   const matricula = colaborador.matricula || "-";
   const cargo = colaborador.cargo || "-";
 
+  const tipoMedida = medida.tipoMedida || "Advertência";
+  const tipoTitulo = tipoMedida.toUpperCase();
+  const tipoAcao = getTipoAcao(tipoMedida);
+
   return (
-
     <div className="page">
-
       <style>{`
-
-/* ================= A4 ================= */
-
-.page {
-  width: 210mm;
-  min-height: 297mm;
-  margin: auto;
-  padding: 24px;
-  font-family: Arial, Helvetica, sans-serif;
-  color: #111;
-  background: #fff;
-}
-
-/* ================= HEADER ================= */
-
-.header {
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  border-bottom:2px solid #FA4C00;
-  padding-bottom:10px;
-  margin-bottom:16px;
-}
-
-.company {
-  font-size:18px;
-  font-weight:700;
-}
-
-.sub {
-  font-size:13px;
-  color:#444;
-}
-
-.title {
-  font-size:20px;
-  font-weight:800;
-  color:#FA4C00;
-}
-
-.meta {
-  font-size:12px;
-  color:#444;
-}
-
-/* ================= SECTIONS ================= */
-
-.section {
-  margin-top:18px;
-}
-
-.section h2 {
-  font-size:13px;
-  text-transform:uppercase;
-  border-bottom:1px solid #e5e7eb;
-  padding-bottom:4px;
-  margin-bottom:8px;
-}
-
-/* ================= GRID ================= */
-
-.grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.field {
-  border:1px solid #e5e7eb;
-  border-radius:8px;
-  padding:10px;
-  background:#fafafa;
-}
-
-.label {
-  font-size:11px;
-  color:#666;
-  margin-bottom:3px;
-}
-
-.value {
-  font-size:13px;
-  font-weight:700;
-}
-
-/* ================= BOX ================= */
-
-.content-box {
-  border:1px solid #e5e7eb;
-  border-radius:10px;
-  padding:12px;
-  font-size:13px;
-  line-height:1.6;
-  background:#fafafa;
-  min-height:80px;
-  white-space:pre-wrap;
-}
-
-/* ================= ALERT ================= */
-
-.alert {
-  border:2px solid #FA4C00;
-  border-radius:10px;
-  padding:12px;
-  background:#FFF5F0;
-  margin-top:16px;
-}
-
-.alert-title {
-  font-weight:700;
-  color:#FA4C00;
-  margin-bottom:6px;
-}
-
-/* ================= ASSINATURAS ================= */
-
-.sign-grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-  margin-top:10px;
-}
-
-.sign {
-  border:1px solid #e5e7eb;
-  border-radius:10px;
-  padding:12px;
-}
-
-.line {
-  border-bottom:1px solid #111;
-  height:20px;
-  margin-top:10px;
-}
-
-.role {
-  font-size:11px;
-  color:#666;
-}
-
-/* ================= OBS ================= */
-
-.notes {
-  border:1px solid #e5e7eb;
-  border-radius:10px;
-  padding:12px;
-  min-height:80px;
-  background:#fafafa;
-}
-
-/* ================= PRINT ================= */
-
-@media print {
-
-  body {
-    background:#fff;
-  }
-
-  .page {
-    margin:0;
-    padding:0;
-    box-shadow:none;
-  }
-
-}
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .page {
+          width: 210mm;
+          min-height: 297mm;
+          margin: auto;
+          padding: 18mm 22mm 16mm;
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 12px;
+          color: #111;
+          background: #fff;
+          line-height: 1.55;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 2px solid #FA4C00;
+          padding-bottom: 8px;
+          margin-bottom: 14px;
+        }
+        .company { font-size: 17px; font-weight: 700; color: #FA4C00; }
+        .doc-info { text-align: right; }
+        .doc-title { font-size: 13px; font-weight: 700; color: #FA4C00; }
+        .doc-meta { font-size: 10px; color: #666; margin-top: 2px; }
+        .date-line { text-align: right; margin-bottom: 12px; }
+        .employee-block { margin-bottom: 12px; }
+        .employee-block p { margin-bottom: 3px; }
+        .main-title {
+          text-align: center;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          text-decoration: underline;
+          margin: 12px 0 10px;
+        }
+        .body-text { margin-bottom: 8px; text-align: justify; }
+        .details-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px 20px;
+          margin: 8px 0;
+          font-size: 11px;
+        }
+        .detail-label { color: #555; }
+        .detail-value { font-weight: 700; }
+        .motivo-block {
+          border-left: 3px solid #FA4C00;
+          padding: 7px 10px;
+          margin: 8px 0;
+          background: #FFFAF8;
+          font-style: italic;
+          text-align: justify;
+        }
+        .alert-text { margin: 10px 0; font-weight: 700; text-align: justify; }
+        .divider { border: none; border-top: 1px solid #ddd; margin: 14px 0; }
+        .sig-section { margin-top: 14px; }
+        .sig-section p { margin-bottom: 4px; font-size: 11px; color: #444; }
+        .sig-line {
+          border-bottom: 1px solid #111;
+          margin: 22px 0 3px;
+        }
+        .sig-label { font-size: 11px; color: #444; }
+        .sig-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-top: 10px;
+        }
+        .ciente-line {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+          margin-top: 14px;
+          font-size: 12px;
+        }
+        .ciente-blank {
+          display: inline-block;
+          border-bottom: 1px solid #111;
+          width: 50px;
+        }
+        .footer {
+          margin-top: 16px;
+          font-size: 9px;
+          color: #999;
+          text-align: center;
+          border-top: 1px solid #e5e7eb;
+          padding-top: 5px;
+        }
+        @media print {
+          body { background: #fff; }
+          .page { margin: 0; box-shadow: none; }
+        }
       `}</style>
 
       {/* HEADER */}
-
       <div className="header">
-
-        <div>
-          <div className="company">{empresa}</div>
-          <div className="sub">Unidade: {unidade}</div>
+        <div className="company">{empresa}</div>
+        <div className="doc-info">
+          <div className="doc-title">CARTA DE {tipoTitulo}</div>
+          <div className="doc-meta">Nº {medida.idMedida} · Emitida em: {fmtDateBR(new Date())}</div>
         </div>
-
-        <div style={{ textAlign: "right" }}>
-          <div className="title">CARTA DE MEDIDA DISCIPLINAR</div>
-
-          <div className="meta">
-            Nº <b>{medida.idMedida}</b>
-            <br />
-            Gerado em: {fmtDateBR(new Date())} às {horaGeracao}
-          </div>
-        </div>
-
       </div>
 
-      {/* COLABORADOR */}
-
-      <div className="section">
-
-        <h2>Dados do Colaborador</h2>
-
-        <div className="grid">
-
-          <div className="field">
-            <div className="label">Nome Completo</div>
-            <div className="value">{nomeColaborador}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">CPF</div>
-            <div className="value">{cpfColaborador}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">Matrícula</div>
-            <div className="value">{matricula}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">Cargo</div>
-            <div className="value">{cargo}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">OPS ID</div>
-            <div className="value">{medida.opsId || "-"}</div>
-          </div>
-
-        </div>
-
+      {/* DATA E LOCAL */}
+      <div className="date-line">
+        {unidade}, {dataAplicacaoLong}
       </div>
 
-      {/* MEDIDA */}
+      {/* DADOS DO COLABORADOR */}
+      <div className="employee-block">
+        <p><strong>NOME COMPLETO:</strong> {nomeColaborador}</p>
+        <p><strong>STAFF ID:</strong> {matricula} &nbsp;|&nbsp; <strong>CPF:</strong> {cpfColaborador}</p>
+        <p><strong>Cargo:</strong> {cargo}</p>
+      </div>
 
-      <div className="section">
+      {/* TÍTULO */}
+      <div className="main-title">CARTA DE {tipoTitulo}</div>
 
-        <h2>Detalhes da Medida</h2>
+      {/* INTRO */}
+      <p className="body-text">
+        Pela presente fica V. Sr(a). <strong>{tipoAcao}</strong>, em razão das irregularidades abaixo discriminadas:
+      </p>
 
-        <div className="grid">
-
-          <div className="field">
-            <div className="label">Tipo</div>
-            <div className="value">{medida.tipoMedida || "-"}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">Nível Violação</div>
-            <div className="value">{medida.nivelViolacao || "-"}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">Violação</div>
-            <div className="value">{medida.violacao || "-"}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">Data Ocorrência</div>
-            <div className="value">{dataOcorrencia}</div>
-          </div>
-
-          <div className="field">
-            <div className="label">Data Aplicação</div>
-            <div className="value">{dataAplicacao}</div>
-          </div>
-
-          {medida.diasSuspensao && (
-            <div className="field">
-              <div className="label">Dias Suspensão</div>
-              <div className="value">{medida.diasSuspensao}</div>
-            </div>
-          )}
-
-        </div>
-
+      {/* DETALHES DA MEDIDA */}
+      <div className="details-row">
+        {medida.violacao && (
+          <span>
+            <span className="detail-label">Violação: </span>
+            <span className="detail-value">{medida.violacao}</span>
+          </span>
+        )}
+        {medida.nivelViolacao && (
+          <span>
+            <span className="detail-label">Nível: </span>
+            <span className="detail-value">{medida.nivelViolacao}</span>
+          </span>
+        )}
+        <span>
+          <span className="detail-label">Data da ocorrência: </span>
+          <span className="detail-value">{dataOcorrencia}</span>
+        </span>
+        {medida.opsId && (
+          <span>
+            <span className="detail-label">OPS ID: </span>
+            <span className="detail-value">{medida.opsId}</span>
+          </span>
+        )}
+        {medida.diasSuspensao && (
+          <span>
+            <span className="detail-label">Dias de suspensão: </span>
+            <span className="detail-value">{medida.diasSuspensao}</span>
+          </span>
+        )}
       </div>
 
       {/* MOTIVO */}
-
-      <div className="section">
-
-        <h2>Motivo</h2>
-
-        <div className="content-box">
-          {medida.motivo || "Nenhum motivo informado"}
-        </div>
-
+      <div className="motivo-block">
+        {medida.motivo || "Nenhum motivo informado."}
       </div>
 
-      {/* ALERT */}
+      {/* CLT */}
+      <p className="alert-text">
+        Lembramos que na reincidência deste comportamento, serão tomadas medidas
+        punitivas mais severas, conforme artigo 482 da Consolidação das Leis do
+        Trabalho - CLT.
+      </p>
 
-      <div className="alert">
+      <hr className="divider" />
 
-        <div className="alert-title">IMPORTANTE</div>
-
-        <div className="alert-text">
-          <b>
-          Lembramos que na reincidência deste comportamento,
-          serão tomadas medidas punitivas mais severas,
-          conforme o Artigo 482 da Consolidação das Leis do Trabalho (CLT).
-          </b>
+      {/* CIÊNCIA DO COLABORADOR */}
+      <div className="sig-section">
+        <div className="ciente-line">
+          <span>Ciente:</span>
+          <span className="ciente-blank"></span>
+          <span>/</span>
+          <span className="ciente-blank"></span>
+          <span>/</span>
+          <span className="ciente-blank" style={{ width: 60 }}></span>
         </div>
-
-      </div>
-
-      {/* CIÊNCIA */}
-
-      <div className="section">
-
-        <h2>Ciência do Colaborador</h2>
-
-        <div className="sign">
-          <div>{nomeColaborador}</div>
-          <div className="role">Colaborador</div>
-          <div className="line"></div>
-          <div className="label">Assinatura e Data</div>
+        <div style={{ marginTop: 4 }}>
+          <div className="sig-line"></div>
+          <div className="sig-label">{nomeColaborador}</div>
         </div>
-
       </div>
 
       {/* TESTEMUNHAS */}
-
-      <div className="section">
-
-        <h2>Testemunhas (caso o colaborador se recuse a assinar)</h2>
-
-        <div style={{fontSize:"12px",marginBottom:"10px"}}>
-          Caso o colaborador se recuse a assinar este documento,
-          a recusa será registrada na presença das testemunhas abaixo.
-        </div>
-
-        <div className="sign-grid">
-
-          <div className="sign">
-            <div>Testemunha 1</div>
-            <div className="line"></div>
-            <div className="role">Nome e assinatura</div>
+      <div className="sig-section" style={{ marginTop: 12 }}>
+        <p>
+          <strong>Testemunhas</strong>{" "}
+          <span style={{ fontStyle: "italic" }}>
+            (caso o colaborador se recuse a assinar)
+          </span>
+        </p>
+        <div className="sig-grid">
+          <div>
+            <div className="sig-line"></div>
+            <div className="sig-label">Nome e assinatura</div>
           </div>
-
-          <div className="sign">
-            <div>Testemunha 2</div>
-            <div className="line"></div>
-            <div className="role">Nome e assinatura</div>
+          <div>
+            <div className="sig-line"></div>
+            <div className="sig-label">Nome e assinatura</div>
           </div>
-
         </div>
-
       </div>
 
-      {/* ASSINATURAS */}
-
-      <div className="section">
-
-        <h2>Validações</h2>
-
-        <div className="sign-grid">
-
-          <div className="sign">
-            <div>Gestor Imediato</div>
-            <div className="role">Supervisor</div>
-            <div className="line"></div>
-          </div>
-
-          <div className="sign">
-            <div>RH</div>
-            <div className="role">Gestão de Pessoas</div>
-            <div className="line"></div>
-          </div>
-
+      {/* VALIDAÇÕES */}
+      <div className="sig-grid" style={{ marginTop: 14 }}>
+        <div>
+          <div className="sig-line"></div>
+          <div className="sig-label">Gestor Imediato / Supervisor</div>
         </div>
-
-      </div>
-
-      {/* OBS */}
-
-      <div className="section">
-
-        <h2>Observações</h2>
-
-        <div className="notes"></div>
-
+        <div>
+          <div className="sig-line"></div>
+          <div className="sig-label">RH / Gestão de Pessoas</div>
+        </div>
       </div>
 
       {/* FOOTER */}
-
-      <div style={{ marginTop: 14, fontSize: 10, color: "#444" }}>
-        Documento interno • Controle de Medidas Disciplinares • {empresa}
+      <div className="footer">
+        Documento interno · Controle de Medidas Disciplinares · {empresa}
       </div>
-
     </div>
-
   );
-
 }
