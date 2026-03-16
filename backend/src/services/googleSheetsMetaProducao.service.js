@@ -566,22 +566,43 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
     const removerAcentos = (str) =>
       String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-    const colaboradoresPorTurno = new Map();
+    // Extrai o OpsId do formato "[Ops12345]NOME" → "ops12345"
+    const extrairOpsId = (str) => {
+      const match = String(str).match(/\[([^\]]+)\]/);
+      return match ? match[1].toLowerCase() : null;
+    };
+
+    // Extrai o nome limpo do formato "[Ops12345]NOME" → "NOME"
+    const extrairNomeLimpo = (str) => {
+      return String(str).replace(/^\[[^\]]+\]/, '').trim();
+    };
+
+    const colaboradoresPorTurno = new Map(); // chave: opsId lowercase → turno
+    const colaboradoresPorTurnoNome = new Map(); // chave: nome normalizado → turno
     for (let i = 1; i < logicRows.length; i++) {
       const row = logicRows[i];
       if (!row || row.length < 2) continue;
       
-      const nome = normalizar(row[0]);
+      const celula = normalizar(row[0]);
       const turnoColaborador = normalizar(row[1]);
       
-      if (nome && turnoColaborador) {
-        // Guardar com e sem acentos para melhor matching
-        colaboradoresPorTurno.set(nome.toLowerCase(), turnoColaborador);
-        colaboradoresPorTurno.set(removerAcentos(nome), turnoColaborador);
+      if (!celula || !turnoColaborador) continue;
+
+      // Indexar por OpsId
+      const opsId = extrairOpsId(celula);
+      if (opsId) {
+        colaboradoresPorTurno.set(opsId, turnoColaborador);
+      }
+
+      // Indexar por nome limpo (fallback)
+      const nomeLimpo = extrairNomeLimpo(celula);
+      if (nomeLimpo) {
+        colaboradoresPorTurnoNome.set(nomeLimpo.toLowerCase(), turnoColaborador);
+        colaboradoresPorTurnoNome.set(removerAcentos(nomeLimpo), turnoColaborador);
       }
     }
 
-    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} entradas na aba Logic`);
+    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} entradas (por OpsId) na aba Logic`);
 
     const linhaDatas = rows[3];
     const linhaHoras = rows[4];
@@ -628,10 +649,15 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
 
       totalLinhasProcessadas++;
 
-      // Tentar matching com e sem acentos
+      // Extrair OpsId e nome limpo da célula (formato "[Ops12345]NOME" ou só "NOME")
+      const opsIdLinha = extrairOpsId(nomeColaborador);
+      const nomeLimpoLinha = extrairNomeLimpo(nomeColaborador);
+
+      // Matching por OpsId primeiro, depois por nome como fallback
       const turnoColaborador = 
-        colaboradoresPorTurno.get(nomeColaborador.toLowerCase()) ||
-        colaboradoresPorTurno.get(removerAcentos(nomeColaborador));
+        (opsIdLinha && colaboradoresPorTurno.get(opsIdLinha)) ||
+        colaboradoresPorTurnoNome.get(nomeLimpoLinha.toLowerCase()) ||
+        colaboradoresPorTurnoNome.get(removerAcentos(nomeLimpoLinha));
       
       if (!turnoColaborador || turnoColaborador !== turno) {
         continue;
@@ -664,7 +690,8 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
       }
 
       colaboradores.push({
-        nome: nomeColaborador,
+        nome: nomeLimpoLinha || nomeColaborador, // usar nome limpo para matching com o banco
+        opsId: opsIdLinha,
         dadosPorHora,
         total: totalProducao
       });

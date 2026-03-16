@@ -155,6 +155,16 @@ export default function PontoPage() {
               {loading ? "Registrando..." : "Registrar Ponto"}
             </button>
 
+            {/* LINK PRODUTIVIDADE — apenas para OPERACAO */}
+            {isKiosk && (
+              <button
+                onClick={() => navigate("/dashboard/produtividade-colaborador")}
+                className="w-full rounded-xl font-semibold border border-[#3D3D40] text-[#BFBFC3] hover:bg-[#2A2A2C] transition h-12 text-base"
+              >
+                Ver Produtividade por Colaborador
+              </button>
+            )}
+
             {/* FEEDBACK */}
             {msg && (
               <div
