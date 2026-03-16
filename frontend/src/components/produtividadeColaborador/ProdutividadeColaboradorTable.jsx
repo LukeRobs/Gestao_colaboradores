@@ -71,9 +71,9 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
 
   const obterCorQuantidade = (quantidade) => {
     if (quantidade === 0) return "text-gray-400";
-    if (quantidade >= 1000) return "text-green-400 font-semibold";
-    if (quantidade >= 500) return "text-yellow-400 font-semibold";
-    return "text-white";
+    if (quantidade >= 700) return "bg-green-200 text-green-900 font-semibold rounded px-1";
+    if (quantidade < 500) return "bg-red-200 text-red-900 font-semibold rounded px-1";
+    return "bg-yellow-100 text-yellow-900 font-semibold rounded px-1"; // entre 500 e 699
   };
 
   const obterIconeRanking = (posicao) => {

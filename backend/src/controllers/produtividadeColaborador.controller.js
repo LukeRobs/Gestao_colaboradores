@@ -70,13 +70,18 @@ const carregarProdutividadeColaborador = async (req, res) => {
       console.log("📋 Primeiros 3 nomes do banco:", colaboradores.slice(0, 3).map(c => c.nomeCompleto));
     }
 
-    // Criar mapa de produção por nome (normalizado - sem acentos, lowercase)
+    // Criar mapa de produção por nome normalizado e por opsId
     const removerAcentos = (str) =>
       str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
     const producaoPorNome = new Map();
+    const producaoPorOpsId = new Map();
     dadosPlanilha.forEach(item => {
       producaoPorNome.set(removerAcentos(item.nome), item);
+      if (item.opsId) {
+        // opsId da planilha vem como "ops108260", banco tem "Ops108260"
+        producaoPorOpsId.set(item.opsId.toLowerCase(), item);
+      }
     });
 
     let matchesEncontrados = 0;
@@ -101,9 +106,12 @@ const carregarProdutividadeColaborador = async (req, res) => {
         dadosHoras[`${hora.toString().padStart(2, '0')}:00`] = 0;
       });
 
-      // Buscar dados da planilha por nome (sem acentos para melhor matching)
+      // Buscar dados da planilha por OpsId primeiro, depois por nome como fallback
       const nomeNormalizado = removerAcentos(colaborador.nomeCompleto);
-      const dadosProducao = producaoPorNome.get(nomeNormalizado);
+      const opsIdNormalizado = colaborador.opsId?.toLowerCase();
+      const dadosProducao = 
+        (opsIdNormalizado && producaoPorOpsId.get(opsIdNormalizado)) ||
+        producaoPorNome.get(nomeNormalizado);
 
       if (dadosProducao && dadosProducao.dadosPorHora) {
         matchesEncontrados++;

@@ -147,7 +147,7 @@ export default function App() {
       <Route
         path="/dashboard/produtividade-colaborador"
         element={
-          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA", "OPERACAO"]}>
             <ProdutividadeColaborador />
           </ProtectedRoute>
         }

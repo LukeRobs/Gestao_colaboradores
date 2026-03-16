@@ -120,8 +120,12 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
           periodoFormatado = inicio
         }
       }
-      
-      const textoInfo = `Report Hora x Hora\nData: ${periodoFormatado}\nTurno: ${metadata.turno || 'N/A'}`
+
+      // Título da mensagem baseado no grupo de destino
+      const isRelatorioOperacional = groupId === process.env.SEATALK_GROUP_ID
+      const tituloReport = isRelatorioOperacional ? 'Report Relatório Operacional' : 'Report Hora x Hora'
+
+      const textoInfo = `${tituloReport}\nData: ${periodoFormatado}\nTurno: ${metadata.turno || 'N/A'}`
       
       console.log("💬 [SEATALK] Enviando texto informativo...")
       
