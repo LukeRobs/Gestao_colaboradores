@@ -58,31 +58,56 @@ const carregarProdutividadeColaborador = async (req, res) => {
 
     console.log(`✅ Encontrados ${colaboradores.length} colaboradores no ${turno}`);
 
-    // Buscar dados de produção detalhada da planilha
-    const produtividadeResult = await buscarProdutividadeDetalhada(dataStr, turno);
-    const dadosPlanilha = produtividadeResult.success ? produtividadeResult.data : [];
+    // Tentar buscar do histórico salvo no banco primeiro
+    // Usar gte/lt para evitar problemas de timezone com campo DATE
+    const dataInicio = new Date(`${dataStr}T00:00:00.000Z`);
+    const dataFim = new Date(`${dataStr}T23:59:59.999Z`);
 
-    console.log(`✅ Dados da planilha: ${dadosPlanilha.length} colaboradores`);
-    if (dadosPlanilha.length > 0) {
-      console.log("📋 Primeiros 3 nomes da planilha:", dadosPlanilha.slice(0, 3).map(d => d.nome));
-    }
-    if (colaboradores.length > 0) {
-      console.log("📋 Primeiros 3 nomes do banco:", colaboradores.slice(0, 3).map(c => c.nomeCompleto));
+    const historicoSalvo = await prisma.producaoColaboradorHistorico.findMany({
+      where: {
+        dataReferencia: { gte: dataInicio, lte: dataFim },
+        turno,
+      },
+    });
+
+    console.log(`🗄️ Histórico no banco para ${dataStr} / ${turno}: ${historicoSalvo.length} registros`);
+    if (historicoSalvo.length > 0) {
+      const comProducao = historicoSalvo.filter(h => h.total > 0).length;
+      console.log(`📊 Registros com produção > 0: ${comProducao}`);
     }
 
-    // Criar mapa de produção por nome normalizado e por opsId
     const removerAcentos = (str) =>
       str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
     const producaoPorNome = new Map();
     const producaoPorOpsId = new Map();
-    dadosPlanilha.forEach(item => {
-      producaoPorNome.set(removerAcentos(item.nome), item);
-      if (item.opsId) {
-        // opsId da planilha vem como "ops108260", banco tem "Ops108260"
-        producaoPorOpsId.set(item.opsId.toLowerCase(), item);
-      }
-    });
+
+    if (historicoSalvo.length > 0) {
+      // Usar dados do banco
+      console.log("✅ Usando dados do histórico salvo no banco");
+      historicoSalvo.forEach(item => {
+        const dadosPorHora = typeof item.dadosPorHora === "string"
+          ? JSON.parse(item.dadosPorHora)
+          : item.dadosPorHora || {};
+        const mapped = { nome: item.nomeCompleto, opsId: item.opsId, total: item.total, dadosPorHora };
+        producaoPorNome.set(removerAcentos(item.nomeCompleto), mapped);
+        if (item.opsId) producaoPorOpsId.set(item.opsId.toLowerCase(), mapped);
+      });
+    } else {
+      // Fallback: buscar da planilha em tempo real
+      console.log("⚠️ Sem histórico no banco, buscando da planilha...");
+      const produtividadeResult = await buscarProdutividadeDetalhada(dataStr, turno);
+      const dadosPlanilha = produtividadeResult.success ? produtividadeResult.data : [];
+      console.log(`✅ Dados da planilha: ${dadosPlanilha.length} colaboradores`);
+      dadosPlanilha.forEach(item => {
+        producaoPorNome.set(removerAcentos(item.nome), item);
+        if (item.opsId) producaoPorOpsId.set(item.opsId.toLowerCase(), item);
+      });
+    }
+
+    if (colaboradores.length > 0) {
+      console.log("📋 Primeiros 3 nomes do banco:", colaboradores.slice(0, 3).map(c => c.nomeCompleto));
+    }
 
     let matchesEncontrados = 0;
 
@@ -116,7 +141,8 @@ const carregarProdutividadeColaborador = async (req, res) => {
       if (dadosProducao && dadosProducao.dadosPorHora) {
         matchesEncontrados++;
         horasTurno.forEach(hora => {
-          const quantidade = dadosProducao.dadosPorHora[hora] || 0;
+          // Chaves podem ser number ou string dependendo da origem (planilha vs banco)
+          const quantidade = dadosProducao.dadosPorHora[hora] ?? dadosProducao.dadosPorHora[String(hora)] ?? 0;
           dadosHoras[`${hora.toString().padStart(2, '0')}:00`] = quantidade;
           totalIndividual += quantidade;
         });

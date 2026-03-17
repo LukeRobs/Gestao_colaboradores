@@ -62,6 +62,9 @@ async function sendReportToSeatalk(req, res, next) {
     } else if (reportType === "operacional") {
       groupId = process.env.SEATALK_GROUP_ID
       console.log("📊 [SEATALK] Tipo: Relatório Operacional")
+    } else if (reportType === "produtividadeColaborador") {
+      groupId = process.env.SEATALK_GROUP_ID_GESTAO
+      console.log("📊 [SEATALK] Tipo: Produtividade por Colaborador")
     } else {
       // Fallback para compatibilidade com versões antigas
       groupId = process.env.SEATALK_GROUP_ID_GESTAO || process.env.SEATALK_GROUP_ID

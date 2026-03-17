@@ -502,6 +502,7 @@ const updateColaborador = async (req, res) => {
 
       dataDesligamento,
       motivoDesligamento,
+      tipoDesligamento,
       dataInicioStatus,
       dataFimStatus,
     } = req.body;
@@ -550,6 +551,20 @@ const updateColaborador = async (req, res) => {
         );
       }
 
+      if (!tipoDesligamento) {
+        return errorResponse(
+          res,
+          "Tipo de desligamento é obrigatório para INATIVO",
+          400
+        );
+      }
+
+      // 🔒 VALIDA ENUM TIPO
+      const TIPOS_VALIDOS = ["DV", "DF", "DP"];
+      if (!TIPOS_VALIDOS.includes(tipoDesligamento)) {
+        return errorResponse(res, "Tipo de desligamento inválido", 400);
+      }
+
       // 🔒 VALIDA ENUM
       const MOTIVOS_VALIDOS = [
         "SEGURANCA",
@@ -583,6 +598,7 @@ const updateColaborador = async (req, res) => {
 
       data.dataDesligamento = dt;
       data.motivoDesligamento = motivoDesligamento;
+      data.tipoDesligamento = tipoDesligamento;
 
       // limpa status temporário
       data.dataInicioStatus = null;
@@ -620,12 +636,14 @@ const updateColaborador = async (req, res) => {
         // limpa demissão
         data.dataDesligamento = null;
         data.motivoDesligamento = null;
+        data.tipoDesligamento = null;
       }
 
       // 🟢 ATIVO → limpa todos os campos de status temporário
       if (status === "ATIVO") {
         data.dataDesligamento = null;
         data.motivoDesligamento = null;
+        data.tipoDesligamento = null;
         data.dataInicioStatus = null;
         data.dataFimStatus = null;
       }

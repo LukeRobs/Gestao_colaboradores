@@ -88,24 +88,26 @@ export default function ProdutividadeColaborador() {
                 </div>
               </div>
 
-              {/* Seletor de turno para OPERACAO */}
-              {isOperacao && (
-                <div className="flex gap-2 shrink-0">
-                  {["T1", "T2", "T3"].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTurno(t)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
-                        turno === t
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : "bg-[#1A1A1C] border-[#2A2A2C] text-[#BFBFC3] hover:bg-[#2A2A2C]"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex items-center gap-3 shrink-0">
+                {/* Seletor de turno para OPERACAO */}
+                {isOperacao && (
+                  <div className="flex gap-2">
+                    {["T1", "T2", "T3"].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setTurno(t)}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                          turno === t
+                            ? "bg-blue-600 border-blue-600 text-white"
+                            : "bg-[#1A1A1C] border-[#2A2A2C] text-[#BFBFC3] hover:bg-[#2A2A2C]"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Filtros — apenas para não-OPERACAO */}

@@ -8,6 +8,12 @@ import api from "../../services/api";
 
 const HORARIOS = ["05:25", "13:20", "21:00"];
 
+const TIPOS_DESLIGAMENTO = [
+  { value: "DV", label: "DV: Desligamento Voluntário" },
+  { value: "DF", label: "DF: Desligamento Forçado" },
+  { value: "DP", label: "DP: Desligamento Planejado" },
+];
+
 const MOTIVOS_DESLIGAMENTO = [
   { value: "SEGURANCA", label: "Segurança" },
   { value: "ALTO_INDICE_ABS", label: "Alto índice de ABS" },
@@ -47,6 +53,7 @@ export default function EditarColaborador() {
     status: "ATIVO",
     dataDemissao: "",
     motivoDesligamento: "",
+    tipoDesligamento: "",
     dataInicioStatus: "",
     dataFimStatus: "",
   });
@@ -83,6 +90,7 @@ export default function EditarColaborador() {
           status: c.status || "ATIVO",
           dataDemissao: c.dataDesligamento ? c.dataDesligamento.substring(0, 10) : "",
           motivoDesligamento: c.motivoDesligamento || "",
+          tipoDesligamento: c.tipoDesligamento || "",
           dataInicioStatus: c.dataInicioStatus ? c.dataInicioStatus.substring(0, 10) : "",
           dataFimStatus: c.dataFimStatus ? c.dataFimStatus.substring(0, 10) : "",
         });
@@ -107,7 +115,8 @@ export default function EditarColaborador() {
           ...prev,
           status: value,
           dataInicioStatus: "",
-          dataFimStatus: ""
+          dataFimStatus: "",
+          tipoDesligamento: "",
         }));
         return;
       }
@@ -147,6 +156,9 @@ export default function EditarColaborador() {
       if (form.status === "INATIVO" && !form.motivoDesligamento) {
         return alert("Informe o motivo do desligamento.");
       }
+      if (form.status === "INATIVO" && !form.tipoDesligamento) {
+        return alert("Informe o tipo de desligamento (DV, DF ou DP).");
+      }
       if (
         form.status === "INATIVO" &&
         form.dataAdmissao &&
@@ -177,6 +189,7 @@ export default function EditarColaborador() {
         status: form.status,
         dataDesligamento: form.dataDemissao || null,
         motivoDesligamento: form.motivoDesligamento || null,
+        tipoDesligamento: form.tipoDesligamento || null,
         dataInicioStatus: form.dataInicioStatus || null,
         dataFimStatus: form.dataFimStatus || null,
       };
@@ -324,6 +337,14 @@ export default function EditarColaborador() {
                   value={form.motivoDesligamento}
                   onChange={handleChange}
                   options={MOTIVOS_DESLIGAMENTO}
+                />
+
+                <Select
+                  name="tipoDesligamento"
+                  label="Tipo de Desligamento *"
+                  value={form.tipoDesligamento}
+                  onChange={handleChange}
+                  options={TIPOS_DESLIGAMENTO}
                 />
               </>
             )}

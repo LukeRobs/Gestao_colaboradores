@@ -227,6 +227,7 @@ model Colaborador {
   dataAdmissao               DateTime                    @map("data_admissao") @db.Date
   dataDesligamento           DateTime?                   @map("data_desligamento") @db.Date
   motivoDesligamento         MotivoDesligamento?         @map("motivo_desligamento")
+  tipoDesligamento           TipoDesligamento?           @map("tipo_desligamento")
   dataInicioStatus           DateTime?                   @map("data_inicio_status") @db.Date
   dataFimStatus              DateTime?                   @map("data_fim_status") @db.Date
   horarioInicioJornada       DateTime                    @map("horario_inicio_jornada") @db.Time(6)
@@ -719,6 +720,12 @@ enum StatusSugestao {
   PENDENTE
   APROVADA
   REJEITADA
+}
+
+enum TipoDesligamento {
+  DV
+  DF
+  DP
 }
 
 enum MotivoDesligamento {

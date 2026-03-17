@@ -22,6 +22,31 @@ export default function GestaoOperacional() {
   const [ocultarHeader, setOcultarHeader] = useState(false);
   const mainContentRef = useRef(null);
 
+  // Contador regressivo em segundos até liberar o botão Seatalk
+  const [segundosParaSeatalk, setSegundosParaSeatalk] = useState(0);
+
+  useEffect(() => {
+    function calcularSegundos() {
+      const agora = new Date();
+      const min = agora.getMinutes();
+      const seg = agora.getSeconds();
+      if (min >= 5) return 0;
+      return (5 - min) * 60 - seg;
+    }
+
+    setSegundosParaSeatalk(calcularSegundos());
+    const timer = setInterval(() => {
+      setSegundosParaSeatalk(calcularSegundos());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function formatarContador(segundos) {
+    const m = Math.floor(segundos / 60);
+    const s = segundos % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
   useEffect(() => {
     console.log("🔄 useEffect disparado - Filtros atualizados:", { data, turno });
     carregarDados();
@@ -88,6 +113,10 @@ export default function GestaoOperacional() {
   };
 
   const enviarScreenshotParaSeatalk = async () => {
+    if (segundosParaSeatalk > 0) {
+      toast.error(`Aguarde ${formatarContador(segundosParaSeatalk)} para enviar.`);
+      return;
+    }
     try {
       setEnviandoScreenshot(true);
       
@@ -298,15 +327,27 @@ export default function GestaoOperacional() {
               </button>
               
               {/* Botão de enviar screenshot para Seatalk */}
-              <button
-                onClick={() => enviarScreenshotParaSeatalk()}
-                disabled={enviandoScreenshot || loading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-[#5A5A5C] disabled:cursor-not-allowed cursor-pointer rounded-lg text-white text-sm font-semibold transition-colors flex items-center gap-2"
-                title="Enviar screenshot para Seatalk (sem ranking)"
-              >
-                <Send className="w-4 h-4" />
-                {enviandoScreenshot ? "Enviando..." : "Enviar para Seatalk"}
-              </button>
+              {(() => {
+                const bloqueado = segundosParaSeatalk > 0;
+                return (
+                  <div className="flex flex-col items-center gap-1">
+                    <button
+                      onClick={() => enviarScreenshotParaSeatalk()}
+                      disabled={enviandoScreenshot || loading || bloqueado}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-[#5A5A5C] disabled:cursor-not-allowed cursor-pointer rounded-lg text-white text-sm font-semibold transition-colors flex items-center gap-2"
+                      title={bloqueado ? `Disponível em ${formatarContador(segundosParaSeatalk)}` : "Enviar screenshot para Seatalk (sem ranking)"}
+                    >
+                      <Send className="w-4 h-4" />
+                      {enviandoScreenshot ? "Enviando..." : "Enviar para Seatalk"}
+                    </button>
+                    {bloqueado && (
+                      <span className="text-xs text-yellow-400">
+                        Disponível em {formatarContador(segundosParaSeatalk)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               
               {/* Filtro de Turno */}
               <div className="flex items-center gap-2">
