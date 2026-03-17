@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { Calendar, Users, TrendingUp, ArrowLeft } from "lucide-react";
+import { Calendar, Users, TrendingUp, ArrowLeft, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import Sidebar from "../../components/Sidebar";
@@ -7,6 +7,67 @@ import Header from "../../components/Header";
 import ProdutividadeColaboradorTable from "../../components/produtividadeColaborador/ProdutividadeColaboradorTable";
 import toast from "react-hot-toast";
 import { AuthContext } from "../../context/AuthContext";
+
+/**
+ * Calcula quantos segundos faltam para o próximo ciclo de 5 minutos.
+ * Ex: 14:03:20 → próximo ciclo 14:05:00 → faltam 100s
+ */
+function segundosParaProximoSync() {
+  const agora = new Date();
+  const segundosTotais = agora.getMinutes() * 60 + agora.getSeconds();
+  const ciclo = 5 * 60;
+  return ciclo - (segundosTotais % ciclo);
+}
+
+function SyncBadge({ turno, data, onSyncComplete }) {
+  const [segundos, setSegundos] = useState(segundosParaProximoSync);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const tick = setInterval(async () => {
+      const s = segundosParaProximoSync();
+      setSegundos(s);
+
+      // Quando o timer zera (ciclo reinicia para ~300), dispara o salvamento
+      if (s >= 299 && !syncing) {
+        setSyncing(true);
+        try {
+          await api.post("/dashboard/produtividade-colaborador/trigger-salvamento", {
+            turno,
+            data,
+          });
+          onSyncComplete?.();
+        } catch (e) {
+          console.error("Erro no sync:", e.message);
+        } finally {
+          setSyncing(false);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [turno, data, syncing]);
+
+  const min = Math.floor(segundos / 60);
+  const seg = segundos % 60;
+  const label = `${min}:${String(seg).padStart(2, "0")}`;
+  const quaseSync = segundos <= 30;
+
+  return (
+    <div
+      title="Tempo até o próximo salvamento no banco"
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+        syncing
+          ? "bg-blue-500/15 border-blue-500/40 text-blue-400"
+          : quaseSync
+          ? "bg-green-500/15 border-green-500/40 text-green-400"
+          : "bg-[#1A1A1C] border-[#2A2A2C] text-[#BFBFC3]"
+      }`}
+    >
+      <RefreshCw className={`w-3 h-3 ${syncing || quaseSync ? "animate-spin" : ""}`} />
+      <span>{syncing ? "Salvando..." : `Sync ${label}`}</span>
+    </div>
+  );
+}
 
 // Retorna a data atual no fuso de Brasília
 function getDataHoje() {
@@ -79,9 +140,12 @@ export default function ProdutividadeColaborador() {
                   </button>
                 )}
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                    Produtividade por Colaborador
-                  </h1>
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                      Produtividade por Colaborador
+                    </h1>
+                    <SyncBadge turno={turno} data={data} onSyncComplete={carregarDados} />
+                  </div>
                   <p className="text-[#BFBFC3] text-sm sm:text-base">
                     Acompanhe a produtividade individual de cada colaborador por turno
                   </p>

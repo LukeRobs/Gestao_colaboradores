@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { buscarProdutividadeDetalhada } = require("../services/googleSheetsMetaProducao.service");
+const { dispararSalvamentoManual } = require("../services/producaoColaboradorHistorico.service");
 
 function agoraBrasil() {
   const now = new Date();
@@ -76,37 +77,39 @@ const carregarProdutividadeColaborador = async (req, res) => {
       console.log(`📊 Registros com produção > 0: ${comProducao}`);
     }
 
-    const removerAcentos = (str) =>
-      str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
-    const producaoPorNome = new Map();
     const producaoPorOpsId = new Map();
 
-    if (historicoSalvo.length > 0) {
-      // Usar dados do banco
-      console.log("✅ Usando dados do histórico salvo no banco");
+    // Sempre busca da planilha em tempo real (fonte de verdade ontime)
+    // O banco é usado apenas para datas históricas (não hoje)
+    const dataHoje = agoraBrasil().toISOString().slice(0, 10);
+    const ehDataHistorica = dataStr < dataHoje;
+
+    if (ehDataHistorica && historicoSalvo.length > 0) {
+      // Data passada: usar o histórico salvo no banco
+      console.log("✅ Data histórica — usando dados do banco");
       historicoSalvo.forEach(item => {
         const dadosPorHora = typeof item.dadosPorHora === "string"
           ? JSON.parse(item.dadosPorHora)
           : item.dadosPorHora || {};
-        const mapped = { nome: item.nomeCompleto, opsId: item.opsId, total: item.total, dadosPorHora };
-        producaoPorNome.set(removerAcentos(item.nomeCompleto), mapped);
-        if (item.opsId) producaoPorOpsId.set(item.opsId.toLowerCase(), mapped);
+        if (item.opsId) {
+          producaoPorOpsId.set(item.opsId.toLowerCase(), {
+            opsId: item.opsId, nome: item.nomeCompleto, total: item.total, dadosPorHora
+          });
+        }
       });
     } else {
-      // Fallback: buscar da planilha em tempo real
-      console.log("⚠️ Sem histórico no banco, buscando da planilha...");
+      // Data de hoje ou sem histórico: buscar da planilha em tempo real
+      if (!ehDataHistorica) {
+        console.log("🔄 Data atual — buscando da planilha em tempo real");
+      } else {
+        console.log("⚠️ Sem histórico no banco para data passada, buscando da planilha...");
+      }
       const produtividadeResult = await buscarProdutividadeDetalhada(dataStr, turno);
       const dadosPlanilha = produtividadeResult.success ? produtividadeResult.data : [];
       console.log(`✅ Dados da planilha: ${dadosPlanilha.length} colaboradores`);
       dadosPlanilha.forEach(item => {
-        producaoPorNome.set(removerAcentos(item.nome), item);
         if (item.opsId) producaoPorOpsId.set(item.opsId.toLowerCase(), item);
       });
-    }
-
-    if (colaboradores.length > 0) {
-      console.log("📋 Primeiros 3 nomes do banco:", colaboradores.slice(0, 3).map(c => c.nomeCompleto));
     }
 
     let matchesEncontrados = 0;
@@ -131,12 +134,9 @@ const carregarProdutividadeColaborador = async (req, res) => {
         dadosHoras[`${hora.toString().padStart(2, '0')}:00`] = 0;
       });
 
-      // Buscar dados da planilha por OpsId primeiro, depois por nome como fallback
-      const nomeNormalizado = removerAcentos(colaborador.nomeCompleto);
+      // Buscar dados de produção exclusivamente por OpsId
       const opsIdNormalizado = colaborador.opsId?.toLowerCase();
-      const dadosProducao = 
-        (opsIdNormalizado && producaoPorOpsId.get(opsIdNormalizado)) ||
-        producaoPorNome.get(nomeNormalizado);
+      const dadosProducao = opsIdNormalizado ? producaoPorOpsId.get(opsIdNormalizado) : null;
 
       if (dadosProducao && dadosProducao.dadosPorHora) {
         matchesEncontrados++;
@@ -159,13 +159,14 @@ const carregarProdutividadeColaborador = async (req, res) => {
       };
     });
 
-    // Ordenar por total decrescente
+    // Ordenar por total decrescente e filtrar quem não produziu nada
     dadosColaboradores.sort((a, b) => b.total - a.total);
+    const dadosFiltrados = dadosColaboradores.filter(c => c.total > 0);
 
     console.log(`📊 Matches encontrados: ${matchesEncontrados}/${colaboradores.length}`);
 
     // Calcular estatísticas adicionais
-    const totais = dadosColaboradores.filter(c => c.total > 0);
+    const totais = dadosFiltrados;
     const mediaColaborador = totais.length > 0 
       ? Math.round(totais.reduce((sum, c) => sum + c.total, 0) / totais.length)
       : 0;
@@ -176,18 +177,18 @@ const carregarProdutividadeColaborador = async (req, res) => {
     const response = {
       success: true,
       data: {
-        colaboradores: dadosColaboradores,
+        colaboradores: dadosFiltrados,
         turno,
         data: dataStr,
         horasTurno: horasTurno.map(h => `${h.toString().padStart(2, '0')}:00`),
         totalColaboradores: colaboradores.length,
         resumo: {
-          totalGeral: dadosColaboradores.reduce((sum, c) => sum + c.total, 0),
+          totalGeral: dadosFiltrados.reduce((sum, c) => sum + c.total, 0),
           mediaColaborador,
           maiorProducao,
           menorProducao,
           colaboradoresAtivos: totais.length,
-          colaboradoresSemProducao: dadosColaboradores.length - totais.length
+          colaboradoresSemProducao: colaboradores.length - totais.length
         }
       }
     };
@@ -205,6 +206,21 @@ const carregarProdutividadeColaborador = async (req, res) => {
   }
 };
 
+const triggerSalvamento = async (req, res) => {
+  try {
+    const { turno, data } = req.body;
+    if (!turno || !["T1", "T2", "T3"].includes(turno)) {
+      return res.status(400).json({ success: false, message: "turno inválido (T1, T2 ou T3)" });
+    }
+    const dataStr = data || new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    const resultado = await dispararSalvamentoManual(turno, dataStr);
+    res.json(resultado);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
-  carregarProdutividadeColaborador
+  carregarProdutividadeColaborador,
+  triggerSalvamento,
 };

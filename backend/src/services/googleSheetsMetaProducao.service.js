@@ -563,9 +563,6 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
     }
 
     // Criar mapa de colaboradores por turno
-    const removerAcentos = (str) =>
-      String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
     // Extrai o OpsId do formato "[Ops12345]NOME" → "ops12345"
     const extrairOpsId = (str) => {
       const match = String(str).match(/\[([^\]]+)\]/);
@@ -578,7 +575,6 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
     };
 
     const colaboradoresPorTurno = new Map(); // chave: opsId lowercase → turno
-    const colaboradoresPorTurnoNome = new Map(); // chave: nome normalizado → turno
     for (let i = 1; i < logicRows.length; i++) {
       const row = logicRows[i];
       if (!row || row.length < 2) continue;
@@ -588,21 +584,13 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
       
       if (!celula || !turnoColaborador) continue;
 
-      // Indexar por OpsId
       const opsId = extrairOpsId(celula);
       if (opsId) {
         colaboradoresPorTurno.set(opsId, turnoColaborador);
       }
-
-      // Indexar por nome limpo (fallback)
-      const nomeLimpo = extrairNomeLimpo(celula);
-      if (nomeLimpo) {
-        colaboradoresPorTurnoNome.set(nomeLimpo.toLowerCase(), turnoColaborador);
-        colaboradoresPorTurnoNome.set(removerAcentos(nomeLimpo), turnoColaborador);
-      }
     }
 
-    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} entradas (por OpsId) na aba Logic`);
+    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} colaboradores por OpsId na aba Logic`);
 
     const linhaDatas = rows[3];
     const linhaHoras = rows[4];
@@ -649,15 +637,14 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
 
       totalLinhasProcessadas++;
 
-      // Extrair OpsId e nome limpo da célula (formato "[Ops12345]NOME" ou só "NOME")
+      // Extrair OpsId da célula — sem OpsId, ignora a linha
       const opsIdLinha = extrairOpsId(nomeColaborador);
       const nomeLimpoLinha = extrairNomeLimpo(nomeColaborador);
 
-      // Matching por OpsId primeiro, depois por nome como fallback
-      const turnoColaborador = 
-        (opsIdLinha && colaboradoresPorTurno.get(opsIdLinha)) ||
-        colaboradoresPorTurnoNome.get(nomeLimpoLinha.toLowerCase()) ||
-        colaboradoresPorTurnoNome.get(removerAcentos(nomeLimpoLinha));
+      if (!opsIdLinha) continue; // sem OpsId não tem como garantir unicidade
+
+      // Matching exclusivamente por OpsId
+      const turnoColaborador = colaboradoresPorTurno.get(opsIdLinha);
       
       if (!turnoColaborador || turnoColaborador !== turno) {
         continue;
@@ -690,7 +677,7 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
       }
 
       colaboradores.push({
-        nome: nomeLimpoLinha || nomeColaborador, // usar nome limpo para matching com o banco
+        nome: nomeLimpoLinha || nomeColaborador,
         opsId: opsIdLinha,
         dadosPorHora,
         total: totalProducao

@@ -3,9 +3,9 @@ const prisma = new PrismaClient();
 const { buscarProdutividadeDetalhada } = require("./googleSheetsMetaProducao.service");
 
 /**
- * Salva o histórico de produtividade por colaborador no banco
- * @param {string} turno - T1, T2 ou T3
- * @param {string} dataStr - Data no formato YYYY-MM-DD
+ * Salva o histórico de produtividade por colaborador no banco.
+ * - Só persiste quem tem total > 0 (evita poluir o banco com zeros)
+ * - Usa upsert para sobrescrever em vez de duplicar
  */
 async function salvarProducaoColaboradorHistorico(turno, dataStr = null) {
   try {
@@ -18,72 +18,92 @@ async function salvarProducaoColaboradorHistorico(turno, dataStr = null) {
     console.log(`\n💾 [HISTÓRICO COLABORADOR] Iniciando salvamento`);
     console.log(`📅 Data: ${dataStr} | 🕐 Turno: ${turno}`);
 
-    // Buscar colaboradores do turno no banco
-    const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
-    const colaboradores = await prisma.colaborador.findMany({
-      where: { turno: { idTurno: turnoId }, status: "ATIVO" },
-      include: { setor: true },
-    });
-
-    console.log(`✅ ${colaboradores.length} colaboradores encontrados no ${turno}`);
-
     // Buscar dados da planilha
     const prodResult = await buscarProdutividadeDetalhada(dataStr, turno);
     const dadosPlanilha = prodResult.success ? prodResult.data : [];
 
     console.log(`✅ ${dadosPlanilha.length} colaboradores com dados na planilha`);
 
-    // Mapear por opsId e por nome para matching
-    const removerAcentos = (str) =>
-      String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    // Filtrar apenas quem tem produção real
+    const comProducao = dadosPlanilha.filter((item) => (item.total || 0) > 0);
+    console.log(`📊 ${comProducao.length} colaboradores com total > 0 (serão salvos)`);
 
-    const porOpsId = new Map();
-    const porNome = new Map();
-    dadosPlanilha.forEach((item) => {
-      if (item.opsId) porOpsId.set(item.opsId.toLowerCase(), item);
-      porNome.set(removerAcentos(item.nome), item);
+    if (comProducao.length === 0) {
+      console.log(`ℹ️ [HISTÓRICO COLABORADOR] Nenhum dado para salvar no momento`);
+      return { success: true, message: `Nenhum dado com produção para ${turno}`, registros: 0 };
+    }
+
+    // Buscar colaboradores do banco para enriquecer com setor
+    const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
+    const colaboradoresBanco = await prisma.colaborador.findMany({
+      where: { turno: { idTurno: turnoId }, status: "ATIVO" },
+      select: {
+        opsId: true,
+        nomeCompleto: true,
+        setor: { select: { nomeSetor: true } },
+      },
+    });
+
+    const bancoPorOpsId = new Map();
+    colaboradoresBanco.forEach((c) => {
+      if (c.opsId) bancoPorOpsId.set(c.opsId.toLowerCase(), c);
     });
 
     let salvos = 0;
+    let semOpsId = 0;
 
-    for (const colab of colaboradores) {
-      const opsIdNorm = colab.opsId?.toLowerCase();
-      const nomeNorm = removerAcentos(colab.nomeCompleto);
-      const dados = (opsIdNorm && porOpsId.get(opsIdNorm)) || porNome.get(nomeNorm);
+    for (const item of comProducao) {
+      const opsIdNorm = item.opsId?.toLowerCase();
 
-      const total = dados?.total || 0;
-      const dadosPorHora = dados?.dadosPorHora || {};
+      if (!opsIdNorm) {
+        console.warn(`⚠️ Item sem OpsId na planilha: ${item.nome}, pulando...`);
+        semOpsId++;
+        continue;
+      }
 
-      await prisma.producaoColaboradorHistorico.upsert({
-        where: {
-          dataReferencia_turno_opsId: {
+      const colabBanco = bancoPorOpsId.get(opsIdNorm);
+      const opsIdFinal = colabBanco?.opsId || item.opsId;
+      const nomeFinal = colabBanco?.nomeCompleto || item.nome;
+      const setorFinal = colabBanco?.setor?.nomeSetor || null;
+
+      try {
+        await prisma.producaoColaboradorHistorico.upsert({
+          where: {
+            dataReferencia_turno_opsId: {
+              dataReferencia: new Date(dataStr),
+              turno,
+              opsId: opsIdFinal,
+            },
+          },
+          update: {
+            nomeCompleto: nomeFinal,
+            setor: setorFinal,
+            total: item.total,
+            dadosPorHora: item.dadosPorHora,
+          },
+          create: {
             dataReferencia: new Date(dataStr),
             turno,
-            opsId: colab.opsId,
+            opsId: opsIdFinal,
+            nomeCompleto: nomeFinal,
+            setor: setorFinal,
+            total: item.total,
+            dadosPorHora: item.dadosPorHora,
           },
-        },
-        update: {
-          nomeCompleto: colab.nomeCompleto,
-          setor: colab.setor?.nomeSetor || null,
-          total,
-          dadosPorHora,
-          updatedAt: new Date(),
-        },
-        create: {
-          dataReferencia: new Date(dataStr),
-          turno,
-          opsId: colab.opsId,
-          nomeCompleto: colab.nomeCompleto,
-          setor: colab.setor?.nomeSetor || null,
-          total,
-          dadosPorHora,
-        },
-      });
+        });
 
-      salvos++;
+        salvos++;
+        console.log(`  ✅ Salvo: ${opsIdFinal} | ${nomeFinal} | total: ${item.total}`);
+      } catch (errItem) {
+        console.error(`  ❌ Erro ao salvar ${opsIdFinal} (${nomeFinal}):`, errItem.message);
+      }
     }
 
-    console.log(`✅ [HISTÓRICO COLABORADOR] ${salvos} registros salvos`);
+    if (semOpsId > 0) {
+      console.warn(`⚠️ ${semOpsId} itens ignorados por não ter OpsId na planilha`);
+    }
+
+    console.log(`✅ [HISTÓRICO COLABORADOR] ${salvos} registros salvos/atualizados`);
     return { success: true, message: `${turno} salvo com sucesso`, registros: salvos };
   } catch (error) {
     console.error(`❌ [HISTÓRICO COLABORADOR] Erro:`, error.message);
@@ -98,4 +118,12 @@ async function verificarRegistroExistente(turno, dataStr) {
   return count > 0;
 }
 
-module.exports = { salvarProducaoColaboradorHistorico, verificarRegistroExistente };
+/**
+ * Disparo manual para debug — executa o salvamento imediatamente
+ */
+async function dispararSalvamentoManual(turno, dataStr) {
+  console.log(`\n🧪 [MANUAL] Disparando salvamento manual — Turno: ${turno} | Data: ${dataStr}`);
+  return salvarProducaoColaboradorHistorico(turno, dataStr);
+}
+
+module.exports = { salvarProducaoColaboradorHistorico, verificarRegistroExistente, dispararSalvamentoManual };
