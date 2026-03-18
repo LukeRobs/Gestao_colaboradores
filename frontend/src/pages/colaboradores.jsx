@@ -17,6 +17,7 @@ export default function ColaboradoresPage() {
   const [turnoSelecionado, setTurnoSelecionado] = useState("TODOS");
   const [escalaSelecionada, setEscalaSelecionada] = useState("TODOS");
   const [liderSelecionado, setLiderSelecionado] = useState("TODOS");
+  const [statusSelecionado, setStatusSelecionado] = useState("TODOS");
   const [lideres, setLideres] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -55,6 +56,7 @@ export default function ColaboradoresPage() {
       turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
       escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
       idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
+      status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
     };
 
 
@@ -73,7 +75,7 @@ export default function ColaboradoresPage() {
   } finally {
     setLoading(false);
   }
-}, [page, limit, query, turnoSelecionado, escalaSelecionada, liderSelecionado]);
+}, [page, limit, query, turnoSelecionado, escalaSelecionada, liderSelecionado, statusSelecionado]);
 
 
   useEffect(() => {
@@ -120,6 +122,11 @@ export default function ColaboradoresPage() {
     setPage(1);
   };
 
+  const handleStatusChange = (newStatus) => {
+    setStatusSelecionado(newStatus);
+    setPage(1);
+  };
+
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
       {/* SIDEBAR */}
@@ -146,7 +153,7 @@ export default function ColaboradoresPage() {
   <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
 
     {/* FILTROS */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full xl:w-auto">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full xl:w-auto">
 
       {/* BUSCA */}
       <div className="flex items-center gap-2 bg-[#1A1A1C] px-4 py-2 rounded-xl">
@@ -196,6 +203,19 @@ export default function ColaboradoresPage() {
             {lider.nomeCompleto}
           </option>
         ))}
+      </select>
+
+      {/* STATUS */}
+      <select
+        value={statusSelecionado}
+        onChange={(e) => handleStatusChange(e.target.value)}
+        className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C] w-full"
+      >
+        <option value="TODOS">Status</option>
+        <option value="ATIVO">Ativo</option>
+        <option value="INATIVO">Inativo</option>
+        <option value="AFASTADO">Afastado</option>
+        <option value="FERIAS">Férias</option>
       </select>
     </div>
 
