@@ -5,6 +5,7 @@ function PresencaRow({
   colaborador,
   dias,
   canEdit,
+  isAdmin = false,
   onEditCell,
 }) {
   const { ano, mes } = colaborador;
@@ -13,7 +14,7 @@ function PresencaRow({
     <tr className="border-t border-[#2A2A2C]">
       
       {/* COLABORADOR */}
-      <td className="bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] whitespace-nowrap min-w-[220px] sm:min-w-[260px]">
+      <td className="sticky left-0 z-10 bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] whitespace-nowrap min-w-[220px] sm:min-w-[260px]">
         <div className="font-medium">
           {colaborador.nome || colaborador.nomeCompleto}
         </div>
@@ -37,6 +38,7 @@ function PresencaRow({
             registro={registro}
             colaborador={colaborador}
             canEdit={canEdit}
+            isAdmin={isAdmin}
             onEdit={onEditCell}
           />
         );

@@ -9,8 +9,10 @@ export default function PresencaToolbar({
   lideres = [],
   pendenciaSaida,
   pendentesHoje,
+  ajusteManual,
   onPendenciaSaidaChange,
   onPendentesHojeChange,
+  onAjusteManualChange,
   onMesChange,
   onTurnoChange,
   onEscalaChange,
@@ -161,6 +163,29 @@ export default function PresencaToolbar({
         >
           <span>Pendentes hoje</span>
           {pendentesHoje && (
+            <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-medium">
+              Ativo
+            </span>
+          )}
+        </button>
+
+        {/* AJUSTE MANUAL - BOTÃO */}
+        <button
+          onClick={() => onAjusteManualChange(!ajusteManual)}
+          className={`
+            inline-flex items-center gap-2
+            px-3 py-2
+            text-sm font-medium
+            rounded-xl
+            transition
+            ${ajusteManual
+              ? 'bg-orange-600 text-white'
+              : 'bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#2A2A2C]'
+            }
+          `}
+        >
+          <span>⏳ Ajuste manual</span>
+          {ajusteManual && (
             <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-medium">
               Ativo
             </span>

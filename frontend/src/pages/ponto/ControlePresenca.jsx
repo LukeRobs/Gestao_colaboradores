@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useContext } from "react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
-import api from "../../services/api";
+import api from "../../services/api.jsx";
 import toast from "react-hot-toast";
+import { AuthContext } from "../../context/AuthContext";
 
 import PresencaToolbar from "../../components/ponto/PresencaToolbar";
 import PresencaGrid from "../../components/ponto/PresencaGrid";
@@ -10,6 +11,8 @@ import PresencaModal from "../../components/ponto/EditarPresencaModal";
 
 export default function ControlePresenca() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { permissions } = useContext(AuthContext);
+  const isAdmin = permissions?.isAdmin ?? false;
 
   /* ================== FILTROS ================== */
   const hoje = new Date();
@@ -22,6 +25,7 @@ export default function ControlePresenca() {
   const [lider, setLider] = useState("TODOS");
   const [pendenciaSaida, setPendenciaSaida] = useState(false);
   const [pendentesHoje, setPendentesHoje] = useState(false);
+  const [ajusteManual, setAjusteManual] = useState(false);
 
   /* ================== DADOS ================== */
   const [dias, setDias] = useState([]);
@@ -37,7 +41,6 @@ export default function ControlePresenca() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState(null);
 
-  // 🔐 futuramente vem do auth
   const isLider = true;
 
   function handleEditCell(data) {
@@ -49,7 +52,7 @@ export default function ControlePresenca() {
   const exportarSheets = async () => {
     try {
       setExportando(true);
-      
+
       if (colaboradores.length === 0) {
         toast.error("Nenhum dado de presença encontrado para exportar.");
         return;
@@ -57,24 +60,15 @@ export default function ControlePresenca() {
 
       toast.loading("Exportando para Google Sheets...", { id: "exportar-sheets" });
 
-      // Exporta sempre completo, sem filtros
-      const params = {
-        mes,
-      };
-
-      const res = await api.get("/ponto/exportar-sheets", { params });
+      const res = await api.get("/ponto/exportar-sheets", { params: { mes } });
 
       if (res.data?.success) {
         const data = res.data.data;
         toast.success(
           `Exportação concluída! ${data.colaboradores} colaboradores e ${data.celulasAtualizadas} células atualizadas na aba "${data.nomeAba}"`,
-          { 
-            id: "exportar-sheets",
-            duration: 5000
-          }
+          { id: "exportar-sheets", duration: 5000 }
         );
       }
-      
     } catch (error) {
       console.error("Erro ao exportar para Google Sheets:", error);
       const mensagem = error.response?.data?.message || "Erro ao exportar dados. Tente novamente.";
@@ -104,13 +98,9 @@ export default function ControlePresenca() {
       const data = res.data?.data || {};
       let lista = data.colaboradores || [];
 
-      // 🔑 injeta ano e mês em cada colaborador (necessário pro grid)
+      // injeta ano e mês em cada colaborador (necessário pro grid)
       const [ano, mesNum] = mes.split("-").map(Number);
-      lista = lista.map((c) => ({
-        ...c,
-        ano,
-        mes: mesNum,
-      }));
+      lista = lista.map((c) => ({ ...c, ano, mes: mesNum }));
 
       // filtro local por nome
       if (busca) {
@@ -119,23 +109,26 @@ export default function ControlePresenca() {
         );
       }
 
-      // 🔑 FILTRO LOCAL: Pendentes hoje (sem presença marcada no dia atual)
+      // 🔑 FILTRO LOCAL: Pendentes hoje
       if (pendentesHoje) {
-        const hoje = new Date();
-        const diaHoje = hoje.getDate();
-        const mesHoje = hoje.getMonth() + 1;
-        const anoHoje = hoje.getFullYear();
-        
-        // Só aplica o filtro se estivermos visualizando o mês atual
+        const agora = new Date();
+        const anoHoje = agora.getFullYear();
+        const mesHoje = agora.getMonth() + 1;
+
         if (ano === anoHoje && mesNum === mesHoje) {
-          const dataHojeISO = `${anoHoje}-${String(mesHoje).padStart(2, "0")}-${String(diaHoje).padStart(2, "0")}`;
-          
+          const dataHojeISO = `${anoHoje}-${String(mesHoje).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
           lista = lista.filter((c) => {
             const registroHoje = c.dias?.[dataHojeISO];
-            // Considera pendente se não tem registro ou se o status é "-" (falta)
             return !registroHoje || registroHoje.status === "-";
           });
         }
+      }
+
+      // 🔑 FILTRO LOCAL: Ajuste manual
+      if (ajusteManual) {
+        lista = lista.filter((c) =>
+          Object.values(c.dias || {}).some((d) => d?.manual === true)
+        );
       }
 
       setDias(data.dias || []);
@@ -148,57 +141,54 @@ export default function ControlePresenca() {
     } finally {
       setLoading(false);
     }
-  }, [mes, turno, escala, busca, lider, pendenciaSaida, pendentesHoje]);
+  }, [mes, turno, escala, busca, lider, pendenciaSaida, pendentesHoje, ajusteManual]);
 
   function aplicarAjusteLocal({ opsId, dataReferencia, status, horaEntrada, horaSaida }) {
-  setColaboradores((prev) =>
-    prev.map((c) => {
-      if (c.opsId !== opsId) return c;
-
-      return {
-        ...c,
-        dias: {
-          ...c.dias,
-        [dataReferencia]: {
-          status,
-          entrada: horaEntrada ? `1970-01-01T${horaEntrada}:00.000Z` : null,
-          saida: horaSaida ? `1970-01-01T${horaSaida}:00.000Z` : null,
-          manual: true,
-        },
-        },
-      };
-    })
-  );
-}
-
-useEffect(() => {
-  loadPresenca();
-}, [loadPresenca]);
-
- useEffect(() => {
-  async function loadLideres() {
-    try {
-      const res = await api.get("/colaboradores/lideres");
-      setLideres(res.data?.data || []);
-    } catch (err) {
-      console.error("Erro ao carregar líderes", err);
-      setLideres([]);
-    }
+    setColaboradores((prev) =>
+      prev.map((c) => {
+        if (c.opsId !== opsId) return c;
+        return {
+          ...c,
+          dias: {
+            ...c.dias,
+            [dataReferencia]: {
+              status,
+              entrada: horaEntrada ? `1970-01-01T${horaEntrada}:00.000Z` : null,
+              saida: horaSaida ? `1970-01-01T${horaSaida}:00.000Z` : null,
+              manual: true,
+            },
+          },
+        };
+      })
+    );
   }
 
-  loadLideres();
-}, []);
+  useEffect(() => {
+    loadPresenca();
+  }, [loadPresenca]);
 
+  useEffect(() => {
+    async function loadLideres() {
+      try {
+        const res = await api.get("/colaboradores/lideres");
+        setLideres(res.data?.data || []);
+      } catch (err) {
+        console.error("Erro ao carregar líderes", err);
+        setLideres([]);
+      }
+    }
+    loadLideres();
+  }, []);
 
   /* ================== UI ================== */
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 lg:ml-64">
+      <div className="flex-1 lg:ml-64 min-w-0 overflow-x-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="px-8 py-6 space-y-6 max-w-full">
+        <main className="px-8 py-6 space-y-6 max-w-full overflow-x-hidden">
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Controle de Presença</h1>
@@ -217,8 +207,10 @@ useEffect(() => {
             lideres={lideres}
             pendenciaSaida={pendenciaSaida}
             pendentesHoje={pendentesHoje}
+            ajusteManual={ajusteManual}
             onPendenciaSaidaChange={setPendenciaSaida}
             onPendentesHojeChange={setPendentesHoje}
+            onAjusteManualChange={setAjusteManual}
             onMesChange={setMes}
             onTurnoChange={setTurno}
             onEscalaChange={setEscala}
@@ -228,9 +220,8 @@ useEffect(() => {
             loading={exportando}
           />
 
-
           {/* GRID */}
-          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden">
+          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden w-full min-w-0">
             {loading ? (
               <div className="p-6 text-[#BFBFC3]">
                 Carregando controle de presença…
@@ -246,6 +237,7 @@ useEffect(() => {
                 dias={dias}
                 colaboradores={colaboradores}
                 canEdit={isLider}
+                isAdmin={isAdmin}
                 onEditCell={handleEditCell}
               />
             )}
@@ -262,16 +254,13 @@ useEffect(() => {
         onClose={() => setModalOpen(false)}
         onSuccess={(payload) => {
           if (pendenciaSaida) {
-            // 🔑 se estiver filtrando pendências, recarrega tudo
             loadPresenca();
           } else {
-            // comportamento atual
             aplicarAjusteLocal(payload);
           }
           setModalOpen(false);
         }}
       />
-
     </div>
   );
 }

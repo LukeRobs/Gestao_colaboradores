@@ -6,12 +6,13 @@ export default function PresencaGrid({
   colaboradores = [],
   onEditCell,
   canEdit = false,
+  isAdmin = false,
 }) {
   const ano = colaboradores?.[0]?.ano ?? null;
   const mes = colaboradores?.[0]?.mes ?? null;
 
   return (
-    <div className="overflow-auto max-h-[70vh] rounded-2xl border border-[#2A2A2C] touch-pan-x touch-pan-y">
+    <div className="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-2xl border border-[#2A2A2C] touch-pan-x touch-pan-y w-full scrollbar-hide">
       <table className="w-max min-w-full text-sm border-separate border-spacing-0">
         <PresencaHeader
           dias={dias}
@@ -27,6 +28,7 @@ export default function PresencaGrid({
               dias={dias}
               onEditCell={onEditCell}
               canEdit={canEdit}
+              isAdmin={isAdmin}
             />
           ))}
         </tbody>

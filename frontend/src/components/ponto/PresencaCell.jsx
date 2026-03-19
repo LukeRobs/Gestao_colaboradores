@@ -30,7 +30,17 @@ const STATUS_CONFIG = {
 };
 
 
-/* ================= HELPERS ================= */
+/* ================= JUSTIFICATIVAS ================= */
+const JUSTIFICATIVA_LABEL = {
+  ESQUECIMENTO_MARCACAO: "Esquecimento da marcação",
+  ALTERACAO_PONTO:       "Alteração de ponto",
+  MARCACAO_INDEVIDA:     "Marcação indevida",
+  ATESTADO_MEDICO:       "Atestado médico",
+  SINERGIA_ENVIADA:      "Sinergia enviada",
+  HORA_EXTRA:            "Hora extra",
+  LICENCA:               "Licença",
+  ON:                    "Onboarding",
+};
 function fmtHora(iso) {
   if (!iso) return null;
 
@@ -75,6 +85,7 @@ export default function PresencaCell({
   colaborador,
   onEdit,
   canEdit = false,
+  isAdmin = false,
 }) {
   const [hover, setHover] = useState(false);
   const weekend = isWeekend(dia?.date);
@@ -135,6 +146,13 @@ export default function PresencaCell({
           </span>
         )}
 
+        {/* ⏳ AJUSTE MANUAL */}
+        {registro?.manual && (
+          <span className="absolute top-0 left-0 text-[10px] leading-none">
+            ⏳
+          </span>
+        )}
+
         <PresencaTooltip open={showTooltip}>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -168,17 +186,27 @@ export default function PresencaCell({
                 </div>
               )}
 
-              {registro?.registradoPor && (
-                <div>
-                  <span className="text-[#EDEDED]">Registrado por:</span>{" "}
-                  {registro.registradoPor}
+              {/* ⏳ Ajuste manual */}
+              {registro?.manual && (
+                <div className="text-orange-400 text-[11px] font-medium">
+                  ⏳ Ajuste manual
+                  {isAdmin && registro?.registradoPor && (
+                    <span className="text-[#BFBFC3] font-normal">
+                      {" "}· por {registro.registradoPor}
+                    </span>
+                  )}
+                  {isAdmin && registro?.justificativa && (
+                    <div className="text-[#BFBFC3] font-normal mt-0.5">
+                      Motivo: {JUSTIFICATIVA_LABEL[registro.justificativa] || registro.justificativa}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {registro?.justificativa && (
-                <div className="pt-1">
-                  <span className="text-[#EDEDED]">Justificativa:</span>{" "}
-                  {registro.justificativa}
+              {registro?.registradoPor && !registro?.manual && (
+                <div>
+                  <span className="text-[#EDEDED]">Registrado por:</span>{" "}
+                  {registro.registradoPor}
                 </div>
               )}
 

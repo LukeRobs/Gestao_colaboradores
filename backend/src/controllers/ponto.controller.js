@@ -647,6 +647,28 @@ const getControlePresenca = async (req, res) => {
     }
 
     /* =====================================================
+       LOOKUP DE NOMES DOS USUÁRIOS (ajustes manuais)
+    ===================================================== */
+    const userIds = [
+      ...new Set(
+        Object.values(freqMap)
+          .filter((f) => f.manual && f.registradoPor)
+          .map((f) => f.registradoPor)
+      ),
+    ];
+
+    const userNomeMap = {};
+    if (userIds.length > 0) {
+      const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, name: true },
+      });
+      for (const u of users) {
+        userNomeMap[u.id] = u.name;
+      }
+    }
+
+    /* =====================================================
        DIAS DO MÊS
     ===================================================== */
     const dias = Array.from(
@@ -681,6 +703,10 @@ const getControlePresenca = async (req, res) => {
             saida: f.horaSaida,
             validado: !!f.validado,
             manual: true,
+            registradoPor: f.registradoPor
+              ? (userNomeMap[f.registradoPor] || f.registradoPor)
+              : null,
+            justificativa: f.justificativa || null,
           };
           continue;
         }

@@ -1215,6 +1215,74 @@ function buildEmpresasResumo({
     };
   }
 
+/* ---------- INPUTS MANUAIS ---------- */
+async function buildInputsManuais({ frequencias, colaboradoresMap }) {
+  const JUSTIFICATIVA_LABEL = {
+    ESQUECIMENTO_MARCACAO: "Esquecimento da marcação",
+    ALTERACAO_PONTO: "Alteração de ponto",
+    MARCACAO_INDEVIDA: "Marcação indevida",
+    ATESTADO_MEDICO: "Atestado médico",
+    SINERGIA_ENVIADA: "Sinergia enviada",
+    HORA_EXTRA: "Hora extra",
+    LICENCA: "Licença",
+    ON: "Onboarding",
+  };
+
+  const manuais = frequencias.filter(f => f.manual === true);
+  const total = manuais.length;
+
+  // Coleta IDs únicos de quem registrou
+  const registradorIds = [...new Set(
+    manuais.map(f => f.registradoPor).filter(Boolean)
+  )];
+
+  // Busca nomes dos usuários
+  const usuarios = await prisma.user.findMany({
+    where: { id: { in: registradorIds } },
+    select: { id: true, name: true },
+  });
+  const usuariosMap = new Map(usuarios.map(u => [u.id, u.name]));
+
+  // Por quem registrou
+  const porRegistrador = {};
+  manuais.forEach(f => {
+    const key = String(f.registradoPor || "sistema");
+    if (!porRegistrador[key]) {
+      porRegistrador[key] = {
+        operador: usuariosMap.get(key) || f.registradoPor || "sistema",
+        quantidade: 0,
+      };
+    }
+    porRegistrador[key].quantidade++;
+  });
+
+  const porColaborador = Object.values(porRegistrador)
+    .map(x => ({
+      ...x,
+      percentual: total > 0 ? Number(((x.quantidade / total) * 100).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.quantidade - a.quantidade);
+
+  // Por motivo
+  const porMotivo = {};
+  manuais.forEach(f => {
+    const key = String(f.justificativa || "SEM_JUSTIFICATIVA").toUpperCase();
+    if (!porMotivo[key]) {
+      porMotivo[key] = { motivo: JUSTIFICATIVA_LABEL[key] || key, quantidade: 0 };
+    }
+    porMotivo[key].quantidade++;
+  });
+
+  const porJustificativa = Object.values(porMotivo)
+    .map(x => ({
+      ...x,
+      percentual: total > 0 ? Number(((x.quantidade / total) * 100).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.quantidade - a.quantidade);
+
+  return { total, porColaborador, porJustificativa };
+}
+
 /* =====================================================
    CONTROLLER — DASHBOARD ADMIN
 ===================================================== */
@@ -1500,6 +1568,11 @@ const carregarDashboardAdmin = async (req, res) => {
         }),
         hierarquia,
         resumoHierarquia,
+
+        inputsManuais: await buildInputsManuais({
+          frequencias,
+          colaboradoresMap,
+        }),
 
         eventos: buildEventos({
           colaboradoresMap,

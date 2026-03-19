@@ -12,7 +12,7 @@ export default function PresencaHeader({ dias = [], ano, mes }) {
   return (
     <thead className="sticky top-0 z-30 bg-[#1A1A1C]">
       <tr>
-        <th className="bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] text-left min-w-[220px] sm:min-w-[260px]">
+        <th className="sticky left-0 z-40 bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] text-left min-w-[220px] sm:min-w-[260px]">
           Colaborador
         </th>
 

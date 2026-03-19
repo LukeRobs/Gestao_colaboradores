@@ -25,6 +25,7 @@ import EmpresasResumoSection from "../../components/dashboard/EmpresasResumoSect
 import ResumoOperacaoCard from "../../components/dashboard/ResumoOperacaoCard";
 import DistribuicaoColaboradoresCadastradosChart from "../../components/dashboard/DistribuicaoColaboradoresCadastradosChart";
 import HierarquiaSection from "../../components/HierarquiaSection";
+import InputsManuaisTable from "../../components/dashboard/InputsManuaisTable";
 
 
 import { AuthContext } from "../../context/AuthContext";
@@ -68,6 +69,7 @@ const INITIAL_DATA = {
   setores: [],   
   lideres: [],   
   eventos: [],
+  inputsManuais: { total: 0, porColaborador: [], porJustificativa: [] },
 };
 
 export default function DashboardAdmin() {
@@ -81,7 +83,7 @@ export default function DashboardAdmin() {
   const [erro, setErro] = useState(null);
 
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, permissions } = useContext(AuthContext);
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -530,6 +532,10 @@ export default function DashboardAdmin() {
             resumo={dados.resumoHierarquia}
             hierarquia={dados.hierarquia}
           />
+
+          {permissions?.isAdmin && (
+            <InputsManuaisTable data={dados.inputsManuais} />
+          )}
 
           <AusentesHojeTable
             title="Eventos no período (Atestados Médicos, Medidas Disciplinares e Acidentes)"
