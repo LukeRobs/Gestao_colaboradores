@@ -146,8 +146,8 @@ export default function PresencaCell({
           </span>
         )}
 
-        {/* ⏳ AJUSTE MANUAL */}
-        {registro?.manual && (
+        {/* ⏳ AJUSTE MANUAL — só admin vê */}
+        {isAdmin && registro?.manual && (
           <span className="absolute top-0 left-0 text-[10px] leading-none">
             ⏳
           </span>
@@ -186,16 +186,16 @@ export default function PresencaCell({
                 </div>
               )}
 
-              {/* ⏳ Ajuste manual */}
-              {registro?.manual && (
+              {/* ⏳ Ajuste manual — só admin vê */}
+              {isAdmin && registro?.manual && (
                 <div className="text-orange-400 text-[11px] font-medium">
                   ⏳ Ajuste manual
-                  {isAdmin && registro?.registradoPor && (
+                  {registro?.registradoPor && (
                     <span className="text-[#BFBFC3] font-normal">
                       {" "}· por {registro.registradoPor}
                     </span>
                   )}
-                  {isAdmin && registro?.justificativa && (
+                  {registro?.justificativa && (
                     <div className="text-[#BFBFC3] font-normal mt-0.5">
                       Motivo: {JUSTIFICATIVA_LABEL[registro.justificativa] || registro.justificativa}
                     </div>
