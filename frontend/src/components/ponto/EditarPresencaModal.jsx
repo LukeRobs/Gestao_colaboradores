@@ -19,6 +19,7 @@ const STATUS_OPTIONS = [
   { code: "LM", label: "Licença maternidade" },
   { code: "LP", label: "Licença paternidade" },
   { code: "NC", label: "Não contratado"},
+  { code: "P", label: "Presente", adminOnly: true },
   { code: "S1", label: "Sinergia enviada" },
   { code: "TR", label: "Transferido" },
   { code: "ON", label: "Onboarding" },
@@ -56,6 +57,7 @@ export default function EditarPresencaModal({
   colaborador,
   dia,
   registro,
+  isAdmin = false,
   onSuccess, // opcional: recarregar grade
 }) {
   const [status, setStatus] = useState("") ;
@@ -208,7 +210,7 @@ export default function EditarPresencaModal({
           >
             <option value="">Selecione um status</option>
 
-            {STATUS_OPTIONS.map((s) => (
+            {STATUS_OPTIONS.filter((s) => !s.adminOnly || isAdmin).map((s) => (
               <option key={s.code} value={s.code}>
                 {s.label}
               </option>
