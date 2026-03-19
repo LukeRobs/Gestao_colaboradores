@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import clsx from "clsx";
 import PresencaTooltip from "./PresencaTooltip";
 
@@ -88,6 +88,8 @@ export default function PresencaCell({
   isAdmin = false,
 }) {
   const [hover, setHover] = useState(false);
+  const [above, setAbove] = useState(false);
+  const cellRef = useRef(null);
   const weekend = isWeekend(dia?.date);
 
   /* ================= STATUS ================= */
@@ -123,7 +125,7 @@ export default function PresencaCell({
   const showTooltip = hover && (canEdit || registro?.status);
 
   return (
-    <td className="border-r border-[#2A2A2C] min-w-12 sm:min-w-14">
+    <td ref={cellRef} className="border-r border-[#2A2A2C] min-w-12 sm:min-w-14">
       <div
         className={clsx(
           "relative px-2 py-2 text-center cursor-pointer select-none transition",
@@ -134,7 +136,13 @@ export default function PresencaCell({
           canEdit && "hover:ring-1 hover:ring-[#FA4C00]"
         )}
         onClick={handleClick}
-        onMouseEnter={() => setHover(true)}
+        onMouseEnter={() => {
+            if (cellRef.current) {
+              const rect = cellRef.current.getBoundingClientRect();
+              setAbove(rect.bottom + 220 > window.innerHeight);
+            }
+            setHover(true);
+          }}
         onMouseLeave={() => setHover(false)}
       >
         <span className="text-xs font-semibold whitespace-nowrap">{cfg.short}</span>
@@ -153,7 +161,7 @@ export default function PresencaCell({
           </span>
         )}
 
-        <PresencaTooltip open={showTooltip}>
+        <PresencaTooltip open={showTooltip} above={above}>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold">{cfg.label}</span>
