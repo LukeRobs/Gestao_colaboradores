@@ -182,13 +182,13 @@ export default function ControlePresenca() {
 
   /* ================== UI ================== */
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
+    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 lg:ml-64 min-w-0 overflow-x-hidden">
+      <div className="flex-1 lg:ml-64 min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="px-8 py-6 space-y-6 max-w-full overflow-x-hidden">
+        <main className="px-8 py-6 space-y-6 max-w-full overflow-hidden">
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Controle de Presença</h1>
@@ -221,7 +221,7 @@ export default function ControlePresenca() {
           />
 
           {/* GRID */}
-          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden w-full min-w-0">
+          <div className="bg-[#1A1A1C] rounded-2xl w-full min-w-0">
             {loading ? (
               <div className="p-6 text-[#BFBFC3]">
                 Carregando controle de presença…
