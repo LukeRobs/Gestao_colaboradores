@@ -16,7 +16,19 @@ function buildWhere({ inicio, fim, empresa, turno, setor, lider }) {
   }
 
   if (empresa) where.idEmpresa = Number(empresa);
-  if (turno) where.idTurno = Number(turno);
+  if (turno) {
+    const turnoMap = {
+        T1: 1,
+        T2: 2,
+        T3: 3,
+    };
+
+    const turnoId = turnoMap[turno];
+
+    if (turnoId) {
+        where.idTurno = turnoId;
+    }
+    }
   if (setor) where.idSetor = Number(setor);
   if (lider) where.idLider = lider;
 
