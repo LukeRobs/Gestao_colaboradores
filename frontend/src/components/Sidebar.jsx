@@ -220,6 +220,11 @@ export default function Sidebar({ isOpen, onClose }) {
                       active={isActive("/dashboard/colaboradores")}
                       onClick={() => go("/dashboard/colaboradores")}
                     />
+                    <SidebarSubItem
+                      label="Desligamentos"
+                      active={isActive("/dashboard/desligamento")}
+                      onClick={() => go("/dashboard/desligamento")}
+                    />
                   </>
                 )}
               </div>

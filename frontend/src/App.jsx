@@ -14,6 +14,7 @@ import DashboardColaborador from "./pages/dashboards/dashboardColaborador";
 import DashboardAtestados from "./pages/dashboards/dashboardAtestados";
 import GestaoOperacional from "./pages/dashboards/gestaoOperacional";
 import ProdutividadeColaborador from "./pages/dashboards/produtividadeColaborador";
+import DashboardDesligamento from "./pages/dashboards/dashboardDesligamento";
 
 /* ================= COLABORADORES ================= */
 import ColaboradoresPage from "./pages/colaboradores";
@@ -155,6 +156,14 @@ export default function App() {
           <ProtectedRoute roles={["ADMIN", "LIDERANCA", "OPERACAO"]}>
             <ProdutividadeColaborador />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/desligamento"
+        element={
+        <ProtectedRoute roles={["ADMIN"]}>
+          <DashboardDesligamento />
+        </ProtectedRoute>
         }
       />
 

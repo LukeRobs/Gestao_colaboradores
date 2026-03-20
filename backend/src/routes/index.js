@@ -42,6 +42,8 @@ const folgaDominical = require("./folgaDominical.routes");
 const gestaoOperacionalRoutes = require("./gestaoOperacional.routes");
 const produtividadeColaboradorRoutes = require("./produtividadeColaborador.routes");
 const sugestaoRoutes = require("./sugestaoMedidaDisciplinar.routes");
+const desligamentoRoutes = require("./desligamentoDashboard.routes");
+
 /* =========================
    HEALTH
 ========================= */
@@ -161,6 +163,6 @@ router.use("/opa", opaRoutes);
 router.use("/folga-dominical", folgaDominical);
 router.use("/dashboard/gestao-operacional", gestaoOperacionalRoutes);
 router.use("/dashboard/produtividade-colaborador", produtividadeColaboradorRoutes);
-
+router.use("/dashboard/desligamento", desligamentoRoutes)
 
 module.exports = router;
