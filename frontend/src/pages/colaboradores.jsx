@@ -52,7 +52,6 @@ export default function ColaboradoresPage() {
     const carregarCargos = async () => {
       try {
         const cargosData = await ColaboradoresAPI.listarCargos();
-        console.log("CARGOS:", cargos);
         setCargos(cargosData);
       } catch (error) {
         console.error("Erro ao carregar cargos:", error);
@@ -277,7 +276,26 @@ export default function ColaboradoresPage() {
               <LoadingScreen />
             ) : (
               <>
-                <EmployeeTable employees={employees} />
+                <EmployeeTable
+                  employees={employees}
+                  onView={(emp) => {
+                    console.log("VIEW CLICK:", emp);
+                    navigate(`/colaboradores/${emp.opsId}`);
+                  }}
+                  onDelete={
+                    permissions.isAdmin
+                      ? async (emp) => {
+                          if (!window.confirm(`Excluir ${emp.nomeCompleto}?`)) return;
+                          try {
+                            await ColaboradoresAPI.excluir(emp.opsId);
+                            load();
+                          } catch {
+                            alert("Erro ao excluir colaborador.");
+                          }
+                        }
+                      : null
+                  }
+                />
                 <Pagination
                   page={page}
                   totalPages={totalPages}
