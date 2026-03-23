@@ -26,6 +26,7 @@ import ResumoOperacaoCard from "../../components/dashboard/ResumoOperacaoCard";
 import DistribuicaoColaboradoresCadastradosChart from "../../components/dashboard/DistribuicaoColaboradoresCadastradosChart";
 import HierarquiaSection from "../../components/HierarquiaSection";
 import InputsManuaisTable from "../../components/dashboard/InputsManuaisTable";
+import FaltasPorTempoCasaChart from "../../components/dashboard/FaltasPorTempoCasaChart";
 
 
 import { AuthContext } from "../../context/AuthContext";
@@ -70,6 +71,7 @@ const INITIAL_DATA = {
   lideres: [],   
   eventos: [],
   inputsManuais: { total: 0, porColaborador: [], porJustificativa: [] },
+  faltasPorTempoCasa: [],
 };
 
 export default function DashboardAdmin() {
@@ -536,6 +538,11 @@ export default function DashboardAdmin() {
           {permissions?.isAdmin && (
             <InputsManuaisTable data={dados.inputsManuais} />
           )}
+
+          <FaltasPorTempoCasaChart
+            title="Faltas por Tempo de Casa"
+            data={dados.faltasPorTempoCasa}
+          />
 
           <AusentesHojeTable
             title="Eventos no período (Atestados Médicos, Medidas Disciplinares e Acidentes)"

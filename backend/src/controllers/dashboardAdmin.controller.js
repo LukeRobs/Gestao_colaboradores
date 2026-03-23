@@ -519,6 +519,65 @@ function buildLideres(colaboradores, frequencias, colaboradoresMap) {
     .sort((a, b) => b.absenteismo - a.absenteismo);
 }
 
+/* ---------- FALTAS POR TEMPO DE CASA ---------- */
+function buildFaltasPorTempoCasa({ frequencias, colaboradoresMap }) {
+  const faixas = [
+    { label: "< 1 mês",     min: 0,   max: 30   },
+    { label: "1–2 meses",   min: 30,  max: 60   },
+    { label: "2–3 meses",   min: 60,  max: 90   },
+    { label: "3–6 meses",   min: 90,  max: 180  },
+    { label: "6–9 meses",   min: 180, max: 270  },
+    { label: "9–12 meses",  min: 270, max: 365  },
+    { label: "1–1,5 ano",   min: 365, max: 548  },
+    { label: "1,5–2 anos",  min: 548, max: 730  },
+    { label: "2–3 anos",    min: 730, max: 1095 },
+    { label: "> 3 anos",    min: 1095, max: Infinity },
+  ];
+
+  const hoje = new Date();
+
+  // inicializa contadores
+  const map = {};
+  faixas.forEach(f => {
+    map[f.label] = { faltas: 0, escalados: 0 };
+  });
+
+  frequencias.forEach(f => {
+    const s = getStatusDoDia(f);
+    if (!s.contaComoEscalado) return;
+
+    const c = colaboradoresMap.get(f.opsId);
+    if (!c?.dataAdmissao) return;
+
+    const diasCasa = Math.floor(
+      (hoje - new Date(c.dataAdmissao)) / 86400000
+    );
+
+    const faixa = faixas.find(
+      fx => diasCasa >= fx.min && diasCasa < fx.max
+    );
+    if (!faixa) return;
+
+    map[faixa.label].escalados++;
+
+    if (s.code === "F" || s.code === "FJ" || s.code === "AM") {
+      map[faixa.label].faltas++;
+    }
+  });
+
+  return faixas.map(f => ({
+    faixa: f.label,
+    faltas: map[f.label].faltas,
+    escalados: map[f.label].escalados,
+    percentual:
+      map[f.label].escalados > 0
+        ? Number(
+            ((map[f.label].faltas / map[f.label].escalados) * 100).toFixed(2)
+          )
+        : 0,
+  }));
+}
+
 /* ---------- OVERVIEW ---------- */
 function buildOverview({ frequencias, inicio, fim }) {
   if (!frequencias.length) {
@@ -1570,6 +1629,11 @@ const carregarDashboardAdmin = async (req, res) => {
         resumoHierarquia,
 
         inputsManuais: await buildInputsManuais({
+          frequencias,
+          colaboradoresMap,
+        }),
+
+        faltasPorTempoCasa: buildFaltasPorTempoCasa({
           frequencias,
           colaboradoresMap,
         }),
