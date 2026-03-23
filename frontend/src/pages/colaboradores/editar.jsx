@@ -15,20 +15,17 @@ const TIPOS_DESLIGAMENTO = [
 ];
 
 const MOTIVOS_DESLIGAMENTO = [
-  { value: "SEGURANCA", label: "Segurança" },
+  { value: "COMPLIANCE", label: "Compliance" },
   { value: "ALTO_INDICE_ABS", label: "Alto índice de ABS" },
-  { value: "ABANDONADO", label: "Abandonado" },
+  { value: "ABANDONO", label: "Abandono" },
   { value: "DESEMPENHO_BAIXO", label: "Desempenho baixo" },
   { value: "DESVIO_COMPORTAMENTAL", label: "Desvio comportamental" },
   { value: "TERMINO_CONTRATO", label: "Término de contrato" },
-  { value: "SEM_EXIBICAO", label: "Sem exibição" },
+  { value: "NO_SHOW", label: "No Show" },
   { value: "DECLINIO", label: "Declínio" },
-  { value: "CONFORMIDADE", label: "Conformidade" },
+  { value: "NAO_CONFORMIDADE", label: "Não conformidade" },
   { value: "PEDIDO_DEMISSAO", label: "Pedido de demissão" },
-  { value: "DESLIGAMENTO_AUTOMATICO", label: "Desligamento automático" },
   { value: "REDUCAO_QUADRO", label: "Redução de quadro" },
-  { value: "VOLUNTARIO", label: "Voluntário" },
-  { value: "INVOLUNTARIO", label: "Involuntário" },
 ];
 
 export default function EditarColaborador() {

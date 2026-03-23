@@ -109,6 +109,14 @@ router.post("/cache/limpar", async (req, res) => {
 ========================= */
 router.use("/auth", authRoutes);
 
+// 🔓 VERSÃO DO SISTEMA — sem autenticação
+router.get("/version", (req, res) => {
+  res.json({
+    success: true,
+    version: process.env.APP_VERSION || "1.0.0",
+  });
+});
+
 // 🔓 CPF – NÃO PASSA POR AUTH
 router.post(
   "/ponto/registrar",

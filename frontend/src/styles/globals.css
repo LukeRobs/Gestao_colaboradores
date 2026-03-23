@@ -88,3 +88,7 @@ body.exporting-report .recharts-pie {
 [data-export-hide] {
   display: flex;
 }
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}

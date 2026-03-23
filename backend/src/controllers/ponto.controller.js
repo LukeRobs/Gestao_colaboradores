@@ -692,6 +692,24 @@ const getControlePresenca = async (req, res) => {
         const key = `${c.opsId}_${dataISO}`;
 
         /* ===============================
+           ATESTADO MÉDICO TEM PRIORIDADE MÁXIMA
+        =============================== */
+        const atestadoDia = c.atestadosMedicos?.find(
+          (a) =>
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+
+        if (atestadoDia) {
+          diasMap[dataISO] = {
+            status: "AM",
+            origem: "atestado",
+            manual: false,
+          };
+          continue;
+        }
+
+        /* ===============================
            MANUAL TEM PRIORIDADE
         =============================== */
         if (freqMap[key]?.manual) {
@@ -712,14 +730,18 @@ const getControlePresenca = async (req, res) => {
         }
 
         /* ===============================
-           STATUS ADMINISTRATIVO
+           STATUS ADMINISTRATIVO (ausências)
         =============================== */
-        const statusAdmin = getStatusAdministrativo(c, dataCalendario);
+        const ausenciaDia = c.ausencias?.find(
+          (a) =>
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
 
-        if (statusAdmin) {
+        if (ausenciaDia) {
           diasMap[dataISO] = {
-            status: statusAdmin.status,
-            origem: statusAdmin.origem,
+            status: ausenciaDia.tipoAusencia?.codigo || "AUS",
+            origem: "ausencia",
             manual: false,
           };
           continue;
@@ -1223,6 +1245,17 @@ const exportarPresencaSheets = async (req, res) => {
         const dataISO = ymd(dataCalendario);
         const key = `${c.opsId}_${dataISO}`;
 
+        // Atestado médico tem prioridade máxima
+        const atestadoDia = c.atestadosMedicos?.find(
+          (a) =>
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+        if (atestadoDia) {
+          diasMap[dataISO] = { status: "AM", origem: "atestado", manual: false };
+          continue;
+        }
+
         // Manual tem prioridade
         if (freqMap[key]?.manual) {
           const f = freqMap[key];
@@ -1236,12 +1269,16 @@ const exportarPresencaSheets = async (req, res) => {
           continue;
         }
 
-        // Status administrativo
-        const statusAdmin = getStatusAdministrativo(c, dataCalendario);
-        if (statusAdmin) {
+        // Ausências administrativas
+        const ausenciaDia = c.ausencias?.find(
+          (a) =>
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+        if (ausenciaDia) {
           diasMap[dataISO] = {
-            status: statusAdmin.status,
-            origem: statusAdmin.origem,
+            status: ausenciaDia.tipoAusencia?.codigo || "AUS",
+            origem: "ausencia",
             manual: false,
           };
           continue;

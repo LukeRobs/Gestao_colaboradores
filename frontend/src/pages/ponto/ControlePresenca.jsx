@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useContext } from "react";
+import { useEffect, useState, useCallback, useContext, useMemo } from "react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api.jsx";
@@ -29,7 +29,7 @@ export default function ControlePresenca() {
 
   /* ================== DADOS ================== */
   const [dias, setDias] = useState([]);
-  const [colaboradores, setColaboradores] = useState([]);
+  const [colaboradoresRaw, setColaboradoresRaw] = useState([]);
 
   /* ================== ESTADOS ================== */
   const [loading, setLoading] = useState(false);
@@ -53,7 +53,7 @@ export default function ControlePresenca() {
     try {
       setExportando(true);
 
-      if (colaboradores.length === 0) {
+      if (colaboradoresRaw.length === 0) {
         toast.error("Nenhum dado de presença encontrado para exportar.");
         return;
       }
@@ -102,49 +102,55 @@ export default function ControlePresenca() {
       const [ano, mesNum] = mes.split("-").map(Number);
       lista = lista.map((c) => ({ ...c, ano, mes: mesNum }));
 
-      // filtro local por nome
-      if (busca) {
-        lista = lista.filter((c) =>
-          c.nome.toLowerCase().includes(busca.toLowerCase())
-        );
-      }
-
-      // 🔑 FILTRO LOCAL: Pendentes hoje
-      if (pendentesHoje) {
-        const agora = new Date();
-        const anoHoje = agora.getFullYear();
-        const mesHoje = agora.getMonth() + 1;
-
-        if (ano === anoHoje && mesNum === mesHoje) {
-          const dataHojeISO = `${anoHoje}-${String(mesHoje).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
-          lista = lista.filter((c) => {
-            const registroHoje = c.dias?.[dataHojeISO];
-            return !registroHoje || registroHoje.status === "-";
-          });
-        }
-      }
-
-      // 🔑 FILTRO LOCAL: Ajuste manual
-      if (ajusteManual) {
-        lista = lista.filter((c) =>
-          Object.values(c.dias || {}).some((d) => d?.manual === true)
-        );
-      }
-
       setDias(data.dias || []);
-      setColaboradores(lista);
+      setColaboradoresRaw(lista);
     } catch (e) {
       console.error("Erro ao carregar controle de presença:", e);
       setError("Erro ao carregar controle de presença");
       setDias([]);
-      setColaboradores([]);
+      setColaboradoresRaw([]);
     } finally {
       setLoading(false);
     }
-  }, [mes, turno, escala, busca, lider, pendenciaSaida, pendentesHoje, ajusteManual]);
+  }, [mes, turno, escala, lider, pendenciaSaida, pendentesHoje]);
+
+  /* ================== FILTROS LOCAIS ================== */
+  const colaboradores = useMemo(() => {
+    let lista = colaboradoresRaw;
+
+    if (busca) {
+      lista = lista.filter((c) =>
+        c.nome.toLowerCase().includes(busca.toLowerCase())
+      );
+    }
+
+    // Pendentes hoje (filtro local complementar ao do backend)
+    if (pendentesHoje) {
+      const agora = new Date();
+      const anoHoje = agora.getFullYear();
+      const mesHoje = agora.getMonth() + 1;
+      const [ano, mesNum] = mes.split("-").map(Number);
+
+      if (ano === anoHoje && mesNum === mesHoje) {
+        const dataHojeISO = `${anoHoje}-${String(mesHoje).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+        lista = lista.filter((c) => {
+          const registroHoje = c.dias?.[dataHojeISO];
+          return !registroHoje || registroHoje.status === "-";
+        });
+      }
+    }
+
+    if (ajusteManual) {
+      lista = lista.filter((c) =>
+        Object.values(c.dias || {}).some((d) => d?.manual === true)
+      );
+    }
+
+    return lista;
+  }, [colaboradoresRaw, busca, pendentesHoje, ajusteManual, mes]);
 
   function aplicarAjusteLocal({ opsId, dataReferencia, status, horaEntrada, horaSaida }) {
-    setColaboradores((prev) =>
+    setColaboradoresRaw((prev) =>
       prev.map((c) => {
         if (c.opsId !== opsId) return c;
         return {
@@ -182,13 +188,13 @@ export default function ControlePresenca() {
 
   /* ================== UI ================== */
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
+    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 lg:ml-64 min-w-0 overflow-x-hidden">
+      <div className="flex-1 lg:ml-64 min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="px-8 py-6 space-y-6 max-w-full overflow-x-hidden">
+        <main className="px-8 py-6 space-y-6 max-w-full overflow-hidden">
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Controle de Presença</h1>
@@ -221,7 +227,7 @@ export default function ControlePresenca() {
           />
 
           {/* GRID */}
-          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden w-full min-w-0">
+          <div className="bg-[#1A1A1C] rounded-2xl w-full min-w-0">
             {loading ? (
               <div className="p-6 text-[#BFBFC3]">
                 Carregando controle de presença…

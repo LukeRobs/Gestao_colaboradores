@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { useVersionCheck } from "./hooks/useVersionCheck";
+import WhatsNewModal from "./components/WhatsNewModal";
 
 /* ================= AUTH ================= */
 import Login from "./pages/login";
@@ -64,8 +66,11 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import ReportRoute from "./routes/report";
 
 export default function App() {
+  const { show, dismiss } = useVersionCheck();
+
   return (
     <>
+      {show && <WhatsNewModal onClose={dismiss} />}
       <Toaster
         position="top-right"
         toastOptions={{

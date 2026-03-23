@@ -266,6 +266,8 @@ const createAtestado = async (req, res) => {
             justificativa: "ATESTADO_MEDICO",
             horaEntrada: null,
             horaSaida: null,
+            manual: false,
+            registradoPor: null,
           },
           create: {
             opsId,
@@ -274,6 +276,7 @@ const createAtestado = async (req, res) => {
             justificativa: "ATESTADO_MEDICO",
             horaEntrada: null,
             horaSaida: null,
+            manual: false,
           },
         });
 

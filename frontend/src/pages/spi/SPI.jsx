@@ -141,27 +141,38 @@ export default function SPI() {
   const dados = abaAtiva === "safety" ? dadosSafety : abaAtiva === "ddsma" ? dadosDDSMA : dadosOPA;
   
   const dadosFiltrados = dados?.registros || [];
-  const mapPendentes = new Map();
-  const mapRealizadas = new Map();
-  
-  dadosFiltrados.forEach(reg => {
-    const key = reg.responsavel;
-    if (reg.status === 'PENDENTE') {
-      if (!mapPendentes.has(key)) {
-        mapPendentes.set(key, reg);
+
+  // Para DDSMA os registros já vêm consolidados por pessoa com campo `status`
+  // Para Safety/OPA mantém lógica original (deduplicação por Map)
+  let pessoasPendentesUnicas, pessoasRealizadasUnicas;
+
+  if (abaAtiva === "ddsma") {
+    pessoasPendentesUnicas = dadosFiltrados.filter(r => r.status === 'PENDENTE');
+    pessoasRealizadasUnicas = dadosFiltrados.filter(r => r.status === 'REALIZADO');
+  } else {
+    const mapPendentes = new Map();
+    const mapRealizadas = new Map();
+    dadosFiltrados.forEach(reg => {
+      const key = reg.responsavel;
+      if (reg.status === 'PENDENTE') {
+        if (!mapPendentes.has(key)) mapPendentes.set(key, reg);
+      } else if (reg.status === 'REALIZADO') {
+        if (!mapRealizadas.has(key)) mapRealizadas.set(key, reg);
       }
-    } else if (reg.status === 'REALIZADO') {
-      if (!mapRealizadas.has(key)) {
-        mapRealizadas.set(key, reg);
-      }
-    }
-  });
-  
-  const pessoasPendentesUnicas = Array.from(mapPendentes.values());
-  const pessoasRealizadasUnicas = Array.from(mapRealizadas.values());
+    });
+    pessoasPendentesUnicas = Array.from(mapPendentes.values());
+    pessoasRealizadasUnicas = Array.from(mapRealizadas.values());
+  }
 
   const semanasDisponiveis = dados?.semanasDisponiveis || [];
   const semanaAtual = dados?.semanaAtual || '';
+
+  // Filtrar semanas até a atual (não mostrar semanas futuras)
+  const semanaAtualNum = semanaAtual ? parseInt(semanaAtual.replace('W', '')) : 0;
+  const semanasAteAtual = semanasDisponiveis.filter(s => {
+    const num = parseInt(s.replace('W', ''));
+    return num <= semanaAtualNum;
+  });
 
   /* =====================================================
      KPIs CONSOLIDADOS
@@ -199,11 +210,57 @@ export default function SPI() {
   /* =====================================================
      RENDER
   ===================================================== */
+
+  // Skeleton shimmer igual ao dashboardDesligamento
+  function Skeleton({ h = "h-48", w = "w-full" }) {
+    return (
+      <div className={`${h} ${w} rounded-2xl bg-white/[0.04] overflow-hidden relative`}>
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+      </div>
+    );
+  }
+
   if (loadingSafety && loadingDDSMA && loadingOPA) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
-        <RefreshCw className="animate-spin mr-2" size={20} />
-        Carregando…
+      <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+        <Sidebar isOpen={false} onClose={() => {}} />
+        <div className="flex-1 lg:ml-64">
+          <Header onMenuClick={() => {}} />
+          <main className="p-8 space-y-8">
+            {/* Header */}
+            <Skeleton h="h-12" />
+
+            {/* 3 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} h="h-48" />
+              ))}
+            </div>
+
+            {/* Filtros */}
+            <div className="flex gap-4">
+              <Skeleton h="h-10" w="w-36" />
+              <Skeleton h="h-10" w="w-36" />
+              <Skeleton h="h-10" w="w-40" />
+            </div>
+
+            {/* Tabelas pendentes/realizados */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Skeleton h="h-72" />
+              <Skeleton h="h-72" />
+            </div>
+
+            {/* Gráficos por turno */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} h="h-64" />
+              ))}
+            </div>
+
+            {/* Aderência geral */}
+            <Skeleton h="h-48" />
+          </main>
+        </div>
       </div>
     );
   }
@@ -419,10 +476,11 @@ export default function SPI() {
               <select
                 value={semanaSelecionada}
                 onChange={(e) => setSemanaSelecionada(e.target.value)}
-                className="bg-[#1A1A1C] border border-[#2A2A2C] px-4 py-2 rounded-lg text-sm"
+                className="bg-[#1A1A1C] border border-[#2A2A2C] px-4 py-2 rounded-lg text-sm scrollbar-hide overflow-y-hidden"
+                size={1}
               >
                 <option value="">Selecione uma semana</option>
-                {semanasDisponiveis.map((semana) => (
+                {semanasAteAtual.map((semana) => (
                   <option key={semana} value={semana}>
                     {semana}
                   </option>
@@ -491,6 +549,11 @@ export default function SPI() {
                         <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
                           Nome
                         </th>
+                        {abaAtiva === "ddsma" && (
+                          <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                            Progresso
+                          </th>
+                        )}
                         <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
                           Cargo
                         </th>
@@ -502,7 +565,7 @@ export default function SPI() {
                     <tbody>
                       {pessoasPendentesUnicas.length === 0 ? (
                         <tr>
-                          <td colSpan="3" className="text-center py-8 text-[#BFBFC3]">
+                          <td colSpan={abaAtiva === "ddsma" ? "4" : "3"} className="text-center py-8 text-[#BFBFC3]">
                             Nenhum pendente
                           </td>
                         </tr>
@@ -513,6 +576,13 @@ export default function SPI() {
                             className="border-b border-[#2A2A2C] hover:bg-[#222] transition-colors"
                           >
                             <td className="py-3 px-4 text-sm">{reg.responsavel}</td>
+                            {abaAtiva === "ddsma" && (
+                              <td className="py-3 px-4 text-sm">
+                                <span className="px-2 py-1 rounded text-xs font-medium bg-[#FF9F0A]/20 text-[#FF9F0A]">
+                                  {reg.progresso || `0/5`}
+                                </span>
+                              </td>
+                            )}
                             <td className="py-3 px-4 text-sm text-[#BFBFC3]">{reg.cargo || '-'}</td>
                             <td className="py-3 px-4 text-sm">
                               <span className="px-2 py-1 rounded text-xs font-medium bg-[#2A2A2C] text-[#BFBFC3]">

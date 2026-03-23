@@ -195,7 +195,25 @@ const buscarDadosDDSMA = async (filtros = {}) => {
       }
     }
 
+    // Cargos isentos de realizar DDSMA
+    const CARGOS_ISENTOS = [
+      'gerência regional',
+      'gerencia regional',
+      'site leader',
+      'coordenação',
+      'coordenacao',
+      'hse',
+      'supervisor',
+      'analista',
+    ];
+
+    const responsaveisFiltrados = responsaveis.filter(r => {
+      const cargoLower = (r.cargo || '').toLowerCase().trim();
+      return !CARGOS_ISENTOS.some(c => cargoLower.includes(c));
+    });
+
     console.log(`✅ Total de responsáveis identificados: ${responsaveis.length}`);
+    console.log(`✅ Após filtro de cargos isentos: ${responsaveisFiltrados.length}`);
 
     const registros = [];
 
@@ -244,9 +262,10 @@ const buscarDadosDDSMA = async (filtros = {}) => {
       const dataFimParsed = parseData(dataInicio); // Usar data início como fim também
 
       let countResponsaveis = 0;
-      responsaveis.forEach((resp) => {
+      responsaveisFiltrados.forEach((resp) => {
         const statusCelula = row[resp.colIndex] || '';
         
+        // Célula vazia = pessoa não está no escopo desta semana, ignorar completamente
         if (!statusCelula || statusCelula.trim() === '') return;
         
         const status = statusCelula.trim();
@@ -268,18 +287,29 @@ const buscarDadosDDSMA = async (filtros = {}) => {
         
         if (filtros.turno && resp.turno !== filtros.turno) return;
 
-        // Verificar se NÃO foi realizado primeiro
-        const naoRealizado = statusLower.includes('não realizado') || 
-                            statusLower.includes('nao realizado') ||
-                            statusLower.startsWith('não') ||
-                            statusLower.startsWith('nao');
-        
-        // Só considerar realizado se não tiver "não" antes
-        const realizado = !naoRealizado && (
-          statusLower.includes('realizado') || 
-          statusLower === 'ok' ||
-          statusLower === 'sim'
-        );
+        // A célula pode conter:
+        // - Percentual numérico: "100.00%", "20.00%", "0.00%" (cada 20% = 1 dia feito de 5)
+        // - Texto: "Realizado", "OK", "Sim", "Não Realizado"
+        let diasRealizadosCelula = 0;
+
+        const percentMatch = status.match(/^(\d+(?:[.,]\d+)?)\s*%$/);
+        if (percentMatch) {
+          // Valor percentual: 100% = 5 dias, 80% = 4, 60% = 3, 40% = 2, 20% = 1, 0% = 0
+          const pct = parseFloat(percentMatch[1].replace(',', '.'));
+          diasRealizadosCelula = Math.round((pct / 100) * 5);
+        } else {
+          // Texto legado
+          const naoRealizado = statusLower.includes('não realizado') ||
+                               statusLower.includes('nao realizado') ||
+                               statusLower.startsWith('não') ||
+                               statusLower.startsWith('nao');
+          const realizado = !naoRealizado && (
+            statusLower.includes('realizado') ||
+            statusLower === 'ok' ||
+            statusLower === 'sim'
+          );
+          diasRealizadosCelula = realizado ? 5 : 0;
+        }
 
         const registro = {
           semana,
@@ -291,7 +321,8 @@ const buscarDadosDDSMA = async (filtros = {}) => {
           email: resp.email,
           turno: resp.turno,
           cargo: resp.cargo,
-          status: realizado ? 'REALIZADO' : 'PENDENTE',
+          diasRealizadosCelula,
+          status: diasRealizadosCelula >= 5 ? 'REALIZADO' : 'PENDENTE',
           statusOriginal: status,
           dataPrevista: dataInicioParsed || '',
           setor: 'Operações',
@@ -338,52 +369,84 @@ const buscarDadosDDSMA = async (filtros = {}) => {
       console.log(`📊 Após filtro de semana específica: ${registrosFiltrados.length} registros`);
     }
 
-    const pessoasUnicas = new Set(registrosFiltrados.map(r => r.responsavel));
-    const pessoasRealizaram = new Set(
-      registrosFiltrados
-        .filter(r => r.status === 'REALIZADO')
-        .map(r => r.responsavel)
-    );
-    
-    const totalInspecoes = pessoasUnicas.size;
-    const realizadas = pessoasRealizaram.size;
-    const pendentes = totalInspecoes - realizadas;
-    const taxaConclusao = totalInspecoes > 0 
-      ? Number(((realizadas / totalInspecoes) * 100).toFixed(2))
-      : 0;
+    // =====================================================================
+    // NOVA LÓGICA DDSMA: a célula já contém o % acumulado da semana
+    // 100% = 5/5, 80% = 4/5, 60% = 3/5, 40% = 2/5, 20% = 1/5, 0% = 0/5
+    // =====================================================================
+    const TOTAL_DIAS_SEMANA = 5;
 
-    const pessoasComValorPorTurno = {};
-    const pessoasRealizaramPorTurno = {};
-    
+    // Como há 1 linha por pessoa por semana, usar diasRealizadosCelula diretamente
+    const progressoPorPessoa = {};
     registrosFiltrados.forEach(r => {
-      const turno = r.turno || 'Não informado';
-      
-      if (!pessoasComValorPorTurno[turno]) {
-        pessoasComValorPorTurno[turno] = new Set();
-      }
-      if (!pessoasRealizaramPorTurno[turno]) {
-        pessoasRealizaramPorTurno[turno] = new Set();
-      }
-      
-      pessoasComValorPorTurno[turno].add(r.responsavel);
-      
-      if (r.status === 'REALIZADO') {
-        pessoasRealizaramPorTurno[turno].add(r.responsavel);
+      const key = r.responsavel;
+      // Se aparecer mais de uma linha, pegar o maior valor
+      if (!progressoPorPessoa[key] || r.diasRealizadosCelula > progressoPorPessoa[key].diasRealizados) {
+        progressoPorPessoa[key] = {
+          responsavel: r.responsavel,
+          email: r.email,
+          turno: r.turno,
+          cargo: r.cargo,
+          semana: r.semana,
+          diasRealizados: r.diasRealizadosCelula,
+        };
       }
     });
 
-    const conclusaoPorTurno = Object.entries(pessoasComValorPorTurno)
-      .map(([turno, pessoasSet]) => {
-        const total = pessoasSet.size;
-        const realizadas = pessoasRealizaramPorTurno[turno]?.size || 0;
-        
+    // Montar registros consolidados por pessoa com progresso
+    const registrosConsolidados = Object.values(progressoPorPessoa).map(p => {
+      const diasFeitos = Math.min(p.diasRealizados, TOTAL_DIAS_SEMANA);
+      const percentual = Math.round((diasFeitos / TOTAL_DIAS_SEMANA) * 100);
+      const statusFinal = diasFeitos >= TOTAL_DIAS_SEMANA ? 'REALIZADO' : 'PENDENTE';
+      return {
+        ...p,
+        diasRealizados: diasFeitos,
+        totalDiasSemana: TOTAL_DIAS_SEMANA,
+        percentualIndividual: percentual,
+        progresso: `${diasFeitos}/${TOTAL_DIAS_SEMANA}`,
+        status: statusFinal,
+        statusOriginal: p.status,
+        acao: 'DDSMA',
+        pilar: 'DDSMA',
+        dataInicio: '',
+        dataFim: '',
+        dataPrevista: '',
+        setor: 'Operações',
+        local: p.semana,
+      };
+    });
+
+    const pessoasUnicas = registrosConsolidados.length;
+    const realizadas = registrosConsolidados.filter(r => r.status === 'REALIZADO').length;
+    const pendentes = pessoasUnicas - realizadas;
+
+    // Taxa de conclusão baseada na média dos percentuais individuais
+    const taxaConclusao = pessoasUnicas > 0
+      ? Number((registrosConsolidados.reduce((acc, r) => acc + r.percentualIndividual, 0) / pessoasUnicas).toFixed(2))
+      : 0;
+
+    // Aderência por turno
+    const progressoPorTurno = {};
+    registrosConsolidados.forEach(r => {
+      const turno = r.turno || 'Não informado';
+      if (!progressoPorTurno[turno]) {
+        progressoPorTurno[turno] = { pessoas: [], realizadas: 0 };
+      }
+      progressoPorTurno[turno].pessoas.push(r);
+      if (r.status === 'REALIZADO') progressoPorTurno[turno].realizadas++;
+    });
+
+    const conclusaoPorTurno = Object.entries(progressoPorTurno)
+      .map(([turno, dados]) => {
+        const total = dados.pessoas.length;
+        const realizadasTurno = dados.realizadas;
+        const mediaPercentual = total > 0
+          ? Number((dados.pessoas.reduce((acc, p) => acc + p.percentualIndividual, 0) / total).toFixed(2))
+          : 0;
         return {
-          turno: turno || 'Não informado',
+          turno,
           total,
-          realizadas,
-          percentual: total > 0 
-            ? Number(((realizadas / total) * 100).toFixed(2))
-            : 0,
+          realizadas: realizadasTurno,
+          percentual: mediaPercentual,
         };
       })
       .sort((a, b) => a.turno.localeCompare(b.turno));
@@ -397,24 +460,24 @@ const buscarDadosDDSMA = async (filtros = {}) => {
       });
 
     const resultado = {
-      totalInspecoes,
+      totalInspecoes: pessoasUnicas,
       realizadas,
       pendentes,
       taxaConclusao,
       naoConformidades: 0,
-      registros: registrosFiltrados,
+      registros: registrosConsolidados,
       conclusaoPorTurno,
       naoConformidadesLista: [],
       semanaAtual: calcularSemanaAtual(),
       semanasDisponiveis,
     };
 
-    console.log('📊 Métricas calculadas:', {
-      totalInspecoes,
+    console.log('📊 Métricas calculadas (nova lógica diária):', {
+      totalInspecoes: pessoasUnicas,
       realizadas,
       pendentes,
       taxaConclusao,
-      totalRegistrosFiltrados: registrosFiltrados.length,
+      totalRegistrosConsolidados: registrosConsolidados.length,
       totalRegistrosOriginais: registros.length,
     });
     console.log('=================================\n');
