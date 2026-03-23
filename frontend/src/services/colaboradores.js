@@ -43,4 +43,12 @@ export const ColaboradoresAPI = {
     // padrão successResponse { success, data }
     return res.data?.data || [];
   },
+  listarCargos: async () => {
+    const res = await api.get("/cargos");
+    return res.data?.data || [];
+  },
+  listarEscalas: async () => {
+    const res = await api.get("/colaboradores/escalas");
+    return res.data?.data || [];
+  },
 };

@@ -424,8 +424,6 @@ export default function DashboardDesligamento() {
           )}
         </div>
       </div>
-
-      {!loading && data && <DebugPanel raw={data} />}
-    </>
+    </> 
   );
 }

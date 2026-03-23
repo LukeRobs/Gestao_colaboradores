@@ -29,6 +29,15 @@ router.get(
   asyncHandler(controller.listarLideres)
 );
 
+/* ================= ESCALAS ================= */
+
+router.get(
+  "/escalas",
+  authenticate,
+  authorize("ADMIN", "GESTAO", "LIDERAMCA"),
+  asyncHandler(controller.listarEscalas)
+);
+
 /* ================= CPF (⚠️ TEM QUE VIR ANTES DE :opsId) ================= */
 router.get(
   "/cpf/:cpf",

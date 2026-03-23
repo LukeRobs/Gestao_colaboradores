@@ -18,16 +18,18 @@ export default function ColaboradoresPage() {
   const [escalaSelecionada, setEscalaSelecionada] = useState("TODOS");
   const [liderSelecionado, setLiderSelecionado] = useState("TODOS");
   const [statusSelecionado, setStatusSelecionado] = useState("TODOS");
+  const [cargoSelecionado, setCargoSelecionado] = useState("TODOS");
+
   const [lideres, setLideres] = useState([]);
+  const [cargos, setCargos] = useState([]);
+  const [escalas, setEscalas] = useState([]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Estados para paginação
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-
-
 
   const navigate = useNavigate();
   const { permissions } = useContext(AuthContext);
@@ -42,41 +44,81 @@ export default function ColaboradoresPage() {
         console.error("Erro ao carregar líderes:", error);
       }
     };
+
     carregarLideres();
+  }, []);
+
+  /* ================= CARREGAR CARGOS ================= */
+  useEffect(() => {
+    const carregarCargos = async () => {
+      try {
+        const cargosData = await ColaboradoresAPI.listarCargos();
+        setCargos(cargosData);
+      } catch (error) {
+        console.error("Erro ao carregar cargos:", error);
+      }
+    };
+
+    carregarCargos();
+  }, []);
+
+  /* ================= CARREGAR ESCALAS ================= */
+  useEffect(() => {
+    const carregarEscalas = async () => {
+      try {
+        const escalasData = await ColaboradoresAPI.listarEscalas();
+        console.log("ESCALAS:", escalasData); // debug
+        setEscalas(escalasData);
+      } catch (error) {
+        console.error("Erro ao carregar escalas:", error);
+      }
+    };
+
+    carregarEscalas();
   }, []);
 
   /* ================= LOAD ================= */
   const load = useCallback(async () => {
-  setLoading(true);
-  try {
-    const params = {
-      page,
-      limit,
-      search: query || undefined,
-      turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
-      escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
-      idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
-      status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
-    };
+    setLoading(true);
 
+    try {
+      const params = {
+        page,
+        limit,
+        search: query || undefined,
+        turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
+        escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
+        idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
+        status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
+        idCargo:
+          cargoSelecionado !== "TODOS"
+            ? Number(cargoSelecionado)
+            : undefined,
+      };
 
-    const res = await ColaboradoresAPI.listar(params);
+      const res = await ColaboradoresAPI.listar(params);
 
-    setEmployees(res.data);
-    setTotalItems(res.pagination.total);
-    setTotalPages(
-      Math.max(1, Math.ceil(res.pagination.total / limit))
-    );
-  } catch (error) {
-    console.error("Erro ao carregar colaboradores:", error);
-    setEmployees([]);
-    setTotalItems(0);
-    setTotalPages(1);
-  } finally {
-    setLoading(false);
-  }
-}, [page, limit, query, turnoSelecionado, escalaSelecionada, liderSelecionado, statusSelecionado]);
-
+      setEmployees(res.data);
+      setTotalItems(res.pagination.total);
+      setTotalPages(Math.max(1, Math.ceil(res.pagination.total / limit)));
+    } catch (error) {
+      console.error("Erro ao carregar colaboradores:", error);
+      setEmployees([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    page,
+    limit,
+    query,
+    turnoSelecionado,
+    escalaSelecionada,
+    liderSelecionado,
+    statusSelecionado,
+    cargoSelecionado,
+  ]);
 
   useEffect(() => {
     load();
@@ -89,7 +131,7 @@ export default function ColaboradoresPage() {
     { label: "T3", value: "T3" },
   ];
 
-  // Handlers para paginação
+  /* ================= HANDLERS ================= */
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
@@ -97,39 +139,41 @@ export default function ColaboradoresPage() {
 
   const handleLimitChange = (newLimit) => {
     setLimit(newLimit);
-    setPage(1); // Reset para página 1 ao mudar limit
-  };
-
-  // Handler para query (reset página)
-  const handleQueryChange = (newQuery) => {
-    setQuery(newQuery);
     setPage(1);
   };
 
-  // Handler para turno (reset página)
-  const handleTurnoChange = (newTurno) => {
-    setTurnoSelecionado(newTurno);
+  const handleQueryChange = (val) => {
+    setQuery(val);
     setPage(1);
   };
 
-  const handleEscalaChange = (newEscala) => {
-    setEscalaSelecionada(newEscala);
+  const handleTurnoChange = (val) => {
+    setTurnoSelecionado(val);
     setPage(1);
   };
 
-  const handleLiderChange = (newLider) => {
-    setLiderSelecionado(newLider);
+  const handleEscalaChange = (val) => {
+    setEscalaSelecionada(val);
     setPage(1);
   };
 
-  const handleStatusChange = (newStatus) => {
-    setStatusSelecionado(newStatus);
+  const handleLiderChange = (val) => {
+    setLiderSelecionado(val);
+    setPage(1);
+  };
+
+  const handleStatusChange = (val) => {
+    setStatusSelecionado(val);
+    setPage(1);
+  };
+
+  const handleCargoChange = (val) => {
+    setCargoSelecionado(val);
     setPage(1);
   };
 
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
-      {/* SIDEBAR */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -140,7 +184,6 @@ export default function ColaboradoresPage() {
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto">
-
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Colaboradores</h1>
@@ -149,115 +192,115 @@ export default function ColaboradoresPage() {
             </p>
           </div>
 
-  {/* FILTROS + CTA */}
-  <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          {/* FILTROS */}
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 w-full xl:w-auto">
+              
+              {/* BUSCA */}
+              <div className="flex items-center gap-2 bg-[#1A1A1C] px-4 py-2 rounded-xl">
+                <Search size={16} className="text-[#BFBFC3]" />
+                <input
+                  value={query}
+                  onChange={(e) => handleQueryChange(e.target.value)}
+                  placeholder="Buscar colaborador..."
+                  className="bg-transparent outline-none text-sm text-white w-full"
+                />
+              </div>
 
-    {/* FILTROS */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full xl:w-auto">
+              {/* TURNO */}
+              <select
+                value={turnoSelecionado}
+                onChange={(e) => handleTurnoChange(e.target.value)}
+                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+              >
+                {turnos.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
 
-      {/* BUSCA */}
-      <div className="flex items-center gap-2 bg-[#1A1A1C] px-4 py-2 rounded-xl">
-        <Search size={16} className="text-[#BFBFC3]" />
-        <input
-          value={query}
-          onChange={(e) => handleQueryChange(e.target.value)}
-          placeholder="Buscar colaborador..."
-          className="bg-transparent outline-none text-sm text-white placeholder-[#BFBFC3] w-full"
-        />
-      </div>
+             {/* ESCALA */}
+              <select
+                value={escalaSelecionada}
+                onChange={(e) => handleEscalaChange(e.target.value)}
+                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+              >
+                <option value="TODOS">Escalas</option>
 
-      {/* TURNO */}
-      <select
-        value={turnoSelecionado}
-        onChange={(e) => handleTurnoChange(e.target.value)}
-        className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C] w-full"
-      >
-        {turnos.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
-          </option>
-        ))}
-      </select>
+                {escalas.map((escala) => (
+                  <option key={escala.idEscala} value={escala.nomeEscala}>
+                    {escala.nomeEscala}
+                  </option>
+                ))}
+              </select>
 
-      {/* ESCALA */}
-      <select
-        value={escalaSelecionada}
-        onChange={(e) => handleEscalaChange(e.target.value)}
-        className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C] w-full"
-      >
-        <option value="TODOS">Escalas</option>
-        <option value="A">Escala A</option>
-        <option value="B">Escala B</option>
-        <option value="C">Escala C</option>
-      </select>
+              {/* CARGO (DINÂMICO 🔥) */}
+              <select
+                value={cargoSelecionado}
+                onChange={(e) => handleCargoChange(e.target.value)}
+                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+              >
+                <option value="TODOS">Cargos</option>
+                {cargos.map((cargo) => (
+                  <option key={cargo.idCargo} value={cargo.idCargo}>
+                    {cargo.nomeCargo}
+                  </option>
+                ))}
+              </select>
 
-      {/* LÍDER */}
-      <select
-        value={liderSelecionado}
-        onChange={(e) => handleLiderChange(e.target.value)}
-        className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C] w-full"
-      >
-        <option value="TODOS">Líderes</option>
-        {lideres.map((lider) => (
-          <option key={lider.opsId} value={lider.opsId}>
-            {lider.nomeCompleto}
-          </option>
-        ))}
-      </select>
+              {/* LÍDER */}
+              <select
+                value={liderSelecionado}
+                onChange={(e) => handleLiderChange(e.target.value)}
+                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+              >
+                <option value="TODOS">Líderes</option>
+                {lideres.map((lider) => (
+                  <option key={lider.opsId} value={lider.opsId}>
+                    {lider.nomeCompleto}
+                  </option>
+                ))}
+              </select>
 
-      {/* STATUS */}
-      <select
-        value={statusSelecionado}
-        onChange={(e) => handleStatusChange(e.target.value)}
-        className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C] w-full"
-      >
-        <option value="TODOS">Status</option>
-        <option value="ATIVO">Ativo</option>
-        <option value="INATIVO">Inativo</option>
-        <option value="AFASTADO">Afastado</option>
-        <option value="FERIAS">Férias</option>
-      </select>
-    </div>
+              {/* STATUS */}
+              <select
+                value={statusSelecionado}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+              >
+                <option value="TODOS">Status</option>
+                <option value="ATIVO">Ativo</option>
+                <option value="INATIVO">Inativo</option>
+                <option value="AFASTADO">Afastado</option>
+                <option value="FERIAS">Férias</option>
+              </select>
+            </div>
 
-    {/* BOTÃO */}
-    {permissions.isAdmin && (
-      <div className="w-full xl:w-auto">
-        <button
-          onClick={() => navigate("/colaboradores/novo")}
-          className="
-            w-full xl:w-auto
-            inline-flex items-center justify-center gap-2
-            px-5 py-2.5
-            bg-[#FA4C00]
-            hover:bg-[#ff5a1a]
-            text-sm font-medium
-            rounded-xl
-            transition
-          "
-        >
-          <Plus size={16} />
-          Novo Colaborador
-        </button>
-      </div>
-    )}
-  </div>
+            {/* BOTÃO */}
+            {permissions.isAdmin && (
+              <button
+                onClick={() => navigate("/colaboradores/novo")}
+                className="px-5 py-2.5 bg-[#FA4C00] rounded-xl"
+              >
+                <Plus size={16} />
+                Novo Colaborador
+              </button>
+            )}
+          </div>
 
           {/* LISTA */}
           <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden">
             {loading ? (
-              <LoadingScreen message="Carregando colaboradores..." />
-            ) : employees.length === 0 ? (
-              <div className="p-6 text-center text-[#BFBFC3]">
-                Nenhum colaborador encontrado. <br />
-                Tente ajustar os filtros ou a busca.
-              </div>
+              <LoadingScreen />
             ) : (
               <>
                 <EmployeeTable
                   employees={employees}
-                  onView={(emp) =>
-                    navigate(`/colaboradores/${emp.opsId}`)
-                  }
+                  onView={(emp) => {
+                    console.log("VIEW CLICK:", emp);
+                    navigate(`/colaboradores/${emp.opsId}`);
+                  }}
                   onDelete={
                     permissions.isAdmin
                       ? async (emp) => {
@@ -272,8 +315,6 @@ export default function ColaboradoresPage() {
                       : null
                   }
                 />
-
-                {/* PAGINAÇÃO - SEMPRE MOSTRADA, MESMO COM 1 PÁGINA */}
                 <Pagination
                   page={page}
                   totalPages={totalPages}
@@ -285,7 +326,6 @@ export default function ColaboradoresPage() {
               </>
             )}
           </div>
-
         </main>
       </div>
     </div>

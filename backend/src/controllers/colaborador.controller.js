@@ -294,7 +294,26 @@ const getColaboradorById = async (req, res) => {
 };
 
 
+/* ================= LISTAR ESCALAS ================= */
+const listarEscalas = async (req, res) => {
+  try {
+    const escalas = await prisma.escala.findMany({
+      select: {
+        idEscala: true,
+        nomeEscala: true,
+        descricao: true,
+      },
+      orderBy: {
+        nomeEscala: "asc",
+      },
+    });
 
+    return successResponse(res, escalas);
+  } catch (err) {
+    console.error("❌ ERRO LISTAR ESCALAS:", err);
+    return errorResponse(res, "Erro ao listar escalas", 500);
+  }
+};
 
 /* ================= CREATE ================= */
 const createColaborador = async (req, res) => {
@@ -1150,4 +1169,5 @@ module.exports = {
   importColaboradores,
   getStatusImport,
   listarLideres,
+  listarEscalas,
 };

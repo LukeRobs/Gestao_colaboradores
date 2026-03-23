@@ -203,16 +203,31 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
               label="Data de Admissão"
               value={
                 colaborador.dataAdmissao
-                  ? new Date(colaborador.dataAdmissao).toLocaleDateString()
+                  ? new Date(colaborador.dataAdmissao).toLocaleDateString("pt-BR")
                   : "-"
               }
             />
+
+            {colaborador.status === "INATIVO" && (
+              <Info
+                label="Data de Demissão"
+                value={
+                  colaborador.dataDesligamento
+                    ? new Date(colaborador.dataDesligamento).toLocaleDateString("pt-BR")
+                    : "-"
+                }
+              />
+            )}
 
             <Info
               label="Início da Jornada"
               value={
                 colaborador.horarioInicioJornada
-                  ? colaborador.horarioInicioJornada.substring(11, 16)
+                  ? new Date(colaborador.horarioInicioJornada).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "UTC",
+                    })
                   : "-"
               }
             />
