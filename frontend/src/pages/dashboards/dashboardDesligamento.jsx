@@ -34,8 +34,8 @@ function toChartDataClean(obj = {}) {
 /* ─── Shimmer skeleton ─────────────────────────────────────── */
 function Skeleton({ h = "h-48" }) {
   return (
-    <div className={`${h} rounded-2xl bg-white/[0.04] overflow-hidden relative`}>
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+    <div className={`${h} rounded-2xl bg-white/4 overflow-hidden relative`}>
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-linear-to-r from-transparent via-white/6 to-transparent" />
     </div>
   );
 }
@@ -51,7 +51,7 @@ function LoadingState() {
         </div>
       </div>
 
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} h="h-24" />
         ))}
@@ -111,11 +111,11 @@ function DebugPanel({ raw }) {
 
       {open && (
         <div className="mt-1 bg-[#141416] border border-white/10 rounded-xl overflow-hidden shadow-2xl">
-          <p className="px-3 py-2 border-b border-white/[0.06] text-white/40 text-[10px] uppercase tracking-widest">
+          <p className="px-3 py-2 border-b border-white/6 text-white/40 text-[10px] uppercase tracking-widest">
             Mapeamento de campos
           </p>
 
-          <ul className="divide-y divide-white/[0.05] max-h-72 overflow-y-auto">
+          <ul className="divide-y divide-white/5 max-h-72 overflow-y-auto">
             {checks.map((c, i) => {
               const hasKeys = c.isObj && c.val && typeof c.val === "object";
               const keyCount = hasKeys ? Object.keys(c.val).length : 0;
@@ -126,7 +126,7 @@ function DebugPanel({ raw }) {
 
               return (
                 <li key={i} className="flex items-start gap-2 px-3 py-2">
-                  <span className="mt-0.5 flex-shrink-0 text-sm">
+                  <span className="mt-0.5 shrink-0 text-sm">
                     {isOk ? "✅" : isZero ? "⚠️" : "❌"}
                   </span>
 
@@ -153,7 +153,7 @@ function DebugPanel({ raw }) {
             })}
           </ul>
 
-          <details className="border-t border-white/[0.06]">
+          <details className="border-t border-white/6">
             <summary className="px-3 py-2 text-white/30 text-[10px] uppercase tracking-widest cursor-pointer hover:text-white/50">
               Raw JSON ▸
             </summary>
@@ -191,10 +191,10 @@ function DateBadge({ inicio, fim, turno }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/40 font-medium">
-      <div className="bg-white/[0.05] border border-white/[0.07] px-3 py-1.5 rounded-full">
+      <div className="bg-white/5 border border-white/[0.07] px-3 py-1.5 rounded-full">
         📅 {fmt(inicio)} → {fmt(fim)}
       </div>
-      <div className="bg-white/[0.05] border border-white/[0.07] px-3 py-1.5 rounded-full">
+      <div className="bg-white/5 border border-white/[0.07] px-3 py-1.5 rounded-full">
         Turno: {turno === "ALL" ? "Todos" : turno}
       </div>
     </div>
@@ -322,7 +322,7 @@ export default function DashboardDesligamento() {
               <section className="fadeUp d1">
                 <SectionLabel>Indicadores-chave</SectionLabel>
 
-                <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
                   <Card
                     title="Total"
                     value={data.total ?? 0}
@@ -378,12 +378,12 @@ export default function DashboardDesligamento() {
                   />
 
                   <ChartBar
-                    title="Motivos por Turno"
+                    title="Desligamentos por Turno"
                     data={toChartDataClean(data.turno)}
                   />
 
                   <ChartBar
-                    title="Motivos por Setor"
+                    title="Desligamentos por Setor"
                     data={toChartDataClean(data.setor)}
                   />
 
@@ -393,7 +393,7 @@ export default function DashboardDesligamento() {
                   />
 
                   <ChartBar
-                    title="Motivos por Empresa"
+                    title="Desligamentos por Empresa"
                     data={toChartDataClean(data.empresa)}
                   />
 
@@ -414,7 +414,7 @@ export default function DashboardDesligamento() {
                   />
 
                   <ChartBar
-                    title="Motivo por Gênero"
+                    title="Desligamentos por Gênero"
                     data={toChartDataClean(data.genero)}
                   />
                 </div>

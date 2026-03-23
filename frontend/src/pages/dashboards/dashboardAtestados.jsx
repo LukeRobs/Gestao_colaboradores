@@ -33,6 +33,21 @@ const COLORS = [
   "#FF453A",
 ]
 
+const CID_DESCRICOES = {
+  A09: "Sintomas Gripais",
+  J11: "Sintomas Gripais",
+  J069: "Sintomas Gripais",
+  B349: "Sintomas Gripais",
+  H920: "Sintomas Gripais",
+
+  M545: "Dor lombar (lombalgia)",
+  M796: "Dor em membros (braços ou pernas)",
+
+  R11: "Náuseas e vômitos",
+  R52: "Dor não especificada",
+  R520: "Dor aguda",
+}
+
 function isoToday() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -44,6 +59,77 @@ function isoFirstDayOfMonth() {
     .slice(0, 10)
 }
 
+function SelectCID({ value, onChange, options }) {
+  const [open, setOpen] = useState(false)
+
+  const selected = options.find((o) => o.codigo === value)
+
+  return (
+    <div className="relative">
+      <div
+        onClick={() => setOpen(!open)}
+        className="
+          bg-[#1c1c1c]
+          rounded-xl
+          p-3
+          cursor-pointer
+          border border-white/5
+        "
+      >
+        <p className="text-[11px] text-white/60 mb-1">CID</p>
+        <div className="flex justify-between items-center">
+          <span className="text-sm">
+            {selected
+              ? `${selected.codigo} (${selected.total})`
+              : "Todos"}
+          </span>
+          <span className="text-white/40">▼</span>
+        </div>
+      </div>
+
+      {open && (
+        <div
+          className="
+            absolute z-9999 mt-2 w-full
+            bg-[#1c1c1c]
+            border border-white/10
+            rounded-xl
+            max-h-60 overflow-y-auto
+            shadow-xl
+          "
+        >
+          <div
+            onClick={() => {
+              onChange("")
+              setOpen(false)
+            }}
+            className="px-3 py-2 hover:bg-white/10 cursor-pointer text-sm"
+          >
+            Todos
+          </div>
+
+          {options.map((c) => (
+            <div
+              key={c.codigo}
+              onClick={() => {
+                onChange(c.codigo)
+                setOpen(false)
+              }}
+              className="
+                px-3 py-2
+                hover:bg-[#FA4C00]/20
+                cursor-pointer
+                text-sm
+              "
+            >
+              {c.codigo} - {CID_DESCRICOES[c.codigo] || "CID"} ({c.total})
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 /* =====================================================
    PAGE
 ===================================================== */
@@ -52,6 +138,8 @@ export default function DashboardAtestados() {
   const [inicio, setInicio] = useState(isoFirstDayOfMonth())
   const [fim, setFim] = useState(isoToday())
 
+  const [cid, setCid] = useState("")
+  const [cids, setCids] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -60,22 +148,34 @@ export default function DashboardAtestados() {
   const [tendencia, setTendencia] = useState([])
   const [topOfensores, setTopOfensores] = useState([])
 
+  const [colaboradores, setColaboradores] = useState([])
+  const [filtroTempoCasa, setFiltroTempoCasa] = useState("")
+  const [filtroTurno, setFiltroTurno] = useState("")
+
   async function fetchAll() {
     try {
       setLoading(true)
       setError("")
 
-      const params = { inicio, fim }
+      const params = {
+        inicio,
+        fim,
+        cid: cid || undefined,
+      }
 
-      const [resResumo, resDist, resTend, resRisco] = await Promise.all([
+      const [resResumo, resDist, resTend, resRisco, resCids, resColab] = await Promise.all([
         api.get("/dashboard/atestados/resumo", { params }),
         api.get("/dashboard/atestados/distribuicoes", { params }),
         api.get("/dashboard/atestados/tendencia", { params }),
         api.get("/dashboard/atestados/risco", { params }),
+        api.get("/dashboard/atestados/cids", { params }),
+        api.get("/dashboard/atestados/colaboradores", { params }),
       ])
 
       setKpis(resResumo.data?.data?.kpis ?? resResumo.data?.kpis ?? null)
       setDist(resDist.data?.data ?? resDist.data ?? null)
+      setCids(resCids.data?.data || [])
+      setColaboradores(resColab.data?.data || [])
 
       setTendencia(
         Array.isArray(resTend.data?.data)
@@ -98,8 +198,7 @@ export default function DashboardAtestados() {
 
   useEffect(() => {
     fetchAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [inicio, fim, cid])
 
   /* =====================================================
      MEMOS — DADOS JÁ VÊM name/value DO BACKEND
@@ -131,8 +230,49 @@ export default function DashboardAtestados() {
 
   const porCidChart = useMemo(() => {
     if (!dist || !Array.isArray(dist.porCid)) return []
-    return [...dist.porCid].slice(0, 10)
+
+    return dist.porCid
+      .map((item) => {
+        const codigo = item.name
+        const descricao = CID_DESCRICOES[codigo] || "Outros"
+
+        return {
+          ...item,
+          name: `${codigo} - ${descricao}`,
+          full: `${codigo} - ${descricao}`,
+        }
+      })
+      .slice(0, 10)
   }, [dist])
+
+  const colaboradoresFiltrados = useMemo(() => {
+    function matchTempoCasa(faixa, filtro) {
+      if (!filtro) return true
+
+      const map = {
+        "0–30": ["0–30", "< 30 dias"],
+        "31–89": ["31–89", "30–89 dias"],
+        "90–180": ["90–180", "≥ 90 dias"],
+        "181–364": ["181–364"],
+        "365+": ["365+"],
+      }
+
+      return map[filtro]?.includes(faixa)
+    }
+
+    return colaboradores.filter((c) => {
+      // ✅ AQUI estava faltando
+      if (!matchTempoCasa(c.tempoCasa, filtroTempoCasa)) {
+        return false
+      }
+
+      if (filtroTurno && c.turno !== filtroTurno) {
+        return false
+      }
+
+      return true
+    })
+  }, [colaboradores, filtroTempoCasa, filtroTurno])
 
   /* =====================================================
      RENDER (RESPONSIVO)
@@ -143,7 +283,7 @@ export default function DashboardAtestados() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* CONTEÚDO */}
-      <div className="flex-1 min-w-0 lg:ml-64 overflow-x-hidden">
+      <div className="flex-1 min-w-0 lg:ml-64 overflow-visible">
         {/* HEADER */}
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
@@ -161,9 +301,19 @@ export default function DashboardAtestados() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:items-end w-full lg:w-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
                 <DateInput label="Início" value={inicio} onChange={setInicio} />
                 <DateInput label="Fim" value={fim} onChange={setFim} />
+
+                
+                <div className="bg-[#1c1c1c] rounded-xl p-3 w-full">
+                  <p className="text-[11px] text-white/60 mb-1">CID</p>
+                  <SelectCID
+                    value={cid}
+                    onChange={setCid}
+                    options={cids}
+                  />
+                </div>
               </div>
 
               <button
@@ -317,6 +467,79 @@ export default function DashboardAtestados() {
               <TopOfensoresTable rows={topOfensores} loading={loading} />
             </Card>
           </div>
+                      {/* TABELA COMPLETA DE COLABORADORES */}
+            <Card title="Colaboradores com Atestados">
+              {/* FILTROS */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <select
+                  value={filtroTempoCasa}
+                  onChange={(e) => setFiltroTempoCasa(e.target.value)}
+                  className="bg-[#1c1c1c] border border-white/10 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">Tempo de casa (Todos)</option>
+                  <option value="0–30">0–30</option>
+                  <option value="31–89">31–89</option>
+                  <option value="90–180">90–180</option>
+                  <option value="181–364">181–364</option>
+                  <option value="365+">365+</option>
+                </select>
+
+                <select
+                  value={filtroTurno}
+                  onChange={(e) => setFiltroTurno(e.target.value)}
+                  className="bg-[#1c1c1c] border border-white/10 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">Turno (Todos)</option>
+                  {[...new Set(colaboradores.map((c) => c.turno))].map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* TABELA */}
+              <div className="w-full overflow-x-auto">
+                  <table className="w-full text-sm">
+                  <thead className="text-white/60">
+                    <tr>
+                      <th className="text-left py-2">Nome</th>
+                      <th className="text-left py-2 pr-4">Empresa</th>
+                      <th className="text-left py-2 pr-4">Setor</th>
+                      <th className="text-left py-2 pr-4">Turno</th>
+                      <th className="text-left py-2 pr-4">Escala</th>
+                      <th className="text-left py-2 pr-4">Tempo Casa</th>
+                      <th className="text-right py-2 pr-4">Recorrência</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {colaboradoresFiltrados.map((c) => (
+                      <tr
+                        key={c.opsId}
+                        className="border-t border-white/5 hover:bg-white/5 transition"
+                      >
+                        <td className="py-2 font-medium">{c.nome}</td>
+                        <td className="py-2 pr-4">{c.empresa}</td>
+                        <td className="py-2 pr-4">{c.setor}</td>
+                        <td className="py-2 pr-4">{c.turno}</td>
+                        <td className="py-2 pr-4">{c.escala}</td>
+
+                        <td className="py-2">
+                          <span className="bg-white/10 px-2 py-1 rounded-md text-xs">
+                            {c.tempoCasa}
+                          </span>
+                        </td>
+
+                        <td className="py-2 text-right">
+                          <span className="bg-[#FA4C00]/20 text-[#FA4C00] px-3 py-1 rounded-lg font-bold">
+                            {c.totalAtestados}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
         </main>
       </div>
     </div>
@@ -606,8 +829,11 @@ function BarBlockHorizontalCID({ data }) {
         >
           <CartesianGrid stroke="rgba(255,255,255,0.06)" />
           <XAxis type="number" allowDecimals={false} domain={[0, (dataMax) => dataMax + 0.3]} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-          <YAxis type="category" dataKey="name" width={70} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
+          <YAxis type="category" dataKey="name" width={120} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
           <Tooltip
+            formatter={(value, _, props) => {
+              return [`${value} atestados`, props.payload.full || props.payload.name]
+            }}
             contentStyle={{
               background: "#232323",
               border: "1px solid rgba(255,255,255,0.1)",

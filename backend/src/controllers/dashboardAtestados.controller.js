@@ -6,11 +6,18 @@ function dateOnlyBrasil(dateStr) {
   return new Date(dateStr + "T00:00:00.000Z");
 }
 
+function buildWhere(inicioDate, fimDate, cid) {
+  return {
+    dataInicio: { gte: inicioDate, lte: fimDate },
+    status: { not: "CANCELADO" },
+    ...(cid && { cid }), // 🔥 filtro dinâmico
+  };
+}
 /* ===================================================== */
 /* RESUMO */
 const getResumoAtestados = async (req, res) => {
   try {
-    const { inicio, fim } = req.query;
+    const { inicio, fim, cid } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -22,10 +29,7 @@ const getResumoAtestados = async (req, res) => {
        BUSCA ATESTADOS DO PERÍODO
     ========================================= */
     const atestadosPeriodo = await prisma.atestadoMedico.findMany({
-      where: {
-        dataInicio: { gte: inicioDate, lte: fimDate },
-        status: { not: "CANCELADO" },
-      },
+      where: buildWhere(inicioDate, fimDate, cid),
       select: {
         opsId: true,
         diasAfastamento: true,
@@ -97,6 +101,7 @@ const getResumoAtestados = async (req, res) => {
           lt: amanha,
         },
         status: { not: "CANCELADO" },
+        ...(cid && { cid }),
       },
     });
 
@@ -113,6 +118,7 @@ const getResumoAtestados = async (req, res) => {
       where: {
         dataInicio: { gte: inicioSemana, lte: hoje },
         status: { not: "CANCELADO" },
+        ...(cid && { cid }),
       },
     });
 
@@ -129,6 +135,7 @@ const getResumoAtestados = async (req, res) => {
       where: {
         dataInicio: { gte: inicioMes, lte: hoje },
         status: { not: "CANCELADO" },
+        ...(cid && { cid }),
       },
     });
 
@@ -175,7 +182,7 @@ const normalize = (v) =>
 
 const getDistribuicoesAtestados = async (req, res) => {
   try {
-    const { inicio, fim } = req.query;
+    const { inicio, fim, cid } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -184,10 +191,7 @@ const getDistribuicoesAtestados = async (req, res) => {
     const fimDate = dateOnlyBrasil(fim);
 
     const atestados = await prisma.atestadoMedico.findMany({
-      where: {
-        dataInicio: { gte: inicioDate, lte: fimDate },
-        status: { not: "CANCELADO" },
-      },
+      where: buildWhere(inicioDate, fimDate, cid),
       include: {
         colaborador: {
           include: {
@@ -251,7 +255,7 @@ const getDistribuicoesAtestados = async (req, res) => {
       porGenero: toArray(acc.genero),
       porLider: toArray(acc.lider),
       porCid: toArray(acc.cid).slice(0, 10),
-      porTempoCasa: toArray(acc.tempoCasa), // 🔥 NOVO
+      porTempoCasa: toArray(acc.tempoCasa),
     });
   } catch (err) {
     console.error("❌ DISTRIBUIÇÕES:", err);
@@ -264,7 +268,7 @@ const getDistribuicoesAtestados = async (req, res) => {
 /* TENDÊNCIA */
 const getTendenciaAtestados = async (req, res) => {
   try {
-    const { inicio, fim } = req.query;
+    const { inicio, fim, cid } = req.query;
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
 
@@ -272,10 +276,7 @@ const getTendenciaAtestados = async (req, res) => {
     const fimDate = dateOnlyBrasil(fim);
 
     const registros = await prisma.atestadoMedico.findMany({
-      where: {
-        dataInicio: { gte: inicioDate, lte: fimDate },
-        status: { not: "CANCELADO" },
-      },
+      where: buildWhere(inicioDate, fimDate, cid),
       select: { dataInicio: true },
     });
 
@@ -301,7 +302,7 @@ const getTendenciaAtestados = async (req, res) => {
 /* TOP OFENSORES */
 const getRiscoAtestados = async (req, res) => {
   try {
-    const { inicio, fim } = req.query;
+    const { inicio, fim, cid } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -313,10 +314,7 @@ const getRiscoAtestados = async (req, res) => {
        BUSCA ATESTADOS + RELAÇÕES
     =============================== */
     const atestados = await prisma.atestadoMedico.findMany({
-      where: {
-        dataInicio: { gte: inicioDate, lte: fimDate },
-        status: { not: "CANCELADO" },
-      },
+      where: buildWhere(inicioDate, fimDate, cid),
       include: {
         colaborador: {
           include: {
@@ -397,12 +395,12 @@ const getRiscoAtestados = async (req, res) => {
         };
       })
       .sort((a, b) => {
-        // 🔥 1º critério → total de atestados
+        //  1º critério → total de atestados
         if (b.totalAtestados !== a.totalAtestados) {
           return b.totalAtestados - a.totalAtestados;
         }
 
-        // 🔥 2º critério (desempate) → dias afastados
+        //  2º critério (desempate) → dias afastados
         return b.diasAfastados - a.diasAfastados;
       })
       .slice(0, 10)
@@ -418,11 +416,122 @@ const getRiscoAtestados = async (req, res) => {
     return errorResponse(res, "Erro ao buscar risco", 500);
   }
 };
+const getCidsAtestados = async (req, res) => {
+  try {
+    const { inicio, fim } = req.query;
 
+    if (!inicio || !fim)
+      return errorResponse(res, "Período obrigatório", 400);
+
+    const inicioDate = dateOnlyBrasil(inicio);
+    const fimDate = dateOnlyBrasil(fim);
+
+    const result = await prisma.atestadoMedico.groupBy({
+      by: ["cid"],
+      _count: { cid: true },
+      where: {
+        dataInicio: { gte: inicioDate, lte: fimDate },
+        status: { not: "CANCELADO" },
+        cid: { not: null },
+      },
+      orderBy: {
+        _count: { cid: "desc" },
+      },
+    });
+
+    return successResponse(
+      res,
+      result.map((r) => ({
+        codigo: r.cid,
+        total: r._count.cid,
+      }))
+    );
+  } catch (err) {
+    console.error("❌ CIDS:", err);
+    return errorResponse(res, "Erro ao buscar CIDs", 500);
+  }
+};
+
+const getColaboradoresAtestados = async (req, res) => {
+  try {
+    const { inicio, fim, cid } = req.query;
+
+    if (!inicio || !fim)
+      return errorResponse(res, "Período obrigatório", 400);
+
+    const inicioDate = dateOnlyBrasil(inicio);
+    const fimDate = dateOnlyBrasil(fim);
+
+    const atestados = await prisma.atestadoMedico.findMany({
+      where: buildWhere(inicioDate, fimDate, cid),
+      include: {
+        colaborador: {
+          include: {
+            empresa: true,
+            setor: true,
+            turno: true,
+            escala: true,
+          },
+        },
+      },
+    });
+
+    const mapa = {};
+
+    function diffDays(start, end) {
+      return Math.floor(
+        (new Date(end) - new Date(start)) / (1000 * 60 * 60 * 24)
+      );
+    }
+
+    function getTempoCasaFaixa(adm, ref) {
+      if (!adm) return "N/I";
+
+      const dias = diffDays(adm, ref);
+
+      if (dias <= 30) return "0–30";
+      if (dias <= 89) return "31–89";
+      if (dias <= 180) return "90–180";
+      if (dias <= 364) return "181–364";
+      return "365+";
+    }
+
+    for (const a of atestados) {
+      const c = a.colaborador;
+      if (!c) continue;
+
+      if (!mapa[a.opsId]) {
+        mapa[a.opsId] = {
+          opsId: a.opsId,
+          nome: c.nomeCompleto,
+          empresa: c.empresa?.razaoSocial || "N/I",
+          setor: c.setor?.nomeSetor || "N/I",
+          turno: c.turno?.nomeTurno || "N/I",
+          escala: c.escala?.nomeEscala || "N/I",
+          tempoCasa: getTempoCasaFaixa(c.dataAdmissao, fimDate),
+          totalAtestados: 0,
+        };
+      }
+
+      mapa[a.opsId].totalAtestados += 1;
+    }
+
+    const resultado = Object.values(mapa).sort(
+      (a, b) => b.totalAtestados - a.totalAtestados
+    );
+
+    return successResponse(res, resultado);
+  } catch (err) {
+    console.error("❌ COLABORADORES:", err);
+    return errorResponse(res, "Erro ao buscar colaboradores", 500);
+  }
+};
 
 module.exports = {
   getResumoAtestados,
   getDistribuicoesAtestados,
   getTendenciaAtestados,
   getRiscoAtestados,
+  getCidsAtestados,
+  getColaboradoresAtestados,
 };
