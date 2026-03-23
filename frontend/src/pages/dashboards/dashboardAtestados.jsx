@@ -459,6 +459,85 @@ export default function DashboardAtestados() {
 
           {/* CID + RANKING */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <Card title="Atestados por Tempo de Casa">
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dist?.porTempoCasa || []}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.08)" />
+
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: "#BFBFC3", fontSize: 12 }}
+                    />
+
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fill: "#BFBFC3", fontSize: 12 }}
+                    />
+
+                    <Tooltip
+                      contentStyle={{
+                        background: "#232323",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: 8,
+                      }}
+                    />
+
+                    <Bar dataKey="value" fill="#FA4C00">
+                      <LabelList
+                        dataKey="value"
+                        position="top"
+                        style={{ fill: "#FFF", fontSize: 12, fontWeight: 600 }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            <Card title="CID - Distribuição Completa">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-white/60">
+                    <tr>
+                      <th className="text-left py-2">CID</th>
+                      <th className="text-right py-2">Quantidade</th>
+                      <th className="text-right py-2">% Total</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {(dist?.porCid || []).map((c, index, arr) => {
+                      const total = arr.reduce((acc, i) => acc + i.value, 0)
+                      const percent = total > 0
+                        ? ((c.value / total) * 100).toFixed(1)
+                        : 0
+
+                      return (
+                        <tr
+                          key={index}
+                          className="border-t border-white/5 hover:bg-white/5"
+                        >
+                          <td className="py-2">{c.name}</td>
+
+                          <td className="py-2 text-right font-semibold">
+                            {c.value}
+                          </td>
+
+                          <td className="py-2 text-right text-[#FA4C00] font-semibold">
+                            {percent}%
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card title="Top 10 CID (dado sensível)">
               <BarBlockHorizontalCID data={porCidChart} />
             </Card>
