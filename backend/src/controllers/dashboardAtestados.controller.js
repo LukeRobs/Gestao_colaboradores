@@ -6,6 +6,16 @@ function dateOnlyBrasil(dateStr) {
   return new Date(dateStr + "T00:00:00.000Z");
 }
 
+// Corrige dataAdmissao com dia/mês invertidos (data futura = cadastro errado)
+function corrigirAdmissao(adm) {
+  if (!adm) return null;
+  const d = new Date(adm);
+  const hoje = new Date();
+  if (d <= hoje) return d; // data normal, não precisa corrigir
+  // inverte mês e dia: YYYY-MM-DD → YYYY-DD-MM
+  return new Date(d.getUTCFullYear(), d.getUTCDate() - 1, d.getUTCMonth() + 1);
+}
+
 function buildWhere(inicioDate, fimDate, cid) {
   return {
     dataInicio: { gte: inicioDate, lte: fimDate },
@@ -168,13 +178,16 @@ const diffDays = (start, end) => {
 };
 
 function getFaixaTempoEmpresa(adm, ref) {
-  if (!adm || !ref) return "N/I";
+  const admDate = corrigirAdmissao(adm);
+  if (!admDate || !ref) return "N/I";
 
-  const dias = diffDays(adm, ref);
+  const dias = diffDays(admDate, ref);
 
-  if (dias < 30) return "< 30 dias";
-  if (dias < 90) return "30–89 dias";
-  return "≥ 90 dias";
+  if (dias <= 7)  return "0-7";
+  if (dias <= 15) return "8-15";
+  if (dias <= 30) return "16-30";
+  if (dias <= 89) return "31-89";
+  return ">90";
 }
 
 const normalize = (v) =>
@@ -211,7 +224,8 @@ const getDistribuicoesAtestados = async (req, res) => {
       genero: {},
       lider: {},
       cid: {},
-      tempoCasa: {}, // 🔥 NOVO
+      tempoCasa: {},
+      empresaFaixaDias: {},
     };
 
     for (const a of atestados) {
@@ -237,6 +251,12 @@ const getDistribuicoesAtestados = async (req, res) => {
       acc.tempoCasa[tempoCasa] =
         (acc.tempoCasa[tempoCasa] || 0) + 1;
 
+      // histograma BPO x faixa de tempo de casa
+      if (!acc.empresaFaixaDias[empresa]) {
+        acc.empresaFaixaDias[empresa] = { "0-7": 0, "8-15": 0, "16-30": 0, "31-89": 0, ">90": 0 };
+      }
+      acc.empresaFaixaDias[empresa][tempoCasa] = (acc.empresaFaixaDias[empresa][tempoCasa] || 0) + 1;
+
       if (a.cid) {
         const cid = normalize(a.cid);
         acc.cid[cid] = (acc.cid[cid] || 0) + 1;
@@ -256,6 +276,10 @@ const getDistribuicoesAtestados = async (req, res) => {
       porLider: toArray(acc.lider),
       porCid: toArray(acc.cid).slice(0, 10),
       porTempoCasa: toArray(acc.tempoCasa),
+      porEmpresaFaixaDias: Object.entries(acc.empresaFaixaDias).map(([empresa, faixas]) => ({
+        name: empresa,
+        ...faixas,
+      })),
     });
   } catch (err) {
     console.error("❌ DISTRIBUIÇÕES:", err);
@@ -376,7 +400,7 @@ const getRiscoAtestados = async (req, res) => {
     const ranking = Object.values(mapa)
       .map((c) => {
         const diasEmpresa = c.dataAdmissao
-          ? diffDays(c.dataAdmissao, refDate)
+          ? diffDays(corrigirAdmissao(c.dataAdmissao), refDate)
           : 0;
 
         return {
@@ -485,9 +509,10 @@ const getColaboradoresAtestados = async (req, res) => {
     }
 
     function getTempoCasaFaixa(adm, ref) {
-      if (!adm) return "N/I";
+      const admDate = corrigirAdmissao(adm);
+      if (!admDate) return "N/I";
 
-      const dias = diffDays(adm, ref);
+      const dias = diffDays(admDate, ref);
 
       if (dias <= 30) return "0–30";
       if (dias <= 89) return "31–89";

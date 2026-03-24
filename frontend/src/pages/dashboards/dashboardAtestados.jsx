@@ -15,6 +15,7 @@ import {
   Pie,
   Cell,
   LabelList,
+  Legend,
 } from "recharts"
 import api from "../../services/api"
 import Sidebar from "../../components/Sidebar"
@@ -226,6 +227,11 @@ export default function DashboardAtestados() {
   const porLiderChart = useMemo(() => {
     if (!dist || !Array.isArray(dist.porLider)) return []
     return [...dist.porLider].slice(0, 10)
+  }, [dist])
+
+  const porEmpresaFaixaDiasChart = useMemo(() => {
+    if (!dist || !Array.isArray(dist.porEmpresaFaixaDias)) return []
+    return dist.porEmpresaFaixaDias
   }, [dist])
 
   const porCidChart = useMemo(() => {
@@ -441,7 +447,13 @@ export default function DashboardAtestados() {
             <Card title="Atestados por Setor">
               <BarBlock data={porSetorChart} />
             </Card>
+          </div>
 
+          <Card title="Atestados por BPO — Tempo de Casa">
+            <HistogramaBPO data={porEmpresaFaixaDiasChart} />
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card title="Top 10 Líderes">
               <BarBlockHorizontal data={porLiderChart} />
             </Card>
@@ -806,6 +818,85 @@ function BarBlockHorizontal({ data }) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+function HistogramaBPO({ data }) {
+  const safeData = Array.isArray(data) ? data : []
+  if (!safeData.length) return <p className="text-sm text-white/60">Sem dados no período.</p>
+
+  const FAIXAS = ["0-7", "8-15", "16-30", "31-89", ">90"]
+  const SHADES = ["#FA4C00", "#FA4C00", "#FA4C00", "#FA4C00", "#FA4C00"]
+
+  // Transforma para small multiples: um array por BPO com { faixa, total }
+  const bpos = safeData.map((row) => ({
+    name: row.name,
+    chartData: FAIXAS.map((f, i) => ({ faixa: f, total: row[f] || 0, fill: SHADES[i] })),
+    total: FAIXAS.reduce((s, f) => s + (row[f] || 0), 0),
+  }))
+
+  return (
+    <div className="space-y-6">
+      {/* SMALL MULTIPLES — um mini gráfico por BPO */}
+      <div className={`grid gap-4 ${bpos.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
+        {bpos.map((bpo) => (
+          <div key={bpo.name} className="bg-[#161616] rounded-xl p-4 border border-white/5">
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-xs font-semibold text-white/80 truncate pr-2">{bpo.name}</p>
+              <span className="text-xs font-bold text-[#FA4C00] shrink-0">{bpo.total} total</span>
+            </div>
+            <div className="h-[140px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={bpo.chartData} margin={{ top: 14, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis dataKey="faixa" tick={{ fill: "#BFBFC3", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fill: "#BFBFC3", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "#232323", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
+                    formatter={(value) => [`${value} atestados`]}
+                  />
+                  <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                    {bpo.chartData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                    <LabelList dataKey="total" position="top" style={{ fill: "#FFF", fontSize: 11, fontWeight: 700 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* TABELA — números inteiros */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-white/60">
+            <tr>
+              <th className="text-left py-2 pr-4">BPO</th>
+              {FAIXAS.map((f) => (
+                <th key={f} className="text-right py-2 px-3">{f} dias</th>
+              ))}
+              <th className="text-right py-2 px-3">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {safeData.map((row) => {
+              const total = FAIXAS.reduce((s, f) => s + (row[f] || 0), 0)
+              return (
+                <tr key={row.name} className="border-t border-white/5 hover:bg-white/5 transition">
+                  <td className="py-2 pr-4 font-medium">{row.name}</td>
+                  {FAIXAS.map((f) => (
+                    <td key={f} className="py-2 px-3 text-right">{row[f] || 0}</td>
+                  ))}
+                  <td className="py-2 px-3 text-right font-bold text-[#FA4C00]">{total}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

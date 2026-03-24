@@ -8,8 +8,10 @@ const CHANGELOG = {
   version: "1.3.0",
   titulo: "Novidades desta atualização",
   items: [
-    "Dashboard de Faltas."
-    
+    "Dashboard de Faltas.",
+    "Correção: atestado médico de múltiplos dias não sobrepõe mais os dias de DSR.",
+    "Correção: exibição do atestado não avançava para o dia anterior por diferença de fuso horário.",
+    "Dashboard de Atestados: novo gráfico de atestados por BPO agrupado por tempo de casa do colaborador.",
   ],
 };
 
