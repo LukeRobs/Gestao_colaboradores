@@ -32,6 +32,17 @@ function dateOnlyBrasil(dateStr) {
 }
 
 
+function isDiaDSR(data, nomeEscala) {
+  const dow = new Date(data).getDay();
+  const dsrMap = {
+    E: [0, 1],
+    G: [2, 3],
+    C: [4, 5],
+  };
+  const dias = dsrMap[String(nomeEscala || "").toUpperCase()];
+  return !!dias?.includes(dow);
+}
+
 function calcDias(dataInicio, dataFim) {
   const ini = dateOnlyBrasil(dataInicio);
   const fim = dateOnlyBrasil(dataFim);
@@ -208,6 +219,7 @@ const createAtestado = async (req, res) => {
 
     const colaborador = await prisma.colaborador.findFirst({
       where: { cpf: cpfLimpo },
+      include: { escala: { select: { nomeEscala: true } } },
     });
 
     if (!colaborador) {
@@ -215,6 +227,7 @@ const createAtestado = async (req, res) => {
     }
 
     const opsId = colaborador.opsId;
+    const nomeEscala = colaborador.escala?.nomeEscala || null;
 
     const dias =
       diasAfastamento && Number(diasAfastamento) > 0
@@ -248,11 +261,25 @@ const createAtestado = async (req, res) => {
         },
       });
 
-      // 🔁 Atualiza frequência dia a dia
+      // 🔁 Atualiza frequência dia a dia (preserva DSR)
       let current = new Date(inicio);
 
       while (current <= fim) {
         const dataReferencia = new Date(current);
+
+        // 🛡️ Não sobrepõe DSR — verifica frequência existente e escala
+        const freqExistente = await tx.frequencia.findUnique({
+          where: { opsId_dataReferencia: { opsId, dataReferencia } },
+          select: { idTipoAusencia: true },
+        });
+
+        const ehDSRNoBanco = freqExistente?.idTipoAusencia === 4;
+        const ehDSRPorEscala = isDiaDSR(dataReferencia, nomeEscala);
+
+        if (ehDSRNoBanco || ehDSRPorEscala) {
+          current.setDate(current.getDate() + 1);
+          continue;
+        }
 
         await tx.frequencia.upsert({
           where: {

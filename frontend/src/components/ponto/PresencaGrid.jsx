@@ -26,6 +26,9 @@ export default function PresencaGrid({
     const el = containerRef.current;
     if (!el) return;
 
+    // não inicia drag se o clique for na coluna do nome (permite selecionar texto)
+    if (e.target.closest("[data-no-drag]")) return;
+
     // cancela inércia em andamento
     if (drag.current.rafId) cancelAnimationFrame(drag.current.rafId);
 

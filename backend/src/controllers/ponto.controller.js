@@ -25,9 +25,13 @@ function agoraBrasil() {
 }
 
 function startOfDay(dateObj) {
+  // Extrai a data como string YYYY-MM-DD do UTC (datas do banco chegam como meia-noite UTC)
+  // e reconstrói como data local para comparação consistente
   const d = new Date(dateObj);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const yyyy = d.getUTCFullYear();
+  const mm = d.getUTCMonth();
+  const dd = d.getUTCDate();
+  return new Date(yyyy, mm, dd, 0, 0, 0, 0);
 }
 
 function getStatusAdministrativo(c, dataCalendario) {
@@ -693,8 +697,12 @@ const getControlePresenca = async (req, res) => {
 
         /* ===============================
            ATESTADO MÉDICO TEM PRIORIDADE MÁXIMA
+           (exceto quando o dia é DSR)
         =============================== */
-        const atestadoDia = c.atestadosMedicos?.find(
+        const escalaDiaAtestado = getEscalaNoDia(c.opsId, dataCalendario, historicoMap, c.escala?.nomeEscala);
+        const diaDSR = isDiaDSR(dataCalendario, escalaDiaAtestado);
+
+        const atestadoDia = !diaDSR && c.atestadosMedicos?.find(
           (a) =>
             dataCalendario >= startOfDay(a.dataInicio) &&
             dataCalendario <= startOfDay(a.dataFim)
@@ -767,9 +775,7 @@ const getControlePresenca = async (req, res) => {
            DSR BASEADO NA ESCALA DO DIA
            OBS: APENAS EXIBE, NÃO ESCREVE NO BANCO
         =============================== */
-        const escalaDia = getEscalaNoDia(c.opsId, dataCalendario, historicoMap, c.escala?.nomeEscala);
-
-        if (isDiaDSR(dataCalendario, escalaDia)) {
+        if (diaDSR) {
           diasMap[dataISO] = {
             status: "DSR",
             manual: false,

@@ -14,7 +14,10 @@ function PresencaRow({
     <tr className="border-t border-[#2A2A2C]">
       
       {/* COLABORADOR */}
-      <td className="sticky left-0 z-10 bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] whitespace-nowrap min-w-[220px] sm:min-w-[260px]">
+      <td
+        data-no-drag="true"
+        className="sticky left-0 z-10 bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] whitespace-nowrap min-w-[220px] sm:min-w-[260px]"
+      >
         <div className="font-medium">
           {colaborador.nome || colaborador.nomeCompleto}
         </div>

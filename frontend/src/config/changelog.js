@@ -5,12 +5,10 @@
  * items: lista de novidades exibidas no modal.
  */
 const CHANGELOG = {
-  version: "1.2.0",
+  version: "1.3.0",
   titulo: "Novidades desta atualização",
   items: [
-    "Dashboard Admin: Histograma de Faltas por Tempo de Casa adicionado.",
-    "Tabela com Descrição do CID, quantidade e % que afetou.",
-    "Histograma de Atestados por tempo de casa."
+    "Dashboard de Faltas."
     
   ],
 };
