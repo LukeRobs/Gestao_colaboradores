@@ -183,11 +183,11 @@ function getFaixaTempoEmpresa(adm, ref) {
 
   const dias = diffDays(admDate, ref);
 
-  if (dias <= 7)  return "0-7";
-  if (dias <= 15) return "8-15";
-  if (dias <= 30) return "16-30";
-  if (dias <= 89) return "31-89";
-  return ">90";
+  if (dias <= 7)  return "0 a 7";
+  if (dias <= 15) return "8 a 15";
+  if (dias <= 30) return "16 a 30";
+  if (dias <= 89) return "31 a 89";
+  return "90+";
 }
 
 const normalize = (v) =>
@@ -253,7 +253,7 @@ const getDistribuicoesAtestados = async (req, res) => {
 
       // histograma BPO x faixa de tempo de casa
       if (!acc.empresaFaixaDias[empresa]) {
-        acc.empresaFaixaDias[empresa] = { "0-7": 0, "8-15": 0, "16-30": 0, "31-89": 0, ">90": 0 };
+        acc.empresaFaixaDias[empresa] = { "0 a 7": 0, "8 a 15": 0, "16 a 30": 0, "31 a 89": 0, "90+": 0 };
       }
       acc.empresaFaixaDias[empresa][tempoCasa] = (acc.empresaFaixaDias[empresa][tempoCasa] || 0) + 1;
 
@@ -268,6 +268,12 @@ const getDistribuicoesAtestados = async (req, res) => {
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value);
 
+    const FAIXA_ORDER = ["0 a 7", "8 a 15", "16 a 30", "31 a 89", "90+", "N/I"];
+    const toArrayTempoCasa = (obj) =>
+      FAIXA_ORDER
+        .filter((k) => obj[k] !== undefined)
+        .map((name) => ({ name, value: obj[name] }));
+
     return successResponse(res, {
       porEmpresa: toArray(acc.empresa),
       porSetor: toArray(acc.setor),
@@ -275,7 +281,7 @@ const getDistribuicoesAtestados = async (req, res) => {
       porGenero: toArray(acc.genero),
       porLider: toArray(acc.lider),
       porCid: toArray(acc.cid).slice(0, 10),
-      porTempoCasa: toArray(acc.tempoCasa),
+      porTempoCasa: toArrayTempoCasa(acc.tempoCasa),
       porEmpresaFaixaDias: Object.entries(acc.empresaFaixaDias).map(([empresa, faixas]) => ({
         name: empresa,
         ...faixas,
@@ -389,9 +395,11 @@ const getRiscoAtestados = async (req, res) => {
     function getFaixaTempoEmpresa(adm, ref) {
       if (!adm || !ref) return "N/I";
       const dias = diffDays(adm, ref);
-      if (dias < 30) return "< 30 dias";
-      if (dias < 90) return "30–89 dias";
-      return "≥ 90 dias";
+      if (dias <= 7)  return "0 a 7";
+      if (dias <= 15) return "8 a 15";
+      if (dias <= 30) return "16 a 30";
+      if (dias <= 89) return "31 a 89";
+      return "90+";
     }
 
     /* ===============================
@@ -514,11 +522,11 @@ const getColaboradoresAtestados = async (req, res) => {
 
       const dias = diffDays(admDate, ref);
 
-      if (dias <= 30) return "0–30";
-      if (dias <= 89) return "31–89";
-      if (dias <= 180) return "90–180";
-      if (dias <= 364) return "181–364";
-      return "365+";
+      if (dias <= 7)  return "0 a 7";
+      if (dias <= 15) return "8 a 15";
+      if (dias <= 30) return "16 a 30";
+      if (dias <= 89) return "31 a 89";
+      return "90+";
     }
 
     for (const a of atestados) {

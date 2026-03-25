@@ -26,6 +26,7 @@ export default function NovoColaborador() {
     idCargo: "",
     idTurno: "",
     idEscala: "",
+    idLider: "",
     dataAdmissao: "",
     horarioInicioJornada: "",
     status: "ATIVO",
@@ -36,13 +37,14 @@ export default function NovoColaborador() {
   const [cargos, setCargos] = useState([]);
   const [turnos, setTurnos] = useState([]);
   const [escalas, setEscalas] = useState([]);
+  const [lideres, setLideres] = useState([]);
 
 
   /* ================= LOAD SELECTS ================= */
   useEffect(() => {
     async function loadData() {
       try {
-        const [e, s, c, t, esc] = await Promise.all([
+        const [e, s, c, t, esc, colab] = await Promise.all([
           api.get("/empresas"),
           api.get("/setores"),
           api.get("/cargos", {
@@ -54,6 +56,7 @@ export default function NovoColaborador() {
           }),
           api.get("/turnos"),
           api.get("/escalas"),
+          api.get("/colaboradores/lideres"),
         ]);
 
         setEmpresas(e.data.data || []);
@@ -61,6 +64,7 @@ export default function NovoColaborador() {
         setCargos(c.data.data || []);
         setTurnos(t.data.data || []);
         setEscalas(esc.data || []);
+        setLideres(colab.data.data || colab.data || []);
       } catch (err) {
         console.error(err);
         alert("Erro ao carregar dados auxiliares");
@@ -222,6 +226,16 @@ export default function NovoColaborador() {
               options={escalas.map((e) => ({
                 value: e.idEscala,
                 label: `${e.nomeEscala} — ${e.descricao}`,
+              }))}
+            />
+
+            <Select
+              label="Líder"
+              name="idLider"
+              onChange={handleChange}
+              options={lideres.map(l => ({
+                value: l.opsId,
+                label: `${l.nomeCompleto} — ${l.opsId}`,
               }))}
             />
 

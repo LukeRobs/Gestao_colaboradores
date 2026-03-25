@@ -190,6 +190,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
             <Info label="Setor" value={vinculo.setor || colaborador.setor?.nomeSetor} />
             <Info label="Cargo" value={vinculo.cargo || colaborador.cargo?.nomeCargo} />
             <Info label="Turno" value={vinculo.turno || colaborador.turno?.nomeTurno} />
+            <Info label="Líder" value={vinculo.lider} />
           </Section>
 
           {/* JORNADA */}

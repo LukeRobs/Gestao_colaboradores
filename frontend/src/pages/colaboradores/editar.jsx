@@ -34,6 +34,7 @@ export default function EditarColaborador() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [escalas, setEscalas] = useState([]);
+  const [lideres, setLideres] = useState([]);
 
   const [form, setForm] = useState({
     nomeCompleto: "",
@@ -45,6 +46,7 @@ export default function EditarColaborador() {
     contatoEmergenciaNome: "",
     contatoEmergenciaTelefone: "",
     idEscala: "",
+    idLider: "",
     dataAdmissao: "",
     horarioInicioJornada: "",
     status: "ATIVO",
@@ -59,14 +61,16 @@ export default function EditarColaborador() {
   useEffect(() => {
     async function load() {
       try {
-        const [resColab, resEscalas] = await Promise.all([
+        const [resColab, resEscalas, resLideres] = await Promise.all([
           api.get(`/colaboradores/${opsId}`),
           api.get("/escalas"),
+          api.get("/colaboradores/lideres"),
         ]);
 
         const c = resColab.data.data.colaborador;
 
         setEscalas(resEscalas.data || []);
+        setLideres(resLideres.data.data || resLideres.data || []);
 
         setForm({
           nomeCompleto: c.nomeCompleto || "",
@@ -78,6 +82,7 @@ export default function EditarColaborador() {
           contatoEmergenciaNome: c.contatoEmergenciaNome || "",
           contatoEmergenciaTelefone: c.contatoEmergenciaTelefone || "",
           idEscala: c.escala?.idEscala ?? "",
+          idLider: c.idLider || "",
           dataAdmissao: c.dataAdmissao
             ? c.dataAdmissao.substring(0, 10)
             : "",
@@ -181,6 +186,7 @@ export default function EditarColaborador() {
         contatoEmergenciaNome: form.contatoEmergenciaNome || null,
         contatoEmergenciaTelefone: form.contatoEmergenciaTelefone || null,
         idEscala: form.idEscala ? Number(form.idEscala) : null,
+        idLider: form.idLider || null,
         dataAdmissao: form.dataAdmissao || null,
         horarioInicioJornada: form.horarioInicioJornada || null,
         status: form.status,
@@ -289,6 +295,17 @@ export default function EditarColaborador() {
               options={escalas.map((e) => ({
                 value: e.idEscala,
                 label: `${e.nomeEscala} — ${e.descricao}`,
+              }))}
+            />
+
+            <Select
+              label="Líder"
+              name="idLider"
+              value={form.idLider}
+              onChange={handleChange}
+              options={lideres.map(l => ({
+                value: l.opsId,
+                label: `${l.nomeCompleto} — ${l.opsId}`,
               }))}
             />
           </Section>

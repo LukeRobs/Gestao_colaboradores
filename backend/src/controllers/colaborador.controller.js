@@ -86,12 +86,8 @@ const getAllColaboradores = async (req, res) => {
   }
 
   if (status !== undefined && status !== "") {
-    if (status === "ATIVO") {
-        where.status = { in: ["ATIVO", "FERIAS", "AFASTADO"] };
-      } else {
-        where.status = status;
-      }
-    }
+    where.status = status;
+  }
   if (idSetor) where.idSetor = Number(idSetor);
   if (idCargo) where.idCargo = Number(idCargo);
   if (idEmpresa) where.idEmpresa = Number(idEmpresa);
@@ -188,6 +184,12 @@ const getColaboradorById = async (req, res) => {
         setor: true,
         turno: true,
         escala: true,
+        lider: {
+          select: {
+            opsId: true,
+            nomeCompleto: true,
+          },
+        },
         estacao: {
           include: {
             regional: true,
@@ -273,6 +275,9 @@ const getColaboradorById = async (req, res) => {
         turno: colaborador.turno?.nomeTurno || null,
         escala: colaborador.escala?.nomeEscala || null,
         cargo: colaborador.cargo?.nomeCargo || null,
+        lider: colaborador.lider
+          ? `${colaborador.lider.nomeCompleto} — ${colaborador.lider.opsId}`
+          : null,
       },
 
       indicadores: {
@@ -336,6 +341,7 @@ const createColaborador = async (req, res) => {
       status,
       contatoEmergenciaNome,
       contatoEmergenciaTelefone,
+      idLider,
     } = req.body;
 
     /* ===============================
@@ -443,6 +449,10 @@ const createColaborador = async (req, res) => {
       ...(escalaId
         ? { escala: { connect: { idEscala: escalaId } } }
         : {}),
+
+      ...(idLider
+        ? { lider: { connect: { opsId: idLider } } }
+        : {}),
     };
 
     /* ===============================
@@ -524,6 +534,7 @@ const updateColaborador = async (req, res) => {
       tipoDesligamento,
       dataInicioStatus,
       dataFimStatus,
+      idLider,
     } = req.body;
 
     const data = {};
@@ -546,6 +557,10 @@ const updateColaborador = async (req, res) => {
     if (contatoEmergenciaTelefone !== undefined) {
       data.contatoEmergenciaTelefone =
         contatoEmergenciaTelefone?.trim() || null;
+    }
+
+    if (idLider !== undefined) {
+      data.idLider = idLider || null;
     }
 
     /* =============================

@@ -162,10 +162,13 @@ const getDistribuicoesFaltas = async (req, res) => {
             setor: true,
             turno: true,
             lider: true,
+            escala: true,
           },
         },
       },
     });
+
+    const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
     const acc = {
       empresa: {},
@@ -173,7 +176,8 @@ const getDistribuicoesFaltas = async (req, res) => {
       turno: {},
       genero: {},
       lider: {},
-      tempoCasa: {},
+      diaSemana: {},
+      escala: {},
     };
 
     for (const f of faltas) {
@@ -185,12 +189,16 @@ const getDistribuicoesFaltas = async (req, res) => {
       const turno = c.turno?.nomeTurno || "N/I";
       const genero = c.genero || "N/I";
       const lider = c.lider?.nomeCompleto || "Sem líder";
+      const diaSemana = DIAS_SEMANA[new Date(f.dataReferencia).getDay()];
+      const escala = c.escala?.nomeEscala || "N/I";
 
       acc.empresa[empresa] = (acc.empresa[empresa] || 0) + 1;
       acc.setor[setor] = (acc.setor[setor] || 0) + 1;
       acc.turno[turno] = (acc.turno[turno] || 0) + 1;
       acc.genero[genero] = (acc.genero[genero] || 0) + 1;
       acc.lider[lider] = (acc.lider[lider] || 0) + 1;
+      acc.diaSemana[diaSemana] = (acc.diaSemana[diaSemana] || 0) + 1;
+      acc.escala[escala] = (acc.escala[escala] || 0) + 1;
     }
 
     const toArray = (obj) =>
@@ -204,6 +212,8 @@ const getDistribuicoesFaltas = async (req, res) => {
       porTurno: toArray(acc.turno),
       porGenero: toArray(acc.genero),
       porLider: toArray(acc.lider).slice(0, 10),
+      porDiaSemana: toArray(acc.diaSemana),
+      porEscala: toArray(acc.escala),
     });
 
   } catch (err) {

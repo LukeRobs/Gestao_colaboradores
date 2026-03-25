@@ -484,7 +484,7 @@ function PieBlock({ data }) {
         {data.map((d, i) => {
           const pct = total > 0 ? Math.round((d.value / total) * 100) : 0
           return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span
                 style={{
                   width: 8,
@@ -495,9 +495,10 @@ function PieBlock({ data }) {
                 }}
               />
               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{d.name}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: CHART_COLORS[i % CHART_COLORS.length] }}>
-                {pct}%
+              <span style={{ fontSize: 13, fontWeight: 700, color: CHART_COLORS[i % CHART_COLORS.length] }}>
+                {d.value}
               </span>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.30)" }}>({pct}%)</span>
             </div>
           )
         })}
@@ -751,6 +752,8 @@ export default function DashboardFaltas() {
   const porTurno   = dist?.porTurno   || []
   const porGenero  = dist?.porGenero  || []
   const porLider   = (dist?.porLider  || []).slice(0, 10)
+  const porDiaSemana = dist?.porDiaSemana || []
+  const porEscala    = dist?.porEscala    || []
 
   /* pulse keyframes injected once */
   const pulseStyle = `
@@ -939,9 +942,22 @@ export default function DashboardFaltas() {
             </div>
           </section>
 
-          {/* ── 06 — TABELA ─────────────────────────────────── */}
+          {/* ── 06 — FALTAS POR CONTEXTO ────────────────────── */}
           <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <SectionLabel num="06" title="Lista de Faltantes" />
+            <SectionLabel num="06" title="Faltas por Contexto" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ minWidth: 0 }}>
+              <Card title="Por Dia da Semana" subtitle="Quais dias concentram mais ausências">
+                {loading ? <Skeleton style={{ height: 210 }} /> : <BarBlock data={porDiaSemana} />}
+              </Card>
+              <Card title="Por Escala" subtitle="Distribuição de faltas por escala de trabalho">
+                {loading ? <Skeleton style={{ height: 210 }} /> : <PieBlock data={porEscala} />}
+              </Card>
+            </div>
+          </section>
+
+          {/* ── 07 — TABELA ─────────────────────────────────── */}
+          <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <SectionLabel num="07" title="Lista de Faltantes" />
             <Card
               title="Faltantes no período"
               subtitle="Todos os colaboradores com ausência registrada"

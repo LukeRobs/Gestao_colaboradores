@@ -36,6 +36,7 @@ export default function MovimentarColaborador() {
   const [cargos, setCargos] = useState([]);
   const [turnos, setTurnos] = useState([]);
   const [estacoes, setEstacoes] = useState([]);
+  const [lideres, setLideres] = useState([]);
 
   /* ================= LOAD ================= */
 useEffect(() => {
@@ -50,6 +51,7 @@ useEffect(() => {
         turRes,
         estRes,
         colabRes,
+        liderRes,
       ] = await Promise.all([
         api.get("/empresas"),
         api.get("/setores"),
@@ -59,6 +61,7 @@ useEffect(() => {
         api.get("/turnos"),
         api.get("/estacoes"),
         api.get(`/colaboradores/${opsId}`),
+        api.get("/colaboradores/lideres"),
       ]);
 
       if (!mounted) return;
@@ -68,6 +71,7 @@ useEffect(() => {
       setCargos(normalize(carRes));
       setTurnos(normalize(turRes));
       setEstacoes(normalize(estRes));
+      setLideres(liderRes.data.data || liderRes.data || []);
 
       const payload = colabRes?.data?.data;
 
@@ -245,12 +249,18 @@ useEffect(() => {
               disabled
             />
 
-            <Input
-              label="Líder (OPS ID)"
+            <Select
+              label="Líder"
               name="idLider"
               value={form.idLider}
               onChange={handleChange}
-              placeholder="Ex: OPS123"
+              options={lideres.map(l => ({
+                [l.opsId]: l.opsId,
+                label: `${l.nomeCompleto} — ${l.opsId}`,
+                value: l.opsId,
+              }))}
+              labelKey="label"
+              valueKey="value"
             />
           </Section>
 

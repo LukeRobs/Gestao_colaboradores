@@ -300,7 +300,7 @@ function TopOfensoresTable({ rows, loading }) {
               <td className="py-2 text-white/80">{r.setor || "N/I"}</td>
               <td className="py-2 text-white/80">{r.turno || "N/I"}</td>
               <td className="py-2">
-                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${r.tempoCasaFaixa === "< 30 dias" ? "bg-[#FF453A]/20 text-[#FF453A]" : r.tempoCasaFaixa === "30–89 dias" ? "bg-[#FF9F0A]/20 text-[#FF9F0A]" : "bg-[#34C759]/20 text-[#34C759]"}`}>
+                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${r.tempoCasaFaixa === "0 a 7" || r.tempoCasaFaixa === "8 a 15" || r.tempoCasaFaixa === "16 a 30" ? "bg-[#FF453A]/20 text-[#FF453A]" : r.tempoCasaFaixa === "31 a 89" ? "bg-[#FF9F0A]/20 text-[#FF9F0A]" : "bg-[#34C759]/20 text-[#34C759]"}`}>
                   {r.tempoCasaFaixa || "N/I"}
                 </span>
               </td>
@@ -319,7 +319,7 @@ const COLS = ["Colaborador", "Empresa", "Setor", "Turno", "Escala", "Tempo Casa"
 
 function ColaboradoresTable({ data, loading, filtroTempoCasa, setFiltroTempoCasa, filtroTurno, setFiltroTurno, colaboradores }) {
   const filtered = useMemo(() => {
-    const tempoCasaMap = { "0–30": ["0–30", "< 30 dias"], "31–89": ["31–89", "30–89 dias"], "90–180": ["90–180", "≥ 90 dias"], "181–364": ["181–364"], "365+": ["365+"] }
+    const tempoCasaMap = { "0 a 7": ["0 a 7"], "8 a 15": ["8 a 15"], "16 a 30": ["16 a 30"], "31 a 89": ["31 a 89"], "90+": ["90+"] }
     return data.filter((c) => {
       if (filtroTempoCasa && !tempoCasaMap[filtroTempoCasa]?.includes(c.tempoCasa)) return false
       if (filtroTurno && c.turno !== filtroTurno) return false
@@ -332,11 +332,11 @@ function ColaboradoresTable({ data, loading, filtroTempoCasa, setFiltroTempoCasa
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <select value={filtroTempoCasa} onChange={(e) => setFiltroTempoCasa(e.target.value)} className="bg-[#1c1c1c] border border-white/10 rounded-lg px-3 py-2 text-sm">
           <option value="">Tempo de casa (Todos)</option>
-          <option value="0–30">0–30</option>
-          <option value="31–89">31–89</option>
-          <option value="90–180">90–180</option>
-          <option value="181–364">181–364</option>
-          <option value="365+">365+</option>
+          <option value="0 a 7">0 a 7</option>
+          <option value="8 a 15">8 a 15</option>
+          <option value="16 a 30">16 a 30</option>
+          <option value="31 a 89">31 a 89</option>
+          <option value="90+">90+</option>
         </select>
         <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)} className="bg-[#1c1c1c] border border-white/10 rounded-lg px-3 py-2 text-sm">
           <option value="">Turno (Todos)</option>

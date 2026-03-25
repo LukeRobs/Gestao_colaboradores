@@ -31,7 +31,14 @@ export default function WhatsNewModal({ onClose }) {
           {CHANGELOG.items.map((item, i) => (
             <li key={i} className="flex items-start gap-3 text-sm text-[#EDEDED]">
               <span className="mt-0.5 text-[#FA4C00] shrink-0">✦</span>
-              <span>{item}</span>
+              <span>
+                {typeof item === "string" ? item : (
+                  <>
+                    <span className="font-semibold text-white">{item.titulo}</span>
+                    {item.descricao && <span className="text-[#BFBFC3]"> — {item.descricao}</span>}
+                  </>
+                )}
+              </span>
             </li>
           ))}
         </ul>
