@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useContext } from "react";
 import { Toaster } from "react-hot-toast";
 import { useVersionCheck } from "./hooks/useVersionCheck";
 import WhatsNewModal from "./components/WhatsNewModal";
+import { AuthContext } from "./context/AuthContext";
 
 /* ================= AUTH ================= */
 import Login from "./pages/login";
@@ -68,10 +70,11 @@ import ReportRoute from "./routes/report";
 
 export default function App() {
   const { show, dismiss } = useVersionCheck();
+  const { isAuthenticated } = useContext(AuthContext);
 
   return (
     <>
-      {show && <WhatsNewModal onClose={dismiss} />}
+      {show && isAuthenticated && <WhatsNewModal onClose={dismiss} />}
       <Toaster
         position="top-right"
         toastOptions={{

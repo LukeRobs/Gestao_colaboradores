@@ -19,7 +19,6 @@ export function useVersionCheck() {
 
       if (!localStorage.getItem(key)) {
         setShow(true);
-        localStorage.setItem(key, "1");
       }
     } catch {
       // silencioso
@@ -27,6 +26,13 @@ export function useVersionCheck() {
   }, [isAuthenticated, user]);
 
   function dismiss() {
+    try {
+      const email = user?.email || "guest";
+      const key = `changelog_seen_${email}_${CHANGELOG.version}`;
+      localStorage.setItem(key, "1");
+    } catch {
+      // silencioso
+    }
     setShow(false);
   }
 

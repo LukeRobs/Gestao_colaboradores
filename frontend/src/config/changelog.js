@@ -5,9 +5,11 @@
  * items: lista de novidades exibidas no modal.
  */
 const CHANGELOG = {
-  version: "1.4.0",
+  version: "1.5.0",
   titulo: "Novidades desta atualização",
   items: [
+    "Dashboard de Faltas: KPIs, tendência mensal, distribuições e análise por colaborador.",
+    "Ajustes de UI/UX nos dashboards de Atestados e Desligamentos para padrão unificado.",
     "Dashboard de Atestados: histograma de atestados por tempo de casa do colaborador.",
     "Dashboard de Atestados: tabela de distribuição de CID com descrição e percentual.",
     "Dashboard de Atestados: gráfico de atestados por BPO agrupado por tempo de casa.",
