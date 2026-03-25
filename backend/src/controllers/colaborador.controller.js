@@ -86,12 +86,8 @@ const getAllColaboradores = async (req, res) => {
   }
 
   if (status !== undefined && status !== "") {
-    if (status === "ATIVO") {
-        where.status = { in: ["ATIVO", "FERIAS", "AFASTADO"] };
-      } else {
-        where.status = status;
-      }
-    }
+    where.status = status;
+  }
   if (idSetor) where.idSetor = Number(idSetor);
   if (idCargo) where.idCargo = Number(idCargo);
   if (idEmpresa) where.idEmpresa = Number(idEmpresa);
