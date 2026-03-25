@@ -8,14 +8,16 @@ const CHANGELOG = {
   version: "1.5.0",
   titulo: "Novidades desta atualização",
   items: [
-    "Dashboard de Faltas: KPIs, tendência mensal, distribuições e análise por colaborador.",
-    "Ajustes de UI/UX nos dashboards de Atestados e Desligamentos para padrão unificado.",
-    "Dashboard de Atestados: histograma de atestados por tempo de casa do colaborador.",
-    "Dashboard de Atestados: tabela de distribuição de CID com descrição e percentual.",
-    "Dashboard de Atestados: gráfico de atestados por BPO agrupado por tempo de casa.",
-    "Dashboard Admin: histograma de faltas por tempo de casa adicionado.",
-    "Correção: atestado médico de múltiplos dias não sobrepõe mais os dias de DSR.",
-    "Correção: exibição do atestado não avançava para o dia anterior por diferença de fuso horário.",
+    {
+      tipo: "novo",
+      titulo: "Dashboard de Faltas — Seção 06: Faltas por Contexto",
+      descricao: "Nova seção com 2 cards: distribuição de faltas por Dia da Semana e por Escala.",
+    },
+    {
+      tipo: "melhoria",
+      titulo: "Dashboard de Faltas — Gráficos de Pizza",
+      descricao: "Legenda atualizada: agora exibe a quantidade absoluta seguida do percentual entre parênteses na mesma linha (ex: T3  32  (64%)).",
+    },
   ],
 };
 
