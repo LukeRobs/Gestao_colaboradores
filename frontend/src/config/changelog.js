@@ -14,6 +14,12 @@ const CHANGELOG = {
       descricao:
         "Agora é possível filtrar todos os dados dos dashboards de Atestados e Faltas por empresa específica. O filtro aparece no cabeçalho ao lado dos campos de data e afeta KPIs, gráficos e tabelas.",
     },
+    {
+      tipo: "novo",
+      titulo: "Filtro por Sintoma no Dashboard de Atestados",
+      descricao:
+        "Novo filtro que agrupa CIDs por categoria de sintoma (ex: Sintomas Gripais, Dor lombar, Náuseas). Ao selecionar um sintoma, todos os CIDs do grupo são aplicados automaticamente. Selecionar um sintoma limpa o filtro de CID individual e vice-versa.",
+    },
   ],
 };
 

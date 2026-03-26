@@ -41,6 +41,13 @@ const CID_DESCRICOES = {
   R11: "Náuseas e vômitos", R52: "Dor não especificada", R520: "Dor aguda",
 }
 
+// Mapa invertido: sintoma → [códigos CID]
+const SINTOMA_CIDS = Object.entries(CID_DESCRICOES).reduce((acc, [codigo, sintoma]) => {
+  if (!acc[sintoma]) acc[sintoma] = []
+  acc[sintoma].push(codigo)
+  return acc
+}, {})
+
 /* ─── SKELETON ───────────────────────────────────────────────────── */
 function Skeleton({ style = {} }) {
   return (
@@ -225,6 +232,52 @@ function SelectCID({ value, onChange, options }) {
   )
 }
 
+/* ─── SELECT SINTOMA ─────────────────────────────────────────────── */
+function SelectSintoma({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const sintomas = Object.keys(SINTOMA_CIDS)
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
+      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Sintoma</label>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : value ? "rgba(250,76,0,0.35)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+      >
+        <span style={{ color: value ? "#fff" : "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+          {value || "Todos os sintomas"}
+        </span>
+        <IconChevronDown c="rgba(255,255,255,0.35)" />
+      </div>
+      {open && (
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+          <div
+            onClick={() => { onChange(""); setOpen(false) }}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Todos os sintomas
+          </div>
+          {sintomas.map((s) => (
+            <div
+              key={s}
+              onClick={() => { onChange(s); setOpen(false) }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: value === s ? BRAND : "rgba(255,255,255,0.65)", fontWeight: value === s ? 600 : 400 }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(250,76,0,0.08)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <span>{s}</span>
+              <span style={{ marginLeft: 8, fontSize: 11, color: "rgba(255,255,255,0.28)" }}>
+                ({SINTOMA_CIDS[s].join(", ")})
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── BAR BLOCK ──────────────────────────────────────────────────── */
 function BarBlock({ data }) {
   const safeData = Array.isArray(data) ? data : []
@@ -320,35 +373,45 @@ function TopOfensoresTable({ rows, loading }) {
   if (loading) return <p className="text-sm text-white/60">Carregando…</p>
   if (!rows?.length) return <p className="text-sm text-white/60">Sem ofensores no período.</p>
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-[880px] w-full text-sm">
+    <div style={{ overflowX: "hidden" }}>
+      <table className="w-full text-sm" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
+        <colgroup>
+          <col style={{ width: 28 }} />
+          <col />
+          <col style={{ width: 80 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 50 }} />
+          <col style={{ width: 72 }} />
+          <col style={{ width: 46 }} />
+          <col style={{ width: 42 }} />
+        </colgroup>
         <thead className="text-white/60">
-          <tr>
-            <th className="text-left py-2 w-10">#</th>
+          <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <th className="text-left py-2">#</th>
             <th className="text-left py-2">Colaborador</th>
             <th className="text-left py-2">Empresa</th>
             <th className="text-left py-2">Setor</th>
             <th className="text-left py-2">Turno</th>
-            <th className="text-left py-2">Tempo Casa</th>
-            <th className="text-right py-2">Atest.</th>
+            <th className="text-left py-2">Tempo</th>
+            <th className="text-right py-2">Atst.</th>
             <th className="text-right py-2">Dias</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.opsId} className="border-t border-white/5 hover:bg-white/5 transition">
-              <td className="py-2 text-white/70">{r.rank}</td>
-              <td className="py-2 font-medium">{r.nome}</td>
-              <td className="py-2 text-white/80">{r.empresa || "N/I"}</td>
-              <td className="py-2 text-white/80">{r.setor || "N/I"}</td>
-              <td className="py-2 text-white/80">{r.turno || "N/I"}</td>
+            <tr key={r.opsId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }} className="hover:bg-white/5 transition">
+              <td className="py-2 text-white/50" style={{ fontSize: 12 }}>{r.rank}</td>
+              <td className="py-2 font-medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.nome}>{r.nome}</td>
+              <td className="py-2 text-white/70" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12 }} title={r.empresa}>{r.empresa || "N/I"}</td>
+              <td className="py-2 text-white/70" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12 }} title={r.setor}>{r.setor || "N/I"}</td>
+              <td className="py-2 text-white/70" style={{ fontSize: 12 }}>{r.turno || "N/I"}</td>
               <td className="py-2">
                 <span className={`px-2 py-1 rounded-md text-xs font-semibold ${r.tempoCasaFaixa === "0 a 7" || r.tempoCasaFaixa === "8 a 15" || r.tempoCasaFaixa === "16 a 30" ? "bg-[#FF453A]/20 text-[#FF453A]" : r.tempoCasaFaixa === "31 a 89" ? "bg-[#FF9F0A]/20 text-[#FF9F0A]" : "bg-[#34C759]/20 text-[#34C759]"}`}>
                   {r.tempoCasaFaixa || "N/I"}
                 </span>
               </td>
-              <td className="py-2 text-right font-semibold">{r.totalAtestados}</td>
-              <td className="py-2 text-right font-semibold text-[#FA4C00]">{r.diasAfastados}</td>
+              <td className="py-2 text-right font-semibold" style={{ fontSize: 13 }}>{r.totalAtestados}</td>
+              <td className="py-2 text-right font-semibold text-[#FA4C00]" style={{ fontSize: 13 }}>{r.diasAfastados}</td>
             </tr>
           ))}
         </tbody>
@@ -447,6 +510,7 @@ export default function DashboardAtestados() {
   const [fim, setFim] = useState(isoToday())
   const [cid, setCid] = useState("")
   const [cids, setCids] = useState([])
+  const [sintoma, setSintoma] = useState("")
   const [empresaId, setEmpresaId] = useState("")
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
@@ -471,6 +535,11 @@ export default function DashboardAtestados() {
       setLoading(true)
       setError("")
       const params = { inicio, fim, cid: cid || undefined, empresaId: empresaId || undefined }
+      // se sintoma selecionado, envia os CIDs do grupo (ignora filtro de CID individual)
+      if (sintoma && SINTOMA_CIDS[sintoma]) {
+        delete params.cid
+        params.cids = SINTOMA_CIDS[sintoma]
+      }
       const [resResumo, resDist, resTend, resRisco, resCids, resColab] = await Promise.all([
         api.get("/dashboard/atestados/resumo", { params }),
         api.get("/dashboard/atestados/distribuicoes", { params }),
@@ -493,7 +562,7 @@ export default function DashboardAtestados() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [inicio, fim, cid, empresaId])
+  useEffect(() => { fetchAll() }, [inicio, fim, cid, sintoma, empresaId])
 
   const porEmpresa   = useMemo(() => dist?.porEmpresa   || [], [dist])
   const porSetor     = useMemo(() => dist?.porSetor     || [], [dist])
@@ -557,7 +626,15 @@ export default function DashboardAtestados() {
               <DateInput label="Início" value={inicio} onChange={setInicio} />
               <DateInput label="Fim" value={fim} onChange={setFim} />
               <SelectEmpresa value={empresaId} onChange={setEmpresaId} options={empresas} />
-              <SelectCID value={cid} onChange={setCid} options={cids} />
+              <SelectSintoma
+                value={sintoma}
+                onChange={(v) => { setSintoma(v); if (v) setCid("") }}
+              />
+              <SelectCID
+                value={cid}
+                onChange={(v) => { setCid(v); if (v) setSintoma("") }}
+                options={cids}
+              />
               <button
                 onClick={fetchAll}
                 disabled={loading}
