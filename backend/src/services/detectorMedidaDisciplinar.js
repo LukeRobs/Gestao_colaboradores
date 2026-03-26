@@ -1,4 +1,5 @@
 const { prisma } = require("../config/database");
+const { StatusMedidaDisciplinar } = require("@prisma/client");
 
 async function detectarViolacaoDisciplinar(idFrequencia) {
   try {
@@ -72,7 +73,7 @@ async function detectarViolacaoDisciplinar(idFrequencia) {
         opsId: frequencia.opsId,
         violacao: "FALTA_INJUSTIFICADA",
         origem: "MANUAL",
-        status: { not: "CANCELADO" },
+        status: { not: StatusMedidaDisciplinar.CANCELADO },
       },
     });
 

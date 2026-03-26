@@ -19,10 +19,28 @@ const getContadores = async (req, res) => {
 
   try {
 
+    const { data, turno, lider } = req.query;
+
+    const baseWhere = {};
+    const colaboradorFilter = {};
+
+    if (data) {
+      const inicio = new Date(`${data}T00:00:00`);
+      const fim = new Date(`${data}T23:59:59`);
+      baseWhere.dataReferencia = { gte: inicio, lte: fim };
+    }
+
+    if (turno) colaboradorFilter.idTurno = Number(turno);
+    if (lider) colaboradorFilter.idLider = lider;
+
+    if (Object.keys(colaboradorFilter).length > 0) {
+      baseWhere.colaborador = { is: colaboradorFilter };
+    }
+
     const [pendente, rejeitada, aprovada] = await Promise.all([
-      prisma.sugestaoMedidaDisciplinar.count({ where: { status: "PENDENTE" } }),
-      prisma.sugestaoMedidaDisciplinar.count({ where: { status: "REJEITADA" } }),
-      prisma.sugestaoMedidaDisciplinar.count({ where: { status: "APROVADA" } }),
+      prisma.sugestaoMedidaDisciplinar.count({ where: { ...baseWhere, status: "PENDENTE" } }),
+      prisma.sugestaoMedidaDisciplinar.count({ where: { ...baseWhere, status: "REJEITADA" } }),
+      prisma.sugestaoMedidaDisciplinar.count({ where: { ...baseWhere, status: "APROVADA" } }),
     ]);
 
     return successResponse(res, { PENDENTE: pendente, REJEITADA: rejeitada, APROVADA: aprovada });

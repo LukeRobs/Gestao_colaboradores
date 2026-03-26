@@ -55,10 +55,15 @@ export default function SugestoesMedidaDisciplinar() {
       if (liderFiltro) params.append("lider", liderFiltro);
       if (statusFiltro) params.append("status", statusFiltro);
 
-      // contadores via endpoint dedicado (eficiente, sem filtros)
+      // contadores com os mesmos filtros (exceto status)
+      const contadorParams = new URLSearchParams();
+      if (dataFiltro) contadorParams.append("data", dataFiltro);
+      if (turnoFiltro) contadorParams.append("turno", turnoFiltro);
+      if (liderFiltro) contadorParams.append("lider", liderFiltro);
+
       const [resFiltrado, resContadores] = await Promise.all([
         api.get(`/medidas-disciplinares/sugestoes?${params.toString()}`),
-        api.get("/medidas-disciplinares/sugestoes/contadores"),
+        api.get(`/medidas-disciplinares/sugestoes/contadores?${contadorParams.toString()}`),
       ]);
 
       setSugestoes(resFiltrado.data.data || []);
