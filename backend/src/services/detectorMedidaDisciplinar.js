@@ -66,6 +66,21 @@ async function detectarViolacaoDisciplinar(idFrequencia) {
        CRIAR SUGESTÃO
     ============================== */
 
+    // Verificar se já existe MD manual para o mesmo colaborador/violação (qualquer data)
+    const mdManualExistente = await prisma.medidaDisciplinar.findFirst({
+      where: {
+        opsId: frequencia.opsId,
+        violacao: "FALTA_INJUSTIFICADA",
+        origem: "MANUAL",
+        status: { not: "CANCELADO" },
+      },
+    });
+
+    const statusSugestao = mdManualExistente ? "REJEITADA" : "PENDENTE";
+    const aprovadoPor = mdManualExistente
+      ? "SISTEMA — MD manual já registrada para esta data"
+      : null;
+
     await prisma.sugestaoMedidaDisciplinar.create({
       data: {
         opsId: frequencia.opsId,
@@ -74,11 +89,16 @@ async function detectarViolacaoDisciplinar(idFrequencia) {
         violacao: "FALTA_INJUSTIFICADA",
         consequencia: matriz.consequencia,
         diasSuspensao: matriz.diasSuspensao,
-        status: "PENDENTE",
+        status: statusSugestao,
+        ...(aprovadoPor && { aprovadoPor }),
       },
     });
 
-    console.log("✅ Sugestão criada para", frequencia.opsId);
+    if (mdManualExistente) {
+      console.log("⚠️ Sugestão criada como REJEITADA — MD manual já existe para", frequencia.opsId, "em", frequencia.dataReferencia);
+    } else {
+      console.log("✅ Sugestão criada para", frequencia.opsId);
+    }
 
   } catch (error) {
 

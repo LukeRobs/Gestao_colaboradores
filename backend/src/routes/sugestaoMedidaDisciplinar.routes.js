@@ -5,6 +5,15 @@ const controller = require("../controllers/sugestaoMedidaDisciplinar.controller"
 const { authorizeRoles } = require("../middlewares/authorizeRoles");
 
 /* =====================================================
+   CONTADORES
+===================================================== */
+router.get(
+  "/contadores",
+  authorizeRoles("ADMIN", "LIDERANCA"),
+  controller.getContadores
+);
+
+/* =====================================================
    LISTAR SUGESTÕES
    ADMIN e LIDERANÇA podem visualizar
 ===================================================== */

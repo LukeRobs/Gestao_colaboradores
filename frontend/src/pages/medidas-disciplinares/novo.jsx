@@ -44,6 +44,7 @@ export default function NovaMedidaDisciplinar() {
 
   const [colaborador, setColaborador] = useState(null);
   const [erroCpf, setErroCpf] = useState("");
+  const [conflito, setConflito] = useState(null); // sugestão em conflito
 
   function handleChange(e) {
 
@@ -93,7 +94,7 @@ export default function NovaMedidaDisciplinar() {
 
   /* ================= SALVAR ================= */
 
-  async function handleSave() {
+  async function salvar(forcarCriacao = false) {
 
     if (!colaborador) {
       alert("Informe um CPF válido.");
@@ -116,42 +117,29 @@ export default function NovaMedidaDisciplinar() {
       setSaving(true);
 
       const res = await api.post("/medidas-disciplinares", {
-
         cpf: form.cpf,
-
         nivelViolacao: form.nivelViolacao,
-
         violacao: form.violacao,
-
         tipoMedida: form.tipoMedida,
-
-        diasSuspensao:
-          form.tipoMedida === "SUSPENSAO"
-            ? Number(form.diasSuspensao)
-            : null,
-
+        diasSuspensao: form.tipoMedida === "SUSPENSAO" ? Number(form.diasSuspensao) : null,
         motivo: form.motivo,
-
         dataOcorrencia: form.dataOcorrencia || null,
-
         dataAplicacao: form.dataAplicacao,
-
         idMatriz: form.idMatriz || null,
-
+        forcarCriacao: forcarCriacao || undefined,
       });
 
-      const medida = res.data.data;
-
-      navigate(`/medidas-disciplinares/${medida.idMedida}`);
+      navigate(`/medidas-disciplinares/${res.data.data.idMedida}`);
 
     } catch (err) {
 
-      console.error(err);
+      if (err?.response?.status === 409 && err.response.data?.conflito) {
+        // exibe modal de conflito
+        setConflito(err.response.data.sugestao);
+        return;
+      }
 
-      alert(
-        err?.response?.data?.message ||
-        "Erro ao criar medida disciplinar."
-      );
+      alert(err?.response?.data?.message || "Erro ao criar medida disciplinar.");
 
     } finally {
 
@@ -161,8 +149,59 @@ export default function NovaMedidaDisciplinar() {
 
   }
 
+  async function handleSave() {
+    await salvar(false);
+  }
+
+  async function confirmarSobreporSugestao() {
+    setConflito(null);
+    await salvar(true);
+  }
+
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+
+      {/* MODAL DE CONFLITO */}
+      {conflito && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center shrink-0 mt-0.5">
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Sugestão automática pendente</h3>
+                <p className="text-sm text-[#BFBFC3] mt-1">
+                  Já existe uma sugestão gerada automaticamente pelo sistema para esta violação em{" "}
+                  <span className="text-white font-medium">
+                    {new Date(conflito.dataReferencia).toLocaleDateString("pt-BR")}
+                  </span>.
+                </p>
+                <p className="text-sm text-[#BFBFC3] mt-2">
+                  Ao continuar, a sugestão automática será <span className="text-[#EF4444] font-medium">rejeitada</span> e a MD manual será criada no lugar.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => setConflito(null)}
+                className="px-4 py-2 rounded-lg bg-[#2A2A2C] hover:bg-[#3A3A3C] text-sm cursor-pointer transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarSobreporSugestao}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-[#FA4C00] hover:bg-[#e64500] active:scale-95 text-sm cursor-pointer transition-all disabled:opacity-50"
+              >
+                {saving ? "Criando..." : "Criar MD manual e rejeitar sugestão"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Sidebar
         isOpen={sidebarOpen}

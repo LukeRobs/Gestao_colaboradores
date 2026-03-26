@@ -12,6 +12,32 @@ const {
 } = require("../utils/response")
 
 /* =====================================================
+   CONTADORES POR STATUS
+===================================================== */
+
+const getContadores = async (req, res) => {
+
+  try {
+
+    const [pendente, rejeitada, aprovada] = await Promise.all([
+      prisma.sugestaoMedidaDisciplinar.count({ where: { status: "PENDENTE" } }),
+      prisma.sugestaoMedidaDisciplinar.count({ where: { status: "REJEITADA" } }),
+      prisma.sugestaoMedidaDisciplinar.count({ where: { status: "APROVADA" } }),
+    ]);
+
+    return successResponse(res, { PENDENTE: pendente, REJEITADA: rejeitada, APROVADA: aprovada });
+
+  } catch (err) {
+
+    console.error("❌ GET CONTADORES SUGESTOES:", err);
+    return errorResponse(res, "Erro ao buscar contadores", 500);
+
+  }
+
+};
+
+
+/* =====================================================
    LISTAR SUGESTÕES
 ===================================================== */
 
@@ -188,25 +214,22 @@ const aprovarSugestao = async (req, res) => {
     =========================== */
 
     const medidaExistente = await prisma.medidaDisciplinar.findFirst({
-
       where: {
         opsId: sugestao.opsId,
         violacao: sugestao.violacao,
-        dataOcorrencia,
         status: {
-        in: [
+          in: [
             StatusMedidaDisciplinar.PENDENTE_ASSINATURA,
             StatusMedidaDisciplinar.ASSINADO
           ]
         }
       },
-
     })
 
     if (medidaExistente) {
       return errorResponse(
         res,
-        "Medida disciplinar já criada",
+        `Já existe uma medida disciplinar ativa para esta violação (${medidaExistente.origem === "MANUAL" ? "criada manualmente" : "gerada pelo sistema"} em ${new Date(medidaExistente.dataOcorrencia).toLocaleDateString("pt-BR")})`,
         400
       )
     }
@@ -451,6 +474,7 @@ const createSugestao = async (req, res) => {
 
 module.exports = {
 
+  getContadores,
   getAllSugestoes,
   aprovarSugestao,
   rejeitarSugestao,

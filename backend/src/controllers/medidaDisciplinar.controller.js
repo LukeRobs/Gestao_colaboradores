@@ -152,29 +152,53 @@ const createMedida = async (req, res) => {
     ====================================== */
 
     const jaExiste = await prisma.medidaDisciplinar.findFirst({
-
       where: {
-
         opsId: colaborador.opsId,
-
         violacao,
-
-        dataOcorrencia: dataOc,
-
-        status: {
-          in: ["PENDENTE_ASSINATURA", "ASSINADO"]
-        }
+        status: { in: ["PENDENTE_ASSINATURA", "ASSINADO"] },
       },
-
     });
 
     if (jaExiste) {
-
       return errorResponse(
         res,
-        "Já existe uma medida disciplinar registrada para esta violação nesta data",
+        `Já existe uma medida disciplinar ativa para esta violação (${jaExiste.origem === "MANUAL" ? "criada manualmente" : "gerada pelo sistema"} em ${new Date(jaExiste.dataOcorrencia).toLocaleDateString("pt-BR")})`,
         400
       );
+    }
+
+    /* ======================================
+       VERIFICAR SUGESTÃO AUTOMÁTICA PENDENTE
+       Se existir e não veio forcarCriacao,
+       retorna 409 para o frontend confirmar.
+    ====================================== */
+
+    const { forcarCriacao } = req.body;
+
+    if (!forcarCriacao) {
+
+      const sugestaoConflito = await prisma.sugestaoMedidaDisciplinar.findFirst({
+        where: {
+          opsId: colaborador.opsId,
+          violacao,
+          status: "PENDENTE",
+        },
+        select: {
+          idSugestao: true,
+          violacao: true,
+          dataReferencia: true,
+          consequencia: true,
+        },
+      });
+
+      if (sugestaoConflito) {
+        return res.status(409).json({
+          success: false,
+          conflito: true,
+          message: "Já existe uma sugestão automática pendente para esta violação.",
+          sugestao: sugestaoConflito,
+        });
+      }
 
     }
 
@@ -221,6 +245,25 @@ const createMedida = async (req, res) => {
 
       },
 
+    });
+
+    /* ======================================
+       REJEITAR SUGESTÕES AUTOMÁTICAS
+       Se existe MD manual para o mesmo
+       colaborador/violação/data, rejeita
+       sugestões pendentes automaticamente.
+    ====================================== */
+
+    await prisma.sugestaoMedidaDisciplinar.updateMany({
+      where: {
+        opsId: colaborador.opsId,
+        violacao,
+        status: "PENDENTE",
+      },
+      data: {
+        status: "REJEITADA",
+        aprovadoPor: "SISTEMA",
+      },
     });
 
     return createdResponse(
