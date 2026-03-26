@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   ResponsiveContainer,
   AreaChart,
@@ -134,7 +134,7 @@ function Card({ title, subtitle, icon, children, style = {} }) {
 function DateInput({ label, value, onChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</label>
+      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</label>
       <input
         type="date"
         value={value}
@@ -148,10 +148,16 @@ function DateInput({ label, value, onChange }) {
 /* ─── SELECT EMPRESA ─────────────────────────────────────────────── */
 function SelectEmpresa({ value, onChange, options }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef(null)
   const selected = options.find((e) => String(e.idEmpresa) === String(value))
+  useEffect(() => {
+    function handleClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
+      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
       <div
         onClick={() => setOpen(!open)}
         style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
@@ -191,10 +197,16 @@ function SelectEmpresa({ value, onChange, options }) {
 /* ─── SELECT CID ─────────────────────────────────────────────────── */
 function SelectCID({ value, onChange, options }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef(null)
   const selected = options.find((c) => c.codigo === value)
+  useEffect(() => {
+    function handleClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>CID</label>
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
+      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>CID</label>
       <div
         onClick={() => setOpen(!open)}
         style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 160, userSelect: "none", transition: "border-color 0.2s" }}
@@ -235,10 +247,16 @@ function SelectCID({ value, onChange, options }) {
 /* ─── SELECT SINTOMA ─────────────────────────────────────────────── */
 function SelectSintoma({ value, onChange }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef(null)
   const sintomas = Object.keys(SINTOMA_CIDS)
+  useEffect(() => {
+    function handleClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Sintoma</label>
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
+      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Sintoma</label>
       <div
         onClick={() => setOpen(!open)}
         style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : value ? "rgba(250,76,0,0.35)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
@@ -373,44 +391,34 @@ function TopOfensoresTable({ rows, loading }) {
   if (loading) return <p className="text-sm text-white/60">Carregando…</p>
   if (!rows?.length) return <p className="text-sm text-white/60">Sem ofensores no período.</p>
   return (
-    <div style={{ overflowX: "hidden" }}>
-      <table className="w-full text-sm" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
-        <colgroup>
-          <col style={{ width: 28 }} />
-          <col />
-          <col style={{ width: 80 }} />
-          <col style={{ width: 90 }} />
-          <col style={{ width: 50 }} />
-          <col style={{ width: 72 }} />
-          <col style={{ width: 46 }} />
-          <col style={{ width: 42 }} />
-        </colgroup>
+    <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+      <table className="w-full text-sm" style={{ minWidth: 480, borderCollapse: "collapse" }}>
         <thead className="text-white/60">
           <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <th className="text-left py-2">#</th>
-            <th className="text-left py-2">Colaborador</th>
-            <th className="text-left py-2">Empresa</th>
-            <th className="text-left py-2">Setor</th>
-            <th className="text-left py-2">Turno</th>
-            <th className="text-left py-2">Tempo</th>
-            <th className="text-right py-2">Atst.</th>
+            <th className="text-left py-2 pr-2" style={{ width: 28 }}>#</th>
+            <th className="text-left py-2 pr-2">Colaborador</th>
+            <th className="text-left py-2 pr-2 hidden sm:table-cell">Empresa</th>
+            <th className="text-left py-2 pr-2">Setor</th>
+            <th className="text-left py-2 pr-2">Turno</th>
+            <th className="text-left py-2 pr-2 hidden md:table-cell">Tempo</th>
+            <th className="text-right py-2 pr-2">Atst.</th>
             <th className="text-right py-2">Dias</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.opsId} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }} className="hover:bg-white/5 transition">
-              <td className="py-2 text-white/50" style={{ fontSize: 12 }}>{r.rank}</td>
-              <td className="py-2 font-medium" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.nome}>{r.nome}</td>
-              <td className="py-2 text-white/70" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12 }} title={r.empresa}>{r.empresa || "N/I"}</td>
-              <td className="py-2 text-white/70" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12 }} title={r.setor}>{r.setor || "N/I"}</td>
-              <td className="py-2 text-white/70" style={{ fontSize: 12 }}>{r.turno || "N/I"}</td>
-              <td className="py-2">
+              <td className="py-2 pr-2 text-white/50" style={{ fontSize: 12 }}>{r.rank}</td>
+              <td className="py-2 pr-2 font-medium" style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.nome}>{r.nome}</td>
+              <td className="py-2 pr-2 text-white/70 hidden sm:table-cell" style={{ fontSize: 12, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.empresa}>{r.empresa || "N/I"}</td>
+              <td className="py-2 pr-2 text-white/70" style={{ fontSize: 12, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.setor}>{r.setor || "N/I"}</td>
+              <td className="py-2 pr-2 text-white/70" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{r.turno || "N/I"}</td>
+              <td className="py-2 pr-2 hidden md:table-cell">
                 <span className={`px-2 py-1 rounded-md text-xs font-semibold ${r.tempoCasaFaixa === "0 a 7" || r.tempoCasaFaixa === "8 a 15" || r.tempoCasaFaixa === "16 a 30" ? "bg-[#FF453A]/20 text-[#FF453A]" : r.tempoCasaFaixa === "31 a 89" ? "bg-[#FF9F0A]/20 text-[#FF9F0A]" : "bg-[#34C759]/20 text-[#34C759]"}`}>
                   {r.tempoCasaFaixa || "N/I"}
                 </span>
               </td>
-              <td className="py-2 text-right font-semibold" style={{ fontSize: 13 }}>{r.totalAtestados}</td>
+              <td className="py-2 pr-2 text-right font-semibold" style={{ fontSize: 13 }}>{r.totalAtestados}</td>
               <td className="py-2 text-right font-semibold text-[#FA4C00]" style={{ fontSize: 13 }}>{r.diasAfastados}</td>
             </tr>
           ))}

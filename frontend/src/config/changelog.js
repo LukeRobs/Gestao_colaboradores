@@ -5,7 +5,7 @@
  * items: lista de novidades exibidas no modal.
  */
 const CHANGELOG = {
-  version: "1.7.3",
+  version: "1.7.2",
   titulo: "Novidades desta atualização",
   items: [
     {

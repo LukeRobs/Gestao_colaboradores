@@ -273,7 +273,7 @@ function DateInput({ label, value, onChange }) {
       <label
         style={{
           fontSize: 10,
-          color: "rgba(255,255,255,0.35)",
+          color: "#fff",
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.12em",
@@ -513,7 +513,7 @@ function SelectEmpresa({ value, onChange, options }) {
   const selected = options.find((e) => String(e.idEmpresa) === String(value))
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
+      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
       <div
         onClick={() => setOpen(!open)}
         style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
