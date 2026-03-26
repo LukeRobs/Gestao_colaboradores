@@ -10,6 +10,11 @@ const CHANGELOG = {
   items: [
     {
       tipo: "melhoria",
+      titulo: "Ajustes na Folga Dominical",
+      descricao: "Regras de DSR revisadas, backfill automático de registros e melhorias na tela de folga dominical.",
+    },
+    {
+      tipo: "melhoria",
       titulo: "Nova justificativa no controle de presença",
       descricao: "Adicionada a opção 'Falta injustificada' como justificativa.",
     },
