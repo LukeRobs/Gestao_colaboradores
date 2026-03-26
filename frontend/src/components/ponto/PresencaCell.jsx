@@ -39,6 +39,7 @@ const JUSTIFICATIVA_LABEL = {
   SINERGIA_ENVIADA:      "Sinergia enviada",
   HORA_EXTRA:            "Hora extra",
   LICENCA:               "Licença",
+  FALTA_INJUSTIFICADA:   "Falta injustificada",
   ON:                    "Onboarding",
 };
 function fmtHora(iso) {

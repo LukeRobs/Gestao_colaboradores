@@ -37,6 +37,7 @@ const JUSTIFICATIVAS = [
   { code: "SINERGIA_ENVIADA", label: "Sinergia enviada" },
   { code: "LICENCA", label: "Licença" },
   { code: "HORA_EXTRA", label: "Hora Extra"},
+  { code: "FALTA_INJUSTIFICADA", label: "Falta injustificada" },
 ];
 
 const STATUS_COM_HORARIO = ["P", "BH"];

@@ -10,13 +10,18 @@ const CHANGELOG = {
   items: [
     {
       tipo: "melhoria",
+      titulo: "Nova justificativa no controle de presença",
+      descricao: "Adicionada a opção 'Falta injustificada' como justificativa.",
+    },
+    {
+      tipo: "melhoria",
       titulo: "Sugestões de Medida Disciplinar",
       descricao: "Filtro de liderança por dropdown, filtro de status com contadores e cards de resumo no topo.",
     },
     {
       tipo: "melhoria",
       titulo: "Prevenção de MD duplicada",
-      descricao: "Impede criação de MDs duplicadas para a mesma violação. Aviso ao criar MD manual com sugestão automática pendente. MDs automáticas bloqueadas se já houver uma manual ativa.",
+      descricao: "Impede criação de MDs duplicadas para a mesma violação. Aviso ao criar MD manual com sugestão automática pendente.",
     },
   ],
 };
