@@ -507,6 +507,49 @@ function PieBlock({ data }) {
   )
 }
 
+/* ─── SELECT EMPRESA ─────────────────────────────────────────────── */
+function SelectEmpresa({ value, onChange, options }) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find((e) => String(e.idEmpresa) === String(value))
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
+      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+      >
+        <span style={{ color: selected ? "#fff" : "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+          {selected ? selected.razaoSocial : "Todas as empresas"}
+        </span>
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+      </div>
+      {open && (
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+          <div
+            onClick={() => { onChange(""); setOpen(false) }}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Todas as empresas
+          </div>
+          {options.map((e) => (
+            <div
+              key={e.idEmpresa}
+              onClick={() => { onChange(String(e.idEmpresa)); setOpen(false) }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "rgba(255,255,255,0.65)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
+              onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
+              onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
+            >
+              {e.razaoSocial}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── TABLE ──────────────────────────────────────────────────────── */
 function AbsenceTable({ data, loading }) {
   const [search, setSearch] = useState("")
@@ -701,6 +744,8 @@ export default function DashboardFaltas() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [inicio, setInicio] = useState(isoFirstDayOfMonth())
   const [fim, setFim] = useState(isoToday())
+  const [empresaId, setEmpresaId] = useState("")
+  const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [kpis, setKpis] = useState(null)
@@ -710,11 +755,18 @@ export default function DashboardFaltas() {
   const [topOfensores, setTopOfensores] = useState([])
   const [porTempoCasa, setPorTempoCasa] = useState([])
 
+  useEffect(() => {
+    api.get("/empresas").then((res) => {
+      const payload = res.data?.data ?? res.data
+      setEmpresas(Array.isArray(payload) ? payload : payload?.items ?? [])
+    }).catch(() => {})
+  }, [])
+
   async function fetchAll() {
     try {
       setLoading(true)
       setError("")
-      const params = { inicio, fim }
+      const params = { inicio, fim, empresaId: empresaId || undefined }
       const [resResumo, resDist, resTend, resColab] = await Promise.all([
         api.get("/dashboard/faltas/resumo", { params }),
         api.get("/dashboard/faltas/distribuicoes", { params }),
@@ -745,7 +797,7 @@ export default function DashboardFaltas() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [inicio, fim])
+  useEffect(() => { fetchAll() }, [inicio, fim, empresaId])
 
   const porEmpresa = dist?.porEmpresa || []
   const porSetor   = dist?.porSetor   || []
@@ -760,6 +812,8 @@ export default function DashboardFaltas() {
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
     .recharts-wrapper, .recharts-surface { overflow: visible !important; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `
 
   return (
@@ -809,6 +863,7 @@ export default function DashboardFaltas() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
               <DateInput label="Início" value={inicio} onChange={setInicio} />
               <DateInput label="Fim" value={fim} onChange={setFim} />
+              <SelectEmpresa value={empresaId} onChange={setEmpresaId} options={empresas} />
               <button
                 onClick={fetchAll}
                 disabled={loading}

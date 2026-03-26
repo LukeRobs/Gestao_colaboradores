@@ -138,6 +138,49 @@ function DateInput({ label, value, onChange }) {
   )
 }
 
+/* ─── SELECT EMPRESA ─────────────────────────────────────────────── */
+function SelectEmpresa({ value, onChange, options }) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find((e) => String(e.idEmpresa) === String(value))
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
+      <label style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+      >
+        <span style={{ color: selected ? "#fff" : "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+          {selected ? selected.razaoSocial : "Todas as empresas"}
+        </span>
+        <IconChevronDown c="rgba(255,255,255,0.35)" />
+      </div>
+      {open && (
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+          <div
+            onClick={() => { onChange(""); setOpen(false) }}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Todas as empresas
+          </div>
+          {options.map((e) => (
+            <div
+              key={e.idEmpresa}
+              onClick={() => { onChange(String(e.idEmpresa)); setOpen(false) }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "rgba(255,255,255,0.65)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
+              onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
+              onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
+            >
+              {e.razaoSocial}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── SELECT CID ─────────────────────────────────────────────────── */
 function SelectCID({ value, onChange, options }) {
   const [open, setOpen] = useState(false)
@@ -155,7 +198,7 @@ function SelectCID({ value, onChange, options }) {
         <IconChevronDown c="rgba(255,255,255,0.35)" />
       </div>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
           <div
             onClick={() => { onChange(""); setOpen(false) }}
             style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
@@ -404,6 +447,8 @@ export default function DashboardAtestados() {
   const [fim, setFim] = useState(isoToday())
   const [cid, setCid] = useState("")
   const [cids, setCids] = useState([])
+  const [empresaId, setEmpresaId] = useState("")
+  const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [kpis, setKpis] = useState(null)
@@ -414,11 +459,18 @@ export default function DashboardAtestados() {
   const [filtroTempoCasa, setFiltroTempoCasa] = useState("")
   const [filtroTurno, setFiltroTurno] = useState("")
 
+  useEffect(() => {
+    api.get("/empresas").then((res) => {
+      const payload = res.data?.data ?? res.data
+      setEmpresas(Array.isArray(payload) ? payload : payload?.items ?? [])
+    }).catch(() => {})
+  }, [])
+
   async function fetchAll() {
     try {
       setLoading(true)
       setError("")
-      const params = { inicio, fim, cid: cid || undefined }
+      const params = { inicio, fim, cid: cid || undefined, empresaId: empresaId || undefined }
       const [resResumo, resDist, resTend, resRisco, resCids, resColab] = await Promise.all([
         api.get("/dashboard/atestados/resumo", { params }),
         api.get("/dashboard/atestados/distribuicoes", { params }),
@@ -441,7 +493,7 @@ export default function DashboardAtestados() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [inicio, fim, cid])
+  useEffect(() => { fetchAll() }, [inicio, fim, cid, empresaId])
 
   const porEmpresa   = useMemo(() => dist?.porEmpresa   || [], [dist])
   const porSetor     = useMemo(() => dist?.porSetor     || [], [dist])
@@ -476,6 +528,8 @@ export default function DashboardAtestados() {
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
     .recharts-wrapper, .recharts-surface { overflow: visible !important; }
     select option { background: #1A1A1A; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   `
 
   return (
@@ -502,6 +556,7 @@ export default function DashboardAtestados() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
               <DateInput label="Início" value={inicio} onChange={setInicio} />
               <DateInput label="Fim" value={fim} onChange={setFim} />
+              <SelectEmpresa value={empresaId} onChange={setEmpresaId} options={empresas} />
               <SelectCID value={cid} onChange={setCid} options={cids} />
               <button
                 onClick={fetchAll}

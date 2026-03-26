@@ -16,18 +16,21 @@ function corrigirAdmissao(adm) {
   return new Date(d.getUTCFullYear(), d.getUTCDate() - 1, d.getUTCMonth() + 1);
 }
 
-function buildWhere(inicioDate, fimDate, cid) {
+function buildWhere(inicioDate, fimDate, cid, empresaId) {
   return {
     dataInicio: { gte: inicioDate, lte: fimDate },
     status: { not: "CANCELADO" },
-    ...(cid && { cid }), // 🔥 filtro dinâmico
+    ...(cid && { cid }),
+    ...(empresaId && {
+      colaborador: { idEmpresa: Number(empresaId) },
+    }),
   };
 }
 /* ===================================================== */
 /* RESUMO */
 const getResumoAtestados = async (req, res) => {
   try {
-    const { inicio, fim, cid } = req.query;
+    const { inicio, fim, cid, empresaId } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -39,7 +42,7 @@ const getResumoAtestados = async (req, res) => {
        BUSCA ATESTADOS DO PERÍODO
     ========================================= */
     const atestadosPeriodo = await prisma.atestadoMedico.findMany({
-      where: buildWhere(inicioDate, fimDate, cid),
+      where: buildWhere(inicioDate, fimDate, cid, empresaId),
       select: {
         opsId: true,
         diasAfastamento: true,
@@ -85,7 +88,10 @@ const getResumoAtestados = async (req, res) => {
        HC ATIVO + % SOBRE HC
     ========================================= */
     const hcTotal = await prisma.colaborador.count({
-      where: { status: "ATIVO" },
+      where: {
+        status: "ATIVO",
+        ...(empresaId && { idEmpresa: Number(empresaId) }),
+      },
     });
 
     const percentualHC =
@@ -112,6 +118,7 @@ const getResumoAtestados = async (req, res) => {
         },
         status: { not: "CANCELADO" },
         ...(cid && { cid }),
+        ...(empresaId && { colaborador: { idEmpresa: Number(empresaId) } }),
       },
     });
 
@@ -129,6 +136,7 @@ const getResumoAtestados = async (req, res) => {
         dataInicio: { gte: inicioSemana, lte: hoje },
         status: { not: "CANCELADO" },
         ...(cid && { cid }),
+        ...(empresaId && { colaborador: { idEmpresa: Number(empresaId) } }),
       },
     });
 
@@ -146,6 +154,7 @@ const getResumoAtestados = async (req, res) => {
         dataInicio: { gte: inicioMes, lte: hoje },
         status: { not: "CANCELADO" },
         ...(cid && { cid }),
+        ...(empresaId && { colaborador: { idEmpresa: Number(empresaId) } }),
       },
     });
 
@@ -195,7 +204,7 @@ const normalize = (v) =>
 
 const getDistribuicoesAtestados = async (req, res) => {
   try {
-    const { inicio, fim, cid } = req.query;
+    const { inicio, fim, cid, empresaId } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -204,7 +213,7 @@ const getDistribuicoesAtestados = async (req, res) => {
     const fimDate = dateOnlyBrasil(fim);
 
     const atestados = await prisma.atestadoMedico.findMany({
-      where: buildWhere(inicioDate, fimDate, cid),
+      where: buildWhere(inicioDate, fimDate, cid, empresaId),
       include: {
         colaborador: {
           include: {
@@ -298,7 +307,7 @@ const getDistribuicoesAtestados = async (req, res) => {
 /* TENDÊNCIA */
 const getTendenciaAtestados = async (req, res) => {
   try {
-    const { inicio, fim, cid } = req.query;
+    const { inicio, fim, cid, empresaId } = req.query;
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
 
@@ -306,7 +315,7 @@ const getTendenciaAtestados = async (req, res) => {
     const fimDate = dateOnlyBrasil(fim);
 
     const registros = await prisma.atestadoMedico.findMany({
-      where: buildWhere(inicioDate, fimDate, cid),
+      where: buildWhere(inicioDate, fimDate, cid, empresaId),
       select: { dataInicio: true },
     });
 
@@ -332,7 +341,7 @@ const getTendenciaAtestados = async (req, res) => {
 /* TOP OFENSORES */
 const getRiscoAtestados = async (req, res) => {
   try {
-    const { inicio, fim, cid } = req.query;
+    const { inicio, fim, cid, empresaId } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -344,7 +353,7 @@ const getRiscoAtestados = async (req, res) => {
        BUSCA ATESTADOS + RELAÇÕES
     =============================== */
     const atestados = await prisma.atestadoMedico.findMany({
-      where: buildWhere(inicioDate, fimDate, cid),
+      where: buildWhere(inicioDate, fimDate, cid, empresaId),
       include: {
         colaborador: {
           include: {
@@ -486,7 +495,7 @@ const getCidsAtestados = async (req, res) => {
 
 const getColaboradoresAtestados = async (req, res) => {
   try {
-    const { inicio, fim, cid } = req.query;
+    const { inicio, fim, cid, empresaId } = req.query;
 
     if (!inicio || !fim)
       return errorResponse(res, "Período obrigatório", 400);
@@ -495,7 +504,7 @@ const getColaboradoresAtestados = async (req, res) => {
     const fimDate = dateOnlyBrasil(fim);
 
     const atestados = await prisma.atestadoMedico.findMany({
-      where: buildWhere(inicioDate, fimDate, cid),
+      where: buildWhere(inicioDate, fimDate, cid, empresaId),
       include: {
         colaborador: {
           include: {
