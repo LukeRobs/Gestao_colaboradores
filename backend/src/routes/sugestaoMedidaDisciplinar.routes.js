@@ -53,4 +53,14 @@ router.post(
   controller.rejeitarSugestao
 );
 
+/* =====================================================
+   BACKFILL — processar datas passadas
+   Apenas ADMIN
+===================================================== */
+router.post(
+  "/backfill",
+  authorizeRoles("ADMIN"),
+  controller.backfillFaltas
+);
+
 module.exports = router;

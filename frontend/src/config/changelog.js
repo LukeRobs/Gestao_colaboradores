@@ -8,26 +8,7 @@ const CHANGELOG = {
   version: "1.7.2",
   titulo: "Novidades desta atualização",
   items: [
-    {
-      tipo: "melhoria",
-      titulo: "Ajustes na Folga Dominical",
-      descricao: "Regras de DSR revisadas, backfill automático de registros e melhorias na tela de folga dominical.",
-    },
-    {
-      tipo: "melhoria",
-      titulo: "Nova justificativa no controle de presença",
-      descricao: "Adicionada a opção 'Falta injustificada' como justificativa.",
-    },
-    {
-      tipo: "melhoria",
-      titulo: "Sugestões de Medida Disciplinar",
-      descricao: "Filtro de liderança por dropdown, filtro de status com contadores e cards de resumo no topo.",
-    },
-    {
-      tipo: "melhoria",
-      titulo: "Prevenção de MD duplicada",
-      descricao: "Impede criação de MDs duplicadas para a mesma violação. Aviso ao criar MD manual com sugestão automática pendente.",
-    },
+   
   ],
 };
 
