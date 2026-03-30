@@ -38,23 +38,75 @@ async function salvarProducaoHistorico(turno, dataStr = null) {
     console.log(`✅ Metas carregadas: ${Object.keys(metasPorHora).length} horas`);
 
     // Buscar quantidade realizada
-    const quantidadeResult = await buscarQuantidadeRealizada(dataStr);
-    const quantidadePorHora = quantidadeResult.success ? quantidadeResult.data : {};
+    // Para T3, buscar de duas datas: dataStr (horas 22-23) e dataStr+1 (horas 0-5)
+    const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
+    let quantidadePorHora = {};
+
+    if (turno === 'T3') {
+      const dataHojeObj = new Date(dataStr);
+      dataHojeObj.setDate(dataHojeObj.getDate() + 1);
+      const dataHojeStr = dataHojeObj.toISOString().slice(0, 10);
+
+      const qOntem = await buscarQuantidadeRealizada(dataStr);
+      if (qOntem.success) {
+        if (qOntem.data[22]) quantidadePorHora[22] = qOntem.data[22];
+        if (qOntem.data[23]) quantidadePorHora[23] = qOntem.data[23];
+      }
+      const qHoje = await buscarQuantidadeRealizada(dataHojeStr);
+      if (qHoje.success) {
+        for (let h = 0; h <= 5; h++) {
+          if (qHoje.data[h]) quantidadePorHora[h] = qHoje.data[h];
+        }
+      }
+    } else {
+      const quantidadeResult = await buscarQuantidadeRealizada(dataStr);
+      quantidadePorHora = quantidadeResult.success ? quantidadeResult.data : {};
+    }
     console.log(`✅ Quantidade realizada carregada: ${Object.keys(quantidadePorHora).length} horas`);
 
     // Buscar dados do banco como fallback
-    const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
-    
-    const producaoPorHora = await prisma.$queryRaw`
-      SELECT 
-        EXTRACT(HOUR FROM data::timestamp) as hora,
-        SUM(CAST(quantidade AS INTEGER)) as realizado
-      FROM dw_real
-      WHERE data::date = CAST(${dataStr} AS date)
-        AND id_turno = ${turnoId}
-      GROUP BY EXTRACT(HOUR FROM data::timestamp)
-      ORDER BY hora
-    `;
+    let producaoPorHora = [];
+
+    if (turno === 'T3') {
+      const dataHojeObj = new Date(dataStr);
+      dataHojeObj.setDate(dataHojeObj.getDate() + 1);
+      const dataHojeStr = dataHojeObj.toISOString().slice(0, 10);
+
+      const producaoOntem = await prisma.$queryRaw`
+        SELECT 
+          EXTRACT(HOUR FROM data::timestamp) as hora,
+          SUM(CAST(quantidade AS INTEGER)) as realizado
+        FROM dw_real
+        WHERE data::date = CAST(${dataStr} AS date)
+          AND id_turno = ${turnoId}
+          AND EXTRACT(HOUR FROM data::timestamp) >= 22
+        GROUP BY EXTRACT(HOUR FROM data::timestamp)
+        ORDER BY hora
+      `;
+      const producaoHoje = await prisma.$queryRaw`
+        SELECT 
+          EXTRACT(HOUR FROM data::timestamp) as hora,
+          SUM(CAST(quantidade AS INTEGER)) as realizado
+        FROM dw_real
+        WHERE data::date = CAST(${dataHojeStr} AS date)
+          AND id_turno = ${turnoId}
+          AND EXTRACT(HOUR FROM data::timestamp) < 6
+        GROUP BY EXTRACT(HOUR FROM data::timestamp)
+        ORDER BY hora
+      `;
+      producaoPorHora = [...producaoOntem, ...producaoHoje];
+    } else {
+      producaoPorHora = await prisma.$queryRaw`
+        SELECT 
+          EXTRACT(HOUR FROM data::timestamp) as hora,
+          SUM(CAST(quantidade AS INTEGER)) as realizado
+        FROM dw_real
+        WHERE data::date = CAST(${dataStr} AS date)
+          AND id_turno = ${turnoId}
+        GROUP BY EXTRACT(HOUR FROM data::timestamp)
+        ORDER BY hora
+      `;
+    }
 
     console.log(`✅ Produção do banco carregada: ${producaoPorHora.length} registros`);
 

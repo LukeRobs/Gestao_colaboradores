@@ -2,6 +2,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { buscarProdutividadeDetalhada } = require("../services/googleSheetsMetaProducao.service");
 const { dispararSalvamentoManual } = require("../services/producaoColaboradorHistorico.service");
+const { salvarProducaoHistorico } = require("../services/producaoHistorico.service");
 
 function agoraBrasil() {
   const now = new Date();
@@ -213,8 +214,20 @@ const triggerSalvamento = async (req, res) => {
       return res.status(400).json({ success: false, message: "turno inválido (T1, T2 ou T3)" });
     }
     const dataStr = data || new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-    const resultado = await dispararSalvamentoManual(turno, dataStr);
-    res.json(resultado);
+
+    // Salvar histórico por colaborador E hora x hora em paralelo
+    const [resultadoColab, resultadoHora] = await Promise.all([
+      dispararSalvamentoManual(turno, dataStr),
+      salvarProducaoHistorico(turno, dataStr),
+    ]);
+
+    console.log(`✅ [TRIGGER] Colaborador: ${resultadoColab.registros ?? 0} registros | Hora x Hora: ${resultadoHora.registros ?? 0} registros`);
+
+    res.json({
+      success: true,
+      colaborador: resultadoColab,
+      horaXHora: resultadoHora,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

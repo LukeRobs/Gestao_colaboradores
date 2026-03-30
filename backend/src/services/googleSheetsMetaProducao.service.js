@@ -424,6 +424,14 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
     const logicRows = await carregarLogic();
     const dataBusca = formatarData(dataISO);
 
+    // Para T3, também buscar dados do dia seguinte (horas 00-05)
+    let dataBuscaExtra = null;
+    if (turno === 'T3') {
+      const dataObj = new Date(dataISO);
+      dataObj.setDate(dataObj.getDate() + 1);
+      dataBuscaExtra = formatarData(dataObj.toISOString().slice(0, 10));
+    }
+
     console.log("📊 Planilha Atualização carregada:", rows.length, "linhas");
     console.log("📊 Planilha Logic carregada:", logicRows.length, "linhas");
 
@@ -433,10 +441,9 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
     }
 
     // Criar mapa de colaboradores por turno da aba Logic
-    // Estrutura: Nome | Turno
     const colaboradoresPorTurno = new Map();
     
-    for (let i = 1; i < logicRows.length; i++) { // Pular header
+    for (let i = 1; i < logicRows.length; i++) {
       const row = logicRows[i];
       if (!row || row.length < 2) continue;
       
@@ -448,29 +455,31 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
       }
     }
 
-    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} colaboradores da aba Logic`);
-    console.log(`🔍 Filtrando por turno: ${turno}`);
-
-    // Estrutura da planilha:
-    // Linha 0: "Atualização Automatica da sheets"
-    // Linha 1: "Soma Total Por Hora" | valor_hora1 | valor_hora2 | ...
-    // Linha 2: "" | timestamp1 | timestamp2 | ...
-    // Linha 3: "" | data1 | data2 | ...
-    // Linha 4: "" | hora1 | hora2 | ...
-    // Linha 5+: Nome_Colaborador | quantidade_hora1 | quantidade_hora2 | ...
-
-    const linhaDatas = rows[3]; // Linha com as datas
+    const linhaDatas = rows[3];
+    const linhaHoras = rows[4];
     
-    // Identificar colunas que correspondem à data buscada
+    // Identificar colunas que correspondem à(s) data(s) buscada(s)
+    // Para T3: pegar horas 22-23 do dia principal e horas 00-05 do dia seguinte
     const colunasData = [];
     for (let colIndex = 1; colIndex < linhaDatas.length; colIndex++) {
       const dataColuna = normalizar(linhaDatas[colIndex]);
+      const horaColuna = normalizar(linhaHoras[colIndex]);
+      const hora = parseInt(horaColuna.split(':')[0]);
+
       if (dataColuna === dataBusca) {
-        colunasData.push(colIndex);
+        if (turno === 'T3') {
+          // Do dia principal, só pegar horas 22 e 23
+          if (hora >= 22) colunasData.push(colIndex);
+        } else {
+          colunasData.push(colIndex);
+        }
+      } else if (dataBuscaExtra && dataColuna === dataBuscaExtra) {
+        // Do dia seguinte (T3), só pegar horas 00-05
+        if (hora < 6) colunasData.push(colIndex);
       }
     }
 
-    console.log(`📋 Encontradas ${colunasData.length} colunas para a data ${dataBusca}`);
+    console.log(`📋 Encontradas ${colunasData.length} colunas para o T3 do dia ${dataBusca}`);
 
     if (colunasData.length === 0) {
       console.warn("⚠️ Nenhuma coluna encontrada para a data:", dataBusca);
@@ -487,7 +496,6 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
       
       const nomeColaborador = normalizar(row[0]);
       
-      // Ignorar linhas vazias, totais ou "User Email"
       if (!nomeColaborador || 
           nomeColaborador.toLowerCase().includes('total') ||
           nomeColaborador.toLowerCase().includes('user email') ||
@@ -495,14 +503,12 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
         continue;
       }
 
-      // Verificar se o colaborador pertence ao turno filtrado
       const turnoColaborador = colaboradoresPorTurno.get(nomeColaborador.toLowerCase());
       
       if (!turnoColaborador || turnoColaborador !== turno) {
-        continue; // Pular colaboradores de outros turnos
+        continue;
       }
 
-      // Somar produção de todas as colunas da data
       let totalProducao = 0;
       
       for (const colIndex of colunasData) {
@@ -523,17 +529,10 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
       }
     }
 
-    // Ordenar por total decrescente e pegar top N
     colaboradores.sort((a, b) => b.total - a.total);
     const ranking = colaboradores.slice(0, limite);
 
     console.log(`✅ Ranking gerado para ${turno}: ${ranking.length} colaboradores`);
-    if (ranking.length > 0) {
-      console.log("🏆 Top 3:");
-      ranking.slice(0, 3).forEach((c, i) => {
-        console.log(`  ${i + 1}º - ${c.nome}: ${c.total}`);
-      });
-    }
 
     return {
       success: true,
@@ -557,24 +556,29 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
     const logicRows = await carregarLogic();
     const dataBusca = formatarData(dataISO);
 
+    // Para T3, também buscar dados do dia seguinte (horas 00-05)
+    let dataBuscaExtra = null;
+    if (turno === 'T3') {
+      const dataObj = new Date(dataISO);
+      dataObj.setDate(dataObj.getDate() + 1);
+      dataBuscaExtra = formatarData(dataObj.toISOString().slice(0, 10));
+    }
+
     if (!rows || rows.length < 5) {
       console.warn("⚠️ Planilha vazia ou sem dados suficientes");
       return { success: false, data: [] };
     }
 
-    // Criar mapa de colaboradores por turno
-    // Extrai o OpsId do formato "[Ops12345]NOME" → "ops12345"
     const extrairOpsId = (str) => {
       const match = String(str).match(/\[([^\]]+)\]/);
       return match ? match[1].toLowerCase() : null;
     };
 
-    // Extrai o nome limpo do formato "[Ops12345]NOME" → "NOME"
     const extrairNomeLimpo = (str) => {
       return String(str).replace(/^\[[^\]]+\]/, '').trim();
     };
 
-    const colaboradoresPorTurno = new Map(); // chave: opsId lowercase → turno
+    const colaboradoresPorTurno = new Map();
     for (let i = 1; i < logicRows.length; i++) {
       const row = logicRows[i];
       if (!row || row.length < 2) continue;
@@ -590,33 +594,34 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
       }
     }
 
-    console.log(`📋 Mapeados ${colaboradoresPorTurno.size} colaboradores por OpsId na aba Logic`);
-
     const linhaDatas = rows[3];
     const linhaHoras = rows[4];
 
-    console.log("📋 Primeiras 5 datas da planilha:", linhaDatas?.slice(1, 6));
-    console.log("📋 Primeiras 5 horas da planilha:", linhaHoras?.slice(1, 6));
-    console.log("📋 Data buscada:", dataBusca);
-    
-    // Identificar colunas que correspondem à data buscada
+    // Identificar colunas para a(s) data(s) do turno
+    // T3: horas 22-23 do dia principal + horas 00-05 do dia seguinte
     const colunasData = [];
     for (let colIndex = 1; colIndex < linhaDatas.length; colIndex++) {
       const dataColuna = normalizar(linhaDatas[colIndex]);
+      const horaColuna = normalizar(linhaHoras[colIndex]);
+      const hora = parseInt(horaColuna.split(':')[0]);
+
       if (dataColuna === dataBusca) {
-        colunasData.push(colIndex);
+        if (turno === 'T3') {
+          if (hora >= 22) colunasData.push(colIndex);
+        } else {
+          colunasData.push(colIndex);
+        }
+      } else if (dataBuscaExtra && dataColuna === dataBuscaExtra) {
+        if (hora < 6) colunasData.push(colIndex);
       }
     }
 
-    console.log(`📋 Colunas encontradas para ${dataBusca}: ${colunasData.length}`);
+    console.log(`📋 Colunas encontradas para ${turno} do dia ${dataBusca}: ${colunasData.length}`);
 
     if (colunasData.length === 0) {
-      console.warn("⚠️ Nenhuma coluna encontrada para a data:", dataBusca);
-      // Retornar colaboradores sem dados (todos zerados) em vez de falhar
       return { success: true, data: [] };
     }
 
-    // Processar colaboradores com dados por hora
     const colaboradores = [];
     let totalLinhasProcessadas = 0;
     let totalFiltradas = 0;
@@ -637,13 +642,11 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
 
       totalLinhasProcessadas++;
 
-      // Extrair OpsId da célula — sem OpsId, ignora a linha
       const opsIdLinha = extrairOpsId(nomeColaborador);
       const nomeLimpoLinha = extrairNomeLimpo(nomeColaborador);
 
-      if (!opsIdLinha) continue; // sem OpsId não tem como garantir unicidade
+      if (!opsIdLinha) continue;
 
-      // Matching exclusivamente por OpsId
       const turnoColaborador = colaboradoresPorTurno.get(opsIdLinha);
       
       if (!turnoColaborador || turnoColaborador !== turno) {
@@ -652,7 +655,6 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
 
       totalFiltradas++;
 
-      // Coletar dados por hora
       const dadosPorHora = {};
       let totalProducao = 0;
       
@@ -669,7 +671,6 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
               const valorStr = String(valorColuna).trim().replace(/\./g, '').replace(',', '.');
               quantidade = Math.round(parseFloat(valorStr) || 0);
             }
-            // Acumular por hora (pode ter múltiplas colunas para a mesma hora)
             dadosPorHora[hora] = (dadosPorHora[hora] || 0) + quantidade;
             totalProducao += quantidade;
           }
@@ -685,10 +686,6 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
     }
 
     console.log(`✅ Produtividade detalhada: ${colaboradores.length} colaboradores do ${turno}`);
-    console.log(`📊 Total linhas processadas: ${totalLinhasProcessadas}, filtradas por turno: ${totalFiltradas}`);
-    if (colaboradores.length > 0) {
-      console.log("📋 Primeiros 3:", colaboradores.slice(0, 3).map(c => `${c.nome}: ${c.total}`));
-    }
 
     return {
       success: true,

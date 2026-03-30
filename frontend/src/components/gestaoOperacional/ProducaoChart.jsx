@@ -37,7 +37,7 @@ export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false
       return (
         <div className="bg-[#1A1A1C] border border-[#2A2A2C] p-4 rounded shadow-lg">
           <p className="font-semibold text-white">
-            Hora: {d.hora}:{String(0).padStart(2, "0")}
+            Hora: {String(parseInt(d.hora)).padStart(2, "0")}-{String((parseInt(d.hora) + 1) % 24).padStart(2, "0")}
           </p>
           <p className="text-blue-400">
             Meta: {d.meta.toLocaleString("pt-BR")}
@@ -188,14 +188,18 @@ export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false
           gridTemplateColumns: `repeat(${dadosFiltrados.length}, 1fr)`,
         }}
       >
-        {dadosFiltrados.map((d, i) => (
-          <div
-            key={i}
-            className="text-center font-bold text-white text-sm py-2 bg-[#1e3a5f] rounded"
-          >
-            {d.hora}-{String(parseInt(d.hora) + 1).padStart(2, "0")}
-          </div>
-        ))}
+        {dadosFiltrados.map((d, i) => {
+          const h = parseInt(d.hora);
+          const proxHora = (h + 1) % 24;
+          return (
+            <div
+              key={i}
+              className="text-center font-bold text-white text-sm py-2 bg-[#1e3a5f] rounded"
+            >
+              {String(h).padStart(2, "0")}-{String(proxHora).padStart(2, "0")}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

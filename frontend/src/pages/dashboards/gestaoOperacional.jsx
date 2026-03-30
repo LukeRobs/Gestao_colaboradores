@@ -69,6 +69,7 @@ export default function GestaoOperacional() {
       
       console.log("🔄 Carregando dados com filtros:", { data, turno });
       console.log("🔑 Token no localStorage:", localStorage.getItem("token") ? "Presente" : "Ausente");
+      console.log("📡 Enviando para API → params:", { data, turno });
       
       const response = await api.get("/dashboard/gestao-operacional", {
         params: { data, turno }
@@ -77,7 +78,13 @@ export default function GestaoOperacional() {
       console.log("✅ Resposta recebida:", response.data);
       
       if (response.data.success) {
-        setDashboardData(response.data.data);
+        const d = response.data.data;
+        console.log("📊 [FRONTEND] producaoPorHora recebido:");
+        (d.producaoPorHora || []).forEach(p => {
+          console.log(`  h${p.hora}: meta=${p.meta}, realizado=${p.realizado}, %=${p.percentual}`);
+        });
+        console.log("📊 [FRONTEND] kpis:", d.kpis);
+        setDashboardData(d);
       }
     } catch (error) {
       console.error("❌ Erro ao carregar dashboard:", error);

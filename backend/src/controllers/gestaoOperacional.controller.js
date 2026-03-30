@@ -18,8 +18,17 @@ const carregarGestaoOperacional = async (req, res) => {
   try {
     const { data, turno } = req.query;
     
-    console.log("📊 Requisição recebida:", { data, turno });
+    const agora = agoraBrasil();
+
+    console.log("\n========================================");
+    console.log("📊 REQUISIÇÃO RECEBIDA");
+    console.log("========================================");
+    console.log("  data (query param):", data ?? "(não enviado)");
+    console.log("  turno:", turno);
+    console.log("  agora (SP):", agora.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }));
+    console.log("  hora atual (SP):", agora.getHours());
     console.log("👤 Usuário:", req.user?.name, "| Role:", req.user?.role);
+    console.log("========================================\n");
     
     if (!turno) {
       return res.status(400).json({
@@ -28,29 +37,32 @@ const carregarGestaoOperacional = async (req, res) => {
       });
     }
 
-    const agora = agoraBrasil();
     let dataReferencia = data ? new Date(`${data}T00:00:00.000Z`) : agora;
     
     // LÓGICA ESPECIAL PARA T3 - apenas quando NÃO passa data específica
-    // T3 trabalha das 22h de um dia até 6h do dia seguinte
-    // Se hoje é 12/03 e são 15h, o T3 "de hoje" ainda não começou (só às 22h)
-    // Então ao buscar T3 sem data específica, deve mostrar o T3 de ontem
     if (turno === 'T3' && !data) {
       const horaAtual = agora.getHours();
-      
-      // Se for antes das 22h, o T3 de hoje ainda não começou
-      // Buscar dados do T3 de ontem
+      // Se for antes das 22h, o T3 de hoje ainda não começou — buscar T3 de ontem
       if (horaAtual < 22) {
         dataReferencia = new Date(agora);
         dataReferencia.setDate(dataReferencia.getDate() - 1);
-        console.log("⏰ T3: Hora atual < 22h, ajustando para dia anterior");
-        console.log(`   Hoje: ${agora.toISOString().slice(0, 10)}, Buscando: ${dataReferencia.toISOString().slice(0, 10)}`);
+        console.log("⏰ T3 sem data: hora atual < 22h, ajustando para dia anterior");
       }
     }
     
     const dataStr = dataReferencia.toISOString().slice(0, 10);
 
-    console.log("📅 Data final para busca:", dataStr);
+    // Para T3, calcular a data do dia seguinte (horas 00-05)
+    const dataStrT3Seguinte = (() => {
+      const d = new Date(dataStr);
+      d.setDate(d.getDate() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
+
+    console.log("📅 dataStr (data de referência do turno):", dataStr);
+    if (turno === 'T3') {
+      console.log("📅 dataStrT3Seguinte (dia seguinte para horas 00-05):", dataStrT3Seguinte);
+    }
 
     // Buscar metas da planilha
     console.log("🔍 Buscando metas da planilha...");
@@ -68,98 +80,90 @@ const carregarGestaoOperacional = async (req, res) => {
     }
 
     // Buscar quantidade realizada da aba Atualização_colaborador
-    console.log("🔍 Buscando quantidade realizada da planilha...");
-    
-    // Para T3, precisamos buscar dados de duas datas (ontem 22h-23h e hoje 0h-6h)
     let quantidadePorHora = {};
     if (turno === 'T3') {
-      // Buscar dados de ontem (22h-23h)
+      console.log(`\n🔍 [T3] Buscando planilha:`);
+      console.log(`   Horas 22-23 → data = '${dataStr}'`);
+      console.log(`   Horas 00-05 → data = '${dataStrT3Seguinte}'`);
+
       const quantidadeOntem = await buscarQuantidadeRealizada(dataStr);
       if (quantidadeOntem.success) {
-        // Pegar apenas horas 22 e 23
         if (quantidadeOntem.data[22]) quantidadePorHora[22] = quantidadeOntem.data[22];
         if (quantidadeOntem.data[23]) quantidadePorHora[23] = quantidadeOntem.data[23];
       }
       
-      // Buscar dados de hoje (0h-6h)
-      const dataHoje = new Date(dataStr);
-      dataHoje.setDate(dataHoje.getDate() + 1);
-      const dataHojeStr = dataHoje.toISOString().slice(0, 10);
-      
-      const quantidadeHoje = await buscarQuantidadeRealizada(dataHojeStr);
+      const quantidadeHoje = await buscarQuantidadeRealizada(dataStrT3Seguinte);
       if (quantidadeHoje.success) {
-        // Pegar horas 0 a 5
         for (let h = 0; h <= 5; h++) {
           if (quantidadeHoje.data[h]) quantidadePorHora[h] = quantidadeHoje.data[h];
         }
       }
       
-      console.log("✅ T3: Quantidade realizada carregada de duas datas:", Object.keys(quantidadePorHora).length, "horas");
+      console.log(`   ✅ Planilha horas 22-23 (${dataStr}): h22=${quantidadePorHora[22] ?? 0}, h23=${quantidadePorHora[23] ?? 0}`);
+      console.log(`   ✅ Planilha horas 00-05 (${dataStrT3Seguinte}):`, 
+        [0,1,2,3,4,5].map(h => `h${h}=${quantidadePorHora[h] ?? 0}`).join(', '));
     } else {
       const quantidadeResult = await buscarQuantidadeRealizada(dataStr);
       quantidadePorHora = quantidadeResult.success ? quantidadeResult.data : {};
       console.log("✅ Quantidade realizada carregada:", Object.keys(quantidadePorHora).length, "horas");
     }
 
-    // Buscar dados de produção por hora do banco (fallback)
-    console.log("🔍 Buscando produção do banco (fallback)...");
+    // Buscar dados de produção por hora do banco
     const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
     
-    // Primeiro tenta buscar do histórico (dados consolidados)
     let producaoPorHora = [];
     try {
-      const historicoProducao = await prisma.producaoHoraHistorico.findMany({
-        where: {
-          dataReferencia: new Date(dataStr),
-          turno: turno,
-        },
-        orderBy: {
-          hora: 'asc'
-        }
-      });
-      
-      if (historicoProducao.length > 0) {
-        producaoPorHora = historicoProducao.map(h => ({
-          hora: h.hora,
-          realizado: Number(h.realizado)
-        }));
-        console.log("✅ Produção carregada do histórico:", producaoPorHora.length, "registros");
+      if (turno === 'T3') {
+        console.log("\n🔍 [T3] Buscando dw_real:");
+        console.log(`   Horas 22-23 → data::date = '${dataStr}' AND hora >= 22`);
+        console.log(`   Horas 00-05 → data::date = '${dataStrT3Seguinte}' AND hora < 6`);
+
+        const producaoOntem = await prisma.$queryRaw`
+          SELECT 
+            EXTRACT(HOUR FROM data::timestamp) as hora,
+            SUM(CAST(quantidade AS INTEGER)) as realizado
+          FROM dw_real
+          WHERE data::date = CAST(${dataStr} AS date)
+            AND id_turno = ${turnoId}
+            AND EXTRACT(HOUR FROM data::timestamp) >= 22
+          GROUP BY EXTRACT(HOUR FROM data::timestamp)
+          ORDER BY hora
+        `;
+
+        const producaoHoje = await prisma.$queryRaw`
+          SELECT 
+            EXTRACT(HOUR FROM data::timestamp) as hora,
+            SUM(CAST(quantidade AS INTEGER)) as realizado
+          FROM dw_real
+          WHERE data::date = CAST(${dataStrT3Seguinte} AS date)
+            AND id_turno = ${turnoId}
+            AND EXTRACT(HOUR FROM data::timestamp) < 6
+          GROUP BY EXTRACT(HOUR FROM data::timestamp)
+          ORDER BY hora
+        `;
+
+        producaoPorHora = [...producaoOntem, ...producaoHoje];
+
+        console.log(`   ✅ Horas 22-23 no banco (${dataStr}): ${producaoOntem.length} registros →`,
+          producaoOntem.map(p => `h${Number(p.hora)}=${Number(p.realizado)}`).join(', ') || 'nenhum');
+        console.log(`   ✅ Horas 00-05 no banco (${dataStrT3Seguinte}): ${producaoHoje.length} registros →`,
+          producaoHoje.map(p => `h${Number(p.hora)}=${Number(p.realizado)}`).join(', ') || 'nenhum');
       } else {
-        // Fallback: buscar de dw_real
-        // Para T3, buscar de duas datas
-        if (turno === 'T3') {
-          // Buscar 22h-23h de ontem
-          const producaoOntem = await prisma.$queryRaw`
-            SELECT 
-              EXTRACT(HOUR FROM data::timestamp) as hora,
-              SUM(CAST(quantidade AS INTEGER)) as realizado
-            FROM dw_real
-            WHERE data::date = CAST(${dataStr} AS date)
-              AND id_turno = ${turnoId}
-              AND EXTRACT(HOUR FROM data::timestamp) >= 22
-            GROUP BY EXTRACT(HOUR FROM data::timestamp)
-            ORDER BY hora
-          `;
-          
-          // Buscar 0h-5h de hoje
-          const dataHoje = new Date(dataStr);
-          dataHoje.setDate(dataHoje.getDate() + 1);
-          const dataHojeStr = dataHoje.toISOString().slice(0, 10);
-          
-          const producaoHoje = await prisma.$queryRaw`
-            SELECT 
-              EXTRACT(HOUR FROM data::timestamp) as hora,
-              SUM(CAST(quantidade AS INTEGER)) as realizado
-            FROM dw_real
-            WHERE data::date = CAST(${dataHojeStr} AS date)
-              AND id_turno = ${turnoId}
-              AND EXTRACT(HOUR FROM data::timestamp) < 6
-            GROUP BY EXTRACT(HOUR FROM data::timestamp)
-            ORDER BY hora
-          `;
-          
-          producaoPorHora = [...producaoOntem, ...producaoHoje];
-          console.log("✅ T3: Produção carregada do dw_real de duas datas:", producaoPorHora.length, "registros");
+        // Para T1/T2: tenta histórico primeiro, fallback para dw_real
+        const historicoProducao = await prisma.producaoHoraHistorico.findMany({
+          where: {
+            dataReferencia: new Date(dataStr),
+            turno: turno,
+          },
+          orderBy: { hora: 'asc' }
+        });
+
+        if (historicoProducao.length > 0) {
+          producaoPorHora = historicoProducao.map(h => ({
+            hora: h.hora,
+            realizado: Number(h.realizado)
+          }));
+          console.log("✅ Produção carregada do histórico:", producaoPorHora.length, "registros");
         } else {
           producaoPorHora = await prisma.$queryRaw`
             SELECT 
@@ -270,19 +274,31 @@ const carregarGestaoOperacional = async (req, res) => {
     // Calcular totais
     const horaAtual = agora.getHours();
     let metaHoraProjetada = 0;
-    let metaHoraAtual = 0; // Meta específica da hora atual
+    let metaHoraAtual = 0;
     let realizado = 0;
     const producaoComMeta = [];
 
     // Verificar se o turno já finalizou
+    // Se a data selecionada é anterior a hoje, o turno sempre finalizou
+    const dataHoje = agora.toISOString().slice(0, 10);
+    const dataSelecionadaAnterior = dataStr < dataHoje;
+
     let turnoFinalizado = false;
-    if (turno === "T1" && horaAtual >= 14) {
+    if (dataSelecionadaAnterior) {
+      // Data passada: para T3, só finaliza se o dia seguinte também já passou
+      if (turno === 'T3') {
+        const dataHojeObj = new Date(dataStr);
+        dataHojeObj.setDate(dataHojeObj.getDate() + 1);
+        const dataFimT3 = dataHojeObj.toISOString().slice(0, 10);
+        turnoFinalizado = dataFimT3 < dataHoje || (dataFimT3 === dataHoje && horaAtual >= 6);
+      } else {
+        turnoFinalizado = true;
+      }
+    } else if (turno === "T1" && horaAtual >= 14) {
       turnoFinalizado = true;
     } else if (turno === "T2" && horaAtual >= 22) {
       turnoFinalizado = true;
     } else if (turno === "T3" && horaAtual >= 6 && horaAtual < 22) {
-      // T3 trabalha das 22h às 5h, então finaliza às 6h
-      // Só considera finalizado se estiver entre 6h e 21h (antes do próximo T3)
       turnoFinalizado = true;
     }
 
@@ -297,16 +313,30 @@ const carregarGestaoOperacional = async (req, res) => {
       console.log(`🎯 Meta da hora atual (${horaAtual}h): ${metaHoraAtual}`);
     }
 
+    // Para T3, converter horaAtual para posição dentro do turno
+    // T3: 22h=pos0, 23h=pos1, 0h=pos2, 1h=pos3, 2h=pos4, 3h=pos5, 4h=pos6, 5h=pos7
+    // Uma hora "h" está completa se sua posição no turno < posição da hora atual
+    const posicaoNoTurnoT3 = (h) => (h >= 22 ? h - 22 : h + 2);
+    const posicaoAtualT3 = posicaoNoTurnoT3(horaAtual);
+
     // Processar todas as horas que têm meta
     for (const [horaStr, meta] of Object.entries(metasPorHora)) {
       const h = parseInt(horaStr);
       
       console.log(`\n🔍 Processando hora ${h}:`);
       console.log(`  - Meta: ${meta}`);
-      console.log(`  - Hora atual: ${horaAtual}, Hora ${h} < Hora atual? ${h < horaAtual}`);
+
+      // Verificar se a hora já passou (completa)
+      let horaCompleta;
+      if (turno === 'T3') {
+        horaCompleta = posicaoNoTurnoT3(h) < posicaoAtualT3;
+      } else {
+        horaCompleta = h < horaAtual;
+      }
+      console.log(`  - Hora atual: ${horaAtual}, Hora ${h} completa? ${horaCompleta}`);
       
       // Somar meta projetada apenas das horas COMPLETAS (antes da hora atual)
-      if (h < horaAtual) {
+      if (horaCompleta) {
         metaHoraProjetada += meta;
         console.log(`  - Meta projetada acumulada: ${metaHoraProjetada}`);
       }
@@ -366,8 +396,15 @@ const carregarGestaoOperacional = async (req, res) => {
       console.log(`  - Origem dos dados: ${origem}`);
     }
 
-    // Ordenar por hora
-    producaoComMeta.sort((a, b) => parseInt(a.hora) - parseInt(b.hora));
+    // Ordenar por hora — T3 começa às 22h, então 22,23 vêm antes de 0,1,2,3,4,5
+    if (turno === 'T3') {
+      producaoComMeta.sort((a, b) => {
+        const ordemT3 = (h) => (parseInt(h) >= 22 ? parseInt(h) - 22 : parseInt(h) + 2);
+        return ordemT3(a.hora) - ordemT3(b.hora);
+      });
+    } else {
+      producaoComMeta.sort((a, b) => parseInt(a.hora) - parseInt(b.hora));
+    }
 
     // Calcular médias e produtividade
     // Contar apenas horas que têm realizado > 0
@@ -424,21 +461,17 @@ const carregarGestaoOperacional = async (req, res) => {
       };
     });
 
-    console.log("✅ Resposta preparada com sucesso");
-    console.log("\n📤 DADOS ENVIADOS AO FRONTEND:");
-    console.log(JSON.stringify({
-      kpis: {
-        metaDia: Math.round(metaDia),
-        metaHoraProjetada: Math.round(metaHoraProjetada),
-        metaHoraAtual: Math.round(metaHoraAtual),
-        horaAtual,
-        realizado,
-        mediaHoraRealizado,
-        produtividade,
-        performance: Number(performance)
-      },
-      producaoPorHora: producaoComMeta.slice(0, 3) // Mostrar apenas primeiras 3 horas
-    }, null, 2));
+    console.log("\n========================================");
+    console.log("📤 RESUMO FINAL - DADOS ENVIADOS AO FRONTEND");
+    console.log("========================================");
+    console.log(`  turno: ${turno} | dataStr: ${dataStr}${turno === 'T3' ? ` | dataStrT3Seguinte: ${dataStrT3Seguinte}` : ''}`);
+    console.log(`  turnoFinalizado: ${turnoFinalizado} | horaAtual: ${horaAtual}`);
+    console.log(`  metaDia: ${Math.round(metaDia)} | realizado: ${realizado} | performance: ${performance}%`);
+    console.log("  producaoComMeta (todas as horas):");
+    producaoComMeta.forEach(p => {
+      console.log(`    h${p.hora}: meta=${p.meta}, realizado=${p.realizado}, %=${p.percentual}`);
+    });
+    console.log("========================================\n");
 
     return res.json({
       success: true,
