@@ -227,6 +227,12 @@ export default function OperationalReport({ report }) {
           <KpiCard label="Diaristas Presentes" value={kpis.diaristasPresentes} />
           <KpiCard label="Aderência DW" value={`${kpis.aderenciaDW}%`} highlight="success" />
           <KpiCard label="Aderência Total" value={`${kpis.aderenciaTotal}%`} highlight="success" />
+          <KpiCard
+            label="Share de Diaristas"
+            value={`${kpis.shareDiaristas}%`}
+            highlight={kpis.shareDiaristas <= 10 ? "success" : "error"}
+            textColor={kpis.shareDiaristas <= 10 ? "#34C759" : "#d6000e"}
+          />
         </div>
         {/* ================= QUANTIDADE POR EMPRESA ================= */}
         <Card>

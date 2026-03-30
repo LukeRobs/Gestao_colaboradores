@@ -10,10 +10,25 @@ import {
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import LoadingScreen from "../components/LoadingScreen";
 
 import { TreinamentosAPI } from "../services/treinamentos";
 import { AuthContext } from "../context/AuthContext";
+
+/* ─── SKELETON ─────────────────────────────────────────────────────── */
+function Sk({ h = 16, w = "100%", r = 8 }) {
+  return (
+    <div
+      style={{
+        height: h,
+        width: w,
+        borderRadius: r,
+        background: "linear-gradient(90deg,#1f1f1f 25%,#2a2a2a 50%,#1f1f1f 75%)",
+        backgroundSize: "600px 100%",
+        animation: "shimmer 1.4s infinite linear",
+      }}
+    />
+  );
+}
 
 /* =====================================================
    PAGE — TREINAMENTOS
@@ -73,7 +88,57 @@ export default function TreinamentosPage() {
 
   /* ================= RENDER ================= */
   if (loading) {
-    return <LoadingScreen message="Carregando treinamentos..." />;
+    return (
+      <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+        <style>{`@keyframes shimmer { from { background-position: -600px 0 } to { background-position: 600px 0 } }`}</style>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
+        <div className="flex-1 lg:ml-64">
+          <Header onMenuClick={() => setSidebarOpen(true)} />
+          <main className="p-8 space-y-8">
+            {/* header */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Sk h={28} w={200} r={8} />
+                <Sk h={14} w={260} r={6} />
+              </div>
+              <Sk h={38} w={160} r={12} />
+            </div>
+
+            {/* 3 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <Sk h={12} w={140} />
+                      <Sk h={28} w={60} />
+                    </div>
+                    <Sk h={48} w={48} r={12} />
+                  </div>
+                  <Sk h={8} r={4} />
+                </div>
+              ))}
+            </div>
+
+            {/* tabela */}
+            <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#2A2A2C]">
+              <div className="bg-[#262628] px-4 py-3 flex gap-6">
+                {[80, 160, 120, 80, 140, 80, 60].map((w, i) => (
+                  <Sk key={i} h={12} w={w} />
+                ))}
+              </div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="px-4 py-3 flex gap-6 border-t border-[#2A2A2C]">
+                  {[80, 160, 120, 80, 140, 80, 60].map((w, j) => (
+                    <Sk key={j} h={12} w={w} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
 
   if (erro) {

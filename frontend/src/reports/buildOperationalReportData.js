@@ -34,6 +34,11 @@ export function buildOperationalReportData({ dados, turno, periodo }) {
       ? Math.round((diaristasPresentes / diaristasPlanejados) * 100)
       : 0
 
+  const shareDiaristas =
+    colaboradoresPresentes > 0
+      ? Number(((diaristasPresentes / colaboradoresPresentes) * 100).toFixed(2))
+      : 0
+
   const aderenciaTotal =
     totalPlanejado > 0
       ? Math.round((totalReal / totalPlanejado) * 100)
@@ -99,6 +104,7 @@ export function buildOperationalReportData({ dados, turno, periodo }) {
       diaristasPresentes,
       aderenciaDW,
       aderenciaTotal,
+      shareDiaristas,
     },
 
     resumo: [

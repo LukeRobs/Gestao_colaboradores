@@ -40,6 +40,14 @@ router.post(
   treinamentoController.presignUploadAta
 );
 
+/* ATUALIZAR PARTICIPANTES */
+router.put(
+  "/:id/participantes",
+  authenticate,
+  authorize("ADMIN", "GESTAO", "LIDERANCA"),
+  treinamentoController.atualizarParticipantes
+);
+
 /* FINALIZAR TREINAMENTO */
 router.post(
   "/:id/finalizar",

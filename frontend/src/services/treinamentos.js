@@ -20,4 +20,9 @@ export const TreinamentosAPI = {
     const res = await api.post(`/treinamentos/${id}/finalizar`, payload);
     return res.data.data;
   },
+
+  atualizarParticipantes: async (id, participantes) => {
+    const res = await api.put(`/treinamentos/${id}/participantes`, { participantes });
+    return res.data.data;
+  },
 };

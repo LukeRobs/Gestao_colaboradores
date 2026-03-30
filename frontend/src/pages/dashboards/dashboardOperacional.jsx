@@ -161,6 +161,11 @@ export default function DashboardOperacional() {
 
   const aderenciaDW = Number(turnoData.aderenciaDW || 0);
 
+  const shareDiaristas =
+    presentes > 0
+      ? Number(((diaristasPresentes / presentes) * 100).toFixed(2))
+      : 0;
+
   const absenteismoTurno =
   totalColaboradores > 0
     ? Number(((ausencias / totalColaboradores) * 100).toFixed(2))
@@ -209,6 +214,13 @@ export default function DashboardOperacional() {
         suffix: "%",
         color: aderenciaDW >= 95 ? "#34C759" : "#FF9F0A",
       },
+      {
+        icon: TrendingUp,
+        label: "Share de Diaristas",
+        value: shareDiaristas,
+        suffix: "%",
+        color: shareDiaristas <= 10 ? "#34C759" : "#d6000e",
+      },
     ],
     [
       totalColaboradores,
@@ -218,6 +230,7 @@ export default function DashboardOperacional() {
       diaristasPlanejados,
       diaristasPresentes,
       aderenciaDW,
+      shareDiaristas,
     ]
   );
 
