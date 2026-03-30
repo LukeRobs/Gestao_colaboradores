@@ -49,8 +49,15 @@ function formatDateBR(dateStr) {
 }
 function formatDateWithWeekday(dateStr) {
   if (!dateStr) return "-";
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+
+  const iso = String(dateStr).slice(0, 10); // YYYY-MM-DD
+  const d = new Date(iso + "T12:00:00");
+
+  return d.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
 }
 
 /* ─── CSS GLOBAL ──────────────────────────────────────────────────── */
@@ -343,6 +350,7 @@ export default function FolgaDominicalPage() {
   const [domingoSelecionado, setDomingoSelecionado] = useState(null);
   const [turnoSelecionado,   setTurnoSelecionado]   = useState("");
   const [escalaSelecionada,  setEscalaSelecionada]  = useState("");
+  const [liderSelecionado, setLiderSelecionado] = useState("");
   const [previewData,    setPreviewData]        = useState(null);
   const [previewLoading, setPreviewLoading]    = useState(false);
   const [previewErro,    setPreviewErro]       = useState("");
@@ -409,6 +417,17 @@ export default function FolgaDominicalPage() {
   const total      = resumo?.total    ?? 0;
   const porDomingo = resumo?.porDomingo ?? {};
 
+  const lideres = useMemo(() => {
+    if (!resumo?.colaboradores) return [];
+
+    const unique = new Set(
+      resumo.colaboradores
+        .map((c) => c.lider)
+        .filter(Boolean)
+    );
+
+    return Array.from(unique).sort();
+  }, [resumo]);
   const colaboradoresFiltrados = useMemo(() => {
     if (!resumo?.colaboradores) return [];
     return resumo.colaboradores.filter((c) => {
@@ -416,10 +435,11 @@ export default function FolgaDominicalPage() {
       return (
         (!domingoSelecionado || data === domingoSelecionado) &&
         (!turnoSelecionado   || c.turno  === turnoSelecionado) &&
-        (!escalaSelecionada  || c.escala === escalaSelecionada)
+        (!escalaSelecionada  || c.escala === escalaSelecionada) &&
+        (!liderSelecionado || c.lider === liderSelecionado)
       );
     });
-  }, [resumo, domingoSelecionado, turnoSelecionado, escalaSelecionada]);
+  }, [resumo, domingoSelecionado, turnoSelecionado, escalaSelecionada, liderSelecionado]);
 
   const previewFiltrado = useMemo(() => {
     if (!previewData?.preview) return [];
@@ -429,7 +449,7 @@ export default function FolgaDominicalPage() {
     );
   }, [previewData, previewTurno, previewDomingo]);
 
-  const hasActiveFilter = domingoSelecionado || turnoSelecionado || escalaSelecionada;
+  const hasActiveFilter = domingoSelecionado || turnoSelecionado || escalaSelecionada || liderSelecionado;
 
   /* ────────────────────────────────────────────── */
   return (
@@ -857,6 +877,15 @@ export default function FolgaDominicalPage() {
                       <option value="G">G</option>
                     </StyledSelect>
 
+                    <StyledSelect value={liderSelecionado} onChange={setLiderSelecionado}>
+                      <option value="">Todos os líderes</option>
+                      {lideres.map((l) => (
+                        <option key={l} value={l}>
+                          {l}
+                        </option>
+                      ))}
+                    </StyledSelect>
+
                     {/* Tag domingo ativo */}
                     {domingoSelecionado && (
                       <button
@@ -880,6 +909,7 @@ export default function FolgaDominicalPage() {
                           setDomingoSelecionado(null);
                           setTurnoSelecionado("");
                           setEscalaSelecionada("");
+                          setLiderSelecionado("");
                         }}
                         style={{
                           display: "flex", alignItems: "center", gap: 5, padding: "6px 12px",
@@ -907,6 +937,7 @@ export default function FolgaDominicalPage() {
                         <TH center>Escala</TH>
                         <TH>Líder</TH>
                         <TH>Setor</TH>
+                        <TH center>Domingo</TH>
                         <TH center>Última Folga</TH>
                         <TH center>Dias sem DSR</TH>
                       </tr>
@@ -941,6 +972,9 @@ export default function FolgaDominicalPage() {
                             <TD center><Badge value={colab.escala} map={ESCALA_COLORS} /></TD>
                             <TD>{colab.lider || "—"}</TD>
                             <TD>{colab.setor || "—"}</TD>
+                            <TD center style={{ color: "#fff", fontWeight: 600 }}>
+                              {colab.dataDomingo ? formatDateWithWeekday(colab.dataDomingo) : "—"}
+                            </TD>
                             <TD center style={{ color: "rgba(255,255,255,0.45)", fontSize: 12 }}>
                               {colab.ultimoDSR ? formatDateWithWeekday(colab.ultimoDSR) : "—"}
                             </TD>

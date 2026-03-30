@@ -13,6 +13,53 @@ const MINIMO_POR_TURNO = {
 /* =====================================================
    HELPERS
 ===================================================== */
+const CHUNK_SIZE = 100;
+
+async function processarPlanejamentosEmLotes(planejamentos, userId) {
+  for (let i = 0; i < planejamentos.length; i += CHUNK_SIZE) {
+    const chunk = planejamentos.slice(i, i + CHUNK_SIZE);
+
+    console.log(
+      `🚀 Lote ${Math.floor(i / CHUNK_SIZE) + 1} | Registros: ${chunk.length}`
+    );
+
+    await prisma.$transaction(
+      chunk.map((item) =>
+        prisma.frequencia.upsert({
+          where: {
+            opsId_dataReferencia: {
+              opsId: item.opsId,
+              dataReferencia: item.dataDomingo,
+            },
+          },
+          update: {
+            idTipoAusencia: DSR_ID,
+            horaEntrada: null,
+            horaSaida: null,
+            justificativa: JUSTIFICATIVA_AUTO,
+            registradoPor: userId,
+            manual: false,
+          },
+          create: {
+            opsId: item.opsId,
+            dataReferencia: item.dataDomingo,
+            idTipoAusencia: DSR_ID,
+            justificativa: JUSTIFICATIVA_AUTO,
+            registradoPor: userId,
+            manual: false,
+          },
+        })
+      ),
+      {
+        timeout: 20000, // proteção extra
+      }
+    );
+
+    // evita stress no banco
+    await new Promise((r) => setTimeout(r, 30));
+  }
+}
+
 function getDomingosDoMes(ano, mes) {
   const domingos = [];
   const data = new Date(ano, mes - 1, 1);
@@ -577,34 +624,9 @@ async function gerarFolgaDominical({ ano, mes, userId }) {
     );
   }
 
-  await prisma.$transaction(async (tx) => {
-    for (const item of planejamentos) {
-      await tx.frequencia.upsert({
-        where: {
-          opsId_dataReferencia: {
-            opsId: item.opsId,
-            dataReferencia: item.dataDomingo,
-          },
-        },
-        update: {
-          idTipoAusencia: DSR_ID,
-          horaEntrada: null,
-          horaSaida: null,
-          justificativa: JUSTIFICATIVA_AUTO,
-          registradoPor: userId,
-          manual: false,
-        },
-        create: {
-          opsId: item.opsId,
-          dataReferencia: item.dataDomingo,
-          idTipoAusencia: DSR_ID,
-          justificativa: JUSTIFICATIVA_AUTO,
-          registradoPor: userId,
-          manual: false,
-        },
-      });
-    }
-  });
+  console.log("TOTAL PLANEJAMENTOS:", planejamentos.length);
+
+  await processarPlanejamentosEmLotes(planejamentos, userId);
 
   const resumoCapacidade = {};
   for (const turno of ["T1", "T2", "T3"]) {
@@ -614,7 +636,6 @@ async function gerarFolgaDominical({ ano, mes, userId }) {
       resumoCapacidade[turno][dataKey] = capacidade[turno][dataKey];
     }
   }
-
   return {
     ano,
     mes,
@@ -729,7 +750,11 @@ async function listarFolgaDominical({ ano, mes }) {
 
   // 🔥 MONTAR RESPOSTA
   const colaboradores = registros.map((r) => {
-    const ultimoDSR = ultimoDSRMap.get(r.colaborador.opsId) || null;
+    const ultimoDSRRaw = ultimoDSRMap.get(r.colaborador.opsId) || null;
+
+    const ultimoDSR = ultimoDSRRaw
+      ? isoDate(ultimoDSRRaw)
+      : null;
 
     const diasSemDSR = ultimoDSR
     ? Math.floor(
