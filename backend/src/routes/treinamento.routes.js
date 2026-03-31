@@ -56,4 +56,12 @@ router.post(
   treinamentoController.finalizarTreinamento
 );
 
+/* CANCELAR TREINAMENTO */
+router.post(
+  "/:id/cancelar",
+  authenticate,
+  authorize("ADMIN", "GESTAO", "LIDERANCA"),
+  treinamentoController.cancelarTreinamento
+);
+
 module.exports = router;

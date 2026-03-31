@@ -25,4 +25,6 @@ router.get("/colaborador/:opsId", authenticate, asyncHandler(controller.getAcide
 
 router.get("/:id", authenticate, asyncHandler(controller.getAcidenteById));
 
+router.post("/:id/cancelar", authenticate, asyncHandler(controller.cancelarAcidente));
+
 module.exports = router;

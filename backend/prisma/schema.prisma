@@ -416,6 +416,10 @@ model AcidenteTrabalho {
   lateralidade         String
   tipoLesao            String
   acoesImediatas       String
+  status               StatusAcidente      @default(ATIVO)
+  motivoCancelamento   String?
+  canceladoEm          DateTime?
+  canceladoPor         String?
   createdAt            DateTime            @default(now())
   colaborador          Colaborador         @relation(fields: [opsIdColaborador], references: [opsId])
   evidencias           EvidenciaAcidente[]
@@ -487,6 +491,9 @@ model Treinamento {
   ataPdfSize            Int?                      @map("ata_pdf_size")
   finalizadoAt          DateTime?                 @map("finalizado_em") @db.Timestamp(6)
   finalizadoPor         String?                   @map("finalizado_por") @db.VarChar(50)
+  canceladoAt           DateTime?                 @map("cancelado_em") @db.Timestamp(6)
+  canceladoPor          String?                   @map("cancelado_por") @db.VarChar(50)
+  motivoCancelamento    String?                   @map("motivo_cancelamento") @db.VarChar(500)
   criadoPor             String?                   @map("criado_por") @db.VarChar(50)
   dataCriacao           DateTime                  @default(now()) @map("data_criacao") @db.Timestamp(6)
   dataAtualizacao       DateTime                  @default(now()) @updatedAt @map("data_atualizacao") @db.Timestamp(6)
@@ -745,6 +752,11 @@ enum MotivoDesligamento {
 enum StatusTreinamento {
   ABERTO
   FINALIZADO
+  CANCELADO
+}
+
+enum StatusAcidente {
+  ATIVO
   CANCELADO
 }
 

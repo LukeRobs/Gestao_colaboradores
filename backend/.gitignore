@@ -32,3 +32,6 @@ logs/
 
 # Prisma
 prisma/migrations/
+
+# Arquivos
+.kiro/steering/access-control-architecture.md

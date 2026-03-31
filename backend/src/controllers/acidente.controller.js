@@ -404,6 +404,45 @@ const getAcidentesByColaborador = async (req, res) => {
   }
 };
 
+/* ================= CANCELAR ACIDENTE ================= */
+const cancelarAcidente = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
+
+    if (!motivo || !motivo.trim()) {
+      return res.status(400).json({ success: false, message: "Motivo do cancelamento é obrigatório" });
+    }
+
+    const acidente = await prisma.acidenteTrabalho.findUnique({
+      where: { idAcidente: Number(id) },
+    });
+
+    if (!acidente) {
+      return res.status(404).json({ success: false, message: "Acidente não encontrado" });
+    }
+
+    if (acidente.status === "CANCELADO") {
+      return res.status(400).json({ success: false, message: "Acidente já está cancelado" });
+    }
+
+    const updated = await prisma.acidenteTrabalho.update({
+      where: { idAcidente: Number(id) },
+      data: {
+        status: "CANCELADO",
+        motivoCancelamento: motivo.trim(),
+        canceladoEm: new Date(),
+        canceladoPor: req.user?.id || null,
+      },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("❌ CANCELAR ACIDENTE:", err);
+    return res.status(500).json({ success: false, message: "Erro ao cancelar acidente" });
+  }
+};
+
 module.exports = {
   presignUpload,
   presignDownload,
@@ -411,4 +450,5 @@ module.exports = {
   getAllAcidentes,
   getAcidenteById,
   getAcidentesByColaborador,
+  cancelarAcidente,
 };

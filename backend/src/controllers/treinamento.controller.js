@@ -415,3 +415,51 @@ exports.atualizarParticipantes = async (req, res) => {
 
   }
 };
+
+
+/* =====================================================
+   CANCELAR TREINAMENTO
+===================================================== */
+exports.cancelarTreinamento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
+
+    if (!motivo || !motivo.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Motivo do cancelamento é obrigatório",
+      });
+    }
+
+    const treinamento = await prisma.treinamento.findUnique({
+      where: { idTreinamento: Number(id) },
+    });
+
+    if (!treinamento) {
+      return res.status(404).json({ success: false, message: "Treinamento não encontrado" });
+    }
+
+    if (treinamento.status !== "ABERTO") {
+      return res.status(400).json({
+        success: false,
+        message: "Apenas treinamentos em aberto podem ser cancelados",
+      });
+    }
+
+    const updated = await prisma.treinamento.update({
+      where: { idTreinamento: Number(id) },
+      data: {
+        status: "CANCELADO",
+        motivoCancelamento: motivo.trim(),
+        canceladoAt: new Date(),
+        canceladoPor: req.user.id,
+      },
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    console.error("❌ cancelarTreinamento:", err);
+    return res.status(500).json({ success: false, message: "Erro ao cancelar treinamento" });
+  }
+};

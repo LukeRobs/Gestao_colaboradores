@@ -1,15 +1,45 @@
 // src/components/AcidenteCard-compact.jsx
 // VERSÃO COM LOGS PARA DEBUG
+import { useContext, useState } from "react";
 import {
   AlertTriangle,
   MapPin,
   Calendar,
   Clock,
   User,
+  XCircle,
+  X,
 } from "lucide-react";
 
-export default function AcidenteCardCompact({ acidente }) {
+import { AcidentesAPI } from "../services/acidentes";
+import { AuthContext } from "../context/AuthContext";
+
+export default function AcidenteCardCompact({ acidente, onCancelado }) {
   
+  const { user } = useContext(AuthContext);
+  const podeCancelar =
+    acidente?.status !== "CANCELADO" &&
+    (user?.role === "ADMIN" || user?.name === acidente?.registradoPor);
+
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [cancelando, setCancelando] = useState(false);
+
+  const handleCancelar = async () => {
+    if (!motivo.trim()) return;
+    setCancelando(true);
+    try {
+      await AcidentesAPI.cancelar(acidente.idAcidente, motivo);
+      setCancelModalOpen(false);
+      if (onCancelado) onCancelado(acidente.idAcidente);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao cancelar acidente");
+    } finally {
+      setCancelando(false);
+    }
+  };
+
   // 🔍 ADICIONE ESTES LOGS TEMPORÁRIOS (remova depois que funcionar)
   console.log("=== DEBUG CARD ===");
   console.log("1. Evidências:", acidente?.evidencias);
@@ -90,6 +120,7 @@ export default function AcidenteCardCompact({ acidente }) {
   })();
 
   return (
+    <>
     <div
       className="
         group
@@ -116,6 +147,18 @@ export default function AcidenteCardCompact({ acidente }) {
               <h3 className="text-lg lg:text-xl font-bold text-white tracking-tight flex-1">
                 {nome}
               </h3>
+              {acidente?.status === "CANCELADO" ? (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FF453A]/10 text-[#FF453A] text-xs font-medium border border-[#FF453A]/20 shrink-0">
+                  <XCircle size={12} /> Cancelado
+                </span>
+              ) : podeCancelar ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMotivo(""); setCancelModalOpen(true); }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FF453A]/10 hover:bg-[#FF453A]/20 text-[#FF453A] text-xs font-medium border border-[#FF453A]/20 shrink-0 transition-colors cursor-pointer"
+                >
+                  <XCircle size={12} /> Cancelar
+                </button>
+              ) : null}
             </div>
 
             {/* Meta info compacta */}
@@ -156,8 +199,8 @@ export default function AcidenteCardCompact({ acidente }) {
               </span>
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2">
+            {/* Badges + botão cancelar */}
+            <div className="flex flex-wrap items-center gap-2">
               {acidente?.participouIntegracao && (
                 <span className="px-2 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] font-medium border border-green-500/20">
                   Integração
@@ -173,5 +216,57 @@ export default function AcidenteCardCompact({ acidente }) {
         </div>
       </div>
     </div>
+
+    {/* MODAL CANCELAR ACIDENTE */}
+    {cancelModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div className="bg-[#1A1A1C] rounded-2xl w-full max-w-md border border-white/10 shadow-2xl">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <XCircle size={18} className="text-[#FF453A]" />
+              <h2 className="font-semibold text-base text-white">Cancelar Acidente</h2>
+            </div>
+            <button onClick={() => setCancelModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-sm text-[#BFBFC3]">
+              Informe o motivo do cancelamento. Esta ação não pode ser desfeita.
+            </p>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Descreva o motivo do cancelamento..."
+              rows={4}
+              className="w-full px-3 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#FF453A]/50 resize-none"
+            />
+          </div>
+
+          <div className="px-5 py-4 border-t border-white/5 flex justify-end gap-3">
+            <button
+              onClick={() => setCancelModalOpen(false)}
+              className="px-5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-white transition-colors"
+            >
+              Voltar
+            </button>
+            <button
+              onClick={handleCancelar}
+              disabled={cancelando || !motivo.trim()}
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition-colors ${
+                cancelando || !motivo.trim()
+                  ? "bg-[#FF453A]/30 text-white/30 cursor-not-allowed"
+                  : "bg-[#FF453A] hover:bg-[#D93025] text-white"
+              }`}
+            >
+              <XCircle size={15} />
+              {cancelando ? "Cancelando..." : "Confirmar cancelamento"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

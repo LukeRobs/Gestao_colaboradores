@@ -27,4 +27,9 @@ export const AcidentesAPI = {
     const res = await api.get("/auth/me");
     return res.data.data;
   },
+
+  async cancelar(id, motivo) {
+    const res = await api.post(`/acidentes/${id}/cancelar`, { motivo });
+    return res.data.data;
+  },
 };

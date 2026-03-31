@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
+  XCircle,
 } from "lucide-react";
 
 import Sidebar from "../components/Sidebar";
@@ -38,6 +39,11 @@ export default function TreinamentosPage() {
   const [treinamentos, setTreinamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
+
+  /* filtros */
+  const [filtroLider, setFiltroLider] = useState("");
+  const [filtroDataInicio, setFiltroDataInicio] = useState("");
+  const [filtroDataFim, setFiltroDataFim] = useState("");
 
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
@@ -73,6 +79,13 @@ export default function TreinamentosPage() {
         </span>
       );
     }
+    if (status === "CANCELADO") {
+      return (
+        <span className="flex items-center gap-1 text-xs text-[#FF453A]">
+          <XCircle size={14} /> Cancelado
+        </span>
+      );
+    }
     return (
       <span className="flex items-center gap-1 text-xs text-[#FF9F0A]">
         <Clock size={14} /> Em aberto
@@ -82,9 +95,31 @@ export default function TreinamentosPage() {
 
   // Calcular estatísticas
   const treinamentosFinalizados = treinamentos.filter(t => t.status === "FINALIZADO").length;
-  const treinamentosPendentes = treinamentos.filter(t => t.status !== "FINALIZADO").length;
+  const treinamentosCancelados = treinamentos.filter(t => t.status === "CANCELADO").length;
+  const treinamentosPendentes = treinamentos.filter(t => t.status === "ABERTO").length;
   const total = treinamentos.length;
   const percentualRealizado = total > 0 ? Math.round((treinamentosFinalizados / total) * 100) : 0;
+
+  // Líderes únicos para o filtro
+  const lideres = [...new Map(
+    treinamentos
+      .filter(t => t.liderResponsavel?.nomeCompleto)
+      .map(t => [t.liderResponsavelOpsId, t.liderResponsavel.nomeCompleto])
+  ).entries()].map(([opsId, nome]) => ({ opsId, nome }));
+
+  // Aplicar filtros
+  const treinamentosFiltrados = treinamentos.filter(t => {
+    if (filtroLider && t.liderResponsavelOpsId !== filtroLider) return false;
+    if (filtroDataInicio) {
+      const data = new Date(t.dataTreinamento);
+      if (data < new Date(filtroDataInicio)) return false;
+    }
+    if (filtroDataFim) {
+      const data = new Date(t.dataTreinamento);
+      if (data > new Date(filtroDataFim + "T23:59:59")) return false;
+    }
+    return true;
+  });
 
   /* ================= RENDER ================= */
   if (loading) {
@@ -182,12 +217,12 @@ export default function TreinamentosPage() {
           </div>
 
           {/* ESTATÍSTICAS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Card Total */}
             <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-[#BFBFC3] mb-1">Total de Treinamentos</p>
+                  <p className="text-sm text-[#BFBFC3] mb-1">Total</p>
                   <p className="text-2xl font-bold text-white">{total}</p>
                 </div>
                 <div className="p-3 bg-[#FA4C00]/10 rounded-xl">
@@ -207,18 +242,13 @@ export default function TreinamentosPage() {
                   <CheckCircle size={24} className="text-[#34C759]" />
                 </div>
               </div>
-              
-              {/* Barra de progresso */}
               <div className="mt-4">
                 <div className="flex justify-between text-xs text-[#BFBFC3] mb-2">
                   <span>Progresso</span>
                   <span>{percentualRealizado}%</span>
                 </div>
                 <div className="w-full bg-[#2A2A2C] rounded-full h-2">
-                  <div 
-                    className="bg-[#34C759] h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${percentualRealizado}%` }}
-                  ></div>
+                  <div className="bg-[#34C759] h-2 rounded-full transition-all duration-500" style={{ width: `${percentualRealizado}%` }} />
                 </div>
               </div>
             </div>
@@ -234,22 +264,79 @@ export default function TreinamentosPage() {
                   <Clock size={24} className="text-[#FF9F0A]" />
                 </div>
               </div>
-              
-              {/* Indicador visual */}
               <div className="mt-4">
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1 bg-[#2A2A2C] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#FF9F0A] transition-all duration-500"
-                      style={{ width: `${total > 0 ? (treinamentosPendentes / total) * 100 : 0}%` }}
-                    ></div>
+                    <div className="h-full bg-[#FF9F0A] transition-all duration-500" style={{ width: `${total > 0 ? (treinamentosPendentes / total) * 100 : 0}%` }} />
                   </div>
-                  <span className="text-xs text-[#BFBFC3]">
-                    {total > 0 ? Math.round((treinamentosPendentes / total) * 100) : 0}%
-                  </span>
+                  <span className="text-xs text-[#BFBFC3]">{total > 0 ? Math.round((treinamentosPendentes / total) * 100) : 0}%</span>
                 </div>
               </div>
             </div>
+
+            {/* Card Cancelados */}
+            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-[#BFBFC3] mb-1">Cancelados</p>
+                  <p className="text-2xl font-bold text-[#FF453A]">{treinamentosCancelados}</p>
+                </div>
+                <div className="p-3 bg-[#FF453A]/10 rounded-xl">
+                  <XCircle size={24} className="text-[#FF453A]" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1 bg-[#2A2A2C] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#FF453A] transition-all duration-500" style={{ width: `${total > 0 ? (treinamentosCancelados / total) * 100 : 0}%` }} />
+                  </div>
+                  <span className="text-xs text-[#BFBFC3]">{total > 0 ? Math.round((treinamentosCancelados / total) * 100) : 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FILTROS */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-[#BFBFC3]">Líder</label>
+              <select
+                value={filtroLider}
+                onChange={(e) => setFiltroLider(e.target.value)}
+                className="px-3 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 appearance-none min-w-[180px]"
+              >
+                <option value="">Todos os líderes</option>
+                {lideres.map(l => (
+                  <option key={l.opsId} value={l.opsId}>{l.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-[#BFBFC3]">Data início</label>
+              <input
+                type="date"
+                value={filtroDataInicio}
+                onChange={(e) => setFiltroDataInicio(e.target.value)}
+                className="px-3 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-[#BFBFC3]">Data fim</label>
+              <input
+                type="date"
+                value={filtroDataFim}
+                onChange={(e) => setFiltroDataFim(e.target.value)}
+                className="px-3 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
+              />
+            </div>
+            {(filtroLider || filtroDataInicio || filtroDataFim) && (
+              <button
+                onClick={() => { setFiltroLider(""); setFiltroDataInicio(""); setFiltroDataFim(""); }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-[#BFBFC3] transition-colors cursor-pointer"
+              >
+                <XCircle size={14} /> Limpar filtros
+              </button>
+            )}
           </div>
 
           {/* LISTAGEM */}
@@ -268,52 +355,28 @@ export default function TreinamentosPage() {
               </thead>
 
               <tbody>
-                {treinamentos.length === 0 && (
+                {treinamentosFiltrados.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-6 text-center text-[#BFBFC3]"
-                    >
-                      Nenhum treinamento cadastrado
+                    <td colSpan={7} className="px-4 py-6 text-center text-[#BFBFC3]">
+                      {treinamentos.length === 0 ? "Nenhum treinamento cadastrado" : "Nenhum resultado para os filtros aplicados"}
                     </td>
                   </tr>
                 )}
 
-                {treinamentos.map((t) => (
-                  <tr
-                    key={t.idTreinamento}
-                    className="border-t border-[#2A2A2C] hover:bg-[#1F1F22]"
-                  >
+                {treinamentosFiltrados.map((t) => (
+                  <tr key={t.idTreinamento} className="border-t border-[#2A2A2C] hover:bg-[#1F1F22]">
                     <td className="px-4 py-3">
                       {new Date(t.dataTreinamento).toLocaleDateString("pt-BR")}
                     </td>
-
-                    <td className="px-4 py-3 font-medium">
-                      {t.tema}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {t.processo}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {t.soc}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {t.liderResponsavel?.nomeCompleto || "-"}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {badgeStatus(t.status)}
-                    </td>
-
+                    <td className="px-4 py-3 font-medium">{t.tema}</td>
+                    <td className="px-4 py-3">{t.processo}</td>
+                    <td className="px-4 py-3">{t.soc}</td>
+                    <td className="px-4 py-3">{t.liderResponsavel?.nomeCompleto || "-"}</td>
+                    <td className="px-4 py-3">{badgeStatus(t.status)}</td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() =>
-                          navigate(`/treinamentos/${t.idTreinamento}`)
-                        }
-                        className="inline-flex items-center gap-1 text-[#0A84FF] hover:underline"
+                        onClick={() => navigate(`/treinamentos/${t.idTreinamento}`)}
+                        className="inline-flex items-center gap-1 text-[#0A84FF] hover:underline cursor-pointer"
                       >
                         <FileText size={14} />
                         Detalhes

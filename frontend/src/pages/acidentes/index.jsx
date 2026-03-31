@@ -67,7 +67,11 @@ export default function AcidentesPage() {
           ) : (
             <div className="space-y-4">
               {acidentes.map((a) => (
-                <AcidenteCard key={a.idAcidente || `${a.opsIdColaborador}-${a.dataOcorrencia}`} acidente={a} />
+                <AcidenteCard
+                  key={a.idAcidente || `${a.opsIdColaborador}-${a.dataOcorrencia}`}
+                  acidente={a}
+                  onCancelado={(id) => setAcidentes((prev) => prev.filter((x) => x.idAcidente !== id))}
+                />
               ))}
             </div>
           )}

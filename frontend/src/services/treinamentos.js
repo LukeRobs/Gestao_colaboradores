@@ -25,4 +25,9 @@ export const TreinamentosAPI = {
     const res = await api.put(`/treinamentos/${id}/participantes`, { participantes });
     return res.data.data;
   },
+
+  cancelar: async (id, motivo) => {
+    const res = await api.post(`/treinamentos/${id}/cancelar`, { motivo });
+    return res.data.data;
+  },
 };

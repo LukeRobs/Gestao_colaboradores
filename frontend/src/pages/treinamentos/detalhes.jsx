@@ -1,6 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
+import { useParams, useNavigate } from "react-router-dom";import {
   ArrowLeft,
   CheckCircle,
   FileText,
@@ -10,6 +9,7 @@ import {
   X,
   Plus,
   Pencil,
+  XCircle,
 } from "lucide-react";
 
 import { printAtaTreinamento } from "../../utils/printAtaTreinamento";
@@ -25,7 +25,7 @@ import { AuthContext } from "../../context/AuthContext";
 export default function DetalhesTreinamento() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,11 @@ export default function DetalhesTreinamento() {
   const [turnosList, setTurnosList] = useState([]);
   const [selecionados, setSelecionados] = useState([]);
   const [salvando, setSalvando] = useState(false);
+
+  /* ---- modal cancelamento ---- */
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [motivoCancelamento, setMotivoCancelamento] = useState("");
+  const [cancelando, setCancelando] = useState(false);
 
   /* ================= LOAD ================= */
   async function load() {
@@ -125,6 +130,22 @@ export default function DetalhesTreinamento() {
     }
   };
 
+  /* ================= CANCELAR ================= */
+  const cancelarTreinamento = async () => {
+    if (!motivoCancelamento.trim()) return;
+    setCancelando(true);
+    try {
+      await TreinamentosAPI.cancelar(id, motivoCancelamento);
+      setCancelModalOpen(false);
+      navigate("/treinamentos");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao cancelar treinamento");
+    } finally {
+      setCancelando(false);
+    }
+  };
+
   /* ================= FINALIZAR ================= */
   const finalizarTreinamento = async () => {
     if (!file) { alert("Selecione o PDF da ata"); return; }
@@ -164,7 +185,12 @@ export default function DetalhesTreinamento() {
   }
   if (!treinamento) return null;
 
-  const statusColor = treinamento.status === "FINALIZADO" ? "text-[#34C759]" : "text-[#FFD60A]";
+  const statusColor =
+    treinamento.status === "FINALIZADO"
+      ? "text-[#34C759]"
+      : treinamento.status === "CANCELADO"
+      ? "text-[#FF453A]"
+      : "text-[#FFD60A]";
 
   return (
     <div className="flex min-h-screen bg-[#0D0D0D] text-white">
@@ -230,13 +256,24 @@ export default function DetalhesTreinamento() {
                   Participantes ({treinamento.participantes.length})
                 </h3>
                 {treinamento.status === "ABERTO" && (
-                  <button
-                    onClick={abrirModal}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FA4C00]/10 hover:bg-[#FA4C00]/20 text-[#FA4C00] text-xs font-medium transition-colors"
-                  >
-                    <Pencil size={13} />
-                    Editar participantes
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={abrirModal}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FA4C00]/10 hover:bg-[#FA4C00]/20 text-[#FA4C00] text-xs font-medium transition-colors"
+                    >
+                      <Pencil size={13} />
+                      Editar participantes
+                    </button>
+                    {(user?.role === "ADMIN" || user?.id === treinamento.criadoPor) && (
+                      <button
+                        onClick={() => { setMotivoCancelamento(""); setCancelModalOpen(true); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF453A]/10 hover:bg-[#FF453A]/20 text-[#FF453A] text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <XCircle size={13} />
+                        Cancelar treinamento
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -426,6 +463,56 @@ export default function DetalhesTreinamento() {
               >
                 <Plus size={15} />
                 {salvando ? "Salvando..." : "Salvar participantes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ===================== MODAL CANCELAR TREINAMENTO ===================== */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-[#1A1A1C] rounded-2xl w-full max-w-md border border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <XCircle size={18} className="text-[#FF453A]" />
+                <h2 className="font-semibold text-base">Cancelar Treinamento</h2>
+              </div>
+              <button onClick={() => setCancelModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-[#BFBFC3]">
+                Informe o motivo do cancelamento. Esta ação não pode ser desfeita.
+              </p>
+              <textarea
+                value={motivoCancelamento}
+                onChange={(e) => setMotivoCancelamento(e.target.value)}
+                placeholder="Descreva o motivo do cancelamento..."
+                rows={4}
+                className="w-full px-3 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#FF453A]/50 resize-none"
+              />
+            </div>
+
+            <div className="px-5 py-4 border-t border-white/5 flex justify-end gap-3">
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm transition-colors"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={cancelarTreinamento}
+                disabled={cancelando || !motivoCancelamento.trim()}
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  cancelando || !motivoCancelamento.trim()
+                    ? "bg-[#FF453A]/30 text-white/30 cursor-not-allowed"
+                    : "bg-[#FF453A] hover:bg-[#D93025] text-white"
+                }`}
+              >
+                <XCircle size={15} />
+                {cancelando ? "Cancelando..." : "Confirmar cancelamento"}
               </button>
             </div>
           </div>
