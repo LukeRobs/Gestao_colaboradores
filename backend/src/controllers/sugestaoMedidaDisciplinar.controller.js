@@ -3,7 +3,7 @@
  */
 
 const { prisma } = require("../config/database")
-const { PrismaClient, StatusMedidaDisciplinar } = require("@prisma/client")
+const { StatusMedidaDisciplinar } = require("@prisma/client")
 const {
   successResponse,
   createdResponse,
@@ -21,15 +21,15 @@ const getContadores = async (req, res) => {
 
   try {
 
-    const { data, turno, lider } = req.query;
+    const { dataInicio, dataFim, turno, lider } = req.query;
 
     const baseWhere = {};
     const colaboradorFilter = {};
 
-    if (data) {
-      const inicio = new Date(`${data}T00:00:00`);
-      const fim = new Date(`${data}T23:59:59`);
-      baseWhere.dataReferencia = { gte: inicio, lte: fim };
+    if (dataInicio || dataFim) {
+      baseWhere.dataReferencia = {};
+      if (dataInicio) baseWhere.dataReferencia.gte = new Date(`${dataInicio}T00:00:00`);
+      if (dataFim)    baseWhere.dataReferencia.lte = new Date(`${dataFim}T23:59:59`);
     }
 
     if (turno) colaboradorFilter.idTurno = Number(turno);
@@ -65,7 +65,7 @@ const getAllSugestoes = async (req, res) => {
 
   try {
 
-    const { status, opsId, data, turno, lider } = req.query;
+    const { status, opsId, dataInicio, dataFim, turno, lider } = req.query;
 
     const where = {};
     const colaboradorFilter = {};
@@ -95,19 +95,13 @@ const getAllSugestoes = async (req, res) => {
     }
 
     /* ==============================
-       FILTRO DATA
+       FILTRO DATA (PERÍODO)
     ============================== */
 
-    if (data) {
-
-      const inicio = new Date(`${data}T00:00:00`);
-      const fim = new Date(`${data}T23:59:59`);
-
-      where.dataReferencia = {
-        gte: inicio,
-        lte: fim
-      };
-
+    if (dataInicio || dataFim) {
+      where.dataReferencia = {};
+      if (dataInicio) where.dataReferencia.gte = new Date(`${dataInicio}T00:00:00`);
+      if (dataFim)    where.dataReferencia.lte = new Date(`${dataFim}T23:59:59`);
     }
 
     /* ==============================
@@ -263,7 +257,7 @@ const aprovarSugestao = async (req, res) => {
         opsId: sugestao.opsId,
         violacao: sugestao.violacao,
         status: {
-          not: StatusMedidaDisciplinar.CANCELADO,
+          not: StatusMedidaDisciplinar.CANCELADA,
         },
       },
     });
@@ -452,6 +446,10 @@ const createSugestao = async (req, res) => {
         "Campos obrigatórios não informados",
         400
       )
+    }
+
+    if (!dataReferencia || isNaN(new Date(dataReferencia))) {
+      return errorResponse(res, "dataReferencia inválida (YYYY-MM-DD)", 400)
     }
 
     const sugestao = await prisma.sugestaoMedidaDisciplinar.create({
