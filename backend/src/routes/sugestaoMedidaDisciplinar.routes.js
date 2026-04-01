@@ -63,4 +63,14 @@ router.post(
   controller.backfillFaltas
 );
 
+/* =====================================================
+   BACKFILL ONBOARDING — gera ON para colaboradores sem ON
+   Apenas ADMIN
+===================================================== */
+router.post(
+  "/backfill-onboarding",
+  authorizeRoles("ADMIN"),
+  controller.backfillOnboarding
+);
+
 module.exports = router;

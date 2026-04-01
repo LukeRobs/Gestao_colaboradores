@@ -68,15 +68,21 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
   console.log(`\n🔍 [DETECTOR FALTAS] Processando ${dataInicio} → ${dataFim}`);
 
   /* =====================================================
-     BUSCAR TIPO "F"
+     BUSCAR TIPOS "F" e "NC"
   ===================================================== */
-  const tipoFalta = await prisma.tipoAusencia.findUnique({
-    where: { codigo: "F" },
-  });
+  const [tipoFalta, tipoNC] = await Promise.all([
+    prisma.tipoAusencia.findUnique({ where: { codigo: "F" } }),
+    prisma.tipoAusencia.findUnique({ where: { codigo: "NC" } }),
+  ]);
 
   if (!tipoFalta) {
     console.error("❌ Tipo de ausência 'F' não encontrado no banco");
     return { sucesso: false, erro: "Tipo F não encontrado" };
+  }
+
+  if (!tipoNC) {
+    console.error("❌ Tipo de ausência 'NC' não encontrado no banco");
+    return { sucesso: false, erro: "Tipo NC não encontrado" };
   }
 
   /* =====================================================
@@ -134,11 +140,33 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
   }
 
   /* =====================================================
+     BUSCAR DATA DO PRIMEIRO ONBOARDING POR COLABORADOR
+     (ON pode estar fora do período processado)
+  ===================================================== */
+  const onboardings = await prisma.frequencia.findMany({
+    where: {
+      opsId: { in: opsIds },
+      tipoAusencia: { codigo: "ON" },
+    },
+    select: { opsId: true, dataReferencia: true },
+  });
+
+  // onbMap: opsId → Date do primeiro ON (ou null se não tiver)
+  const onbMap = {};
+  for (const o of onboardings) {
+    const d = startOfDay(o.dataReferencia);
+    if (!onbMap[o.opsId] || d < onbMap[o.opsId]) {
+      onbMap[o.opsId] = d;
+    }
+  }
+
+  /* =====================================================
      ITERAR DIAS
   ===================================================== */
   let totalFaltasCriadas = 0;
   let totalSugestoesCriadas = 0;
   let totalIgnorados = 0;
+  let totalNCCriados = 0;
 
   const hoje = startOfDay(new Date());
 
@@ -181,12 +209,29 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
         continue;
       }
 
+      /* ── Antes do onboarding → NC (Não Contratado) ── */
+      const dataOnboarding = onbMap[colaborador.opsId];
+      const isAntesOnboarding = dataOnboarding && dia < dataOnboarding;
+
       /* ── Já tem frequência com código que não é falta ── */
       const freqExistente = freqMap[key];
       if (freqExistente) {
         const codigo = freqExistente.tipoAusencia?.codigo;
         if (CODIGOS_NAO_FALTA.has(codigo)) {
           totalIgnorados++;
+          continue;
+        }
+        // Já tem "F" mas é antes do onboarding → corrigir para NC
+        if (codigo === "F" && isAntesOnboarding) {
+          try {
+            await prisma.frequencia.update({
+              where: { idFrequencia: freqExistente.idFrequencia },
+              data: { idTipoAusencia: tipoNC.idTipoAusencia, registradoPor: "SISTEMA_AUTO" },
+            });
+            totalNCCriados++;
+          } catch (e) {
+            console.error(`⚠️ Erro ao corrigir NC para ${colaborador.opsId} em ${dataISO}:`, e.message);
+          }
           continue;
         }
         // Já tem frequência com código "F" → só dispara detector (pode não ter sugestão ainda)
@@ -199,6 +244,21 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
           }
           continue;
         }
+      }
+
+      /* ── Dia em branco antes do onboarding: criar NC ── */
+      if (isAntesOnboarding) {
+        try {
+          await prisma.frequencia.upsert({
+            where: { opsId_dataReferencia: { opsId: colaborador.opsId, dataReferencia: dia } },
+            update: { idTipoAusencia: tipoNC.idTipoAusencia, manual: false, registradoPor: "SISTEMA_AUTO" },
+            create: { opsId: colaborador.opsId, dataReferencia: dia, idTipoAusencia: tipoNC.idTipoAusencia, manual: false, registradoPor: "SISTEMA_AUTO" },
+          });
+          totalNCCriados++;
+        } catch (e) {
+          console.error(`⚠️ Erro ao criar NC para ${colaborador.opsId} em ${dataISO}:`, e.message);
+        }
+        continue;
       }
 
       /* ── Dia em branco: criar frequência F e disparar detector ── */
@@ -240,6 +300,7 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
     periodo: { inicio: dataInicio, fim: dataFim },
     colaboradoresProcessados: colaboradores.length,
     faltasCriadas: totalFaltasCriadas,
+    ncCriados: totalNCCriados,
     sugestoesDisparadas: totalSugestoesCriadas,
     diasIgnorados: totalIgnorados,
   };

@@ -11,6 +11,7 @@ const {
   notFoundResponse,
 } = require("../utils/response")
 const { detectarFaltasAutomatico } = require("../services/detectarFaltasAutomatico.service")
+const { gerarOnboardingColaborador } = require("../services/dsrBackfill.service")
 
 /* =====================================================
    CONTADORES POR STATUS
@@ -538,6 +539,55 @@ const backfillFaltas = async (req, res) => {
 
 };
 
+/* =====================================================
+   BACKFILL ONBOARDING — gera ON para colaboradores sem ON
+   POST /medidas-disciplinares/sugestoes/backfill-onboarding
+   Body: { dataAdmissaoMinima: "YYYY-MM-DD" }  (default: 2026-01-02)
+   Apenas ADMIN
+===================================================== */
+
+const backfillOnboarding = async (req, res) => {
+
+  try {
+
+    const { dataAdmissaoMinima = "2026-01-02" } = req.body;
+
+    const minima = new Date(`${dataAdmissaoMinima}T00:00:00`);
+
+    if (isNaN(minima)) {
+      return errorResponse(res, "dataAdmissaoMinima inválida (YYYY-MM-DD)", 400);
+    }
+
+    const colaboradores = await prisma.colaborador.findMany({
+      where: { dataAdmissao: { gte: minima } },
+      select: { opsId: true, dataAdmissao: true },
+    });
+
+    let processados = 0;
+    let erros = 0;
+
+    for (const col of colaboradores) {
+      if (!col.dataAdmissao) continue;
+      try {
+        await gerarOnboardingColaborador({ opsId: col.opsId, dataAdmissao: col.dataAdmissao });
+        processados++;
+      } catch (e) {
+        console.error(`⚠️ Erro ON para ${col.opsId}:`, e.message);
+        erros++;
+      }
+    }
+
+    return successResponse(res, { processados, erros }, "Backfill de onboarding concluído");
+
+  } catch (err) {
+
+    console.error("❌ BACKFILL ONBOARDING:", err);
+    return errorResponse(res, "Erro ao executar backfill de onboarding", 500);
+
+  }
+
+};
+
 module.exports = {
 
   getContadores,
@@ -546,5 +596,6 @@ module.exports = {
   rejeitarSugestao,
   createSugestao,
   backfillFaltas,
+  backfillOnboarding,
 
 }

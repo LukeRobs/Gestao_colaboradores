@@ -139,7 +139,37 @@ async function gerarDSRFuturoColaborador({
   }
 }
 
+/**
+ * Gera os 2 dias de Onboarding (ON) para um colaborador:
+ * data_admissao e data_admissao + 1 dia.
+ * Faz upsert — sobrescreve qualquer registro existente nessas datas.
+ */
+async function gerarOnboardingColaborador({ opsId, dataAdmissao, tx = prisma }) {
+  if (!opsId) throw new Error("opsId é obrigatório.");
+  if (!dataAdmissao) throw new Error("dataAdmissao é obrigatória.");
+
+  const tipoON = await tx.tipoAusencia.findFirst({
+    where: { codigo: "ON" },
+    select: { idTipoAusencia: true },
+  });
+
+  if (!tipoON) throw new Error("Tipo de ausência ON não encontrado.");
+
+  const dia1 = startOfDay(new Date(dataAdmissao));
+  const dia2 = new Date(dia1);
+  dia2.setDate(dia2.getDate() + 1);
+
+  for (const dia of [dia1, dia2]) {
+    await tx.frequencia.upsert({
+      where: { opsId_dataReferencia: { opsId, dataReferencia: dia } },
+      update: { idTipoAusencia: tipoON.idTipoAusencia, manual: false, registradoPor: "SISTEMA_AUTO" },
+      create: { opsId, dataReferencia: dia, idTipoAusencia: tipoON.idTipoAusencia, manual: false, registradoPor: "SISTEMA_AUTO" },
+    });
+  }
+}
+
 module.exports = {
   gerarDSRBackfillColaborador,
   gerarDSRFuturoColaborador,
+  gerarOnboardingColaborador,
 };

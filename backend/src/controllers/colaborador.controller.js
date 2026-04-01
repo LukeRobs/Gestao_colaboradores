@@ -12,7 +12,7 @@ const {
   paginatedResponse,
   errorResponse,
 } = require("../utils/response");
-const { gerarDSRBackfillColaborador, gerarDSRFuturoColaborador } = require("../services/dsrBackfill.service");
+const { gerarDSRBackfillColaborador, gerarDSRFuturoColaborador, gerarOnboardingColaborador } = require("../services/dsrBackfill.service");
 
 /* ================= CONSTANTES ================= */
 const HORARIOS_PERMITIDOS = ["05:25", "13:20", "21:00"];
@@ -551,6 +551,15 @@ const createColaborador = async (req, res) => {
       });
 
       const nomeEscala = escalaCriada?.nomeEscala;
+
+      /* =========================
+         ONBOARDING (2 DIAS)
+      ========================= */
+      await gerarOnboardingColaborador({
+        opsId: novo.opsId,
+        dataAdmissao: dataAdmissaoDate || hoje,
+        tx,
+      });
 
       /* =========================
          BACKFILL (PASSADO)
