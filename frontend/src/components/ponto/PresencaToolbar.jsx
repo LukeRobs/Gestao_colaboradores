@@ -9,10 +9,12 @@ export default function PresencaToolbar({
   lideres = [],
   pendenciaSaida,
   pendentesHoje,
-  ajusteManual,
+  filtroFalta,
+  filtroOn,
   onPendenciaSaidaChange,
   onPendentesHojeChange,
-  onAjusteManualChange,
+  onFiltroFaltaChange,
+  onFiltroOnChange,
   onMesChange,
   onTurnoChange,
   onEscalaChange,
@@ -169,23 +171,46 @@ export default function PresencaToolbar({
           )}
         </button>
 
-        {/* AJUSTE MANUAL - BOTÃO */}
+        {/* FALTA - BOTÃO */}
         <button
-          onClick={() => onAjusteManualChange(!ajusteManual)}
+          onClick={() => onFiltroFaltaChange(!filtroFalta)}
           className={`
             inline-flex items-center gap-2
             px-3 py-2
             text-sm font-medium
             rounded-xl
             transition
-            ${ajusteManual
-              ? 'bg-orange-600 text-white'
+            ${filtroFalta
+              ? 'bg-red-600 text-white'
               : 'bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#2A2A2C]'
             }
           `}
         >
-          <span>⏳ Ajuste manual</span>
-          {ajusteManual && (
+          <span>Falta</span>
+          {filtroFalta && (
+            <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-medium">
+              Ativo
+            </span>
+          )}
+        </button>
+
+        {/* ONBOARDING - BOTÃO */}
+        <button
+          onClick={() => onFiltroOnChange(!filtroOn)}
+          className={`
+            inline-flex items-center gap-2
+            px-3 py-2
+            text-sm font-medium
+            rounded-xl
+            transition
+            ${filtroOn
+              ? 'bg-orange-500 text-white'
+              : 'bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#2A2A2C]'
+            }
+          `}
+        >
+          <span>Onboarding</span>
+          {filtroOn && (
             <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-medium">
               Ativo
             </span>

@@ -155,8 +155,8 @@ export default function PresencaCell({
           </span>
         )}
 
-        {/* ⏳ AJUSTE MANUAL — só admin vê */}
-        {isAdmin && registro?.manual && (
+        {/* ⏳ AJUSTE MANUAL — só admin vê, e só quando há status preenchido */}
+        {isAdmin && registro?.manual && status !== "-" && (
           <span className="absolute top-0 left-0 text-[10px] leading-none">
             ⏳
           </span>
@@ -195,8 +195,8 @@ export default function PresencaCell({
                 </div>
               )}
 
-              {/* ⏳ Ajuste manual — só admin vê */}
-              {isAdmin && registro?.manual && (
+              {/* ⏳ Ajuste manual — só admin vê, e só quando há status preenchido */}
+              {isAdmin && registro?.manual && status !== "-" && (
                 <div className="text-orange-400 text-[11px] font-medium">
                   ⏳ Ajuste manual
                   {registro?.registradoPor && (

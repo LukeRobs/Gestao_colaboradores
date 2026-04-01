@@ -25,7 +25,8 @@ export default function ControlePresenca() {
   const [lider, setLider] = useState("TODOS");
   const [pendenciaSaida, setPendenciaSaida] = useState(false);
   const [pendentesHoje, setPendentesHoje] = useState(false);
-  const [ajusteManual, setAjusteManual] = useState(false);
+  const [filtroFalta, setFiltroFalta] = useState(false);
+  const [filtroOn, setFiltroOn] = useState(false);
 
   /* ================== DADOS ================== */
   const [dias, setDias] = useState([]);
@@ -140,14 +141,20 @@ export default function ControlePresenca() {
       }
     }
 
-    if (ajusteManual) {
+    if (filtroFalta) {
       lista = lista.filter((c) =>
-        Object.values(c.dias || {}).some((d) => d?.manual === true)
+        Object.values(c.dias || {}).some((d) => d?.status === "F" || d?.status === "FJ")
+      );
+    }
+
+    if (filtroOn) {
+      lista = lista.filter((c) =>
+        Object.values(c.dias || {}).some((d) => d?.status === "ON")
       );
     }
 
     return lista;
-  }, [colaboradoresRaw, busca, pendentesHoje, ajusteManual, mes]);
+  }, [colaboradoresRaw, busca, pendentesHoje, filtroFalta, filtroOn, mes]);
 
   function aplicarAjusteLocal({ opsId, dataReferencia, status, horaEntrada, horaSaida }) {
     setColaboradoresRaw((prev) =>
@@ -213,10 +220,12 @@ export default function ControlePresenca() {
             lideres={lideres}
             pendenciaSaida={pendenciaSaida}
             pendentesHoje={pendentesHoje}
-            ajusteManual={ajusteManual}
+            filtroFalta={filtroFalta}
+            filtroOn={filtroOn}
             onPendenciaSaidaChange={setPendenciaSaida}
             onPendentesHojeChange={setPendentesHoje}
-            onAjusteManualChange={setAjusteManual}
+            onFiltroFaltaChange={setFiltroFalta}
+            onFiltroOnChange={setFiltroOn}
             onMesChange={setMes}
             onTurnoChange={setTurno}
             onEscalaChange={setEscala}
