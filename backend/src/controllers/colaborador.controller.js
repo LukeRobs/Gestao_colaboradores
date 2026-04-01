@@ -946,6 +946,23 @@ const importColaboradores = async (req, res) => {
 
       const parseDate = (v) => {
         if (!v) return null;
+        const s = String(v).trim();
+
+        // Formato DD/MM/YYYY
+        const brMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (brMatch) {
+          const d = new Date(`${brMatch[3]}-${brMatch[2]}-${brMatch[1]}T00:00:00`);
+          return isNaN(d.getTime()) ? null : d;
+        }
+
+        // Formato YYYY-MM-DD (ISO) — anexa T00:00:00 para evitar interpretação UTC
+        const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) {
+          const d = new Date(`${s}T00:00:00`);
+          return isNaN(d.getTime()) ? null : d;
+        }
+
+        // Fallback genérico
         const d = new Date(v);
         if (isNaN(d.getTime())) return null;
         return d;
