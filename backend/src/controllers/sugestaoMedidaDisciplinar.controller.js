@@ -495,14 +495,19 @@ const backfillFaltas = async (req, res) => {
 
   try {
 
-    const { dataInicio, dataFim } = req.body;
+    // Se não informar datas, usa os últimos 31 dias até hoje (horário SP)
+    const agoraSP = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const hojeStr = agoraSP.toISOString().slice(0, 10);
 
-    if (!dataInicio || !dataFim) {
-      return errorResponse(res, "dataInicio e dataFim são obrigatórios (YYYY-MM-DD)", 400);
-    }
+    const trintaDiasAtras = new Date(agoraSP);
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 31);
+    const trintaDiasAtrasStr = trintaDiasAtras.toISOString().slice(0, 10);
+
+    const dataInicio = req.body?.dataInicio || trintaDiasAtrasStr;
+    const dataFim    = req.body?.dataFim    || hojeStr;
 
     const inicio = new Date(dataInicio);
-    const fim = new Date(dataFim);
+    const fim    = new Date(dataFim);
 
     if (isNaN(inicio) || isNaN(fim)) {
       return errorResponse(res, "Datas inválidas", 400);
@@ -512,7 +517,6 @@ const backfillFaltas = async (req, res) => {
       return errorResponse(res, "dataFim deve ser >= dataInicio", 400);
     }
 
-    // Limitar a 31 dias por chamada para evitar timeout
     const diffDias = Math.ceil((fim - inicio) / 86400000);
     if (diffDias > 31) {
       return errorResponse(res, "Intervalo máximo de 31 dias por chamada", 400);

@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext } from "react";
-import { Search, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw } from "lucide-react";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -61,6 +62,27 @@ export default function SugestoesMedidaDisciplinar() {
   const [acao, setAcao] = useState(null);
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [backfillando, setBackfillando] = useState(false);
+
+  async function executarBackfill() {
+    setBackfillando(true);
+    const toastId = toast.loading("Varrendo faltas dos últimos 31 dias...");
+    try {
+      const res = await SugestoesAPI.backfill();
+      const { sugestoesDisparadas } = res.data ?? {};
+      if (sugestoesDisparadas > 0) {
+        toast.success(`${sugestoesDisparadas} nova(s) sugestão(ões) gerada(s)`, { id: toastId, duration: 5000 });
+      } else {
+        toast.success("Painel atualizado — nenhuma sugestão nova encontrada.", { id: toastId, duration: 4000 });
+      }
+      load();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao executar varredura.", { id: toastId });
+    } finally {
+      setBackfillando(false);
+    }
+  }
 
   // listas para selects
   const [turnos, setTurnos] = useState([]);
@@ -169,9 +191,21 @@ export default function SugestoesMedidaDisciplinar() {
         <main className="p-8 max-w-6xl mx-auto space-y-6">
 
           {/* HEADER */}
-          <div>
-            <h1 className="text-2xl font-semibold">Sugestões de Medida Disciplinar</h1>
-            <p className="text-sm text-[#BFBFC3]">Faltas injustificadas detectadas automaticamente</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">Sugestões de Medida Disciplinar</h1>
+              <p className="text-sm text-[#BFBFC3]">Faltas injustificadas detectadas automaticamente</p>
+            </div>
+            {!isLideranca && (
+              <button
+                onClick={executarBackfill}
+                disabled={backfillando}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1A1A1C] border border-[#2A2A2C] hover:border-[#FA4C00] text-sm text-[#BFBFC3] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <RefreshCw size={14} className={backfillando ? "animate-spin" : ""} />
+                {backfillando ? "Varrendo..." : "Varrer faltas"}
+              </button>
+            )}
           </div>
 
           {/* CONTADORES */}

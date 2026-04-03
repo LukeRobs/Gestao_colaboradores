@@ -14,6 +14,9 @@ export const SugestoesAPI = {
   contadores: (params = {}) =>
     api.get("/medidas-disciplinares/sugestoes/contadores", { params }).then((res) => res.data.data),
 
+  backfill: () =>
+    api.post("/medidas-disciplinares/sugestoes/backfill").then((res) => res.data),
+
 };
 
 export const MedidasDisciplinaresAPI = {

@@ -5,7 +5,7 @@
  * de código "F" já registrada, dispara o detector de medida disciplinar.
  *
  * Regras:
- * - Só processa dias passados (não o dia atual em andamento)
+ * - Só processa dias passados e o dia atual
  * - Ignora DSR, atestados, ausências administrativas, férias, afastamentos
  * - NÃO cria frequências novas — só processa "F" já existentes
  * - Idempotente: não duplica sugestões já existentes
@@ -164,8 +164,8 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
 
   for (const colaborador of colaboradores) {
     for (const dia of dias) {
-      // Nunca processar o dia atual (pode ainda estar em andamento)
-      if (dia >= hoje) continue;
+      // Nunca processar datas futuras
+      if (dia > hoje) continue;
 
       const dataISO = ymd(dia);
       const key = `${colaborador.opsId}_${dataISO}`;
