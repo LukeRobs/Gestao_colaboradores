@@ -1,5 +1,24 @@
 import api from "./api";
 
+export const SugestoesAPI = {
+
+  listar: (params = {}) =>
+    api.get("/medidas-disciplinares/sugestoes", { params }).then((res) => res.data.data),
+
+  aprovar: (id, payload) =>
+    api.post(`/medidas-disciplinares/sugestoes/${id}/aprovar`, payload).then((res) => res.data),
+
+  rejeitar: (id, payload) =>
+    api.post(`/medidas-disciplinares/sugestoes/${id}/rejeitar`, payload).then((res) => res.data),
+
+  contadores: (params = {}) =>
+    api.get("/medidas-disciplinares/sugestoes/contadores", { params }).then((res) => res.data.data),
+
+  backfill: () =>
+    api.post("/medidas-disciplinares/sugestoes/backfill").then((res) => res.data),
+
+};
+
 export const MedidasDisciplinaresAPI = {
 
   /* ================= LISTAR ================= */

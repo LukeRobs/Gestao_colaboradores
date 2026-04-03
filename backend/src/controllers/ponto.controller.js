@@ -25,13 +25,10 @@ function agoraBrasil() {
 }
 
 function startOfDay(dateObj) {
-  // Extrai a data como string YYYY-MM-DD do UTC (datas do banco chegam como meia-noite UTC)
-  // e reconstrói como data local para comparação consistente
+  // Extrai a data YYYY-MM-DD do UTC e reconstrói como meia-noite UTC
+  // para comparação consistente com dataCalendario (também UTC meia-noite)
   const d = new Date(dateObj);
-  const yyyy = d.getUTCFullYear();
-  const mm = d.getUTCMonth();
-  const dd = d.getUTCDate();
-  return new Date(yyyy, mm, dd, 0, 0, 0, 0);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
 function getStatusAdministrativo(c, dataCalendario) {
@@ -118,8 +115,8 @@ function nowToMinutes(dateObj) {
 
 
 function isDiaDSR(dataOperacional, nomeEscala) {
-  // 0 = domingo ... 6 = sábado
-  const dow = new Date(dataOperacional).getDay();
+  // 0 = domingo ... 6 = sábado — usa UTC para consistência com datas armazenadas como meia-noite UTC
+  const dow = new Date(dataOperacional).getUTCDay();
 
   const dsrMap = {
     E: [0, 1], // domingo, segunda
@@ -689,8 +686,9 @@ const getControlePresenca = async (req, res) => {
       const diasMap = {};
 
       for (let d = 1; d <= dias.length; d++) {
-        const dataCalendario = new Date(ano, mesNum - 1, d);
-        dataCalendario.setHours(0, 0, 0, 0);
+        // Constrói a data em UTC para que ymd() (que usa toISOString/UTC) retorne o dia correto
+        // sem deslocamento de fuso (ex: Brasília UTC-3 deslocaria para o dia anterior)
+        const dataCalendario = new Date(Date.UTC(ano, mesNum - 1, d));
 
         const dataISO = ymd(dataCalendario);
         const key = `${c.opsId}_${dataISO}`;

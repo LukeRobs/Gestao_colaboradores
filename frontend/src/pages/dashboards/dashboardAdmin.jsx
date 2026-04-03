@@ -9,6 +9,18 @@ import {
   Clock,
   User,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LabelList,
+} from "recharts";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -72,6 +84,7 @@ const INITIAL_DATA = {
   eventos: [],
   inputsManuais: { total: 0, porColaborador: [], porJustificativa: [] },
   faltasPorTempoCasa: [],
+  series: { headcountMensal: [], admissoesMensal: [], desligamentosMensal: [] },
 };
 
 export default function DashboardAdmin() {
@@ -510,6 +523,44 @@ export default function DashboardAdmin() {
           </div>
 
           <EmpresasResumoSection empresas={dados.empresasResumo} />
+
+          {/* ================= HEADCOUNT & MOVIMENTAÇÕES ================= */}
+          <div className="bg-[#1A1A1C] rounded-xl p-6">
+            <h2 className="text-white font-semibold text-base mb-4">Headcount & Movimentações</h2>
+            <ResponsiveContainer width="100%" height={350}>
+              <ComposedChart
+                data={(dados.series?.headcountMensal || []).map((h, index) => ({
+                  mes: h.mes,
+                  headcount: h.total,
+                  admissoes: dados.series?.admissoesMensal?.[index]?.total || 0,
+                  desligamentos: dados.series?.desligamentosMensal?.[index]?.total || 0,
+                }))}
+              >
+                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="mes" stroke="#BFBFC3" />
+                <YAxis stroke="#BFBFC3" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#1F1F22", border: "none", borderRadius: 12 }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="headcount"
+                  stroke="#FA4C00"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                  name="Headcount"
+                  label={{ position: "top", fill: "#FFFFFF", fontSize: 12, fontWeight: 600 }}
+                />
+                <Bar dataKey="admissoes" fill="#34C759" radius={[6, 6, 0, 0]} name="Admissões">
+                  <LabelList dataKey="admissoes" position="top" fill="#34C759" fontSize={12} fontWeight={600} />
+                </Bar>
+                <Bar dataKey="desligamentos" fill="#FF453A" radius={[6, 6, 0, 0]} name="Demissões">
+                  <LabelList dataKey="desligamentos" position="top" fill="#FF453A" fontSize={12} fontWeight={600} />
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
 
           <div className="
             grid

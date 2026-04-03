@@ -372,7 +372,7 @@ export default function GestaoOperacional() {
 
               {/* Filtro de Data */}
               <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-[#BFBFC3]" />
+                <Calendar className="w-5 h-5 text-white" />
                 <input
                   type="date"
                   value={data}

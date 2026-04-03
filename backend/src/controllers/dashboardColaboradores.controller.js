@@ -317,6 +317,13 @@ const carregarDashboardColaboradores = async (req, res) => {
        - turno filtro (se veio)
        - DESLIGADO entra para KPI desligados + séries, mas não entra no absenteísmo do período (igual seu padrão operacional)
     =============================== */
+    // Empresas BPO (Dashboard Colaboradores exibe apenas BPO, sem SPX)
+    const BPO_EMPRESAS = ["ADECCO", "ADILIS", "LUANDRE"];
+    const isBPO = (c) =>
+      BPO_EMPRESAS.includes(
+        String(c.empresa?.razaoSocial || "").toUpperCase()
+      );
+
     const colaboradoresElegiveis = colaboradoresAll.filter((c) => {
       const t = normalizeTurno(c.turno?.nomeTurno);
       if (turnoNormFiltro && t !== turnoNormFiltro) return false;
@@ -325,9 +332,11 @@ const carregarDashboardColaboradores = async (req, res) => {
       // mas para presença/abs do período a gente avalia separado
       if (c.status !== "ATIVO") return false;
 
-
       if (!isCargoElegivel(c.cargo?.nomeCargo)) return false;
       if (t === "Sem turno") return false;
+
+      // Apenas BPO
+      if (!isBPO(c)) return false;
 
       return true;
     });
@@ -551,6 +560,8 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
       if (c.status !== "ATIVO") return;
       if (!isCargoElegivel(c.cargo?.nomeCargo)) return;
       if (turnoColab === "Sem turno") return;
+      // Apenas BPO
+      if (!isBPO(c)) return;
 
       const s = getStatusDoDiaOperacional(f);
 
@@ -584,6 +595,8 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
       if (c.status !== "ATIVO") return;
       if (!isCargoElegivel(c.cargo?.nomeCargo)) return;
       if (turnoColab === "Sem turno") return;
+      // Apenas BPO
+      if (!isBPO(c)) return;
 
       // 🔴 FALTAS (usando campo correto do Prisma)
       if (f.idTipoAusencia === 3 || f.idTipoAusencia === 32) {
@@ -629,6 +642,9 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
         ...(turnoNormFiltro
           ? { turno: { nomeTurno: { contains: turnoNormFiltro, mode: "insensitive" } } }
           : {}),
+        empresa: {
+          razaoSocial: { in: ["ADECCO", "ADILIS", "LUANDRE"], mode: "insensitive" },
+        },
         dataDesligamento: {
           gte: inicio,
           lte: fim,
@@ -689,12 +705,14 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
         ? { turno: { nomeTurno: { contains: turnoNormFiltro, mode: "insensitive" } } }
         : {}),
       cargo: {
-        // aproximação compatível com Prisma:
-        // cobre I, II e geral (desde que tenha "AUXILIAR DE LOGÍSTICA" no nome)
         nomeCargo: { contains: "AUXILIAR DE LOGÍSTICA", mode: "insensitive" },
       },
       // não conta PCD
       NOT: [{ cargo: { nomeCargo: { contains: "PCD", mode: "insensitive" } } }],
+      // Apenas BPO (sem SPX)
+      empresa: {
+        razaoSocial: { in: ["ADECCO", "ADILIS", "LUANDRE"], mode: "insensitive" },
+      },
     };
 
     const [headcountMensal, admissoesMensal, desligamentosMensal] = await Promise.all([
@@ -745,6 +763,102 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
     ]);
 
     /* ===============================
+       8.1) CANDIDATOS À INTERNALIZAÇÃO
+       Critérios (desde a admissão):
+       - BPO, ATIVO, cargo elegível
+       - Mais de 90 dias de casa
+       - Sem atestados médicos
+       - Sem faltas (idTipoAusencia 3 ou 32 na frequência)
+       - Sem medidas disciplinares
+    =============================== */
+    const noventa_dias_atras = new Date();
+    noventa_dias_atras.setDate(noventa_dias_atras.getDate() - 90);
+
+    const [opsComAtestado, opsComFalta, opsComMedida] = await Promise.all([
+      prisma.atestadoMedico.groupBy({
+        by: ["opsId"],
+        where: { opsId: { in: colaboradoresElegiveis.map(c => c.opsId) } },
+        _count: { opsId: true },
+      }),
+      prisma.frequencia.groupBy({
+        by: ["opsId"],
+        where: {
+          opsId: { in: colaboradoresElegiveis.map(c => c.opsId) },
+          idTipoAusencia: { in: [3, 32] },
+        },
+        _count: { opsId: true },
+      }),
+      prisma.medidaDisciplinar.groupBy({
+        by: ["opsId"],
+        where: { opsId: { in: colaboradoresElegiveis.map(c => c.opsId) } },
+        _count: { opsId: true },
+      }),
+    ]);
+
+    // Maps opsId → contagem
+    const mapAtestado = new Map(opsComAtestado.map(r => [r.opsId, r._count.opsId]));
+    const mapFalta    = new Map(opsComFalta.map(r => [r.opsId, r._count.opsId]));
+    const mapMedida   = new Map(opsComMedida.map(r => [r.opsId, r._count.opsId]));
+
+    const setAtestado = new Set(mapAtestado.keys());
+    const setFalta    = new Set(mapFalta.keys());
+    const setMedida   = new Set(mapMedida.keys());
+
+    const mapColabBase = (c) => ({
+      opsId: c.opsId,
+      nome: c.nomeCompleto,
+      empresa: c.empresa?.razaoSocial || "-",
+      turno: normalizeTurno(c.turno?.nomeTurno),
+      setor: c.setor?.nomeSetor || "-",
+      lider: c.lider?.nomeCompleto || "-",
+      diasCasa: Math.floor((new Date() - new Date(c.dataAdmissao)) / 86400000),
+      dataAdmissao: toISODateStr(c.dataAdmissao),
+      // contagens (0 quando não tem)
+      qtdFaltas:   mapFalta.get(c.opsId)    || 0,
+      qtdAtestados: mapAtestado.get(c.opsId) || 0,
+      qtdMedidas:  mapMedida.get(c.opsId)   || 0,
+    });
+
+    // Colaboradores com +90 dias de casa
+    const acima90dias = colaboradoresElegiveis.filter(c => {
+      if (!c.dataAdmissao) return false;
+      return Math.floor((new Date() - new Date(c.dataAdmissao)) / 86400000) > 90;
+    });
+
+    // Passou nos critérios: +90 dias + sem falta + sem medida + máximo 1 atestado
+    // Exclui quem tem 0 atestados também (esses já aparecem em candidatosInternalizacao)
+    const semFaltaComTempo = acima90dias
+      .filter(c => !setFalta.has(c.opsId) && !setMedida.has(c.opsId) && (mapAtestado.get(c.opsId) || 0) === 1)
+      .map(mapColabBase)
+      .sort((a, b) => b.diasCasa - a.diasCasa);
+
+    // Passou só no tempo de casa, mas reprovado em falta/atestado/medida
+    const reprovadosComTempo = acima90dias
+      .filter(c => setFalta.has(c.opsId) || (mapAtestado.get(c.opsId) || 0) > 1 || setMedida.has(c.opsId))
+      .map(c => ({
+        ...mapColabBase(c),
+        motivos: [
+          setFalta.has(c.opsId)                        ? "Falta"              : null,
+          (mapAtestado.get(c.opsId) || 0) > 1          ? "Atestado"           : null,
+          setMedida.has(c.opsId)                       ? "Medida Disciplinar" : null,
+        ].filter(Boolean),
+      }))
+      .sort((a, b) => b.diasCasa - a.diasCasa);
+
+    const candidatosInternalizacao = colaboradoresElegiveis
+      .filter(c => {
+        if (!c.dataAdmissao) return false;
+        const diasCasa = Math.floor((new Date() - new Date(c.dataAdmissao)) / 86400000);
+        if (diasCasa <= 90) return false;
+        if (setAtestado.has(c.opsId)) return false;
+        if (setFalta.has(c.opsId)) return false;
+        if (setMedida.has(c.opsId)) return false;
+        return true;
+      })
+      .map(mapColabBase)
+      .sort((a, b) => b.diasCasa - a.diasCasa);
+
+    /* ===============================
        9) PAGINAÇÃO TABELA
     =============================== */
     const p = Number(page) || 1;
@@ -789,6 +903,10 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
           topFaltas,
           topAtestados,
         },
+
+        candidatosInternalizacao,
+        semFaltaComTempo,
+        reprovadosComTempo,
 
         distribuicoes: {
           setorGenero,

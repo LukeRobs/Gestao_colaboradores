@@ -10,7 +10,7 @@ const logger = require('./utils/logger');
 const { iniciarSyncPresencaSheets } = require('./jobs/syncPresencaSheets.job');
 const { iniciarJobsProducao } = require('./jobs/salvarProducaoHistorico.job');
 const { iniciarJobsProducaoColaborador } = require('./jobs/salvarProducaoColaboradorHistorico.job');
-const { iniciarJobDetectarFaltas } = require('./jobs/detectarFaltasAutomatico.job');
+
 
 // =====================================================
 // INICIALIZAÇÃO DO SERVIDOR
@@ -41,9 +41,6 @@ const startServer = async () => {
       
       // Inicia jobs de histórico de produtividade por colaborador
       iniciarJobsProducaoColaborador();
-
-      // Inicia job de detecção automática de faltas e sugestões de MD
-      iniciarJobDetectarFaltas();
     });
 
     // Tratamento de erros não capturados

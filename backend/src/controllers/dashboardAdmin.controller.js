@@ -1553,6 +1553,70 @@ const carregarDashboardAdmin = async (req, res) => {
     });
 
     /* ===============================
+       SÉRIES MENSAIS (HC / ADMISSÕES / DESLIGAMENTOS) — TODOS (SPX + BPO)
+    =============================== */
+    function gerarMesesRetroativos(refDate, qtd = 12) {
+      const base = new Date(refDate);
+      const meses = [];
+      for (let i = qtd - 1; i >= 0; i--) {
+        const inicio = new Date(base.getFullYear(), base.getMonth() - i, 1);
+        const fim = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0, 23, 59, 59, 999);
+        const label = inicio.toLocaleString("pt-BR", { month: "short" });
+        const ano = inicio.getFullYear();
+        meses.push({ label: `${label}/${String(ano).slice(-2)}`, inicio, fim });
+      }
+      return meses;
+    }
+
+    const mesesSerie = gerarMesesRetroativos(fimFinal, 12);
+
+    // Todos os colaboradores elegíveis (cargo + sem PCD) — sem filtro de empresa
+    const whereSerieBase = {
+      ...(turnoSelecionado !== "ALL"
+        ? { turno: { nomeTurno: { contains: turnoSelecionado, mode: "insensitive" } } }
+        : {}),
+      cargo: { nomeCargo: { contains: "AUXILIAR DE LOGÍSTICA", mode: "insensitive" } },
+      NOT: [{ cargo: { nomeCargo: { contains: "PCD", mode: "insensitive" } } }],
+    };
+
+    // Colaboradores ativos para HC mensal (em memória, já temos colaboradoresFiltrados + todos)
+    const todosElegiveis = await prisma.colaborador.findMany({
+      where: whereSerieBase,
+      select: { opsId: true, status: true, dataAdmissao: true, dataDesligamento: true },
+    });
+
+    const [headcountMensal, admissoesMensal, desligamentosMensal] = await Promise.all([
+      Promise.all(
+        mesesSerie.map(async (m) => {
+          const total = todosElegiveis.filter((c) => {
+            if (c.status !== "ATIVO") return false;
+            if (!c.dataAdmissao) return false;
+            if (new Date(c.dataAdmissao) > m.fim) return false;
+            if (c.dataDesligamento && new Date(c.dataDesligamento) <= m.fim) return false;
+            return true;
+          }).length;
+          return { mes: m.label, total };
+        })
+      ),
+      Promise.all(
+        mesesSerie.map(async (m) => {
+          const total = await prisma.colaborador.count({
+            where: { ...whereSerieBase, dataAdmissao: { gte: m.inicio, lte: m.fim } },
+          });
+          return { mes: m.label, total };
+        })
+      ),
+      Promise.all(
+        mesesSerie.map(async (m) => {
+          const total = await prisma.colaborador.count({
+            where: { ...whereSerieBase, dataDesligamento: { gte: m.inicio, lte: m.fim } },
+          });
+          return { mes: m.label, total };
+        })
+      ),
+    ]);
+
+    /* ===============================
        RESPONSE FINAL
     =============================== */
     return res.json({
@@ -1644,6 +1708,12 @@ const carregarDashboardAdmin = async (req, res) => {
           acidentes,
           medidas,
         }),
+
+        series: {
+          headcountMensal,
+          admissoesMensal,
+          desligamentosMensal,
+        },
       },
     });
   } catch (error) {

@@ -235,7 +235,7 @@ export default function NovoTreinamento() {
                 {/* DATA */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-xs lg:text-sm font-medium text-white/70">
-                    <Calendar size={14} className="text-white/40" />
+                    <Calendar size={14} className="text-white" />
                     Data do Treinamento *
                   </label>
                   <input

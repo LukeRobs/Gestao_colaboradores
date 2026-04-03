@@ -1,28 +1,34 @@
-/**
- * CHANGELOG — atualize este arquivo a cada deploy.
- *
- * version: deve bater com APP_VERSION no .env do backend.
- * categorias: agrupa as mudanças por tipo (Novidade, Melhoria, Correção).
- */
 const CHANGELOG = {
-  version: "1.7.4",
-  titulo: "Novidades desta atualização",
+  version: "1.7.5",
+  titulo: "Novidades do Sistema",
   categorias: [
     {
-      tipo: "Novidade",
+      nome: "Dashboard de Internalização",
+      icone: "👥",
       itens: [
-        "Cancelamento de treinamentos: botão disponível nos detalhes do treinamento com modal de motivo obrigatório. Apenas quem criou o treinamento ou ADMIN pode cancelar.",
-        "Cancelamento de acidentes: botão disponível diretamente no card da listagem com modal de motivo obrigatório. Apenas quem registrou o acidente ou ADMIN pode cancelar.",
-        "Card de 'Cancelados' na tela de treinamentos exibindo total e percentual.",
-        "Filtros por líder e por período (data início / data fim) na listagem de treinamentos.",
+        "Card '+90 dias · Sem Falta · Sem Medida' exibe colaboradores com exatamente 1 atestado — quem tem 0 já aparece em Candidatos à Internalização.",
+        "Card de Reprovados exibe badges com contagem real de faltas, atestados (>1) e medidas disciplinares.",
+        "Botão Internalizar redireciona para a tela de movimentação do colaborador (disponível apenas para administradores).",
+        "Gráfico de Headcount & Movimentações exibe apenas dados BPO (sem SPX).",
+        "Todos os KPIs, donuts e rankings filtram exclusivamente colaboradores BPO.",
+        "Cards de HC por Líder, HC por Setor e HC por Escala ocultados.",
+        "Nova tabela de Candidatos à Internalização: BPO ativos com +90 dias de casa, sem atestado, falta ou medida disciplinar.",
+        "Tabela de candidatos com filtros por turno e líder, e exportação em CSV.",
       ],
     },
     {
-      tipo: "Melhoria",
+      nome: "Dashboard Administrativo",
+      icone: "📊",
       itens: [
-        "Badge 'Cancelado' em vermelho na listagem de treinamentos.",
-        "Status 'Cancelado' exibido nos detalhes do treinamento.",
-        "Acidentes cancelados exibem badge 'Cancelado' no card em vez do botão de ação.",
+        "Gráfico de Headcount & Movimentações adicionado, exibindo todos os colaboradores incluindo SPX.",
+      ],
+    },
+    {
+      nome: "Medidas Disciplinares",
+      icone: "🖨️",
+      itens: [
+        "Impressão de carta agora seleciona o modelo automaticamente com base na empresa do colaborador.",
+        "Colaboradores da ADILIS e Adecco utilizam o modelo oficial de Advertência Disciplinar dessas empresas.",
       ],
     },
   ],

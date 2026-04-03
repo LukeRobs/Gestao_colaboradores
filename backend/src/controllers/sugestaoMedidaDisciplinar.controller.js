@@ -3,7 +3,7 @@
  */
 
 const { prisma } = require("../config/database")
-const { PrismaClient, StatusMedidaDisciplinar } = require("@prisma/client")
+const { StatusMedidaDisciplinar } = require("@prisma/client")
 const {
   successResponse,
   createdResponse,
@@ -21,15 +21,15 @@ const getContadores = async (req, res) => {
 
   try {
 
-    const { data, turno, lider } = req.query;
+    const { dataInicio, dataFim, turno, lider } = req.query;
 
     const baseWhere = {};
     const colaboradorFilter = {};
 
-    if (data) {
-      const inicio = new Date(`${data}T00:00:00`);
-      const fim = new Date(`${data}T23:59:59`);
-      baseWhere.dataReferencia = { gte: inicio, lte: fim };
+    if (dataInicio || dataFim) {
+      baseWhere.dataReferencia = {};
+      if (dataInicio) baseWhere.dataReferencia.gte = new Date(`${dataInicio}T00:00:00`);
+      if (dataFim)    baseWhere.dataReferencia.lte = new Date(`${dataFim}T23:59:59`);
     }
 
     if (turno) colaboradorFilter.idTurno = Number(turno);
@@ -65,7 +65,7 @@ const getAllSugestoes = async (req, res) => {
 
   try {
 
-    const { status, opsId, data, turno, lider } = req.query;
+    const { status, opsId, dataInicio, dataFim, turno, lider } = req.query;
 
     const where = {};
     const colaboradorFilter = {};
@@ -78,13 +78,8 @@ const getAllSugestoes = async (req, res) => {
 
       where.status = status;
 
-    } else {
-
-      where.status = {
-        in: ["PENDENTE", "REJEITADA"]
-      };
-
     }
+    // sem filtro de status padrão — retorna todos (PENDENTE, REJEITADA, APROVADA)
 
     /* ==============================
        FILTRO OPS ID
@@ -95,19 +90,13 @@ const getAllSugestoes = async (req, res) => {
     }
 
     /* ==============================
-       FILTRO DATA
+       FILTRO DATA (PERÍODO)
     ============================== */
 
-    if (data) {
-
-      const inicio = new Date(`${data}T00:00:00`);
-      const fim = new Date(`${data}T23:59:59`);
-
-      where.dataReferencia = {
-        gte: inicio,
-        lte: fim
-      };
-
+    if (dataInicio || dataFim) {
+      where.dataReferencia = {};
+      if (dataInicio) where.dataReferencia.gte = new Date(`${dataInicio}T00:00:00`);
+      if (dataFim)    where.dataReferencia.lte = new Date(`${dataFim}T23:59:59`);
     }
 
     /* ==============================
@@ -151,7 +140,7 @@ const getAllSugestoes = async (req, res) => {
       where,
 
       orderBy: {
-        createdAt: "desc",
+        dataReferencia: "desc",
       },
 
       include: {
@@ -258,15 +247,14 @@ const aprovarSugestao = async (req, res) => {
        CONTAR HISTÓRICO
     =========================== */
 
-    const historicoCount = await prisma.medidaDisciplinar.count({
-      where: {
-        opsId: sugestao.opsId,
-        violacao: sugestao.violacao,
-        status: {
-          not: StatusMedidaDisciplinar.CANCELADO,
-        },
-      },
-    });
+    const historicoResult = await prisma.$queryRaw`
+      SELECT COUNT(*)::int as count
+      FROM medida_disciplinar
+      WHERE ops_id = ${sugestao.opsId}
+        AND violacao = ${sugestao.violacao}
+        AND status::text <> 'CANCELADA'
+    `;
+    const historicoCount = historicoResult[0]?.count ?? 0;
 
     const frequenciaViolacao =
       historicoCount === 0
@@ -454,6 +442,10 @@ const createSugestao = async (req, res) => {
       )
     }
 
+    if (!dataReferencia || isNaN(new Date(dataReferencia))) {
+      return errorResponse(res, "dataReferencia inválida (YYYY-MM-DD)", 400)
+    }
+
     const sugestao = await prisma.sugestaoMedidaDisciplinar.create({
 
       data: {
@@ -503,14 +495,19 @@ const backfillFaltas = async (req, res) => {
 
   try {
 
-    const { dataInicio, dataFim } = req.body;
+    // Se não informar datas, usa os últimos 31 dias até hoje (horário SP)
+    const agoraSP = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const hojeStr = agoraSP.toISOString().slice(0, 10);
 
-    if (!dataInicio || !dataFim) {
-      return errorResponse(res, "dataInicio e dataFim são obrigatórios (YYYY-MM-DD)", 400);
-    }
+    const trintaDiasAtras = new Date(agoraSP);
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 31);
+    const trintaDiasAtrasStr = trintaDiasAtras.toISOString().slice(0, 10);
+
+    const dataInicio = req.body?.dataInicio || trintaDiasAtrasStr;
+    const dataFim    = req.body?.dataFim    || hojeStr;
 
     const inicio = new Date(dataInicio);
-    const fim = new Date(dataFim);
+    const fim    = new Date(dataFim);
 
     if (isNaN(inicio) || isNaN(fim)) {
       return errorResponse(res, "Datas inválidas", 400);
@@ -520,7 +517,6 @@ const backfillFaltas = async (req, res) => {
       return errorResponse(res, "dataFim deve ser >= dataInicio", 400);
     }
 
-    // Limitar a 31 dias por chamada para evitar timeout
     const diffDias = Math.ceil((fim - inicio) / 86400000);
     if (diffDias > 31) {
       return errorResponse(res, "Intervalo máximo de 31 dias por chamada", 400);

@@ -443,7 +443,9 @@ const getMedidaById = async (req, res) => {
       where: { idMedida: Number(id) },
 
       include: {
-        colaborador: true,
+        colaborador: {
+          include: { empresa: true }
+        },
         matriz: true
       },
 

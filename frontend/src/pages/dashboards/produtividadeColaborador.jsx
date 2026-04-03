@@ -180,7 +180,7 @@ export default function ProdutividadeColaborador() {
                 <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
                   <div className="flex-1 min-w-0">
                     <label className="block text-sm font-medium text-[#BFBFC3] mb-2">
-                      <Calendar className="inline w-4 h-4 mr-1" />Data
+                      <Calendar className="inline w-4 h-4 mr-1 text-white" />Data
                     </label>
                     <input
                       type="date"

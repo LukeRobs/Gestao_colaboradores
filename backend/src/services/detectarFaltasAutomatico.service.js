@@ -1,15 +1,14 @@
 /**
  * Service: Detectar Faltas Automáticas
  *
- * Varre colaboradores operacionais ativos e, para cada dia sem registro
- * (ou com registro de falta não justificada), cria a frequência com código "F"
- * e dispara o detector de medida disciplinar.
+ * Varre colaboradores operacionais ativos e, para cada dia com frequência
+ * de código "F" já registrada, dispara o detector de medida disciplinar.
  *
  * Regras:
- * - Só processa dias passados (não o dia atual em andamento)
+ * - Só processa dias passados e o dia atual
  * - Ignora DSR, atestados, ausências administrativas, férias, afastamentos
- * - Dias em branco ("-") viram falta "F" e geram sugestão de MD
- * - Idempotente: não duplica frequências nem sugestões já existentes
+ * - NÃO cria frequências novas — só processa "F" já existentes
+ * - Idempotente: não duplica sugestões já existentes
  */
 
 const { prisma } = require("../config/database");
@@ -24,11 +23,8 @@ const CARGOS_OPERACIONAIS = [
   "Fiscal de pátio",
 ];
 
-// Códigos que NÃO são falta (não geram sugestão)
-const CODIGOS_NAO_FALTA = new Set([
-  "P", "DSR", "AM", "FE", "AFA", "BH", "S1", "FO",
-  "LM", "LP", "AA", "TR", "DP", "DV", "DF", "FJ", "NC", "ON",
-]);
+// Códigos que NÃO são falta (não geram sugestão) — mantido para referência
+// O loop agora só processa "F" explicitamente, então este set não é mais usado no backfill
 
 function startOfDay(d) {
   const r = new Date(d);
@@ -68,21 +64,13 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
   console.log(`\n🔍 [DETECTOR FALTAS] Processando ${dataInicio} → ${dataFim}`);
 
   /* =====================================================
-     BUSCAR TIPOS "F" e "NC"
+     BUSCAR TIPO "F"
   ===================================================== */
-  const [tipoFalta, tipoNC] = await Promise.all([
-    prisma.tipoAusencia.findUnique({ where: { codigo: "F" } }),
-    prisma.tipoAusencia.findUnique({ where: { codigo: "NC" } }),
-  ]);
+  const tipoFalta = await prisma.tipoAusencia.findUnique({ where: { codigo: "F" } });
 
   if (!tipoFalta) {
     console.error("❌ Tipo de ausência 'F' não encontrado no banco");
     return { sucesso: false, erro: "Tipo F não encontrado" };
-  }
-
-  if (!tipoNC) {
-    console.error("❌ Tipo de ausência 'NC' não encontrado no banco");
-    return { sucesso: false, erro: "Tipo NC não encontrado" };
   }
 
   /* =====================================================
@@ -141,7 +129,7 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
 
   /* =====================================================
      BUSCAR DATA DO PRIMEIRO ONBOARDING POR COLABORADOR
-     (ON pode estar fora do período processado)
+     — não utilizado neste fluxo, mantido para compatibilidade futura
   ===================================================== */
   const onboardings = await prisma.frequencia.findMany({
     where: {
@@ -163,10 +151,8 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
   /* =====================================================
      ITERAR DIAS
   ===================================================== */
-  let totalFaltasCriadas = 0;
   let totalSugestoesCriadas = 0;
   let totalIgnorados = 0;
-  let totalNCCriados = 0;
 
   const hoje = startOfDay(new Date());
 
@@ -178,8 +164,8 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
 
   for (const colaborador of colaboradores) {
     for (const dia of dias) {
-      // Nunca processar o dia atual (pode ainda estar em andamento)
-      if (dia >= hoje) continue;
+      // Nunca processar datas futuras
+      if (dia > hoje) continue;
 
       const dataISO = ymd(dia);
       const key = `${colaborador.opsId}_${dataISO}`;
@@ -209,88 +195,18 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
         continue;
       }
 
-      /* ── Antes do onboarding → NC (Não Contratado) ── */
-      const dataOnboarding = onbMap[colaborador.opsId];
-      const isAntesOnboarding = dataOnboarding && dia < dataOnboarding;
-
-      /* ── Já tem frequência com código que não é falta ── */
+      /* ── Só processa se já tem frequência com código "F" ── */
       const freqExistente = freqMap[key];
-      if (freqExistente) {
-        const codigo = freqExistente.tipoAusencia?.codigo;
-        if (CODIGOS_NAO_FALTA.has(codigo)) {
-          totalIgnorados++;
-          continue;
-        }
-        // Já tem "F" mas é antes do onboarding → corrigir para NC
-        if (codigo === "F" && isAntesOnboarding) {
-          try {
-            await prisma.frequencia.update({
-              where: { idFrequencia: freqExistente.idFrequencia },
-              data: { idTipoAusencia: tipoNC.idTipoAusencia, registradoPor: "SISTEMA_AUTO" },
-            });
-            totalNCCriados++;
-          } catch (e) {
-            console.error(`⚠️ Erro ao corrigir NC para ${colaborador.opsId} em ${dataISO}:`, e.message);
-          }
-          continue;
-        }
-        // Já tem frequência com código "F" → só dispara detector (pode não ter sugestão ainda)
-        if (codigo === "F") {
-          try {
-            await detectarViolacaoDisciplinar(freqExistente.idFrequencia);
-            totalSugestoesCriadas++;
-          } catch (e) {
-            console.error(`⚠️ Detector falhou para ${colaborador.opsId} em ${dataISO}:`, e.message);
-          }
-          continue;
-        }
-      }
-
-      /* ── Dia em branco antes do onboarding: criar NC ── */
-      if (isAntesOnboarding) {
-        try {
-          await prisma.frequencia.upsert({
-            where: { opsId_dataReferencia: { opsId: colaborador.opsId, dataReferencia: dia } },
-            update: { idTipoAusencia: tipoNC.idTipoAusencia, manual: false, registradoPor: "SISTEMA_AUTO" },
-            create: { opsId: colaborador.opsId, dataReferencia: dia, idTipoAusencia: tipoNC.idTipoAusencia, manual: false, registradoPor: "SISTEMA_AUTO" },
-          });
-          totalNCCriados++;
-        } catch (e) {
-          console.error(`⚠️ Erro ao criar NC para ${colaborador.opsId} em ${dataISO}:`, e.message);
-        }
+      if (!freqExistente || freqExistente.tipoAusencia?.codigo !== "F") {
+        totalIgnorados++;
         continue;
       }
 
-      /* ── Dia em branco: criar frequência F e disparar detector ── */
       try {
-        const novaFreq = await prisma.frequencia.upsert({
-          where: {
-            opsId_dataReferencia: {
-              opsId: colaborador.opsId,
-              dataReferencia: dia,
-            },
-          },
-          update: {
-            idTipoAusencia: tipoFalta.idTipoAusencia,
-            manual: false,
-            registradoPor: "SISTEMA_AUTO",
-          },
-          create: {
-            opsId: colaborador.opsId,
-            dataReferencia: dia,
-            idTipoAusencia: tipoFalta.idTipoAusencia,
-            manual: false,
-            registradoPor: "SISTEMA_AUTO",
-          },
-        });
-
-        totalFaltasCriadas++;
-
-        await detectarViolacaoDisciplinar(novaFreq.idFrequencia);
+        await detectarViolacaoDisciplinar(freqExistente.idFrequencia);
         totalSugestoesCriadas++;
-
       } catch (e) {
-        console.error(`⚠️ Erro ao processar ${colaborador.opsId} em ${dataISO}:`, e.message);
+        console.error(`⚠️ Detector falhou para ${colaborador.opsId} em ${dataISO}:`, e.message);
       }
     }
   }
@@ -299,8 +215,6 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
     sucesso: true,
     periodo: { inicio: dataInicio, fim: dataFim },
     colaboradoresProcessados: colaboradores.length,
-    faltasCriadas: totalFaltasCriadas,
-    ncCriados: totalNCCriados,
     sugestoesDisparadas: totalSugestoesCriadas,
     diasIgnorados: totalIgnorados,
   };

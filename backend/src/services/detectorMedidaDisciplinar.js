@@ -48,13 +48,14 @@ async function detectarViolacaoDisciplinar(idFrequencia) {
        CONTAR HISTÓRICO (1ª ocorrência ou reincidência)
     ============================== */
 
-    const historicoCount = await prisma.medidaDisciplinar.count({
-      where: {
-        opsId: frequencia.opsId,
-        violacao: "FALTA_INJUSTIFICADA",
-        status: { not: StatusMedidaDisciplinar.CANCELADA },
-      },
-    });
+    const result = await prisma.$queryRaw`
+      SELECT COUNT(*)::int as count
+      FROM medida_disciplinar
+      WHERE ops_id = ${frequencia.opsId}
+        AND violacao = 'FALTA_INJUSTIFICADA'
+        AND status::text <> 'CANCELADA'
+    `;
+    const historicoCount = result[0]?.count ?? 0;
 
     const frequenciaViolacao = historicoCount === 0 ? "PRIMEIRA_OCORRENCIA" : "REINCIDENCIA";
 
@@ -88,8 +89,19 @@ async function detectarViolacaoDisciplinar(idFrequencia) {
         opsId: frequencia.opsId,
         violacao: "FALTA_INJUSTIFICADA",
         origem: "MANUAL",
-        status: { not: StatusMedidaDisciplinar.CANCELADA },
       },
+      // filtra CANCELADA via raw para evitar bug do enum desatualizado no client
+    }).then(async (md) => {
+      if (!md) return null;
+      const res = await prisma.$queryRaw`
+        SELECT id_medida FROM medida_disciplinar
+        WHERE ops_id = ${frequencia.opsId}
+          AND violacao = 'FALTA_INJUSTIFICADA'
+          AND origem = 'MANUAL'
+          AND status::text <> 'CANCELADA'
+        LIMIT 1
+      `;
+      return res.length > 0 ? md : null;
     });
 
     const statusSugestao = mdManualExistente ? "REJEITADA" : "PENDENTE";

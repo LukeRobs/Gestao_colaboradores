@@ -84,7 +84,7 @@ export default function AtestadoCard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[#0E0E0F] border border-[#2C2C2F] rounded-xl p-3 sm:p-4">
         
         <div className="flex items-center gap-3 text-xs sm:text-sm text-white">
-          <Calendar size={15} className="text-[#9CA3AF]" />
+          <Calendar size={15} className="text-white" />
           <span className="wrap-break-words">
             {formatDateBR(atestado.dataInicio)} →{" "}
             {formatDateBR(atestado.dataFim)}

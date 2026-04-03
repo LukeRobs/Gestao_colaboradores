@@ -221,7 +221,7 @@ export default function Sidebar({ isOpen, onClose }) {
                       onClick={() => go("/dashboard/admin")}
                     />
                     <SidebarSubItem
-                      label="Colaboradores"
+                      label="Internalização"
                       active={isActive("/dashboard/colaboradores")}
                       onClick={() => go("/dashboard/colaboradores")}
                     />

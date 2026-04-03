@@ -110,7 +110,7 @@ export default function MedidaDisciplinarCard({ medida }) {
               </div>
 
               <div className="flex items-center gap-1">
-                <Calendar size={12} />
+                <Calendar size={12} className="text-white" />
                 {dataAplicacao}
               </div>
 

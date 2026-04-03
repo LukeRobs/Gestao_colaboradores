@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -26,6 +26,8 @@ import api from "../../services/api"
 import TurnoSelector from "../../components/dashboard/TurnoSelector"
 import DateFilter from "../../components/dashboard/DateFilter"
 import DashboardHeader from "../../components/dashboard/DashboardHeader"
+import { AuthContext } from "../../context/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 const COLORS = ["#FA4C00", "#3b82f6", "#FFB37A", "#34C759", "#A855F7"]
 
@@ -34,6 +36,8 @@ export default function DashboardColaboradoresExecutivo() {
   const [loading, setLoading] = useState(true)
   const [turno, setTurno] = useState("ALL")
   const [dateRange, setDateRange] = useState({})
+  const { permissions } = useContext(AuthContext)
+  const navigate = useNavigate()
 
   useEffect(() => {
     async function load() {
@@ -53,10 +57,10 @@ export default function DashboardColaboradoresExecutivo() {
 
 
   if (loading || !dados) {
-    return <LoadingScreen message="Carregando dashboard de colaboradores..." />;
+    return <LoadingScreen message="Carregando dashboard de internalização..." />;
   }
 
-  const { kpis, series, donut, rankings, distribuicoes, hc } = dados
+  const { kpis, series, donut, rankings, distribuicoes, hc, candidatosInternalizacao, semFaltaComTempo, reprovadosComTempo } = dados
   
 
   const tempoCasaData = Object.entries(
@@ -85,7 +89,7 @@ export default function DashboardColaboradoresExecutivo() {
 
         <main className="p-8 space-y-10">
         <DashboardHeader
-          title="Dashboard de Colaboradores"
+          title="Dashboard de Internalização"
           subtitle="Período"
           date={
             dados?.periodo?.inicio && dados?.periodo?.fim
@@ -267,33 +271,23 @@ export default function DashboardColaboradoresExecutivo() {
             </Card>
                     
           </div>
-          {/* ================= HC POR LIDER / SETOR / ESCALA ================= */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-
-            <Card title="HC por Líder">
-              <RankingListHC data={hcLider} />
-            </Card>
-
-            <Card title="HC por Setor">
-              <RankingListHC data={hcSetor} />
-            </Card>
-
-            <Card title="HC por Escala">
-              <RankingListHC data={hcEscala} />
-            </Card>
-
-          </div>
+          {/* HC por Líder / Setor / Escala — oculto */}
                     
           {/* ================= TOP 10 ================= */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card title="Top 10 Faltas">
-              <RankingList data={rankings?.topFaltas || []} />
+            <Card title="+90 dias · Sem Falta · Sem Medida">
+              <p className="text-xs text-[#BFBFC3] mb-3">+90 dias, sem falta, sem medida e exatamente 1 atestado (candidatos plenos estão em Internalização)</p>
+              <RankingListCriterios data={semFaltaComTempo || []} />
             </Card>
 
-            <Card title="Top 10 Atestados">
-              <RankingList data={rankings?.topAtestados || []} />
+            <Card title="+90 dias · Reprovados">
+              <p className="text-xs text-[#BFBFC3] mb-3">Têm tempo de casa mas falharam em outro critério</p>
+              <RankingListReprovados data={reprovadosComTempo || []} />
             </Card>
           </div>
+
+          {/* ================= CANDIDATOS À INTERNALIZAÇÃO ================= */}
+          <CandidatosInternalizacaoTable data={candidatosInternalizacao || []} isAdmin={permissions?.isAdmin} navigate={navigate} />
 
         </main>
       </div>
@@ -333,6 +327,57 @@ function RankingList({ data }) {
     </div>
   )
 }
+
+function RankingListCriterios({ data }) {
+  if (!data.length) return <p className="text-xs text-[#BFBFC3] text-center py-4">Nenhum colaborador.</p>
+  return (
+    <div className="space-y-2 max-h-64 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      {data.map((c, i) => (
+        <div key={i} className="flex items-center justify-between text-sm gap-2">
+          <span className="truncate text-white">{c.nome}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#34C759]/20 text-[#34C759]">0 faltas</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${c.qtdAtestados === 0 ? "bg-[#34C759]/20 text-[#34C759]" : "bg-[#FFB37A]/20 text-[#FFB37A]"}`}>
+              {c.qtdAtestados} atestado{c.qtdAtestados !== 1 ? "s" : ""}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#34C759]/20 text-[#34C759]">0 medidas</span>
+            <span className="text-[#BFBFC3] font-semibold">{c.diasCasa}d</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function RankingListReprovados({ data }) {
+  if (!data.length) return <p className="text-xs text-[#BFBFC3] text-center py-4">Nenhum colaborador.</p>
+  return (
+    <div className="space-y-2 max-h-64 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      {data.map((c, i) => (
+        <div key={i} className="flex items-center justify-between text-sm gap-2">
+          <span className="truncate text-white">{c.nome}</span>
+          <div className="flex items-center gap-1 shrink-0">
+            {c.qtdFaltas > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#FF453A]/20 text-[#FF453A]">
+                {c.qtdFaltas} falta{c.qtdFaltas !== 1 ? "s" : ""}
+              </span>
+            )}
+            {c.qtdAtestados > 1 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#FFB37A]/20 text-[#FFB37A]">
+                {c.qtdAtestados} atestados
+              </span>
+            )}
+            {c.qtdMedidas > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#A855F7]/20 text-[#A855F7]">
+                {c.qtdMedidas} medida{c.qtdMedidas !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 function RankingListHC({ data }) {
   return (
     <div className="space-y-2">
@@ -344,6 +389,116 @@ function RankingListHC({ data }) {
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+function exportarCSV(data) {
+  const headers = ["Nome", "Empresa", "Turno", "Setor", "Líder", "Admissão", "Dias de Casa"]
+  const rows = data.map(c => [
+    c.nome, c.empresa, c.turno, c.setor, c.lider, c.dataAdmissao, c.diasCasa
+  ])
+  const csv = [headers, ...rows]
+    .map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+    .join("\n")
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `candidatos_internalizacao_${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function CandidatosInternalizacaoTable({ data, isAdmin, navigate }) {
+  const [filtroTurno, setFiltroTurno] = useState("ALL")
+  const [filtroLider, setFiltroLider] = useState("ALL")
+
+  const turnos = ["ALL", ...Array.from(new Set(data.map(c => c.turno))).sort()]
+  const lideres = ["ALL", ...Array.from(new Set(data.map(c => c.lider))).sort()]
+
+  const filtrado = data.filter(c => {
+    if (filtroTurno !== "ALL" && c.turno !== filtroTurno) return false
+    if (filtroLider !== "ALL" && c.lider !== filtroLider) return false
+    return true
+  })
+
+  const selectClass = "bg-[#0D0D0D] border border-white/10 text-[#BFBFC3] text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#FA4C00]"
+
+  return (
+    <div className="bg-[#1A1A1C] rounded-xl p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+          <h2 className="font-semibold text-white">Candidatos à Internalização</h2>
+          <p className="text-xs text-[#BFBFC3] mt-1">
+            BPO · Ativos · +90 dias de casa · Sem atestado, falta ou medida disciplinar
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select value={filtroTurno} onChange={e => setFiltroTurno(e.target.value)} className={selectClass}>
+            {turnos.map(t => <option key={t} value={t}>{t === "ALL" ? "Todos os turnos" : t}</option>)}
+          </select>
+          <select value={filtroLider} onChange={e => setFiltroLider(e.target.value)} className={selectClass}>
+            {lideres.map(l => <option key={l} value={l}>{l === "ALL" ? "Todos os líderes" : l}</option>)}
+          </select>
+          <span className="text-sm text-[#BFBFC3]">{filtrado.length} colaborador{filtrado.length !== 1 ? "es" : ""}</span>
+          <button
+            onClick={() => exportarCSV(filtrado)}
+            disabled={filtrado.length === 0}
+            className="text-xs px-3 py-1.5 rounded-lg bg-[#34C759]/20 text-[#34C759] hover:bg-[#34C759]/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Baixar CSV
+          </button>
+        </div>
+      </div>
+
+      {filtrado.length === 0 ? (
+        <p className="text-sm text-[#BFBFC3] text-center py-8">Nenhum candidato encontrado.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-[#BFBFC3] border-b border-white/10">
+                <th className="text-left py-2 pr-4 font-medium">Nome</th>
+                <th className="text-left py-2 pr-4 font-medium">Empresa</th>
+                <th className="text-left py-2 pr-4 font-medium">Turno</th>
+                <th className="text-left py-2 pr-4 font-medium">Setor</th>
+                <th className="text-left py-2 pr-4 font-medium">Líder</th>
+                <th className="text-left py-2 pr-4 font-medium">Admissão</th>
+                <th className="text-right py-2 pr-4 font-medium">Dias de Casa</th>
+                <th className="text-right py-2 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrado.map((c, i) => (
+                <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <td className="py-2 pr-4 text-white">{c.nome}</td>
+                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.empresa}</td>
+                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.turno}</td>
+                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.setor}</td>
+                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.lider}</td>
+                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.dataAdmissao}</td>
+                  <td className="py-2 pr-4 text-right text-[#34C759] font-semibold">{c.diasCasa}d</td>
+                  <td className="py-2 text-right">
+                    <button
+                      onClick={() => isAdmin && navigate(`/colaboradores/${c.opsId}/movimentar`)}
+                      disabled={!isAdmin}
+                      title={isAdmin ? "Ir para movimentação" : "Apenas administradores"}
+                      className={`text-xs px-3 py-1 rounded-lg transition-colors ${
+                        isAdmin
+                          ? "bg-[#FA4C00]/20 text-[#FA4C00] hover:bg-[#FA4C00]/40 cursor-pointer"
+                          : "bg-[#FA4C00]/10 text-[#FA4C00] opacity-30 cursor-not-allowed"
+                      }`}
+                    >
+                      Internalizar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
