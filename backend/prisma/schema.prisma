@@ -115,9 +115,12 @@ model User {
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
   opsId                   String?          @map("ops_id") @db.VarChar(50)
+  idEstacao               Int?             @map("id_estacao")
+  estacao                 Estacao?         @relation(fields: [idEstacao], references: [idEstacao])
   folgasDominicaisCriadas FolgaDominical[]
 
   @@index([opsId], map: "idx_users_ops_id")
+  @@index([idEstacao], map: "idx_users_id_estacao")
   @@map("users")
 }
 
@@ -170,6 +173,7 @@ model Estacao {
   dataCriacao   DateTime      @default(now()) @map("data_criacao")
   idRegional    Int?          @map("id_regional")
   colaboradores Colaborador[]
+  users         User[]
   regional      Regional?     @relation(fields: [idRegional], references: [idRegional], onUpdate: NoAction, map: "fk_estacao_regional")
 
   @@index([idRegional], map: "idx_estacao_id_regional")
@@ -775,6 +779,7 @@ enum Lateralidade {
 enum UserRole {
   USER
   ADMIN
+  ALTA_GESTAO
   MANAGER
   OPERACAO
   GESTAO

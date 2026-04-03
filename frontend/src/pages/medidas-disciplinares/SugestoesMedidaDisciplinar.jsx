@@ -383,7 +383,9 @@ export default function SugestoesMedidaDisciplinar() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-[#6B7280]">{s.aprovadoPor ?? "—"}</span>
+                          <span className="text-xs text-[#6B7280]">
+                            {user?.role === "ADMIN" ? (s.aprovadoPorEmail ?? "—") : "—"}
+                          </span>
                         )}
                       </td>
                     </tr>

@@ -274,7 +274,11 @@ export default function App() {
 
       <Route
         path="/medidas-disciplinares/sugestao"
-        element={<SugestoesMedidaDisciplinar />}
+        element={
+          <ProtectedRoute roles={["ADMIN", "LIDERANCA"]}>
+            <SugestoesMedidaDisciplinar />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/medidas-disciplinares/:id"
