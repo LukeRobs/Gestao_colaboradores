@@ -77,7 +77,7 @@ export default function DateFilter({ value, onApply }) {
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 px-4 h-11 rounded-xl bg-[#1C1C1F] border border-white/10 text-sm hover:border-white/20 transition"
       >
-        <Calendar size={16} />
+        <Calendar size={16} className="text-white" />
         {range?.inicio && range?.fim
           ? `${range.inicio} → ${range.fim}`
           : "Selecionar período"}
@@ -142,7 +142,8 @@ export default function DateFilter({ value, onApply }) {
                       inicio: e.target.value,
                     }))
                   }
-                  className="w-full mt-1 px-3 py-2 rounded-lg bg-[#0F0F10] border border-white/10 text-sm"
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-[#0F0F10] border border-white/10 text-sm text-white"
+                  style={{ colorScheme: "dark" }}
                 />
               </div>
 
@@ -159,7 +160,8 @@ export default function DateFilter({ value, onApply }) {
                       fim: e.target.value,
                     }))
                   }
-                  className="w-full mt-1 px-3 py-2 rounded-lg bg-[#0F0F10] border border-white/10 text-sm"
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-[#0F0F10] border border-white/10 text-sm text-white"
+                  style={{ colorScheme: "dark" }}
                 />
               </div>
             </div>
