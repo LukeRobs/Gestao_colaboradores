@@ -186,12 +186,58 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        1️⃣ FILTROS DE DATA
     =============================== */
-    const { data, dataInicio, dataFim } = req.query;
+    const { data, dataInicio, dataFim, turno: turnoFiltro } = req.query;
 
     const agora = agoraBrasil();
     const { dataOperacional, dataOperacionalStr, turnoAtual } =
       getDateOperacional(agora);
-    const { turno: turnoFiltro } = req.query;
+
+    /* ===============================
+       🚫 GUARD T3 — turno ainda não começou
+       T3 começa às 22h e termina às 06h do dia seguinte.
+       Se o usuário filtrou por T3 e a hora atual está fora desse
+       range (06:00–21:59) e não foi passada uma data específica,
+       o turno ainda não iniciou: retorna zeros.
+    =============================== */
+    const horaAtual = agora.getHours();
+    const t3EmAndamento = horaAtual >= 22 || horaAtual < 7; // 22h–06:20 (margem até 06:59)
+    const t3AindaNaoComecou =
+      turnoFiltro === "T3" &&
+      !data && !dataInicio && !dataFim &&
+      !t3EmAndamento;
+
+    if (t3AindaNaoComecou) {
+      return res.json({
+        success: true,
+        data: {
+          dataOperacional: dataOperacionalStr,
+          turnoAtual,
+          periodo: { inicio: dataOperacionalStr, fim: dataOperacionalStr },
+          kpis: {
+            totalColaboradores: 0,
+            presentes: 0,
+            ausencias: 0,
+            diaristasPlanejados: 0,
+            diaristasPresentes: 0,
+            aderenciaDW: 0,
+            absenteismo: 0,
+          },
+          distribuicaoTurnoSetor: [],
+          generoPorTurno: { T1: [], T2: [], T3: [] },
+          statusColaboradoresPorTurno: { T1: [], T2: [], T3: [] },
+          empresaPorTurno: { T1: [], T2: [], T3: [] },
+          distribuicaoVinculoPorTurno: {
+            T1: [{ name: "SPX", value: 0 }, { name: "BPO", value: 0 }],
+            T2: [{ name: "SPX", value: 0 }, { name: "BPO", value: 0 }],
+            T3: [{ name: "SPX", value: 0 }, { name: "BPO", value: 0 }],
+          },
+          ausenciasHoje: [],
+          tendenciaPorDia: [],
+          turnos: [],
+          escalasAtivas: [],
+        },
+      });
+    }
 
     /* ===============================
        📅 RANGE DE DATA (SEGURO)
