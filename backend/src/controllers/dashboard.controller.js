@@ -100,7 +100,17 @@ const initTurnoMap = () => ({
    STATUS DO DIA — PADRÃO ADMIN (COM 4 ESTADOS OPERACIONAIS)
 ===================================================== */
 function getStatusDoDiaOperacional(f) {
-  // Presença
+  // DSR/FO têm prioridade máxima — mesmo que haja horaEntrada (ajuste indevido),
+  // o dia de folga não deve ser contado como escalado
+  if (f?.tipoAusencia) {
+    const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
+
+    if (codigo === "DSR" || codigo === "FO") {
+      return { label: "Folga", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+    }
+  }
+
+  // Presença via batida de ponto
   if (f?.horaEntrada) {
     return {
       label: "Presente",
@@ -113,99 +123,63 @@ function getStatusDoDiaOperacional(f) {
   // Ausência registrada (tipoAusencia)
   if (f?.tipoAusencia) {
     const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
-    const desc = String(f.tipoAusencia.descricao || "").toUpperCase();
 
-    // ✅ NC -> não contratado (não escalado, não impacta abs)
-    if (codigo === "NC") {
-      return {
-        label: "Não contratado",
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-        origem: "tipoAusencia",
-      };
-    }
-    // ✅ ON -> onboarding (não escalado, não impacta abs)
-    if (codigo === "ON") {
-      return {
-        label: "Onboarding",
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-        origem: "tipoAusencia",
-      };
-    }
-    
-    // FO -> conta como HC Apto, não impacta absenteísmo
-    if (codigo === "FO") {
-      return {
-        label: "Folga",
-        contaComoEscalado: true,       // ✅ entra no HC APTO
-        impactaAbsenteismo: false,    // ✅ não é ausência
-        origem: "tipoAusencia",
-      };
-    }
+    switch (codigo) {
+      // Presença sem batida de ponto (ex: ajuste manual)
+      case "P":
+        return { label: "Presente", contaComoEscalado: true, impactaAbsenteismo: false, origem: "tipoAusencia" };
 
-    // DSR -> não escalado
-    if (codigo === "DSR") {
-      return {
-        label: "Folga",
-        contaComoEscalado: false,     // ❌ fora do HC
-        impactaAbsenteismo: false,
-        origem: "tipoAusencia",
-      };
-    }
+      // Não escalado / fora do HC
+      case "NC":
+        return { label: "Não contratado", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "ON":
+        return { label: "Onboarding", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "T":
+        return { label: "Transferido", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
 
-    
-        // FE -> Férias (não escalado, não impacta abs)
-    if (codigo === "FE" || desc.includes("FÉRIAS")) {
-      return {
-        label: "Férias",
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-        origem: "tipoAusencia",
-      };
-    }
-    // Atestado médico (preferência por código AM; fallback por descrição)
-    if (codigo === "AM" || desc.includes("ATEST")) {
-      return {
-        label: "Atestado Médico",
-        contaComoEscalado: true,
-        impactaAbsenteismo: true,
-        origem: "tipoAusencia",
-      };
-    }
+      // Afastamentos / licenças — escalado mas não impacta absenteísmo operacional
+      case "FE":
+        return { label: "Férias", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "AFA":
+      case "AF":
+        return { label: "Afastamento", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "LM":
+        return { label: "Licença Maternidade", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "LP":
+        return { label: "Licença Paternidade", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "S1":
+        return { label: "Sinergia Enviada", contaComoEscalado: true, impactaAbsenteismo: false, origem: "tipoAusencia" };
+      case "BH":
+        return { label: "Banco de Horas", contaComoEscalado: true, impactaAbsenteismo: false, origem: "tipoAusencia" };
 
-    if (codigo === "S1" || desc.includes("SINERGIA")) {
-      return {
-        label: "Sinergia Enviada",
-        contaComoEscalado: true,      // ✅ entra no HC APTO
-        impactaAbsenteismo: false,   // ✅ NÃO conta como ausência
-        origem: "tipoAusencia",
-      };
+      // Ausências que impactam absenteísmo
+      case "AM":
+      case "AA":
+        return { label: "Atestado Médico", contaComoEscalado: true, impactaAbsenteismo: true, origem: "tipoAusencia" };
+      case "F":
+        return { label: "Falta", contaComoEscalado: true, impactaAbsenteismo: true, origem: "tipoAusencia" };
+
+      // Qualquer código desconhecido — não conta como escalado para não inflar métricas
+      default:
+        return { label: "Outro", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
     }
-    if (codigo === "BH" || desc.includes("Banco de Horas")) {
-      return {
-        label: "Banco de Horas",
-        contaComoEscalado: true,
-        impactaAbsenteismo: false,
-        origem: "tipoAusencia",
-      };
-    }
-    // Qualquer outra ausência conta como falta operacional
-    return {
-      label: "Falta",
-      contaComoEscalado: true,
-      impactaAbsenteismo: true,
-      origem: "tipoAusencia",
-    };
   }
 
-  // fallback (igual Admin: F)
+  // Sem registro no banco — falta real
   return {
     label: "Falta",
     contaComoEscalado: true,
     impactaAbsenteismo: true,
     origem: "semRegistro",
   };
+}
+
+/**
+ * Retorna true se o registro existe no banco mas está "vazio"
+ * (sem tipoAusencia e sem horaEntrada) — não deve ser contabilizado como falta.
+ */
+function isRegistroVazio(f) {
+  return f && !f.horaEntrada && !f.tipoAusencia;
 }
 
 /* =====================================================
@@ -216,12 +190,58 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        1️⃣ FILTROS DE DATA
     =============================== */
-    const { data, dataInicio, dataFim } = req.query;
+    const { data, dataInicio, dataFim, turno: turnoFiltro } = req.query;
 
     const agora = agoraBrasil();
     const { dataOperacional, dataOperacionalStr, turnoAtual } =
       getDateOperacional(agora);
-    const { turno: turnoFiltro } = req.query;
+
+    /* ===============================
+       🚫 GUARD T3 — turno ainda não começou
+       T3 começa às 22h e termina às 06h do dia seguinte.
+       Se o usuário filtrou por T3 e a hora atual está fora desse
+       range (06:00–21:59) e não foi passada uma data específica,
+       o turno ainda não iniciou: retorna zeros.
+    =============================== */
+    const horaAtual = agora.getHours();
+    const t3EmAndamento = horaAtual >= 22 || horaAtual < 7; // 22h–06:20 (margem até 06:59)
+    const t3AindaNaoComecou =
+      turnoFiltro === "T3" &&
+      !data && !dataInicio && !dataFim &&
+      !t3EmAndamento;
+
+    if (t3AindaNaoComecou) {
+      return res.json({
+        success: true,
+        data: {
+          dataOperacional: dataOperacionalStr,
+          turnoAtual,
+          periodo: { inicio: dataOperacionalStr, fim: dataOperacionalStr },
+          kpis: {
+            totalColaboradores: 0,
+            presentes: 0,
+            ausencias: 0,
+            diaristasPlanejados: 0,
+            diaristasPresentes: 0,
+            aderenciaDW: 0,
+            absenteismo: 0,
+          },
+          distribuicaoTurnoSetor: [],
+          generoPorTurno: { T1: [], T2: [], T3: [] },
+          statusColaboradoresPorTurno: { T1: [], T2: [], T3: [] },
+          empresaPorTurno: { T1: [], T2: [], T3: [] },
+          distribuicaoVinculoPorTurno: {
+            T1: [{ name: "SPX", value: 0 }, { name: "BPO", value: 0 }],
+            T2: [{ name: "SPX", value: 0 }, { name: "BPO", value: 0 }],
+            T3: [{ name: "SPX", value: 0 }, { name: "BPO", value: 0 }],
+          },
+          ausenciasHoje: [],
+          tendenciaPorDia: [],
+          turnos: [],
+          escalasAtivas: [],
+        },
+      });
+    }
 
     /* ===============================
        📅 RANGE DE DATA (SEGURO)
@@ -275,6 +295,13 @@ const carregarDashboard = async (req, res) => {
             dataReferencia: {
               gte: inicio,
               lte: fim,
+            },
+            colaborador: {
+              status: "ATIVO",
+              dataDesligamento: null,
+              ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
+                ? { idEstacao: req.dbContext.estacaoId }
+                : {}),
             },
           },
           include: {
@@ -376,6 +403,7 @@ const carregarDashboard = async (req, res) => {
         }
 
         // só conta dias em que estava escalado (FO/DSR fora)
+        // e respeita filtro de turno para não misturar T1/T2/T3
         if (s.contaComoEscalado) {
           tendenciaPorDia[dataRef].escalados++;
 
@@ -396,6 +424,23 @@ const carregarDashboard = async (req, res) => {
       // Igual ao Admin: se não tem frequência no dia, ele não entra no snapshot do dia
       // (evita inventar escalado sem base)
       if (!registroSnapshot) return;
+
+      // Registro existe mas está vazio (sem tipo e sem hora) — trata como sem lançamento
+      if (isRegistroVazio(registroSnapshot)) return;
+
+      // 🔒 GUARD T3: colaboradores do T3 só devem ser contados se a horaEntrada
+      // for compatível com o horário do T3 (≥ 20:50 ou < 06:20).
+      // Isso evita que registros de ajuste manual ou batidas fora do horário
+      // do T3 inflem a contagem de presentes.
+      if (turno === "T3" && registroSnapshot.horaEntrada) {
+        const h = new Date(registroSnapshot.horaEntrada).getUTCHours();
+        const m = new Date(registroSnapshot.horaEntrada).getUTCMinutes();
+        const minutos = h * 60 + m;
+        const T3_INICIO = 20 * 60 + 50; // 20:50
+        const T3_FIM = 6 * 60 + 20;     // 06:20
+        const dentroDoT3 = minutos >= T3_INICIO || minutos < T3_FIM;
+        if (!dentroDoT3) return;
+      }
 
       const sSnap = getStatusDoDiaOperacional(registroSnapshot);
 
@@ -439,7 +484,6 @@ const carregarDashboard = async (req, res) => {
       const setor = getSetor(registroSnapshot, c);
       turnoSetorAgg[turno].setores[setor] =
         (turnoSetorAgg[turno].setores[setor] || 0) + 1;
-      console.log("ADMISSAO:", c.nomeCompleto, c.dataAdmissao);
       const tempoCasa = calcularTempoDeCasa(c.dataAdmissao);
       // Status do snapshot (4 estados)
       statusPorTurno[turno][sSnap.label] =
@@ -687,17 +731,20 @@ const aderenciaDW =
         empresaPorTurno: Object.fromEntries(
           Object.entries(empresaPorTurno).map(([t, empresas]) => [
             t,
-            Object.entries(empresas).map(([empresa, dados]) => ({
-              empresa,
-              total: dados.total,
-              faltas: dados.faltas,
-              atestados: dados.atestados,
-              ausencias: dados.faltas + dados.atestados,
-              absenteismo:
-                dados.total > 0
-                  ? Number(((dados.ausencias / dados.total) * 100).toFixed(2))
-                  : 0,
-            })),
+            Object.entries(empresas).map(([empresa, dados]) => {
+              const ausencias = dados.faltas + dados.atestados;
+              return {
+                empresa,
+                total: dados.total,
+                faltas: dados.faltas,
+                atestados: dados.atestados,
+                ausencias,
+                absenteismo:
+                  dados.total > 0
+                    ? Number(((ausencias / dados.total) * 100).toFixed(2))
+                    : 0,
+              };
+            }),
           ])
         ),
 

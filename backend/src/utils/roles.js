@@ -1,11 +1,12 @@
 /**
  * Helpers de autorização por role
- * ADMIN e ALTA_GESTAO têm acesso global entre estações (bypass RLS)
+ * ADMIN tem acesso global entre estações (bypass RLS)
+ * ALTA_GESTAO tem visão ampla mas fixada na estação definida no banco
  */
 const { authorizeRoles } = require('../middlewares/authorizeRoles');
 
-// Roles com visão global (bypass RLS)
-const GLOBAL_ROLES = ['ADMIN', 'ALTA_GESTAO'];
+// Roles com visão global (bypass RLS) - apenas ADMIN
+const GLOBAL_ROLES = ['ADMIN'];
 
 const onlyAdmin = authorizeRoles('ADMIN');
 

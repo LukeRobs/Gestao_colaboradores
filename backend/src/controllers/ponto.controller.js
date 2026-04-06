@@ -5,6 +5,7 @@ const {
   createdResponse,
   notFoundResponse,
   errorResponse,
+  forbiddenResponse,
 } = require("../utils/response");
 const { getDateOperacional } = require("../utils/dateOperacional");
 const { finalizarAtestadosVencidos } = require("../utils/atestadoAutoFinalize");
@@ -273,8 +274,10 @@ const registrarPontoCPF = async (req, res) => {
     ========================================== */
 
     if (!aberta) {
+      // Usa escala do histórico se disponível, senão cai para a escala atual do colaborador
+      const nomeEscalaDia = escalaDia?.escala?.nomeEscala || colaborador.escala?.nomeEscala;
 
-      if (isDiaDSR(dataReferenciaOperacional, escalaDia?.escala?.nomeEscala)) {
+      if (isDiaDSR(dataReferenciaOperacional, nomeEscalaDia)) {
         return errorResponse(
           res,
           "Hoje é DSR do colaborador",
@@ -375,9 +378,20 @@ const registrarPontoCPF = async (req, res) => {
 
     if (frequenciaDia && !frequenciaDia.horaEntrada) {
 
+      const tipoPresencaFix = await prisma.tipoAusencia.findFirst({
+        where: { codigo: "P" },
+      });
+
+      if (!tipoPresencaFix) {
+        return errorResponse(res, "Tipo de ausência 'P' não encontrado no banco. Contate o administrador.", 500);
+      }
+
       const atualizado = await prisma.frequencia.update({
         where: { idFrequencia: frequenciaDia.idFrequencia },
-        data: { horaEntrada: horaAgora },
+        data: {
+          horaEntrada: horaAgora,
+          idTipoAusencia: tipoPresencaFix.idTipoAusencia,
+        },
       });
 
       return createdResponse(
@@ -396,12 +410,16 @@ const registrarPontoCPF = async (req, res) => {
       where: { codigo: "P" },
     });
 
+    if (!tipoPresenca) {
+      return errorResponse(res, "Tipo de ausência 'P' não encontrado no banco. Contate o administrador.", 500);
+    }
+
     const registro = await prisma.frequencia.create({
       data: {
         opsId: colaborador.opsId,
         dataReferencia: dataReferenciaOperacional,
         horaEntrada: horaAgora,
-        idTipoAusencia: tipoPresenca?.idTipoAusencia ?? null,
+        idTipoAusencia: tipoPresenca.idTipoAusencia,
         registradoPor: colaborador.opsId,
         validado: false,
       },
@@ -478,9 +496,19 @@ const getControlePresenca = async (req, res) => {
     /* =====================================================
        FILTROS COLABORADOR
     ===================================================== */
+
+    // Usuário não-global sem estação configurada não deve ver nada
+    if (!req.dbContext?.isGlobal && !req.dbContext?.estacaoId) {
+      return successResponse(res, { dias: [], colaboradores: [] });
+    }
+
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
+      // Isolamento por estação: ADMIN vê todas, demais só a sua
+      ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
+        ? { idEstacao: req.dbContext.estacaoId }
+        : {}),
       // Filtrar cargos operacionais
       cargo: {
         nomeCargo: {
@@ -635,8 +663,17 @@ const getControlePresenca = async (req, res) => {
         continue;
       }
 
+      // Manual só tem prioridade se tiver tipoAusencia válido,
+      // ou se o registro atual também não tiver
+      const fTemTipo = !!f.tipoAusencia;
+      const atualTemTipo = !!freqMap[key].tipoAusencia;
+
       if (f.manual && !freqMap[key].manual) {
-        freqMap[key] = f;
+        // Manual substitui automático apenas se tiver tipo válido,
+        // ou se o automático também não tiver tipo
+        if (fTemTipo || !atualTemTipo) {
+          freqMap[key] = f;
+        }
         continue;
       }
 
@@ -805,15 +842,14 @@ const getControlePresenca = async (req, res) => {
     let colaboradoresFiltrados = resultado;
 
     if (pendentesHoje === "true") {
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-
-      const diaHoje = hoje.getDate();
-      const mesHoje = hoje.getMonth() + 1;
-      const anoHoje = hoje.getFullYear();
+      const agora = agoraBrasil();
+      const anoHoje = agora.getFullYear();
+      const mesHoje = agora.getMonth() + 1;
+      const diaHoje = agora.getDate();
 
       if (ano === anoHoje && mesNum === mesHoje) {
-        const dataHojeISO = ymd(hoje);
+        const dataHojeUTC = new Date(Date.UTC(anoHoje, mesHoje - 1, diaHoje));
+        const dataHojeISO = ymd(dataHojeUTC);
 
         colaboradoresFiltrados = resultado.filter((c) => {
           const registroHoje = c.dias[dataHojeISO];
@@ -894,6 +930,16 @@ const ajusteManualPresenca = async (req, res) => {
 
     if (colaborador.dataDesligamento || colaborador.status !== "ATIVO") {
       return errorResponse(res, "Colaborador não está ativo", 403);
+    }
+
+    // Isolamento por estação: não-ADMIN só pode ajustar colaboradores da sua estação
+    if (!req.dbContext?.isGlobal) {
+      if (!req.dbContext?.estacaoId) {
+        return forbiddenResponse(res, "Usuário sem estação configurada");
+      }
+      if (colaborador.idEstacao !== req.dbContext.estacaoId) {
+        return forbiddenResponse(res, "Colaborador não pertence à sua estação");
+      }
     }
 
     /* ===============================
@@ -1014,6 +1060,20 @@ const ajusteManualPresenca = async (req, res) => {
     }
 
     /* ===============================
+       CÁLCULO DE HORAS TRABALHADAS
+    =============================== */
+
+    let horasTrabalhadas = null;
+
+    if (horaEntrada && horaSaida) {
+      const [hE, mE] = horaEntrada.split(":").map(Number);
+      const [hS, mS] = horaSaida.split(":").map(Number);
+      let minutos = hS * 60 + mS - (hE * 60 + mE);
+      if (minutos < 0) minutos += 24 * 60;
+      horasTrabalhadas = Number((minutos / 60).toFixed(2));
+    }
+
+    /* ===============================
        UPSERT FREQUÊNCIA
     =============================== */
 
@@ -1028,6 +1088,7 @@ const ajusteManualPresenca = async (req, res) => {
         idTipoAusencia: tipo.idTipoAusencia,
         horaEntrada: toTime(horaEntrada),
         horaSaida: horaSaidaFinal,
+        horasTrabalhadas,
         justificativa: justificativaNormalizada,
         manual: true,
         validado: true,
@@ -1039,6 +1100,7 @@ const ajusteManualPresenca = async (req, res) => {
         idTipoAusencia: tipo.idTipoAusencia,
         horaEntrada: toTime(horaEntrada),
         horaSaida: horaSaidaFinal,
+        horasTrabalhadas,
         justificativa: justificativaNormalizada,
         manual: true,
         validado: true,
@@ -1264,7 +1326,7 @@ const exportarPresencaSheets = async (req, res) => {
         if (freqMap[key]?.manual) {
           const f = freqMap[key];
           diasMap[dataISO] = {
-            status: f.tipoAusencia?.codigo || "P",
+            status: f.tipoAusencia?.codigo || "-",
             entrada: f.horaEntrada,
             saida: f.horaSaida,
             validado: !!f.validado,
@@ -1292,7 +1354,7 @@ const exportarPresencaSheets = async (req, res) => {
         if (freqMap[key]) {
           const f = freqMap[key];
           diasMap[dataISO] = {
-            status: f.tipoAusencia?.codigo || "P",
+            status: f.tipoAusencia?.codigo || "-",
             entrada: f.horaEntrada,
             saida: f.horaSaida,
             validado: f.validado,

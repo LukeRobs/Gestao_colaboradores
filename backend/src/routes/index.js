@@ -5,7 +5,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { authenticate } = require("../middlewares/auth.middleware");
+const { authenticate, authorize } = require("../middlewares/auth.middleware");
 const { injectDbContext } = require("../middlewares/dbContext.middleware");
 const blockOperacao = require("../middlewares/blockOperacao");
 
@@ -59,54 +59,6 @@ router.get("/health", (req, res) => {
 });
 
 /* =========================
-   DEBUG - TESTAR PLANILHA
-========================= */
-router.get("/debug/planilha", async (req, res) => {
-  try {
-    const { buscarQuantidadeRealizada } = require("../services/googleSheetsMetaProducao.service");
-    const { data = "2026-06-03" } = req.query;
-    
-    console.log("🔍 DEBUG - Testando leitura da planilha para data:", data);
-    const result = await buscarQuantidadeRealizada(data);
-    
-    res.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error("❌ Erro no debug:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      stack: error.stack
-    });
-  }
-});
-
-/* =========================
-   LIMPAR CACHE DA PLANILHA
-========================= */
-router.post("/cache/limpar", async (req, res) => {
-  try {
-    const { limparCache } = require("../services/googleSheetsMetaProducao.service");
-    limparCache();
-    
-    res.json({
-      success: true,
-      message: "Cache limpo com sucesso",
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error("❌ Erro ao limpar cache:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-/* =========================
    🔓 ROTAS PÚBLICAS
 ========================= */
 router.use("/auth", authRoutes);
@@ -131,6 +83,54 @@ router.post(
 router.use(authenticate);
 router.use(injectDbContext);
 router.use(blockOperacao);
+
+/* =========================
+   DEBUG - TESTAR PLANILHA (requer ADMIN)
+========================= */
+router.get("/debug/planilha", authorize("ADMIN"), async (req, res) => {
+  try {
+    const { buscarQuantidadeRealizada } = require("../services/googleSheetsMetaProducao.service");
+    const { data = "2026-06-03" } = req.query;
+
+    console.log("🔍 DEBUG - Testando leitura da planilha para data:", data);
+    const result = await buscarQuantidadeRealizada(data);
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("❌ Erro no debug:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+/* =========================
+   LIMPAR CACHE DA PLANILHA (requer ADMIN)
+========================= */
+router.post("/cache/limpar", authorize("ADMIN"), async (req, res) => {
+  try {
+    const { limparCache } = require("../services/googleSheetsMetaProducao.service");
+    limparCache();
+
+    res.json({
+      success: true,
+      message: "Cache limpo com sucesso",
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("❌ Erro ao limpar cache:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 router.use("/empresas", empresaRoutes);
 router.use("/setores", setorRoutes);

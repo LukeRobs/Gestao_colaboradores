@@ -130,10 +130,11 @@ export default function ControlePresenca() {
       const agora = new Date();
       const anoHoje = agora.getFullYear();
       const mesHoje = agora.getMonth() + 1;
+      const diaHoje = agora.getDate();
       const [ano, mesNum] = mes.split("-").map(Number);
 
       if (ano === anoHoje && mesNum === mesHoje) {
-        const dataHojeISO = `${anoHoje}-${String(mesHoje).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+        const dataHojeISO = `${anoHoje}-${String(mesHoje).padStart(2, "0")}-${String(diaHoje).padStart(2, "0")}`;
         lista = lista.filter((c) => {
           const registroHoje = c.dias?.[dataHojeISO];
           return !registroHoje || registroHoje.status === "-";

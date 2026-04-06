@@ -21,7 +21,10 @@ function getDateOperacional(baseDate) {
   const T2_TOLERANCIA = 20;
   const T1_START = 5 * 60 + 25;   // 05:25
   const T2_START = 13 * 60 + 20;  // 13:20
-  const T3_START = 20 * 60 + 50;       // 20:50
+  const T3_START = 20 * 60 + 50;  // 20:50
+
+  // T3 termina às 06:20 — qualquer batimento antes disso ainda pertence ao T3 da noite anterior
+  const T3_END = 6 * 60 + 20; // 06:20
 
   let turnoAtual;
 
@@ -33,10 +36,12 @@ function getDateOperacional(baseDate) {
     turnoAtual = "T3";
   }
 
-  // 🔑 REGRA CORRETA DO DIA OPERACIONAL
-  // Se for T3 e ainda não chegou 05:25 → dia operacional = ontem
+  // 🔑 REGRA DO DIA OPERACIONAL
+  // Se for T3 e ainda não chegou 06:20 (fim do turno) → dia operacional = ontem
+  // Isso garante que saídas na madrugada (ex: 05:52) sejam vinculadas à entrada da noite anterior
+  // Nota: T1 tem tolerância a partir das 05:00 — se já é T1, não recua o dia mesmo que < 06:20
   const diaOperacional =
-    turnoAtual === "T3" && minutosTotais < T1_START
+    turnoAtual === "T3" && minutosTotais < T3_END
       ? addDays(d, -1)
       : d;
 

@@ -166,16 +166,17 @@ model Cargo {
 }
 
 model Estacao {
-  idEstacao     Int           @id @default(autoincrement()) @map("id_estacao")
-  nomeEstacao   String        @unique @map("nome_estacao") @db.VarChar(100)
-  localizacao   String?       @db.VarChar(200)
-  capacidade    Int?
-  ativo         Boolean       @default(true)
-  dataCriacao   DateTime      @default(now()) @map("data_criacao")
-  idRegional    Int?          @map("id_regional")
-  colaboradores Colaborador[]
-  users         User[]
-  regional      Regional?     @relation(fields: [idRegional], references: [idRegional], onUpdate: NoAction, map: "fk_estacao_regional")
+  idEstacao              Int           @id @default(autoincrement()) @map("id_estacao")
+  nomeEstacao            String        @unique @map("nome_estacao") @db.VarChar(100)
+  localizacao            String?       @db.VarChar(200)
+  capacidade             Int?
+  ativo                  Boolean       @default(true)
+  dataCriacao            DateTime      @default(now()) @map("data_criacao")
+  idRegional             Int?          @map("id_regional")
+  sheetsMetaProducaoId   String?       @map("sheets_meta_producao_id") @db.VarChar(200)
+  colaboradores          Colaborador[]
+  users                  User[]
+  regional               Regional?     @relation(fields: [idRegional], references: [idRegional], onUpdate: NoAction, map: "fk_estacao_regional")
 
   @@index([idRegional], map: "idx_estacao_id_regional")
   @@map("estacao")

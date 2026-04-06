@@ -74,7 +74,11 @@ export default function EditarPresencaModal({
   useEffect(() => {
     if (!open) return;
 
-    setStatus(registro?.status || "");
+    // Se o registro tem entrada mas status é "-" ou vazio, infere "P"
+    const statusInicial = registro?.status && registro.status !== "-"
+      ? registro.status
+      : (registro?.entrada ? "P" : "");
+    setStatus(statusInicial);
     setHoraEntrada(toHHMM(registro?.entrada));
     setHoraSaida(toHHMM(registro?.saida));
     setJustificativa("");
@@ -97,6 +101,11 @@ export default function EditarPresencaModal({
   const permiteHorario = STATUS_COM_HORARIO.includes(status);
 
   async function handleSave() {
+    if (!status) {
+      alert("Status é obrigatório");
+      return;
+    }
+
     if (!justificativa) {
       alert("Justificativa é obrigatória");
       return;

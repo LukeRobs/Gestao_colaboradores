@@ -140,7 +140,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
           </div>
 
           {/* AÇÕES */}
-          {permissions.isAdmin && (
+          {(permissions.isAdmin || permissions.isAltaGestao) && (
             <div className="flex gap-3">
               <ActionButton
                 icon={<Pencil size={16} />}
@@ -154,12 +154,14 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                 onClick={() => navigate(`/colaboradores/${opsId}/movimentar`)}
               />
 
-              <ActionButton
-                icon={<Trash2 size={16} />}
-                label="Excluir"
-                danger
-                onClick={handleDelete}
-              />
+              {permissions.isAdmin && (
+                <ActionButton
+                  icon={<Trash2 size={16} />}
+                  label="Excluir"
+                  danger
+                  onClick={handleDelete}
+                />
+              )}
             </div>
           )}
 

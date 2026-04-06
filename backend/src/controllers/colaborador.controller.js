@@ -11,6 +11,7 @@ const {
   notFoundResponse,
   paginatedResponse,
   errorResponse,
+  forbiddenResponse,
 } = require("../utils/response");
 const { gerarDSRBackfillColaborador, gerarDSRFuturoColaborador, gerarOnboardingColaborador } = require("../services/dsrBackfill.service");
 
@@ -482,6 +483,9 @@ const createColaborador = async (req, res) => {
        DATA COLABORADOR
     =============================== */
 
+    // Estação: usa a do dbContext (estação selecionada pelo ADMIN ou fixada para ALTA_GESTAO)
+    const idEstacaoFinal = req.dbContext?.estacaoId ?? null;
+
     const data = {
       opsId,
       nomeCompleto,
@@ -495,6 +499,10 @@ const createColaborador = async (req, res) => {
       dataAdmissao: dataAdmissaoDate,
       horarioInicioJornada: horario,
       status: status || "ATIVO",
+
+      ...(idEstacaoFinal
+        ? { estacao: { connect: { idEstacao: idEstacaoFinal } } }
+        : {}),
 
       ...(idEmpresa
         ? { empresa: { connect: { idEmpresa: Number(idEmpresa) } } }
@@ -619,6 +627,17 @@ const updateColaborador = async (req, res) => {
   }
 
   try {
+    // Isolamento por estação: ALTA_GESTAO só edita colaboradores da sua estação
+    if (!req.dbContext?.isGlobal && req.dbContext?.estacaoId) {
+      const col = await prisma.colaborador.findUnique({
+        where: { opsId },
+        select: { idEstacao: true },
+      });
+      if (!col) return notFoundResponse(res, "Colaborador não encontrado");
+      if (col.idEstacao !== req.dbContext.estacaoId) {
+        return forbiddenResponse(res, "Colaborador não pertence à sua estação");
+      }
+    }
     const {
       nomeCompleto,
       cpf,
@@ -877,6 +896,13 @@ const movimentarColaborador = async (req, res) => {
 
   const atual = await prisma.colaborador.findUnique({ where: { opsId } });
   if (!atual) return notFoundResponse(res, "Colaborador não encontrado");
+
+  // Isolamento por estação: ALTA_GESTAO só movimenta colaboradores da sua estação
+  if (!req.dbContext?.isGlobal && req.dbContext?.estacaoId) {
+    if (atual.idEstacao !== req.dbContext.estacaoId) {
+      return forbiddenResponse(res, "Colaborador não pertence à sua estação");
+    }
+  }
 
   await prisma.$transaction([
     prisma.historicoMovimentacao.create({

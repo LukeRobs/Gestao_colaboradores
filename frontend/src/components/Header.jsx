@@ -63,7 +63,7 @@ export default function Header({ onMenuClick }) {
       {/* ================= DIREITA ================= */}
       <div className="flex items-center gap-2 sm:gap-3">
 
-        {/* SELETOR DE ESTAÇÃO (só para ADMIN e ALTA_GESTAO) */}
+        {/* SELETOR DE ESTAÇÃO (só para ADMIN) */}
         <EstacaoSelector />
 
         {/* TOGGLE TEMA */}

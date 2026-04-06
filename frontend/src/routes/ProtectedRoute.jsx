@@ -2,26 +2,23 @@ import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
-export default function ProtectedRoute({ children, roles }) {
+export default function ProtectedRoute({ children, roles, excludeEstacoes }) {
   const { isAuthenticated, user, isLoadingAuth } = useContext(AuthContext);
 
-  // 🔄 Aguarda restaurar sessão
-  if (isLoadingAuth) {
-    return null; // ou spinner
-  }
+  if (isLoadingAuth) return null;
 
-  // ❌ Não autenticado
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  // 🔐 Controle de role
   if (roles && roles.length > 0) {
     if (!user || !roles.includes(user.role)) {
       return <Navigate to="/dashboard/operacional" replace />;
     }
   }
 
-  // ✅ Autorizado
+  // Bloqueia acesso para estações específicas
+  if (excludeEstacoes && user?.idEstacao && excludeEstacoes.includes(user.idEstacao)) {
+    return <Navigate to="/dashboard/operacional" replace />;
+  }
+
   return children;
 }
