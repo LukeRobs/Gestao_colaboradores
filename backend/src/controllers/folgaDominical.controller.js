@@ -54,10 +54,15 @@ async function gerar(req, res) {
       });
     }
 
+    const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+      ? req.dbContext.estacaoId
+      : null;
+
     const resultado = await gerarFolgaDominical({
       ano: parsed.anoNum,
       mes: parsed.mesNum,
       userId,
+      estacaoId,
     });
 
     return res.status(200).json({
@@ -192,6 +197,9 @@ async function deletar(req, res) {
     const resultado = await deletarFolgaDominical({
       ano: parsed.anoNum,
       mes: parsed.mesNum,
+      estacaoId: (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+        ? req.dbContext.estacaoId
+        : null,
     });
 
     return res.status(200).json({
@@ -249,6 +257,9 @@ async function preview(req, res) {
     const resultado = await previewFolgaDominical({
       ano: parsed.anoNum,
       mes: parsed.mesNum,
+      estacaoId: (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+        ? req.dbContext.estacaoId
+        : null,
     });
 
     return res.status(200).json({

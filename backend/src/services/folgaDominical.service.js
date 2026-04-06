@@ -223,7 +223,7 @@ function mapearUltimaFolgaAnterior(registros) {
 /* =====================================================
    CONTEXTO DE PLANEJAMENTO
 ===================================================== */
-async function carregarContextoPlanejamento({ ano, mes }) {
+async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
   if (!ano || !mes) throw new Error("Ano e mês são obrigatórios.");
 
   const domingos = getDomingosDoMes(ano, mes);
@@ -234,23 +234,20 @@ async function carregarContextoPlanejamento({ ano, mes }) {
 
   const primeiroDomingoMes = domingos[0];
 
+  const estacaoFilter = estacaoId ? { idEstacao: estacaoId } : {};
+
   /* =====================================================
      1) TOTAL DE ATIVOS POR TURNO
   ===================================================== */
   const ativosPorTurno = await prisma.colaborador.findMany({
     where: {
       status: "ATIVO",
-      turno: {
-        nomeTurno: { in: ["T1", "T2", "T3"] },
-      },
+      ...estacaoFilter,
+      turno: { nomeTurno: { in: ["T1", "T2", "T3"] } },
     },
     select: {
       opsId: true,
-      turno: {
-        select: {
-          nomeTurno: true,
-        },
-      },
+      turno: { select: { nomeTurno: true } },
     },
   });
 
@@ -271,6 +268,7 @@ async function carregarContextoPlanejamento({ ano, mes }) {
   const elegiveis = await prisma.colaborador.findMany({
     where: {
       status: "ATIVO",
+      ...estacaoFilter,
       escala: {
         nomeEscala: { in: ["B", "C", "G"] },
         ativo: true,
@@ -568,7 +566,7 @@ function montarPlanejamento({
 /* =====================================================
    GERAR FOLGA DOMINICAL
 ===================================================== */
-async function gerarFolgaDominical({ ano, mes, userId }) {
+async function gerarFolgaDominical({ ano, mes, userId, estacaoId = null }) {
   if (!ano || !mes) throw new Error("Ano e mês são obrigatórios.");
   if (!userId) throw new Error("Usuário não autenticado.");
 
@@ -579,10 +577,8 @@ async function gerarFolgaDominical({ ano, mes, userId }) {
     where: {
       idTipoAusencia: DSR_ID,
       justificativa: JUSTIFICATIVA_AUTO,
-      dataReferencia: {
-        gte: inicio,
-        lte: fim,
-      },
+      dataReferencia: { gte: inicio, lte: fim },
+      ...(estacaoId && { colaborador: { idEstacao: estacaoId } }),
     },
   });
 
@@ -597,7 +593,7 @@ async function gerarFolgaDominical({ ano, mes, userId }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
-  } = await carregarContextoPlanejamento({ ano, mes });
+  } = await carregarContextoPlanejamento({ ano, mes, estacaoId });
 
   const {
     planejamentos,
@@ -791,7 +787,7 @@ async function listarFolgaDominical({ ano, mes, estacaoId = null }) {
 /* =====================================================
    DELETAR FOLGA DOMINICAL
 ===================================================== */
-async function deletarFolgaDominical({ ano, mes }) {
+async function deletarFolgaDominical({ ano, mes, estacaoId = null }) {
   if (!ano || !mes) throw new Error("Ano e mês são obrigatórios.");
 
   const inicio = new Date(ano, mes - 1, 1);
@@ -801,10 +797,8 @@ async function deletarFolgaDominical({ ano, mes }) {
     where: {
       idTipoAusencia: DSR_ID,
       justificativa: JUSTIFICATIVA_AUTO,
-      dataReferencia: {
-        gte: inicio,
-        lte: fim,
-      },
+      dataReferencia: { gte: inicio, lte: fim },
+      ...(estacaoId && { colaborador: { idEstacao: estacaoId } }),
     },
     data: {
       idTipoAusencia: null,
@@ -824,7 +818,7 @@ async function deletarFolgaDominical({ ano, mes }) {
 /* =====================================================
    PREVIEW FOLGA DOMINICAL
 ===================================================== */
-async function previewFolgaDominical({ ano, mes }) {
+async function previewFolgaDominical({ ano, mes, estacaoId = null }) {
   if (!ano || !mes) throw new Error("Ano e mês são obrigatórios.");
 
   const {
@@ -833,7 +827,7 @@ async function previewFolgaDominical({ ano, mes }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
-  } = await carregarContextoPlanejamento({ ano, mes });
+  } = await carregarContextoPlanejamento({ ano, mes, estacaoId });
 
   const {
     planejamentos,

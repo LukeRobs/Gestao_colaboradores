@@ -5,21 +5,21 @@ const controller = require("../controllers/folgaDominical.controller");
 const { authorizeRoles } = require("../middlewares/authorizeRoles");
 
 /* =====================================================
-   👀 LISTAR → ADMIN + LIDERANCA
+   👀 LISTAR → ADMIN + ALTA_GESTAO + LIDERANCA
 ===================================================== */
 router.get(
   "/",
-  authorizeRoles("ADMIN", "LIDERANCA"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   controller.listar
 );
 
 /* =====================================================
-  PREVIEW → ADMIN + LIDERANCA
+  PREVIEW → ADMIN + ALTA_GESTAO + LIDERANCA
   (simulação sem salvar)
 ===================================================== */
 router.post(
   "/preview",
-  authorizeRoles("ADMIN", "LIDERANCA"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   controller.preview
 );
 

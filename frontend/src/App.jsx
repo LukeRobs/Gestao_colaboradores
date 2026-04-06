@@ -148,7 +148,7 @@ export default function App() {
       <Route
         path="/dashboard/gestao-operacional"
         element={
-          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]}>
+          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} onlyEstacoes={[1]}>
             <GestaoOperacional />
           </ProtectedRoute>
         }
@@ -157,7 +157,7 @@ export default function App() {
       <Route
         path="/dashboard/produtividade-colaborador"
         element={
-          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA", "OPERACAO"]}>
+          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA", "OPERACAO"]} onlyEstacoes={[1]}>
             <ProdutividadeColaborador />
           </ProtectedRoute>
         }
@@ -419,7 +419,7 @@ export default function App() {
       <Route
         path="/spi"
         element={
-          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} excludeEstacoes={[2]}>
+          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} onlyEstacoes={[1]}>
             <SPI />
           </ProtectedRoute>
         }

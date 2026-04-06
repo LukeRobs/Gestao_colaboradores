@@ -19,6 +19,16 @@ const getAllSetores = async (req, res) => {
   const skip = (Number(page) - 1) * Number(limit);
   const take = Number(limit);
 
+  // Filtro de estação: ADMIN global vê tudo, demais só a sua estação
+  const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    ? req.dbContext.estacaoId
+    : null;
+
+  const colaboradoresWhere = {
+    status: 'ATIVO',
+    ...(estacaoId ? { idEstacao: estacaoId } : {}),
+  };
+
   const where = {};
 
   if (search) {
@@ -27,6 +37,11 @@ const getAllSetores = async (req, res) => {
 
   if (ativo !== undefined) {
     where.ativo = ativo === 'true';
+  }
+
+  // Se filtrado por estação, só retorna setores que tenham ao menos 1 colaborador ativo nela
+  if (estacaoId) {
+    where.colaboradores = { some: colaboradoresWhere };
   }
 
   const [setores, total] = await Promise.all([
@@ -38,9 +53,7 @@ const getAllSetores = async (req, res) => {
       include: {
         _count: {
           select: {
-            colaboradores: {
-              where: { status: 'ATIVO' }, // 🔥 conta só ativos
-            },
+            colaboradores: { where: colaboradoresWhere },
           },
         },
       },
@@ -48,7 +61,6 @@ const getAllSetores = async (req, res) => {
     prisma.setor.count({ where }),
   ]);
 
-  // 🔥 Normaliza resposta (igual Empresas)
   const data = setores.map((s) => ({
     idSetor: s.idSetor,
     nomeSetor: s.nomeSetor,
@@ -68,11 +80,20 @@ const getAllSetores = async (req, res) => {
 const getSetorById = async (req, res) => {
   const { id } = req.params;
 
+  const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    ? req.dbContext.estacaoId
+    : null;
+
+  const colaboradoresWhere = {
+    status: 'ATIVO',
+    ...(estacaoId ? { idEstacao: estacaoId } : {}),
+  };
+
   const setor = await prisma.setor.findUnique({
     where: { idSetor: Number(id) },
     include: {
       colaboradores: {
-        where: { status: 'ATIVO' },
+        where: colaboradoresWhere,
         select: {
           opsId: true,
           nomeCompleto: true,
@@ -82,9 +103,7 @@ const getSetorById = async (req, res) => {
       },
       _count: {
         select: {
-          colaboradores: {
-            where: { status: 'ATIVO' },
-          },
+          colaboradores: { where: colaboradoresWhere },
         },
       },
     },
