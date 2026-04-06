@@ -118,8 +118,12 @@ export default function SetoresPage() {
                 }}
                 onDelete={async (s) => {
                   if (!window.confirm(`Excluir ${s.nomeSetor}?`)) return;
-                  await SetoresAPI.excluir(s.idSetor);
-                  load();
+                  try {
+                    await SetoresAPI.excluir(s.idSetor);
+                    load();
+                  } catch (err) {
+                    alert(err?.response?.data?.message || "Erro ao excluir setor");
+                  }
                 }}
               />
             )}
@@ -133,13 +137,18 @@ export default function SetoresPage() {
           setor={selected}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
-            if (selected) {
-              await SetoresAPI.atualizar(selected.idSetor, data);
-            } else {
-              await SetoresAPI.criar(data);
+            try {
+              if (selected) {
+                await SetoresAPI.atualizar(selected.idSetor, data);
+              } else {
+                await SetoresAPI.criar(data);
+              }
+              setModalOpen(false);
+              load();
+            } catch (err) {
+              console.error("Erro ao salvar setor:", err);
+              alert(err?.response?.data?.message || "Erro ao salvar setor");
             }
-            setModalOpen(false);
-            load();
           }}
         />
       )}

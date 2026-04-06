@@ -1,13 +1,9 @@
 import { X } from "lucide-react";
 import { useState, useEffect } from "react";
-import api from "../services/api";
 
 export default function RegionalModal({ regional, onClose, onSave }) {
-  const [empresas, setEmpresas] = useState([]);
-
   const [form, setForm] = useState(() => ({
     nome: regional?.nome || "",
-    idEmpresa: regional?.idEmpresa || "",
   }));
 
   /* ================= BLOQUEIA SCROLL BODY ================= */
@@ -18,24 +14,7 @@ export default function RegionalModal({ regional, onClose, onSave }) {
     };
   }, []);
 
-  /* ================= LOAD EMPRESAS ================= */
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      try {
-        const res = await api.get("/empresas");
-        if (!active) return;
-        setEmpresas(res.data.data || res.data);
-      } catch (err) {
-        console.error("Erro ao carregar empresas", err);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [saving, setSaving] = useState(false);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -43,8 +22,13 @@ export default function RegionalModal({ regional, onClose, onSave }) {
   }
 
   async function handleSave() {
-    if (!form.nome || !form.idEmpresa) return;
-    await onSave(form);
+    if (!form.nome) return;
+    setSaving(true);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -59,7 +43,7 @@ export default function RegionalModal({ regional, onClose, onSave }) {
       {/* Modal */}
       <div
         className="
-          relative
+          relative z-10
           w-full
           max-w-lg
           max-h-[92vh]
@@ -92,16 +76,6 @@ export default function RegionalModal({ regional, onClose, onSave }) {
             value={form.nome}
             onChange={handleChange}
           />
-
-          <Select
-            label="Empresa"
-            name="idEmpresa"
-            value={form.idEmpresa}
-            onChange={handleChange}
-            options={empresas}
-            labelKey="razaoSocial"
-            valueKey="idEmpresa"
-          />
         </div>
 
         {/* FOOTER */}
@@ -115,9 +89,10 @@ export default function RegionalModal({ regional, onClose, onSave }) {
 
           <button
             onClick={handleSave}
-            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#FA4C00]"
+            disabled={saving || !form.nome}
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#FA4C00] disabled:opacity-50"
           >
-            Salvar
+            {saving ? "Salvando..." : "Salvar"}
           </button>
         </div>
       </div>
@@ -143,32 +118,6 @@ function Input({ label, ...props }) {
           focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
         "
       />
-    </div>
-  );
-}
-
-function Select({ label, options, labelKey, valueKey, ...props }) {
-  return (
-    <div>
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
-      <select
-        {...props}
-        className="
-          w-full mt-1
-          px-3 sm:px-4 py-2.5
-          bg-[#2A2A2C]
-          border border-[#3D3D40]
-          rounded-xl
-          text-white text-sm
-        "
-      >
-        <option value="">Selecione</option>
-        {options.map((o) => (
-          <option key={o[valueKey]} value={o[valueKey]}>
-            {o[labelKey]}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

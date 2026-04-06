@@ -120,15 +120,13 @@ export default function EmpresasPage() {
                   setModalOpen(true);
                 }}
                 onDelete={async (empresa) => {
-                  if (
-                    !window.confirm(
-                      `Deseja excluir a empresa "${empresa.razaoSocial}"?`
-                    )
-                  )
-                    return;
-
-                  await EmpresasAPI.excluir(empresa.idEmpresa);
-                  load();
+                  if (!window.confirm(`Deseja excluir a empresa "${empresa.razaoSocial}"?`)) return;
+                  try {
+                    await EmpresasAPI.excluir(empresa.idEmpresa);
+                    load();
+                  } catch (err) {
+                    alert(err?.response?.data?.message || "Erro ao excluir empresa");
+                  }
                 }}
               />
             )}
@@ -142,13 +140,17 @@ export default function EmpresasPage() {
           empresa={selected}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
-            if (selected) {
-              await EmpresasAPI.atualizar(selected.idEmpresa, data);
-            } else {
-              await EmpresasAPI.criar(data);
+            try {
+              if (selected) {
+                await EmpresasAPI.atualizar(selected.idEmpresa, data);
+              } else {
+                await EmpresasAPI.criar(data);
+              }
+              setModalOpen(false);
+              load();
+            } catch (err) {
+              alert(err?.response?.data?.message || "Erro ao salvar empresa");
             }
-            setModalOpen(false);
-            load();
           }}
         />
       )}

@@ -107,15 +107,13 @@ export default function EstacoesPage() {
                   setModalOpen(true);
                 }}
                 onDelete={async (estacao) => {
-                  if (
-                    !window.confirm(
-                      `Deseja excluir a estação "${estacao.nome}"?`
-                    )
-                  )
-                    return;
-
-                  await EstacoesAPI.excluir(estacao.idEstacao);
-                  load();
+                  if (!window.confirm(`Deseja excluir a estação "${estacao.nomeEstacao || estacao.nome}"?`)) return;
+                  try {
+                    await EstacoesAPI.excluir(estacao.idEstacao);
+                    load();
+                  } catch (err) {
+                    alert(err?.response?.data?.message || "Erro ao excluir estação");
+                  }
                 }}
               />
             )}
@@ -128,18 +126,22 @@ export default function EstacoesPage() {
           estacao={selected}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
-            const payload = {
-              nomeEstacao: data.nome,
-              idRegional: data.idRegional ? Number(data.idRegional) : undefined,
-              sheetsMetaProducaoId: data.sheetsMetaProducaoId || null,
-            };
-            if (selected) {
-              await EstacoesAPI.atualizar(selected.idEstacao, payload);
-            } else {
-              await EstacoesAPI.criar(payload);
+            try {
+              const payload = {
+                nomeEstacao: data.nome,
+                idRegional: data.idRegional ? Number(data.idRegional) : undefined,
+                sheetsMetaProducaoId: data.sheetsMetaProducaoId || null,
+              };
+              if (selected) {
+                await EstacoesAPI.atualizar(selected.idEstacao, payload);
+              } else {
+                await EstacoesAPI.criar(payload);
+              }
+              setModalOpen(false);
+              load();
+            } catch (err) {
+              alert(err?.response?.data?.message || "Erro ao salvar estação");
             }
-            setModalOpen(false);
-            load();
           }}
         />
       )}

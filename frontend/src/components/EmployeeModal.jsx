@@ -54,7 +54,7 @@ export default function EmployeeModal({ employee, onClose, onSave }) {
       {/* MODAL */}
       <div
         className="
-          relative
+          relative z-10
           w-full
           max-w-5xl
           max-h-[92vh]

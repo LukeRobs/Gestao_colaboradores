@@ -22,9 +22,17 @@ const getAllEmpresas = async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);
 
-  // Construindo filtros
+  const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    ? req.dbContext.estacaoId
+    : null;
+
+  const colaboradoresWhere = {
+    status: 'ATIVO',
+    ...(estacaoId ? { idEstacao: estacaoId } : {}),
+  };
+
   const where = {};
-  
+
   if (search) {
     where.OR = [
       { razaoSocial: { contains: search, mode: 'insensitive' } },
@@ -45,7 +53,7 @@ const getAllEmpresas = async (req, res) => {
       include: {
         _count: {
           select: {
-            colaboradores: true,
+            colaboradores: { where: colaboradoresWhere },
             contratos: true,
           },
         },
@@ -161,10 +169,15 @@ const deleteEmpresa = async (req, res) => {
     return notFoundResponse(res, 'Empresa não encontrada');
   }
 
-  await prisma.empresa.delete({
-    where: { idEmpresa: parseInt(id) },
-  });
+  const total = await prisma.colaborador.count({ where: { idEmpresa: parseInt(id) } });
+  if (total > 0) {
+    return res.status(409).json({
+      success: false,
+      message: `Não é possível excluir esta empresa pois ela possui ${total} colaborador(es) vinculado(s).`,
+    });
+  }
 
+  await prisma.empresa.delete({ where: { idEmpresa: parseInt(id) } });
   return deletedResponse(res, 'Empresa excluída com sucesso');
 };
 

@@ -108,15 +108,13 @@ export default function RegionaisPage() {
                   setModalOpen(true);
                 }}
                 onDelete={async (regional) => {
-                  if (
-                    !window.confirm(
-                      `Deseja excluir a regional "${regional.nome}"?`
-                    )
-                  )
-                    return;
-
-                  await RegionaisAPI.excluir(regional.idRegional);
-                  load();
+                  if (!window.confirm(`Deseja excluir a regional "${regional.nome}"?`)) return;
+                  try {
+                    await RegionaisAPI.excluir(regional.idRegional);
+                    load();
+                  } catch (err) {
+                    alert(err?.response?.data?.message || "Erro ao excluir regional");
+                  }
                 }}
               />
             )}
@@ -129,13 +127,17 @@ export default function RegionaisPage() {
           regional={selected}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
-            if (selected) {
-              await RegionaisAPI.atualizar(selected.idRegional, data);
-            } else {
-              await RegionaisAPI.criar(data);
+            try {
+              if (selected) {
+                await RegionaisAPI.atualizar(selected.idRegional, data);
+              } else {
+                await RegionaisAPI.criar(data);
+              }
+              setModalOpen(false);
+              load();
+            } catch (err) {
+              alert(err?.response?.data?.message || "Erro ao salvar regional");
             }
-            setModalOpen(false);
-            load();
           }}
         />
       )}

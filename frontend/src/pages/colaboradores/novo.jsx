@@ -90,8 +90,19 @@ export default function NovoColaborador() {
     await api.post("/colaboradores", form);
     navigate("/colaboradores");
   } catch (err) {
-    console.error(err);
-    alert("Erro ao salvar colaborador");
+    console.error("ERRO COMPLETO:", err);
+    console.error("RESPONSE DATA:", err?.response?.data);
+
+    const data = err?.response?.data;
+    const msg =
+      data?.message ||
+      data?.error ||
+      (typeof data === "string" ? data : null) ||
+      err?.message ||
+      "Erro ao salvar colaborador";
+
+    const status = err?.response?.status ? ` (${err.response.status})` : "";
+    alert(`Erro ao salvar colaborador${status}:\n${msg}`);
   }
 }
 

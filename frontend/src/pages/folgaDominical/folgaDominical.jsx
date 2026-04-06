@@ -338,6 +338,7 @@ export default function FolgaDominicalPage() {
   const { user }  = useContext(AuthContext);
 
   const isAdmin     = user?.role === "ADMIN";
+  const isAltaGestao = user?.role === "ALTA_GESTAO";
   const isLideranca = user?.role === "LIDERANCA";
   const atual       = getMesAtual();
 
@@ -381,7 +382,7 @@ export default function FolgaDominicalPage() {
 
   /* ── actions ────────────────────────────────── */
   async function gerar() {
-    if (!isAdmin) return;
+    if (!isAdmin && !isAltaGestao) return;
     if (previewInvalido) { setErro("Existem colaboradores não alocados na simulação. Ajuste antes de gerar."); return; }
     if (!window.confirm("Deseja gerar o planejamento deste mês?")) return;
     setLoading(true); setErro("");
@@ -391,7 +392,7 @@ export default function FolgaDominicalPage() {
   }
 
   async function reprocessar() {
-    if (!isAdmin) return;
+    if (!isAdmin && !isAltaGestao) return;
     if (!window.confirm("Isso irá remover o planejamento atual e apagar DSRs automáticos.\nDeseja continuar?")) return;
     setLoading(true); setErro("");
     try {
@@ -528,7 +529,7 @@ export default function FolgaDominicalPage() {
               </button>
 
               {/* Simular */}
-              {(isAdmin || isLideranca) && (
+              {(isAdmin || isAltaGestao || isLideranca) && (
                 <button
                   onClick={preview}
                   disabled={previewLoading || loading}
@@ -547,7 +548,7 @@ export default function FolgaDominicalPage() {
               )}
 
               {/* Gerar */}
-              {isAdmin && (
+              {(isAdmin || isAltaGestao) && (
                 <>
                   <button
                     onClick={gerar}

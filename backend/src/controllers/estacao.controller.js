@@ -129,9 +129,33 @@ const atualizarEstacao = async (req, res) => {
   }
 };
 
+/* =====================================================
+   EXCLUIR ESTAÇÃO
+===================================================== */
+const excluirEstacao = async (req, res) => {
+  try {
+    const { idEstacao } = req.params;
+
+    const total = await prisma.colaborador.count({ where: { idEstacao: Number(idEstacao) } });
+    if (total > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Não é possível excluir esta estação pois ela possui ${total} colaborador(es) vinculado(s).`,
+      });
+    }
+
+    await prisma.estacao.delete({ where: { idEstacao: Number(idEstacao) } });
+    return res.json({ success: true, message: "Estação excluída com sucesso" });
+  } catch (error) {
+    console.error("❌ ERRO EXCLUIR ESTAÇÃO:", error);
+    return res.status(500).json({ success: false, message: "Erro ao excluir estação" });
+  }
+};
+
 module.exports = {
   listarEstacoes,
   buscarEstacaoPorId,
   criarEstacao,
   atualizarEstacao,
+  excluirEstacao,
 };

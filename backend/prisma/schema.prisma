@@ -142,14 +142,17 @@ model Empresa {
 
 model Setor {
   idSetor       Int                @id @default(autoincrement()) @map("id_setor")
-  nomeSetor     String             @unique @map("nome_setor") @db.VarChar(100)
+  nomeSetor     String             @map("nome_setor") @db.VarChar(100)
   descricao     String?
   ativo         Boolean            @default(true)
   dataCriacao   DateTime           @default(now()) @map("data_criacao")
+  idEstacao     Int?               @map("id_estacao")
+  estacao       Estacao?           @relation(fields: [idEstacao], references: [idEstacao], onUpdate: NoAction, map: "fk_setor_estacao")
   colaboradores Colaborador[]
   frequencias   Frequencia[]
   treinamentos  TreinamentoSetor[]
 
+  @@index([idEstacao], map: "idx_setor_id_estacao")
   @@map("setor")
 }
 
@@ -176,6 +179,7 @@ model Estacao {
   sheetsMetaProducaoId   String?       @map("sheets_meta_producao_id") @db.VarChar(200)
   colaboradores          Colaborador[]
   users                  User[]
+  setores                Setor[]
   regional               Regional?     @relation(fields: [idRegional], references: [idRegional], onUpdate: NoAction, map: "fk_estacao_regional")
 
   @@index([idRegional], map: "idx_estacao_id_regional")

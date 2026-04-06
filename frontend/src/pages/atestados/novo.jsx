@@ -82,43 +82,54 @@ const [uploading, setUploading] = useState(false);
       setSaving(true);
 
       /* 1️⃣ Presign upload */
+      console.log("1️⃣ Solicitando presign para CPF:", cpfLimpo);
       const presignRes = await api.post(
         "/atestados-medicos/presign-upload",
         { cpf: cpfLimpo }
       );
+      console.log("1️⃣ Presign response:", presignRes.data);
 
       const { uploadUrl, key } = presignRes.data.data;
+      console.log("1️⃣ uploadUrl:", uploadUrl, "key:", key);
 
       /* 2️⃣ Upload direto para o R2 */
       setUploading(true);
+      console.log("2️⃣ Fazendo upload do PDF...");
 
-      const upload = await fetch(uploadUrl, {
+      const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/pdf",
-        },
+        headers: { "Content-Type": "application/pdf" },
         body: file,
       });
 
       setUploading(false);
+      console.log("2️⃣ Upload status:", uploadRes.status, uploadRes.ok);
 
-      if (!upload.ok) {
-        alert("Falha ao enviar o PDF.");
+      if (!uploadRes.ok) {
+        const uploadErr = await uploadRes.text();
+        console.error("2️⃣ Upload falhou:", uploadErr);
+        alert(`Falha ao enviar o PDF (${uploadRes.status}): ${uploadErr}`);
         return;
       }
 
       /* 3️⃣ Criação do atestado */
-      await api.post("/atestados-medicos", {
+      const payload = {
         ...form,
         cpf: cpfLimpo,
         diasAfastamento,
         documentoKey: key,
-      });
+      };
+      console.log("3️⃣ Criando atestado com payload:", payload);
+
+      const createRes = await api.post("/atestados-medicos", payload);
+      console.log("3️⃣ Atestado criado:", createRes.data);
 
       navigate("/atestados");
     } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar atestado médico.");
+      console.error("❌ ERRO COMPLETO:", err);
+      console.error("❌ RESPONSE DATA:", err?.response?.data);
+      const msg = err?.response?.data?.message || err?.message || "Erro ao salvar atestado médico.";
+      alert(`Erro: ${msg}`);
     } finally {
       setUploading(false);
       setSaving(false);

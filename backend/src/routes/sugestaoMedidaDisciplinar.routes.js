@@ -9,67 +9,67 @@ const { authorizeRoles } = require("../middlewares/authorizeRoles");
 ===================================================== */
 router.get(
   "/contadores",
-  authorizeRoles("ADMIN", "LIDERANCA"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   controller.getContadores
 );
 
 /* =====================================================
    LISTAR SUGESTÕES
-   ADMIN e LIDERANÇA podem visualizar
+   ADMIN, ALTA_GESTAO e LIDERANÇA podem visualizar
 ===================================================== */
 router.get(
   "/",
-  authorizeRoles("ADMIN", "LIDERANCA"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   controller.getAllSugestoes
 );
 
 /* =====================================================
    CRIAR SUGESTÃO MANUAL
-   Apenas ADMIN
+   ADMIN e ALTA_GESTAO
 ===================================================== */
 router.post(
   "/",
-  authorizeRoles("ADMIN"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO"),
   controller.createSugestao
 );
 
 /* =====================================================
    APROVAR SUGESTÃO
-   ADMIN e LIDERANÇA
+   ADMIN, ALTA_GESTAO e LIDERANÇA
 ===================================================== */
 router.post(
   "/:id/aprovar",
-  authorizeRoles("ADMIN", "LIDERANCA"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   controller.aprovarSugestao
 );
 
 /* =====================================================
    REJEITAR SUGESTÃO
-   ADMIN e LIDERANÇA
+   ADMIN, ALTA_GESTAO e LIDERANÇA
 ===================================================== */
 router.post(
   "/:id/rejeitar",
-  authorizeRoles("ADMIN", "LIDERANCA"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   controller.rejeitarSugestao
 );
 
 /* =====================================================
    BACKFILL — processar datas passadas
-   Apenas ADMIN
+   ADMIN e ALTA_GESTAO
 ===================================================== */
 router.post(
   "/backfill",
-  authorizeRoles("ADMIN"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO"),
   controller.backfillFaltas
 );
 
 /* =====================================================
    BACKFILL ONBOARDING — gera ON para colaboradores sem ON
-   Apenas ADMIN
+   ADMIN e ALTA_GESTAO
 ===================================================== */
 router.post(
   "/backfill-onboarding",
-  authorizeRoles("ADMIN"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO"),
   controller.backfillOnboarding
 );
 

@@ -57,11 +57,11 @@ function isDiaDSR(data, nomeEscala) {
  * @param {string} dataFim    - YYYY-MM-DD (inclusive)
  * @returns {object} resumo da execução
  */
-async function detectarFaltasAutomatico(dataInicio, dataFim) {
+async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
   const inicio = startOfDay(new Date(dataInicio));
   const fim = startOfDay(new Date(dataFim));
 
-  console.log(`\n🔍 [DETECTOR FALTAS] Processando ${dataInicio} → ${dataFim}`);
+  console.log(`\n🔍 [DETECTOR FALTAS] Processando ${dataInicio} → ${dataFim}${estacaoId ? ` | estação ${estacaoId}` : " | todas as estações"}`);
 
   /* =====================================================
      BUSCAR TIPO "F"
@@ -81,6 +81,7 @@ async function detectarFaltasAutomatico(dataInicio, dataFim) {
       status: "ATIVO",
       dataDesligamento: null,
       cargo: { nomeCargo: { in: CARGOS_OPERACIONAIS } },
+      ...(estacaoId ? { idEstacao: estacaoId } : {}),
     },
     include: {
       escala: true,

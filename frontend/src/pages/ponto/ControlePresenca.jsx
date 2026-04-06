@@ -12,7 +12,7 @@ import PresencaModal from "../../components/ponto/EditarPresencaModal";
 export default function ControlePresenca() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { permissions } = useContext(AuthContext);
-  const isAdmin = permissions?.isAdmin ?? false;
+  const isAdmin = (permissions?.isAdmin || permissions?.isAltaGestao) ?? false;
 
   /* ================== FILTROS ================== */
   const hoje = new Date();

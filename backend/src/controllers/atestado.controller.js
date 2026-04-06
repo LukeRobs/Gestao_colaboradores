@@ -193,6 +193,10 @@ const presignDownload = async (req, res) => {
 ===================================================== */
 const createAtestado = async (req, res) => {
   try {
+    console.log("📋 CREATE ATESTADO - body:", JSON.stringify(req.body));
+    console.log("📋 CREATE ATESTADO - dbContext:", JSON.stringify(req.dbContext));
+    console.log("📋 CREATE ATESTADO - user:", req.user?.opsId, req.user?.role);
+
     const {
       cpf,
       dataInicio,
@@ -204,6 +208,7 @@ const createAtestado = async (req, res) => {
     } = req.body;
 
     if (!cpf || !dataInicio || !dataFim || !documentoKey) {
+      console.log("❌ Campos obrigatórios faltando:", { cpf: !!cpf, dataInicio: !!dataInicio, dataFim: !!dataFim, documentoKey: !!documentoKey });
       return errorResponse(
         res,
         "CPF, datas e documento PDF são obrigatórios",
@@ -217,10 +222,14 @@ const createAtestado = async (req, res) => {
       return errorResponse(res, "CPF inválido", 400);
     }
 
+    console.log("🔍 Buscando colaborador com CPF:", cpfLimpo);
+
     const colaborador = await prisma.colaborador.findFirst({
       where: { cpf: cpfLimpo },
       include: { escala: { select: { nomeEscala: true } } },
     });
+
+    console.log("👤 Colaborador encontrado:", colaborador ? `${colaborador.opsId} - ${colaborador.nomeCompleto}` : "NÃO ENCONTRADO");
 
     if (!colaborador) {
       return notFoundResponse(res, "Colaborador não encontrado");
@@ -234,15 +243,12 @@ const createAtestado = async (req, res) => {
         ? Number(diasAfastamento)
         : calcDias(dataInicio, dataFim);
 
+    console.log("📅 Datas:", { dataInicio, dataFim, dias });
+
     const inicio = dateOnlyBrasil(dataInicio);
     const fim = dateOnlyBrasil(dataFim);
 
-    if (dias >= 16) {
-      await tx.colaborador.update({
-        where: { opsId },
-        data: { status: "AFASTADO" }
-      });
-    }
+    console.log("📅 Datas convertidas:", { inicio, fim });
 
     /* ============================================
        🔥 TRANSACTION — cria atestado + ajusta frequência
@@ -260,6 +266,13 @@ const createAtestado = async (req, res) => {
           status: "ATIVO",
         },
       });
+
+      if (dias >= 16) {
+        await tx.colaborador.update({
+          where: { opsId },
+          data: { status: "AFASTADO" },
+        });
+      }
 
       // 🔁 Atualiza frequência dia a dia (preserva DSR)
       let current = new Date(inicio);
@@ -315,8 +328,10 @@ const createAtestado = async (req, res) => {
 
     return createdResponse(res, resultado, "Atestado criado com sucesso");
   } catch (err) {
-    console.error("❌ CREATE ATESTADO:", err);
-    return errorResponse(res, "Erro ao criar atestado", 500);
+    console.error("❌ CREATE ATESTADO - código:", err?.code);
+    console.error("❌ CREATE ATESTADO - mensagem:", err?.message);
+    console.error("❌ CREATE ATESTADO - stack:", err?.stack);
+    return errorResponse(res, err?.message || "Erro ao criar atestado", 500);
   }
 };
 

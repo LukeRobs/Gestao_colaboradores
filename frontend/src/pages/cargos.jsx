@@ -117,8 +117,12 @@ export default function CargosPage() {
                 }}
                 onDelete={async (c) => {
                   if (!window.confirm(`Excluir ${c.nomeCargo}?`)) return;
-                  await CargosAPI.excluir(c.idCargo);
-                  load();
+                  try {
+                    await CargosAPI.excluir(c.idCargo);
+                    load();
+                  } catch (err) {
+                    alert(err?.response?.data?.message || "Erro ao excluir cargo");
+                  }
                 }}
               />
             )}
@@ -131,13 +135,17 @@ export default function CargosPage() {
           cargo={selected}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
-            if (selected) {
-              await CargosAPI.atualizar(selected.idCargo, data);
-            } else {
-              await CargosAPI.criar(data);
+            try {
+              if (selected) {
+                await CargosAPI.atualizar(selected.idCargo, data);
+              } else {
+                await CargosAPI.criar(data);
+              }
+              setModalOpen(false);
+              load();
+            } catch (err) {
+              alert(err?.response?.data?.message || "Erro ao salvar cargo");
             }
-            setModalOpen(false);
-            load();
           }}
         />
       )}

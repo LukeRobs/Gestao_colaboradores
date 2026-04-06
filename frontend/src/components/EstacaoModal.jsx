@@ -59,7 +59,7 @@ export default function EstacaoModal({ estacao, onClose, onSave }) {
       {/* Modal */}
       <div
         className="
-          relative
+          relative z-10
           w-full
           max-w-lg
           max-h-[92vh]

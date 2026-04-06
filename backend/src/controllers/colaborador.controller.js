@@ -423,6 +423,22 @@ const createColaborador = async (req, res) => {
       );
     }
 
+    /* ===============================
+       VERIFICAR OPS DUPLICADO
+    =============================== */
+    const opsExistente = await prisma.colaborador.findUnique({
+      where: { opsId },
+      select: { opsId: true, nomeCompleto: true },
+    });
+
+    if (opsExistente) {
+      return errorResponse(
+        res,
+        `OPS inválido: o código "${opsId}" já está cadastrado para o colaborador "${opsExistente.nomeCompleto}"`,
+        409
+      );
+    }
+
     if (!idEscala) {
       return errorResponse(res, "Escala é obrigatória", 400);
     }
@@ -604,6 +620,10 @@ const createColaborador = async (req, res) => {
 
   } catch (err) {
     console.error("❌ ERRO CREATE:", err);
+
+    if (err?.code === "P2002") {
+      return errorResponse(res, `OPS inválido: o código "${req.body?.opsId}" já está em uso`, 409);
+    }
 
     return errorResponse(
       res,

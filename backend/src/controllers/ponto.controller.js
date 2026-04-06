@@ -140,9 +140,9 @@ const registrarPontoCPF = async (req, res) => {
   try {
     await finalizarAtestadosVencidos();
 
-    const { cpf } = req.body;
+    const { cpf, estacaoId } = req.body;
 
-    console.log(`[${reqId}] registrarPontoCPF body:`, { cpf });
+    console.log(`[${reqId}] registrarPontoCPF body:`, { cpf, estacaoId });
 
     if (!cpf) return errorResponse(res, "CPF não informado", 400);
 
@@ -153,7 +153,10 @@ const registrarPontoCPF = async (req, res) => {
     ========================================== */
 
     const colaborador = await prisma.colaborador.findFirst({
-      where: { cpf },
+      where: {
+        cpf,
+        ...(estacaoId ? { idEstacao: Number(estacaoId) } : {}),
+      },
       include: {
         turno: true,
         escala: true,

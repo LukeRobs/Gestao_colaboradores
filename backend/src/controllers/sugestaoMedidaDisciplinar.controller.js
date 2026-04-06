@@ -26,6 +26,11 @@ const getContadores = async (req, res) => {
     const baseWhere = {};
     const colaboradorFilter = {};
 
+    // Filtro de estação — igual ao getAllSugestoes
+    if (!req.dbContext?.isGlobal && req.dbContext?.estacaoId) {
+      colaboradorFilter.idEstacao = req.dbContext.estacaoId;
+    }
+
     if (dataInicio || dataFim) {
       baseWhere.dataReferencia = {};
       if (dataInicio) baseWhere.dataReferencia.gte = new Date(`${dataInicio}T00:00:00`);
@@ -547,7 +552,12 @@ const backfillFaltas = async (req, res) => {
       return errorResponse(res, "Intervalo máximo de 31 dias por chamada", 400);
     }
 
-    const resultado = await detectarFaltasAutomatico(dataInicio, dataFim);
+    // Filtro de estação: não-global usa a estação do contexto
+    const estacaoId = !req.dbContext?.isGlobal && req.dbContext?.estacaoId
+      ? req.dbContext.estacaoId
+      : null;
+
+    const resultado = await detectarFaltasAutomatico(dataInicio, dataFim, estacaoId);
 
     return successResponse(res, resultado, "Backfill concluído");
 

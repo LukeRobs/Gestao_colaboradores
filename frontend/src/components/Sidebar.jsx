@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
   );
 
   const [organizacaoOpen, setOrganizacaoOpen] = useState(
-    ["/empresas", "/regionais", "/estacoes", "/setores", "/cargos"].some((p) =>
+    ["/empresas", "/regionais", "/estacoes", "/setores", "/cargos", "/turnos"].some((p) =>
       location.pathname.startsWith(p)
     )
   );
@@ -208,22 +208,24 @@ export default function Sidebar({ isOpen, onClose }) {
 
                 {(isGlobal || isLideranca) && (
                   <>
-                    <SidebarSubItem
-                      label="Gestão Operacional"
-                      active={isActive("/dashboard/gestao-operacional")}
-                      onClick={() => go("/dashboard/gestao-operacional")}
-                    />
-                    <SidebarSubItem
-                      label="Produtividade por Colaborador"
-                      active={isActive("/dashboard/produtividade-colaborador")}
-                      onClick={() => go("/dashboard/produtividade-colaborador")}
-                    />
-                    {user?.idEstacao !== 2 && (
-                      <SidebarSubItem
-                        label="SPI"
-                        active={isActive("/spi")}
-                        onClick={() => go("/spi")}
-                      />
+                    {(isAdmin || user?.idEstacao === 1) && (
+                      <>
+                        <SidebarSubItem
+                          label="Gestão Operacional"
+                          active={isActive("/dashboard/gestao-operacional")}
+                          onClick={() => go("/dashboard/gestao-operacional")}
+                        />
+                        <SidebarSubItem
+                          label="Produtividade por Colaborador"
+                          active={isActive("/dashboard/produtividade-colaborador")}
+                          onClick={() => go("/dashboard/produtividade-colaborador")}
+                        />
+                        <SidebarSubItem
+                          label="SPI"
+                          active={isActive("/spi")}
+                          onClick={() => go("/spi")}
+                        />
+                      </>
                     )}
                     <SidebarSubItem
                       label="Atestados"
@@ -307,6 +309,7 @@ export default function Sidebar({ isOpen, onClose }) {
                   />
                   <SidebarSubItem label="Setores" onClick={() => go("/setores")} />
                   <SidebarSubItem label="Cargos" onClick={() => go("/cargos")} />
+                  <SidebarSubItem label="Turnos" onClick={() => go("/turnos")} />
                 </div>
               )}
             </div>

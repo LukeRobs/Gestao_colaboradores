@@ -9,9 +9,20 @@ export default function CargoModal({ cargo, onClose, onSave }) {
     descricao: cargo?.descricao || "",
     ativo: cargo?.ativo ?? true,
   }));
+  const [saving, setSaving] = useState(false);
 
   const handle = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleSave = async () => {
+    if (!form.nomeCargo.trim()) return;
+    setSaving(true);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // 🔥 Bloqueia scroll do body enquanto modal aberto
   useEffect(() => {
@@ -33,7 +44,7 @@ export default function CargoModal({ cargo, onClose, onSave }) {
       {/* Modal */}
       <div
         className="
-          relative
+          relative z-10
           w-full
           max-w-lg
           max-h-[90vh]
@@ -137,10 +148,11 @@ export default function CargoModal({ cargo, onClose, onSave }) {
           </Button.Secondary>
 
           <Button.Primary
-            onClick={() => onSave(form)}
+            onClick={handleSave}
+            disabled={saving || !form.nomeCargo.trim()}
             className="w-full sm:w-auto"
           >
-            {cargo ? "Salvar alterações" : "Criar cargo"}
+            {saving ? "Salvando..." : cargo ? "Salvar alterações" : "Criar cargo"}
           </Button.Primary>
         </div>
       </div>

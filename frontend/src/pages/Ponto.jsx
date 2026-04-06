@@ -31,7 +31,10 @@ export default function PontoPage() {
     setTipoBatida(null);
 
     try {
-      const res = await api.post("/ponto/registrar", { cpf });
+      const payload = { cpf };
+      if (user?.idEstacao) payload.estacaoId = user.idEstacao;
+
+      const res = await api.post("/ponto/registrar", payload);
 
       setMsg(res.data.message || "Ponto registrado com sucesso");
       setMsgType("success");

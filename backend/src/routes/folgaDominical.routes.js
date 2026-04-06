@@ -24,20 +24,20 @@ router.post(
 );
 
 /* =====================================================
-  GERAR → apenas ADMIN
+  GERAR → ADMIN + ALTA_GESTAO
 ===================================================== */
 router.post(
   "/",
-  authorizeRoles("ADMIN"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO"),
   controller.gerar
 );
 
 /* =====================================================
-  DELETE → apenas ADMIN
+  DELETE → ADMIN + ALTA_GESTAO
 ===================================================== */
 router.delete(
   "/",
-  authorizeRoles("ADMIN"),
+  authorizeRoles("ADMIN", "ALTA_GESTAO"),
   controller.deletar
 );
 

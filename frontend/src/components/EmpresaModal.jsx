@@ -9,13 +9,19 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
     cnpj: empresa?.cnpj ?? "",
     ativo: empresa?.ativo ?? true,
   }));
+  const [saving, setSaving] = useState(false);
 
   const handle = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.razaoSocial || !form.cnpj) return;
-    onSave({ ...form, ativo: Boolean(form.ativo) });
+    setSaving(true);
+    try {
+      await onSave({ ...form, ativo: Boolean(form.ativo) });
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 🔒 Bloqueia scroll do body
@@ -38,7 +44,7 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
       {/* Modal */}
       <div
         className="
-          relative
+          relative z-10
           w-full
           max-w-lg
           max-h-[92vh]
@@ -152,11 +158,10 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
 
           <Button.Primary
             onClick={submit}
+            disabled={saving || !form.razaoSocial || !form.cnpj}
             className="w-full sm:w-auto"
           >
-            {form.idEmpresa
-              ? "Salvar alterações"
-              : "Criar empresa"}
+            {saving ? "Salvando..." : form.idEmpresa ? "Salvar alterações" : "Criar empresa"}
           </Button.Primary>
         </div>
       </div>

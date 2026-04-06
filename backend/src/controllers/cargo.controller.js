@@ -19,6 +19,15 @@ const getAllCargos = async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const take = parseInt(limit);
 
+  const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    ? req.dbContext.estacaoId
+    : null;
+
+  const colaboradoresWhere = {
+    status: 'ATIVO',
+    ...(estacaoId ? { idEstacao: estacaoId } : {}),
+  };
+
   const where = {};
 
   if (search) {
@@ -40,7 +49,7 @@ const getAllCargos = async (req, res) => {
       orderBy: { nomeCargo: 'asc' },
       include: {
         _count: {
-          select: { colaboradores: true },
+          select: { colaboradores: { where: colaboradoresWhere } },
         },
       },
     }),
@@ -120,10 +129,15 @@ const updateCargo = async (req, res) => {
 const deleteCargo = async (req, res) => {
   const { id } = req.params;
 
-  await prisma.cargo.delete({
-    where: { idCargo: parseInt(id) },
-  });
+  const total = await prisma.colaborador.count({ where: { idCargo: parseInt(id) } });
+  if (total > 0) {
+    return res.status(409).json({
+      success: false,
+      message: `Não é possível excluir este cargo pois ele possui ${total} colaborador(es) vinculado(s).`,
+    });
+  }
 
+  await prisma.cargo.delete({ where: { idCargo: parseInt(id) } });
   return deletedResponse(res, 'Cargo excluído com sucesso');
 };
 

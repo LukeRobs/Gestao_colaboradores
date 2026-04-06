@@ -19,15 +19,9 @@ const getAllSetores = async (req, res) => {
   const skip = (Number(page) - 1) * Number(limit);
   const take = Number(limit);
 
-  // Filtro de estação: ADMIN global vê tudo, demais só a sua estação
   const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
     ? req.dbContext.estacaoId
     : null;
-
-  const colaboradoresWhere = {
-    status: 'ATIVO',
-    ...(estacaoId ? { idEstacao: estacaoId } : {}),
-  };
 
   const where = {};
 
@@ -39,9 +33,13 @@ const getAllSetores = async (req, res) => {
     where.ativo = ativo === 'true';
   }
 
-  // Se filtrado por estação, só retorna setores que tenham ao menos 1 colaborador ativo nela
+  // Filtra diretamente pelo idEstacao do setor
+  // Setores sem estação (legado) são visíveis para todos
   if (estacaoId) {
-    where.colaboradores = { some: colaboradoresWhere };
+    where.OR = [
+      { idEstacao: estacaoId },
+      { idEstacao: null },
+    ];
   }
 
   const [setores, total] = await Promise.all([
@@ -52,9 +50,7 @@ const getAllSetores = async (req, res) => {
       orderBy: { nomeSetor: 'asc' },
       include: {
         _count: {
-          select: {
-            colaboradores: { where: colaboradoresWhere },
-          },
+          select: { colaboradores: { where: { status: 'ATIVO' } } },
         },
       },
     }),
@@ -66,6 +62,7 @@ const getAllSetores = async (req, res) => {
     nomeSetor: s.nomeSetor,
     descricao: s.descricao,
     ativo: s.ativo,
+    idEstacao: s.idEstacao,
     totalColaboradores: s._count.colaboradores,
   }));
 
@@ -80,20 +77,11 @@ const getAllSetores = async (req, res) => {
 const getSetorById = async (req, res) => {
   const { id } = req.params;
 
-  const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
-    ? req.dbContext.estacaoId
-    : null;
-
-  const colaboradoresWhere = {
-    status: 'ATIVO',
-    ...(estacaoId ? { idEstacao: estacaoId } : {}),
-  };
-
   const setor = await prisma.setor.findUnique({
     where: { idSetor: Number(id) },
     include: {
       colaboradores: {
-        where: colaboradoresWhere,
+        where: { status: 'ATIVO' },
         select: {
           opsId: true,
           nomeCompleto: true,
@@ -102,9 +90,7 @@ const getSetorById = async (req, res) => {
         },
       },
       _count: {
-        select: {
-          colaboradores: { where: colaboradoresWhere },
-        },
+        select: { colaboradores: { where: { status: 'ATIVO' } } },
       },
     },
   });
@@ -118,6 +104,7 @@ const getSetorById = async (req, res) => {
     nomeSetor: setor.nomeSetor,
     descricao: setor.descricao,
     ativo: setor.ativo,
+    idEstacao: setor.idEstacao,
     totalColaboradores: setor._count.colaboradores,
     colaboradores: setor.colaboradores,
   });
@@ -125,17 +112,28 @@ const getSetorById = async (req, res) => {
 
 /* ================= CREATE ================= */
 const createSetor = async (req, res) => {
-  const { nomeSetor, descricao, ativo } = req.body;
+  const { nomeSetor, descricao, ativo, idEstacao: idEstacaoBody } = req.body;
 
-  const setor = await prisma.setor.create({
-    data: {
-      nomeSetor,
-      descricao,
-      ativo: ativo !== undefined ? ativo : true,
-    },
-  });
+  // Prioridade: body (ADMIN escolheu no modal) > dbContext (estação selecionada/fixada)
+  const idEstacao = idEstacaoBody ? Number(idEstacaoBody) : (req.dbContext?.estacaoId ?? null);
 
-  return createdResponse(res, setor, 'Setor criado com sucesso');
+  try {
+    const setor = await prisma.setor.create({
+      data: {
+        nomeSetor,
+        descricao,
+        ativo: ativo !== undefined ? ativo : true,
+        ...(idEstacao ? { idEstacao } : {}),
+      },
+    });
+
+    return createdResponse(res, setor, 'Setor criado com sucesso');
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ success: false, message: 'Já existe um setor com este nome nesta estação.' });
+    }
+    throw error;
+  }
 };
 
 /* ================= UPDATE ================= */
@@ -143,27 +141,55 @@ const updateSetor = async (req, res) => {
   const { id } = req.params;
   const { nomeSetor, descricao, ativo } = req.body;
 
-  const setor = await prisma.setor.update({
-    where: { idSetor: Number(id) },
-    data: {
-      ...(nomeSetor && { nomeSetor }),
-      ...(descricao !== undefined && { descricao }),
-      ...(ativo !== undefined && { ativo }),
-    },
-  });
+  try {
+    const setor = await prisma.setor.update({
+      where: { idSetor: Number(id) },
+      data: {
+        ...(nomeSetor && { nomeSetor }),
+        ...(descricao !== undefined && { descricao }),
+        ...(ativo !== undefined && { ativo }),
+      },
+    });
 
-  return successResponse(res, setor, 'Setor atualizado com sucesso');
+    return successResponse(res, setor, 'Setor atualizado com sucesso');
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ success: false, message: 'Já existe um setor com este nome nesta estação.' });
+    }
+    throw error;
+  }
 };
 
 /* ================= DELETE ================= */
 const deleteSetor = async (req, res) => {
   const { id } = req.params;
 
-  await prisma.setor.delete({
-    where: { idSetor: Number(id) },
-  });
+  try {
+    const total = await prisma.colaborador.count({
+      where: { idSetor: Number(id) },
+    });
 
-  return deletedResponse(res, 'Setor excluído com sucesso');
+    if (total > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Não é possível excluir este setor pois ele possui ${total} colaborador(es) vinculado(s).`,
+      });
+    }
+
+    await prisma.setor.delete({
+      where: { idSetor: Number(id) },
+    });
+
+    return deletedResponse(res, 'Setor excluído com sucesso');
+  } catch (error) {
+    if (error.code === 'P2003' || error.code === 'P2014') {
+      return res.status(409).json({
+        success: false,
+        message: 'Não é possível excluir este setor pois ele possui colaboradores vinculados.',
+      });
+    }
+    throw error;
+  }
 };
 
 module.exports = {
