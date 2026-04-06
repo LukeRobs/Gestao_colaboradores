@@ -419,7 +419,7 @@ export default function App() {
       <Route
         path="/spi"
         element={
-          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]}>
+          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} excludeEstacoes={[2]}>
             <SPI />
           </ProtectedRoute>
         }

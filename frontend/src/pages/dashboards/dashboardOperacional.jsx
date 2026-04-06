@@ -40,9 +40,14 @@ export default function DashboardOperacional() {
   /* 📅 DATE PICKER */
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [draftRange, setDraftRange] = useState({ from: null, to: null });
-  const [appliedRange, setAppliedRange] = useState({ from: null, to: null });
+  const [appliedRange, setAppliedRange] = useState(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return { from: hoje, to: hoje };
+  });
 
   const calendarRef = useRef(null);
+  const isFirstRender = useRef(true);
 
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
@@ -61,6 +66,8 @@ export default function DashboardOperacional() {
             dataFim: (range.to || range.from).toISOString().slice(0, 10),
           }
         : {};
+
+      if (estacaoId) params.estacaoId = estacaoId;
 
       const res = await api.get("/dashboard", { params });
       const payload = res.data.data;
@@ -94,6 +101,8 @@ export default function DashboardOperacional() {
           .slice(0, 10);
       }
 
+      if (estacaoId) params.estacaoId = estacaoId;
+
       const res = await api.get("/dashboard", { params });
 
       navigate("/report", {
@@ -111,11 +120,16 @@ export default function DashboardOperacional() {
 
   /* LOAD INICIAL */
   useEffect(() => {
-    loadDashboard();
+    isFirstRender.current = true;
+    loadDashboard(appliedRange);
   }, [estacaoId]);
 
-  /* LOAD QUANDO RANGE APLICADO MUDA */
+  /* LOAD QUANDO RANGE APLICADO MUDA — ignora o mount inicial */
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (appliedRange.from) loadDashboard(appliedRange);
   }, [appliedRange]);
 

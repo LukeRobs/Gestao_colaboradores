@@ -218,11 +218,13 @@ export default function Sidebar({ isOpen, onClose }) {
                       active={isActive("/dashboard/produtividade-colaborador")}
                       onClick={() => go("/dashboard/produtividade-colaborador")}
                     />
-                    <SidebarSubItem
-                      label="SPI"
-                      active={isActive("/spi")}
-                      onClick={() => go("/spi")}
-                    />
+                    {user?.idEstacao !== 2 && (
+                      <SidebarSubItem
+                        label="SPI"
+                        active={isActive("/spi")}
+                        onClick={() => go("/spi")}
+                      />
+                    )}
                     <SidebarSubItem
                       label="Atestados"
                       active={isActive("/dashboard/atestados")}

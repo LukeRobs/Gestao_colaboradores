@@ -278,7 +278,7 @@ export default function ColaboradoresPage() {
             </div>
 
             {/* BOTÃO */}
-            {permissions.isAdmin && (
+            {(permissions.isAdmin || permissions.isAltaGestao) && (
               <button
                 onClick={() => navigate("/colaboradores/novo")}
                 className="px-5 py-2.5 bg-[#FA4C00] rounded-xl"

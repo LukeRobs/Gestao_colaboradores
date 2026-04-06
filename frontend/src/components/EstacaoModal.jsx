@@ -4,8 +4,9 @@ import api from "../services/api";
 
 export default function EstacaoModal({ estacao, onClose, onSave }) {
   const [form, setForm] = useState(() => ({
-    nome: estacao?.nome || "",
+    nome: estacao?.nomeEstacao || estacao?.nome || "",
     idRegional: estacao?.idRegional || "",
+    sheetsMetaProducaoId: estacao?.sheetsMetaProducaoId || "",
   }));
 
   const [regionais, setRegionais] = useState([]);
@@ -46,7 +47,6 @@ export default function EstacaoModal({ estacao, onClose, onSave }) {
     if (!form.nome || !form.idRegional) return;
     await onSave(form);
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 sm:px-6">
       
@@ -101,6 +101,14 @@ export default function EstacaoModal({ estacao, onClose, onSave }) {
             options={regionais}
             labelKey="nome"
             valueKey="idRegional"
+          />
+
+          <Input
+            label="ID da Planilha Google Sheets (Gestão Operacional)"
+            name="sheetsMetaProducaoId"
+            value={form.sheetsMetaProducaoId}
+            onChange={handleChange}
+            placeholder="Ex: 17Dpmr1Kn6ybvK3rah2JvoCBsAeOvotvM6k_7uaATPz0"
           />
         </div>
 

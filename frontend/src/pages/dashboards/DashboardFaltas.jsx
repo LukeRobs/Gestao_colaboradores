@@ -564,8 +564,6 @@ function IconDownload({ s = 16 }) {
 }
 
 function AbsenceTable({ data, loading }) {
-  const { user } = useContext(AuthContext)
-  const canExport = user?.email?.toLowerCase() === "alysson.nascimento@shopee.com"
   const [search, setSearch] = useState("")
 
   const filtered = useMemo(() => {
@@ -643,32 +641,30 @@ function AbsenceTable({ data, loading }) {
           onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
         />
       </div>
-      {canExport && (
         <button
           onClick={exportCSV}
-        disabled={loading || filtered.length === 0}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "9px 14px",
-          borderRadius: 12,
-          border: "1px solid rgba(255,255,255,0.08)",
-          background: "#1A1A1A",
-          color: loading || filtered.length === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.70)",
-          fontSize: 13,
-          fontWeight: 500,
-          cursor: loading || filtered.length === 0 ? "not-allowed" : "pointer",
-          whiteSpace: "nowrap",
-          transition: "border-color 0.15s, color 0.15s",
-        }}
-        onMouseEnter={(e) => { if (!loading && filtered.length > 0) { e.currentTarget.style.borderColor = "rgba(250,76,0,0.45)"; e.currentTarget.style.color = "#fff" } }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = loading || filtered.length === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.70)" }}
-      >
-        <IconDownload />
-        Exportar CSV
-      </button>
-      )}
+          disabled={loading || filtered.length === 0}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "9px 14px",
+            borderRadius: 12,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "#1A1A1A",
+            color: loading || filtered.length === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.70)",
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: loading || filtered.length === 0 ? "not-allowed" : "pointer",
+            whiteSpace: "nowrap",
+            transition: "border-color 0.15s, color 0.15s",
+          }}
+          onMouseEnter={(e) => { if (!loading && filtered.length > 0) { e.currentTarget.style.borderColor = "rgba(250,76,0,0.45)"; e.currentTarget.style.color = "#fff" } }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = loading || filtered.length === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.70)" }}
+        >
+          <IconDownload />
+          Exportar CSV
+        </button>
       </div>
 
       {/* table wrapper */}

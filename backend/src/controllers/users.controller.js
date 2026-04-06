@@ -23,6 +23,7 @@ const list = async (req, res) => {
       email: true,
       role: true,
       isActive: true,
+      idEstacao: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -49,6 +50,7 @@ const getById = async (req, res) => {
       email: true,
       role: true,
       isActive: true,
+      idEstacao: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -90,6 +92,7 @@ const create = async (req, res) => {
       email: true,
       role: true,
       isActive: true,
+      idEstacao: true,
       createdAt: true,
     },
   });
@@ -103,7 +106,7 @@ const create = async (req, res) => {
  */
 const update = async (req, res) => {
   const { id } = req.params;
-  const { name, role, isActive } = req.body;
+  const { name, role, isActive, idEstacao } = req.body;
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -118,6 +121,8 @@ const update = async (req, res) => {
       name,
       role,
       isActive,
+      // idEstacao só é relevante para ALTA_GESTAO, mas aceita para qualquer role
+      ...(idEstacao !== undefined && { idEstacao: idEstacao ? Number(idEstacao) : null }),
     },
     select: {
       id: true,
@@ -125,6 +130,7 @@ const update = async (req, res) => {
       email: true,
       role: true,
       isActive: true,
+      idEstacao: true,
       updatedAt: true,
     },
   });

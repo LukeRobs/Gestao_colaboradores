@@ -4,55 +4,43 @@ const { google } = require("googleapis");
    CONFIG
 ===================================================== */
 
-const META_SPREADSHEET_ID = "17Dpmr1Kn6ybvK3rah2JvoCBsAeOvotvM6k_7uaATPz0";
+// ID padrão (fallback para ADMIN sem estação configurada)
+const DEFAULT_SPREADSHEET_ID = "17Dpmr1Kn6ybvK3rah2JvoCBsAeOvotvM6k_7uaATPz0";
 const META_SHEET = "Meta";
 const ATUALIZACAO_SHEET = "Atualização_colaborador";
 const LOGIC_SHEET = "Logic";
 
 /* =====================================================
-   CACHE
+   CACHE POR SPREADSHEET ID
 ===================================================== */
 
-let sheetCache = null;
-let cacheTimestamp = null;
-let atualizacaoCache = null;
-let atualizacaoCacheTimestamp = null;
-let logicCache = null;
-let logicCacheTimestamp = null;
-const CACHE_TTL = 1 * 60 * 1000; // 1 min (reduzido de 5 min)
+// Estrutura: { [spreadsheetId]: { meta, atualizacao, logic, timestamps } }
+const cacheMap = new Map();
+const CACHE_TTL = 1 * 60 * 1000; // 1 min
 
-function isCacheValid() {
-  return (
-    sheetCache &&
-    cacheTimestamp &&
-    Date.now() - cacheTimestamp < CACHE_TTL
-  );
+function getCache(spreadsheetId) {
+  if (!cacheMap.has(spreadsheetId)) {
+    cacheMap.set(spreadsheetId, {
+      meta: null, metaTs: null,
+      atualizacao: null, atualizacaoTs: null,
+      logic: null, logicTs: null,
+    });
+  }
+  return cacheMap.get(spreadsheetId);
 }
 
-function isAtualizacaoCacheValid() {
-  return (
-    atualizacaoCache &&
-    atualizacaoCacheTimestamp &&
-    Date.now() - atualizacaoCacheTimestamp < CACHE_TTL
-  );
+function isCacheValid(ts) {
+  return ts && Date.now() - ts < CACHE_TTL;
 }
 
-function isLogicCacheValid() {
-  return (
-    logicCache &&
-    logicCacheTimestamp &&
-    Date.now() - logicCacheTimestamp < CACHE_TTL
-  );
-}
-
-function limparCache() {
-  sheetCache = null;
-  cacheTimestamp = null;
-  atualizacaoCache = null;
-  atualizacaoCacheTimestamp = null;
-  logicCache = null;
-  logicCacheTimestamp = null;
-  console.log("🗑️ Cache limpo");
+function limparCache(spreadsheetId) {
+  if (spreadsheetId) {
+    cacheMap.delete(spreadsheetId);
+    console.log(`🗑️ Cache limpo para ${spreadsheetId}`);
+  } else {
+    cacheMap.clear();
+    console.log("🗑️ Todo cache limpo");
+  }
 }
 
 /* =====================================================
@@ -68,11 +56,7 @@ const getGoogleSheetsClient = () => {
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
 
-  return google.sheets({
-    version: "v4",
-    auth,
-    retry: false,
-  });
+  return google.sheets({ version: "v4", auth, retry: false });
 };
 
 /* =====================================================
@@ -85,143 +69,125 @@ const formatarData = (dataISO) => {
 };
 
 const normalizar = (v) =>
-  String(v ?? "")
-    .replace(/\u00A0/g, " ")
-    .trim();
+  String(v ?? "").replace(/\u00A0/g, " ").trim();
 
 /* =====================================================
-   CARREGAR PLANILHA
+   CARREGAR ABAS
 ===================================================== */
 
-async function carregarPlanilha() {
-  if (isCacheValid()) {
+async function carregarPlanilha(spreadsheetId) {
+  const cache = getCache(spreadsheetId);
+  if (isCacheValid(cache.metaTs)) {
     console.log("📦 Meta retornada do cache");
-    return sheetCache;
+    return cache.meta;
   }
 
-  console.log("🌎 Buscando Meta no Google Sheets...");
-
+  console.log(`🌎 Buscando Meta no Google Sheets [${spreadsheetId}]...`);
   const sheets = getGoogleSheetsClient();
 
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: META_SPREADSHEET_ID,
-    range: `${META_SHEET}!A:E`,
-    valueRenderOption: "FORMATTED_VALUE",
-  });
-
-  const rows = response.data.values;
-
-  if (!rows || rows.length === 0) {
-    throw new Error("Aba Meta vazia");
+  let response;
+  try {
+    response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${META_SHEET}!A:E`,
+      valueRenderOption: "FORMATTED_VALUE",
+    });
+  } catch (err) {
+    // Aba não existe ou planilha não configurada
+    const msg = err?.message || '';
+    if (msg.includes('Unable to parse range') || msg.includes('404') || msg.includes('not found')) {
+      const e = new Error(`Planilha não configurada para esta estação`);
+      e.code = 'SHEETS_NOT_CONFIGURED';
+      throw e;
+    }
+    throw err;
   }
 
-  sheetCache = rows;
-  cacheTimestamp = Date.now();
+  const rows = response.data.values;
+  if (!rows || rows.length === 0) {
+    const e = new Error(`Planilha não configurada para esta estação`);
+    e.code = 'SHEETS_NOT_CONFIGURED';
+    throw e;
+  }
 
+  cache.meta = rows;
+  cache.metaTs = Date.now();
   console.log("✅ Meta armazenada em cache");
-
   return rows;
 }
 
-/* =====================================================
-   CARREGAR PLANILHA ATUALIZAÇÃO
-===================================================== */
-
-async function carregarAtualizacaoColaborador() {
-  if (isAtualizacaoCacheValid()) {
+async function carregarAtualizacaoColaborador(spreadsheetId) {
+  const cache = getCache(spreadsheetId);
+  if (isCacheValid(cache.atualizacaoTs)) {
     console.log("📦 Atualização_colaborador retornada do cache");
-    return atualizacaoCache;
+    return cache.atualizacao;
   }
 
-  console.log("🌎 Buscando Atualização_colaborador no Google Sheets...");
-
+  console.log(`🌎 Buscando Atualização_colaborador no Google Sheets [${spreadsheetId}]...`);
   const sheets = getGoogleSheetsClient();
-
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: META_SPREADSHEET_ID,
+    spreadsheetId,
     range: `${ATUALIZACAO_SHEET}!A:ZZ`,
     valueRenderOption: "FORMATTED_VALUE",
   });
 
   const rows = response.data.values;
+  if (!rows || rows.length === 0) throw new Error("Aba Atualização_colaborador vazia");
 
-  if (!rows || rows.length === 0) {
-    throw new Error("Aba Atualização_colaborador vazia");
-  }
-
-  atualizacaoCache = rows;
-  atualizacaoCacheTimestamp = Date.now();
-
+  cache.atualizacao = rows;
+  cache.atualizacaoTs = Date.now();
   console.log("✅ Atualização_colaborador armazenada em cache");
-
   return rows;
 }
 
-/* =====================================================
-   CARREGAR PLANILHA LOGIC
-===================================================== */
-
-async function carregarLogic() {
-  if (isLogicCacheValid()) {
+async function carregarLogic(spreadsheetId) {
+  const cache = getCache(spreadsheetId);
+  if (isCacheValid(cache.logicTs)) {
     console.log("📦 Logic retornada do cache");
-    return logicCache;
+    return cache.logic;
   }
 
-  console.log("🌎 Buscando Logic no Google Sheets...");
-
+  console.log(`🌎 Buscando Logic no Google Sheets [${spreadsheetId}]...`);
   const sheets = getGoogleSheetsClient();
-
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: META_SPREADSHEET_ID,
+    spreadsheetId,
     range: `${LOGIC_SHEET}!A:B`,
     valueRenderOption: "FORMATTED_VALUE",
   });
 
   const rows = response.data.values;
+  if (!rows || rows.length === 0) throw new Error("Aba Logic vazia");
 
-  if (!rows || rows.length === 0) {
-    throw new Error("Aba Logic vazia");
-  }
-
-  logicCache = rows;
-  logicCacheTimestamp = Date.now();
-
+  cache.logic = rows;
+  cache.logicTs = Date.now();
   console.log("✅ Logic armazenada em cache");
-
   return rows;
 }
+
 
 /* =====================================================
    BUSCAR METAS POR TURNO E DATA
 ===================================================== */
 
-async function buscarMetasProducao(turno, dataISO) {
+async function buscarMetasProducao(turno, dataISO, spreadsheetId = DEFAULT_SPREADSHEET_ID) {
   try {
-    console.log("🔍 Iniciando busca de metas:", { turno, dataISO });
+    console.log("🔍 Iniciando busca de metas:", { turno, dataISO, spreadsheetId });
     
-    const rows = await carregarPlanilha();
+    const rows = await carregarPlanilha(spreadsheetId);
     const dataBusca = formatarData(dataISO);
 
-    console.log("� Planilha carregada:", rows.length, "linhas");
-    console.log("�🔍 Buscando metas para:", { turno, data: dataBusca });
-
-    // Estrutura esperada: Data | Hora | Esteira | Meta | Turno
     const metasPorHora = {};
     let metaDia = 0;
     let linhasEncontradas = 0;
 
-    // Pular header (linha 0)
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      
       if (!row || row.length < 4) continue;
 
       const dataRow = normalizar(row[0]);
       const horaRaw = normalizar(row[1]);
       const hora = parseInt(horaRaw);
-      const esteira = normalizar(row[2]);
       
-      // Tratar números no formato brasileiro
       const metaOriginal = String(row[3] || '0').trim();
       let metaStr = metaOriginal;
       
@@ -229,94 +195,37 @@ async function buscarMetasProducao(turno, dataISO) {
         metaStr = metaOriginal.replace(/\./g, '').replace(',', '.');
       } else if (metaOriginal.includes(',') && !metaOriginal.includes('.')) {
         const partes = metaOriginal.split(',');
-        if (partes[1] && partes[1].length === 3) {
-          metaStr = metaOriginal.replace(',', '');
-        } else {
-          metaStr = metaOriginal.replace(',', '.');
-        }
+        metaStr = partes[1]?.length === 3
+          ? metaOriginal.replace(',', '')
+          : metaOriginal.replace(',', '.');
       }
       
       const meta = parseFloat(metaStr) || 0;
       
-      // Inferir turno pela hora se não estiver na planilha
       let turnoRow = row[4] ? normalizar(row[4]) : null;
-      
       if (!turnoRow) {
-        // T1: 6-13h, T2: 14-21h, T3: 22-5h
-        if (hora >= 6 && hora <= 13) {
-          turnoRow = 'T1';
-        } else if (hora >= 14 && hora <= 21) {
-          turnoRow = 'T2';
-        } else {
-          turnoRow = 'T3';
-        }
+        if (hora >= 6 && hora <= 13) turnoRow = 'T1';
+        else if (hora >= 14 && hora <= 21) turnoRow = 'T2';
+        else turnoRow = 'T3';
       }
 
-      // Debug das primeiras 10 linhas
-      if (i <= 10) {
-        console.log(`Linha ${i}:`, { 
-          dataRow, 
-          horaRaw, 
-          hora, 
-          esteira, 
-          metaOriginal,
-          metaStr,
-          meta, 
-          turnoRow 
-        });
-      }
-
-      // Filtrar por data e turno
       if (dataRow === dataBusca && turnoRow === turno && !isNaN(hora)) {
         linhasEncontradas++;
-        
-        if (!metasPorHora[hora]) {
-          metasPorHora[hora] = 0;
-        }
-        
-        metasPorHora[hora] += meta;
+        metasPorHora[hora] = (metasPorHora[hora] || 0) + meta;
         metaDia += meta;
-
-        if (linhasEncontradas <= 10) {
-          console.log(`✅ Match encontrado:`, { 
-            hora, 
-            esteira, 
-            metaOriginal,
-            metaStr,
-            meta, 
-            totalHora: metasPorHora[hora] 
-          });
-        }
       }
     }
 
-    console.log("✅ Metas encontradas:", { 
-      metaDia, 
-      horas: Object.keys(metasPorHora).length,
-      linhasEncontradas,
-      metasPorHora 
-    });
-
     if (linhasEncontradas === 0) {
-      console.warn("⚠️ Nenhuma linha encontrada para:", { turno, data: dataBusca });
-      console.warn("📋 Primeiras 5 linhas da planilha:");
-      for (let i = 0; i < Math.min(5, rows.length); i++) {
-        console.warn(`Linha ${i}:`, rows[i]);
-      }
+      console.warn("⚠️ Nenhuma linha encontrada para:", { turno, data: dataBusca, spreadsheetId });
     }
 
     return {
       success: true,
-      data: {
-        dataConsultada: dataBusca,
-        turnoConsultado: turno,
-        metaDia,
-        metasPorHora,
-      },
+      data: { dataConsultada: dataBusca, turnoConsultado: turno, metaDia, metasPorHora },
     };
   } catch (error) {
     console.error("❌ Erro ao buscar metas:", error.message);
-    console.error("Stack:", error.stack);
     throw error;
   }
 }
@@ -325,89 +234,44 @@ async function buscarMetasProducao(turno, dataISO) {
    BUSCAR QUANTIDADE REALIZADA POR HORA
 ===================================================== */
 
-async function buscarQuantidadeRealizada(dataISO) {
+async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_SPREADSHEET_ID) {
   try {
-    console.log("🔍 Iniciando busca de quantidade realizada:", { dataISO });
-    
-    const rows = await carregarAtualizacaoColaborador();
+    const rows = await carregarAtualizacaoColaborador(spreadsheetId);
     const dataBusca = formatarData(dataISO);
 
-    console.log("📊 Planilha Atualização carregada:", rows.length, "linhas");
+    if (!rows || rows.length < 5) return { success: false, data: {} };
 
-    if (!rows || rows.length < 5) {
-      console.warn("⚠️ Planilha vazia ou sem dados suficientes");
-      return { success: false, data: {} };
-    }
+    const linhaSomaTotalPorHora = rows[1];
+    const linhaDatas = rows[3];
+    const linhaHoras = rows[4];
 
-    // Estrutura da planilha:
-    // Linha 0: "Atualização Automatica da sheets"
-    // Linha 1: "Soma Total Por Hora" | valor_hora1 | valor_hora2 | ...
-    // Linha 2: "" | timestamp1 | timestamp2 | ...
-    // Linha 3: "" | data1 | data2 | ...
-    // Linha 4: "" | hora1 | hora2 | ...
-    // Linha 5+: colaboradores com suas quantidades
-
-    const linhaSomaTotalPorHora = rows[1]; // Linha com "Soma Total Por Hora"
-    const linhaDatas = rows[3]; // Linha com as datas
-    const linhaHoras = rows[4]; // Linha com as horas
-
-    console.log("📋 Total de colunas:", linhaSomaTotalPorHora.length);
-    console.log("📋 Primeira coluna da linha 1:", linhaSomaTotalPorHora[0]);
-    console.log("📋 Primeiras 10 datas:", linhaDatas.slice(0, 10));
-    console.log("📋 Primeiras 10 horas:", linhaHoras.slice(0, 10));
-
-    // Extrair quantidades por hora
     const quantidadePorHora = {};
     
-    // Começar da coluna 1 (coluna 0 é o label)
     for (let colIndex = 1; colIndex < linhaSomaTotalPorHora.length; colIndex++) {
       const dataColuna = normalizar(linhaDatas[colIndex]);
       const horaColuna = normalizar(linhaHoras[colIndex]);
       const valorColuna = linhaSomaTotalPorHora[colIndex];
 
-      // Verificar se a data corresponde
-      if (dataColuna !== dataBusca) {
-        continue;
-      }
+      if (dataColuna !== dataBusca) continue;
 
-      // Extrair hora (formato: "09:00", "08:00", etc)
       const horaMatch = horaColuna.match(/^(\d{1,2})/);
-      if (!horaMatch) {
-        continue;
-      }
+      if (!horaMatch) continue;
 
       const hora = parseInt(horaMatch[1]);
-      
-      if (hora < 0 || hora > 23) {
-        continue;
-      }
+      if (hora < 0 || hora > 23) continue;
 
-      // Converter valor para número
       if (valorColuna && valorColuna !== "") {
         const valorStr = String(valorColuna).trim().replace(/\./g, '').replace(',', '.');
         const quantidade = parseFloat(valorStr) || 0;
-
         if (quantidade > 0) {
           quantidadePorHora[hora] = (quantidadePorHora[hora] || 0) + quantidade;
-          
-          // Log apenas das primeiras 15 horas encontradas
-          if (Object.keys(quantidadePorHora).length <= 15) {
-            console.log(`  ✅ Hora ${hora.toString().padStart(2, '0')} (col ${colIndex}): ${quantidade}`);
-          }
         }
       }
     }
 
-    console.log("\n📊 RESUMO - Quantidades por hora extraídas:");
-    console.log(JSON.stringify(quantidadePorHora, null, 2));
-
-    return {
-      success: true,
-      data: quantidadePorHora
-    };
+    return { success: true, data: quantidadePorHora };
   } catch (error) {
     console.error("❌ Erro ao buscar quantidade realizada:", error.message);
-    console.error("Stack:", error.stack);
     return { success: false, data: {} };
   }
 }
@@ -416,15 +280,12 @@ async function buscarQuantidadeRealizada(dataISO) {
    BUSCAR RANKING DE COLABORADORES
 ===================================================== */
 
-async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
+async function buscarRankingColaboradores(dataISO, turno, limite = 15, spreadsheetId = DEFAULT_SPREADSHEET_ID) {
   try {
-    console.log("🔍 Iniciando busca de ranking de colaboradores:", { dataISO, turno, limite });
-    
-    const rows = await carregarAtualizacaoColaborador();
-    const logicRows = await carregarLogic();
+    const rows = await carregarAtualizacaoColaborador(spreadsheetId);
+    const logicRows = await carregarLogic(spreadsheetId);
     const dataBusca = formatarData(dataISO);
 
-    // Para T3, também buscar dados do dia seguinte (horas 00-05)
     let dataBuscaExtra = null;
     if (turno === 'T3') {
       const dataObj = new Date(dataISO);
@@ -432,24 +293,14 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
       dataBuscaExtra = formatarData(dataObj.toISOString().slice(0, 10));
     }
 
-    console.log("📊 Planilha Atualização carregada:", rows.length, "linhas");
-    console.log("📊 Planilha Logic carregada:", logicRows.length, "linhas");
+    if (!rows || rows.length < 5) return { success: false, data: [] };
 
-    if (!rows || rows.length < 5) {
-      console.warn("⚠️ Planilha vazia ou sem dados suficientes");
-      return { success: false, data: [] };
-    }
-
-    // Criar mapa de colaboradores por turno da aba Logic
     const colaboradoresPorTurno = new Map();
-    
     for (let i = 1; i < logicRows.length; i++) {
       const row = logicRows[i];
       if (!row || row.length < 2) continue;
-      
       const nome = normalizar(row[0]);
       const turnoColaborador = normalizar(row[1]);
-      
       if (nome && turnoColaborador) {
         colaboradoresPorTurno.set(nome.toLowerCase(), turnoColaborador);
       }
@@ -458,8 +309,6 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
     const linhaDatas = rows[3];
     const linhaHoras = rows[4];
     
-    // Identificar colunas que correspondem à(s) data(s) buscada(s)
-    // Para T3: pegar horas 22-23 do dia principal e horas 00-05 do dia seguinte
     const colunasData = [];
     for (let colIndex = 1; colIndex < linhaDatas.length; colIndex++) {
       const dataColuna = normalizar(linhaDatas[colIndex]);
@@ -467,80 +316,45 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
       const hora = parseInt(horaColuna.split(':')[0]);
 
       if (dataColuna === dataBusca) {
-        if (turno === 'T3') {
-          // Do dia principal, só pegar horas 22 e 23
-          if (hora >= 22) colunasData.push(colIndex);
-        } else {
-          colunasData.push(colIndex);
-        }
+        if (turno === 'T3') { if (hora >= 22) colunasData.push(colIndex); }
+        else colunasData.push(colIndex);
       } else if (dataBuscaExtra && dataColuna === dataBuscaExtra) {
-        // Do dia seguinte (T3), só pegar horas 00-05
         if (hora < 6) colunasData.push(colIndex);
       }
     }
 
-    console.log(`📋 Encontradas ${colunasData.length} colunas para o T3 do dia ${dataBusca}`);
+    if (colunasData.length === 0) return { success: false, data: [] };
 
-    if (colunasData.length === 0) {
-      console.warn("⚠️ Nenhuma coluna encontrada para a data:", dataBusca);
-      return { success: false, data: [] };
-    }
-
-    // Processar colaboradores (linhas 5+)
     const colaboradores = [];
-    
     for (let rowIndex = 5; rowIndex < rows.length; rowIndex++) {
       const row = rows[rowIndex];
-      
       if (!row || row.length === 0) continue;
       
       const nomeColaborador = normalizar(row[0]);
-      
       if (!nomeColaborador || 
           nomeColaborador.toLowerCase().includes('total') ||
           nomeColaborador.toLowerCase().includes('user email') ||
-          nomeColaborador === 'User Email') {
-        continue;
-      }
+          nomeColaborador === 'User Email') continue;
 
       const turnoColaborador = colaboradoresPorTurno.get(nomeColaborador.toLowerCase());
-      
-      if (!turnoColaborador || turnoColaborador !== turno) {
-        continue;
-      }
+      if (!turnoColaborador || turnoColaborador !== turno) continue;
 
       let totalProducao = 0;
-      
       for (const colIndex of colunasData) {
         const valorColuna = row[colIndex];
-        
         if (valorColuna && valorColuna !== "") {
           const valorStr = String(valorColuna).trim().replace(/\./g, '').replace(',', '.');
-          const quantidade = parseFloat(valorStr) || 0;
-          totalProducao += quantidade;
+          totalProducao += parseFloat(valorStr) || 0;
         }
       }
 
-      if (totalProducao > 0) {
-        colaboradores.push({
-          nome: nomeColaborador,
-          total: totalProducao
-        });
-      }
+      if (totalProducao > 0) colaboradores.push({ nome: nomeColaborador, total: totalProducao });
     }
 
     colaboradores.sort((a, b) => b.total - a.total);
-    const ranking = colaboradores.slice(0, limite);
-
-    console.log(`✅ Ranking gerado para ${turno}: ${ranking.length} colaboradores`);
-
-    return {
-      success: true,
-      data: ranking
-    };
+    return { success: true, data: colaboradores.slice(0, limite) };
   } catch (error) {
     console.error("❌ Erro ao buscar ranking de colaboradores:", error.message);
-    console.error("Stack:", error.stack);
     return { success: false, data: [] };
   }
 }
@@ -548,15 +362,13 @@ async function buscarRankingColaboradores(dataISO, turno, limite = 15) {
 /* =====================================================
    BUSCAR PRODUTIVIDADE DETALHADA POR COLABORADOR
 ===================================================== */
-async function buscarProdutividadeDetalhada(dataISO, turno) {
+
+async function buscarProdutividadeDetalhada(dataISO, turno, spreadsheetId = DEFAULT_SPREADSHEET_ID) {
   try {
-    console.log("🔍 Iniciando busca de produtividade detalhada:", { dataISO, turno });
-    
-    const rows = await carregarAtualizacaoColaborador();
-    const logicRows = await carregarLogic();
+    const rows = await carregarAtualizacaoColaborador(spreadsheetId);
+    const logicRows = await carregarLogic(spreadsheetId);
     const dataBusca = formatarData(dataISO);
 
-    // Para T3, também buscar dados do dia seguinte (horas 00-05)
     let dataBuscaExtra = null;
     if (turno === 'T3') {
       const dataObj = new Date(dataISO);
@@ -564,41 +376,30 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
       dataBuscaExtra = formatarData(dataObj.toISOString().slice(0, 10));
     }
 
-    if (!rows || rows.length < 5) {
-      console.warn("⚠️ Planilha vazia ou sem dados suficientes");
-      return { success: false, data: [] };
-    }
+    if (!rows || rows.length < 5) return { success: false, data: [] };
 
     const extrairOpsId = (str) => {
       const match = String(str).match(/\[([^\]]+)\]/);
       return match ? match[1].toLowerCase() : null;
     };
 
-    const extrairNomeLimpo = (str) => {
-      return String(str).replace(/^\[[^\]]+\]/, '').trim();
-    };
+    const extrairNomeLimpo = (str) =>
+      String(str).replace(/^\[[^\]]+\]/, '').trim();
 
     const colaboradoresPorTurno = new Map();
     for (let i = 1; i < logicRows.length; i++) {
       const row = logicRows[i];
       if (!row || row.length < 2) continue;
-      
       const celula = normalizar(row[0]);
       const turnoColaborador = normalizar(row[1]);
-      
       if (!celula || !turnoColaborador) continue;
-
       const opsId = extrairOpsId(celula);
-      if (opsId) {
-        colaboradoresPorTurno.set(opsId, turnoColaborador);
-      }
+      if (opsId) colaboradoresPorTurno.set(opsId, turnoColaborador);
     }
 
     const linhaDatas = rows[3];
     const linhaHoras = rows[4];
 
-    // Identificar colunas para a(s) data(s) do turno
-    // T3: horas 22-23 do dia principal + horas 00-05 do dia seguinte
     const colunasData = [];
     for (let colIndex = 1; colIndex < linhaDatas.length; colIndex++) {
       const dataColuna = normalizar(linhaDatas[colIndex]);
@@ -606,54 +407,32 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
       const hora = parseInt(horaColuna.split(':')[0]);
 
       if (dataColuna === dataBusca) {
-        if (turno === 'T3') {
-          if (hora >= 22) colunasData.push(colIndex);
-        } else {
-          colunasData.push(colIndex);
-        }
+        if (turno === 'T3') { if (hora >= 22) colunasData.push(colIndex); }
+        else colunasData.push(colIndex);
       } else if (dataBuscaExtra && dataColuna === dataBuscaExtra) {
         if (hora < 6) colunasData.push(colIndex);
       }
     }
 
-    console.log(`📋 Colunas encontradas para ${turno} do dia ${dataBusca}: ${colunasData.length}`);
-
-    if (colunasData.length === 0) {
-      return { success: true, data: [] };
-    }
+    if (colunasData.length === 0) return { success: true, data: [] };
 
     const colaboradores = [];
-    let totalLinhasProcessadas = 0;
-    let totalFiltradas = 0;
-    
     for (let rowIndex = 5; rowIndex < rows.length; rowIndex++) {
       const row = rows[rowIndex];
-      
       if (!row || row.length === 0) continue;
       
       const nomeColaborador = normalizar(row[0]);
-      
       if (!nomeColaborador || 
           nomeColaborador.toLowerCase().includes('total') ||
           nomeColaborador.toLowerCase().includes('user email') ||
-          nomeColaborador === 'User Email') {
-        continue;
-      }
-
-      totalLinhasProcessadas++;
+          nomeColaborador === 'User Email') continue;
 
       const opsIdLinha = extrairOpsId(nomeColaborador);
       const nomeLimpoLinha = extrairNomeLimpo(nomeColaborador);
-
       if (!opsIdLinha) continue;
 
       const turnoColaborador = colaboradoresPorTurno.get(opsIdLinha);
-      
-      if (!turnoColaborador || turnoColaborador !== turno) {
-        continue;
-      }
-
-      totalFiltradas++;
+      if (!turnoColaborador || turnoColaborador !== turno) continue;
 
       const dadosPorHora = {};
       let totalProducao = 0;
@@ -664,7 +443,6 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
         
         if (horaStr) {
           const hora = parseInt(horaStr.split(':')[0]);
-          
           if (!isNaN(hora)) {
             let quantidade = 0;
             if (valorColuna && valorColuna !== "") {
@@ -686,11 +464,7 @@ async function buscarProdutividadeDetalhada(dataISO, turno) {
     }
 
     console.log(`✅ Produtividade detalhada: ${colaboradores.length} colaboradores do ${turno}`);
-
-    return {
-      success: true,
-      data: colaboradores
-    };
+    return { success: true, data: colaboradores };
   } catch (error) {
     console.error("❌ Erro ao buscar produtividade detalhada:", error.message);
     return { success: false, data: [] };
@@ -703,4 +477,5 @@ module.exports = {
   buscarRankingColaboradores,
   buscarProdutividadeDetalhada,
   limparCache,
+  DEFAULT_SPREADSHEET_ID,
 };

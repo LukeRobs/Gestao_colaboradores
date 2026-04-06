@@ -75,21 +75,21 @@ router.get(
 router.post(
   "/",
   authenticate,
-  authorize("ADMIN", "MANAGER"),
+  authorize("ADMIN", "MANAGER", "ALTA_GESTAO"),
   asyncHandler(controller.createColaborador)
 );
 
 router.put(
   "/:opsId",
   authenticate,
-  authorize("ADMIN", "MANAGER"),
+  authorize("ADMIN", "MANAGER", "ALTA_GESTAO"),
   asyncHandler(controller.updateColaborador)
 );
 
 router.post(
   "/:opsId/movimentar",
   authenticate,
-  authorize("ADMIN", "MANAGER"),
+  authorize("ADMIN", "MANAGER", "ALTA_GESTAO"),
   asyncHandler(controller.movimentarColaborador)
 );
 

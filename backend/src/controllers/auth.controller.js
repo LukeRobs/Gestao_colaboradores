@@ -100,6 +100,7 @@ const getMe = async (req, res) => {
       email: true,
       role: true,
       isActive: true,
+      idEstacao: true,
       createdAt: true,
       updatedAt: true,
     },

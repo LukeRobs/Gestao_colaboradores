@@ -1392,12 +1392,18 @@ const carregarDashboardAdmin = async (req, res) => {
   const turnoSelecionado = String(turno || "ALL").toUpperCase();
   const isAll = turnoSelecionado === "ALL";
 
+  // Filtro de estação: ADMIN global vê tudo, demais só a sua estação
+  const estacaoFilter = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    ? { idEstacao: req.dbContext.estacaoId }
+    : {};
+
     /* ===============================
        COLABORADORES BASE
     =============================== */
     const colaboradores = await prisma.colaborador.findMany({
       where: {
         status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
+        ...estacaoFilter,
       },
       include: {
         empresa: true,
@@ -1537,12 +1543,14 @@ const carregarDashboardAdmin = async (req, res) => {
       where: {
         status: "INATIVO",
         dataDesligamento: { gte: inicioFinal, lte: fimFinal },
+        ...estacaoFilter,
       },
     });
 
     const admitidos = await prisma.colaborador.findMany({
       where: {
         dataAdmissao: { gte: inicioFinal, lte: fimFinal },
+        ...estacaoFilter,
       },
     });
 
@@ -1572,6 +1580,7 @@ const carregarDashboardAdmin = async (req, res) => {
 
     // Todos os colaboradores elegíveis (cargo + sem PCD) — sem filtro de empresa
     const whereSerieBase = {
+      ...estacaoFilter,
       ...(turnoSelecionado !== "ALL"
         ? { turno: { nomeTurno: { contains: turnoSelecionado, mode: "insensitive" } } }
         : {}),

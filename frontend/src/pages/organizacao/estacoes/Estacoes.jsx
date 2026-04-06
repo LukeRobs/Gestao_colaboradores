@@ -131,6 +131,7 @@ export default function EstacoesPage() {
             const payload = {
               nomeEstacao: data.nome,
               idRegional: data.idRegional ? Number(data.idRegional) : undefined,
+              sheetsMetaProducaoId: data.sheetsMetaProducaoId || null,
             };
             if (selected) {
               await EstacoesAPI.atualizar(selected.idEstacao, payload);

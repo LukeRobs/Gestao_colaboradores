@@ -100,7 +100,17 @@ const initTurnoMap = () => ({
    STATUS DO DIA — PADRÃO ADMIN (COM 4 ESTADOS OPERACIONAIS)
 ===================================================== */
 function getStatusDoDiaOperacional(f) {
-  // Presença
+  // DSR/FO têm prioridade máxima — mesmo que haja horaEntrada (ajuste indevido),
+  // o dia de folga não deve ser contado como escalado
+  if (f?.tipoAusencia) {
+    const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
+
+    if (codigo === "DSR" || codigo === "FO") {
+      return { label: "Folga", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+    }
+  }
+
+  // Presença via batida de ponto
   if (f?.horaEntrada) {
     return {
       label: "Presente",
@@ -124,8 +134,6 @@ function getStatusDoDiaOperacional(f) {
         return { label: "Não contratado", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
       case "ON":
         return { label: "Onboarding", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
-      case "DSR":
-        return { label: "Folga", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
       case "T":
         return { label: "Transferido", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
 
@@ -139,10 +147,6 @@ function getStatusDoDiaOperacional(f) {
         return { label: "Licença Maternidade", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
       case "LP":
         return { label: "Licença Paternidade", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
-
-      // Folga programada — não conta como escalado (igual DSR)
-      case "FO":
-        return { label: "Folga", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
       case "S1":
         return { label: "Sinergia Enviada", contaComoEscalado: true, impactaAbsenteismo: false, origem: "tipoAusencia" };
       case "BH":
@@ -423,6 +427,20 @@ const carregarDashboard = async (req, res) => {
 
       // Registro existe mas está vazio (sem tipo e sem hora) — trata como sem lançamento
       if (isRegistroVazio(registroSnapshot)) return;
+
+      // 🔒 GUARD T3: colaboradores do T3 só devem ser contados se a horaEntrada
+      // for compatível com o horário do T3 (≥ 20:50 ou < 06:20).
+      // Isso evita que registros de ajuste manual ou batidas fora do horário
+      // do T3 inflem a contagem de presentes.
+      if (turno === "T3" && registroSnapshot.horaEntrada) {
+        const h = new Date(registroSnapshot.horaEntrada).getUTCHours();
+        const m = new Date(registroSnapshot.horaEntrada).getUTCMinutes();
+        const minutos = h * 60 + m;
+        const T3_INICIO = 20 * 60 + 50; // 20:50
+        const T3_FIM = 6 * 60 + 20;     // 06:20
+        const dentroDoT3 = minutos >= T3_INICIO || minutos < T3_FIM;
+        if (!dentroDoT3) return;
+      }
 
       const sSnap = getStatusDoDiaOperacional(registroSnapshot);
 

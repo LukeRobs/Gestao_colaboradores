@@ -92,11 +92,16 @@ export default function GestaoOperacional() {
       console.error("❌ Erro ao carregar dashboard:", error);
       console.error("📋 Resposta do servidor:", error.response?.data);
       console.error("📊 Status:", error.response?.status);
-      
-      const mensagemErro = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          "Erro ao carregar dados";
-      setErro(mensagemErro);
+
+      const code = error.response?.data?.code;
+      if (code === 'SHEETS_NOT_CONFIGURED') {
+        setErro('SHEETS_NOT_CONFIGURED');
+      } else {
+        const mensagemErro = error.response?.data?.message || 
+                            error.response?.data?.error || 
+                            "Erro ao carregar dados";
+        setErro(mensagemErro);
+      }
     } finally {
       setLoading(false);
     }
@@ -281,6 +286,32 @@ export default function GestaoOperacional() {
   }
 
   if (erro) {
+    if (erro === 'SHEETS_NOT_CONFIGURED') {
+      return (
+        <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <div className="flex-1 lg:ml-64">
+            <Header onMenuClick={() => setSidebarOpen(true)} />
+            <div className="flex flex-col items-center justify-center h-[80vh] gap-6 text-center px-4">
+              <div className="w-20 h-20 rounded-full bg-[#1A1A1C] border border-[#3D3D40] flex items-center justify-center">
+                <span className="text-4xl">🔧</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-white mb-2">Funcionalidade em configuração</h2>
+                <p className="text-[#BFBFC3] text-sm max-w-sm">
+                  A planilha de produtividade desta estação ainda está sendo configurada.
+                  Em breve os dados estarão disponíveis aqui.
+                </p>
+              </div>
+              <div className="px-4 py-1.5 rounded-full bg-[#FA4C00]/10 border border-[#FA4C00]/30 text-[#FA4C00] text-xs font-medium">
+                Em breve
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="h-screen flex items-center justify-center bg-[#0D0D0D]">
         <div className="text-center">

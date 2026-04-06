@@ -1,0 +1,4 @@
+ops_id,nome_completo,matricula,genero,cpf,data_nascimento,data_admissao,email,telefone,status,hora_inicio_jornada,id_estacao,id_setor,id_cargo,id_empresa,id_turno,id_escala,id_lider
+OBRIGATORIO,OBRIGATORIO,OBRIGATORIO,opcional,opcional,opcional,OBRIGATORIO,opcional,opcional,opcional,opcional,OBRIGATORIO,opcional,opcional,opcional,opcional,opcional,opcional
+Ops123456,João da Silva,MAT001,M,123.456.789-00,15/06/1995,01/03/2024,joao.silva@email.com,11999999999,ATIVO,05:25,1,,,,,,, 
+Ops789012,Maria Souza,MAT002,F,987.654.321-00,22/09/1998,15/04/2024,maria.souza@email.com,11988888888,ATIVO,13:25,1,,,,,,,

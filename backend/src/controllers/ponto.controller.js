@@ -5,6 +5,7 @@ const {
   createdResponse,
   notFoundResponse,
   errorResponse,
+  forbiddenResponse,
 } = require("../utils/response");
 const { getDateOperacional } = require("../utils/dateOperacional");
 const { finalizarAtestadosVencidos } = require("../utils/atestadoAutoFinalize");
@@ -273,8 +274,10 @@ const registrarPontoCPF = async (req, res) => {
     ========================================== */
 
     if (!aberta) {
+      // Usa escala do histórico se disponível, senão cai para a escala atual do colaborador
+      const nomeEscalaDia = escalaDia?.escala?.nomeEscala || colaborador.escala?.nomeEscala;
 
-      if (isDiaDSR(dataReferenciaOperacional, escalaDia?.escala?.nomeEscala)) {
+      if (isDiaDSR(dataReferenciaOperacional, nomeEscalaDia)) {
         return errorResponse(
           res,
           "Hoje é DSR do colaborador",
@@ -493,9 +496,19 @@ const getControlePresenca = async (req, res) => {
     /* =====================================================
        FILTROS COLABORADOR
     ===================================================== */
+
+    // Usuário não-global sem estação configurada não deve ver nada
+    if (!req.dbContext?.isGlobal && !req.dbContext?.estacaoId) {
+      return successResponse(res, { dias: [], colaboradores: [] });
+    }
+
     const whereColaborador = {
       status: "ATIVO",
       dataDesligamento: null,
+      // Isolamento por estação: ADMIN vê todas, demais só a sua
+      ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
+        ? { idEstacao: req.dbContext.estacaoId }
+        : {}),
       // Filtrar cargos operacionais
       cargo: {
         nomeCargo: {
@@ -917,6 +930,16 @@ const ajusteManualPresenca = async (req, res) => {
 
     if (colaborador.dataDesligamento || colaborador.status !== "ATIVO") {
       return errorResponse(res, "Colaborador não está ativo", 403);
+    }
+
+    // Isolamento por estação: não-ADMIN só pode ajustar colaboradores da sua estação
+    if (!req.dbContext?.isGlobal) {
+      if (!req.dbContext?.estacaoId) {
+        return forbiddenResponse(res, "Usuário sem estação configurada");
+      }
+      if (colaborador.idEstacao !== req.dbContext.estacaoId) {
+        return forbiddenResponse(res, "Colaborador não pertence à sua estação");
+      }
     }
 
     /* ===============================

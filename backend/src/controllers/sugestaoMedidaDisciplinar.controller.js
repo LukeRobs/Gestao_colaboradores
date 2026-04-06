@@ -579,8 +579,16 @@ const backfillOnboarding = async (req, res) => {
       return errorResponse(res, "dataAdmissaoMinima inválida (YYYY-MM-DD)", 400);
     }
 
+    const whereColaborador = {
+      dataAdmissao: { gte: minima },
+      // Isolamento por estação: ADMIN global processa todas, senão só a sua
+      ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
+        ? { idEstacao: req.dbContext.estacaoId }
+        : {}),
+    };
+
     const colaboradores = await prisma.colaborador.findMany({
-      where: { dataAdmissao: { gte: minima } },
+      where: whereColaborador,
       select: { opsId: true, dataAdmissao: true },
     });
 
