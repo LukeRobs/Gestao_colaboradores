@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -75,9 +75,9 @@ export default function DateFilter({ value, onApply }) {
       <button
         ref={buttonRef}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-4 h-11 rounded-xl bg-[#1C1C1F] border border-white/10 text-sm hover:border-white/20 transition"
+        className="flex items-center gap-2 px-4 h-11 rounded-xl bg-surface border border-default text-sm hover:bg-surface-2 transition text-page"
       >
-        <Calendar size={16} className="text-white" />
+        <Calendar size={16} className="text-muted" />
         {range?.inicio && range?.fim
           ? `${range.inicio} → ${range.fim}`
           : "Selecionar período"}
@@ -88,14 +88,14 @@ export default function DateFilter({ value, onApply }) {
         createPortal(
           <div
             ref={calendarRef}
-            className="fixed z-[9999] w-[320px] bg-[#141416] border border-white/10 rounded-2xl shadow-2xl p-4 animate-[fadeUp_.2s_ease]"
+            className="fixed z-[9999] w-[320px] bg-surface border border-default rounded-2xl shadow-2xl p-4 animate-[fadeUp_.2s_ease]"
             style={{
               top: position.top,
               left: position.left,
             }}
           >
             {/* HEADER */}
-            <p className="text-xs text-white/40 mb-3">
+            <p className="text-xs text-muted mb-3">
               Selecione um período
             </p>
 
@@ -103,25 +103,25 @@ export default function DateFilter({ value, onApply }) {
             <div className="grid grid-cols-2 gap-2 mb-4">
               <button
                 onClick={() => handleQuick(0)}
-                className="px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs"
+                className="px-3 py-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-xs text-page"
               >
                 Hoje
               </button>
               <button
                 onClick={() => handleQuick(7)}
-                className="px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs"
+                className="px-3 py-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-xs text-page"
               >
                 Últimos 7 dias
               </button>
               <button
                 onClick={() => handleQuick(30)}
-                className="px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs"
+                className="px-3 py-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-xs text-page"
               >
                 Últimos 30 dias
               </button>
               <button
                 onClick={() => handleQuick(90)}
-                className="px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs"
+                className="px-3 py-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-xs text-page"
               >
                 3 meses
               </button>
@@ -130,7 +130,7 @@ export default function DateFilter({ value, onApply }) {
             {/* INPUTS */}
             <div className="flex flex-col gap-3">
               <div>
-                <label className="text-[10px] text-white/40">
+                <label className="text-[10px] text-muted">
                   Data início
                 </label>
                 <input
@@ -142,13 +142,12 @@ export default function DateFilter({ value, onApply }) {
                       inicio: e.target.value,
                     }))
                   }
-                  className="w-full mt-1 px-3 py-2 rounded-lg bg-[#0F0F10] border border-white/10 text-sm text-white"
-                  style={{ colorScheme: "dark" }}
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-2 border border-default text-sm text-page"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] text-white/40">
+                <label className="text-[10px] text-muted">
                   Data fim
                 </label>
                 <input
@@ -160,8 +159,7 @@ export default function DateFilter({ value, onApply }) {
                       fim: e.target.value,
                     }))
                   }
-                  className="w-full mt-1 px-3 py-2 rounded-lg bg-[#0F0F10] border border-white/10 text-sm text-white"
-                  style={{ colorScheme: "dark" }}
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-surface-2 border border-default text-sm text-page"
                 />
               </div>
             </div>
@@ -170,7 +168,7 @@ export default function DateFilter({ value, onApply }) {
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() => setOpen(false)}
-                className="px-3 py-2 text-xs text-white/40 hover:text-white"
+                className="px-3 py-2 text-xs text-muted hover:text-page"
               >
                 Cancelar
               </button>

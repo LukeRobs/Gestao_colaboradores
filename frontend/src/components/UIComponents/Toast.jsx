@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle, AlertCircle, Info, X } from "lucide-react";
+﻿import { CheckCircle, XCircle, AlertCircle, Info, X } from "lucide-react";
 
 export const Toast = ({ type = "success", message, onClose }) => {
   const styles = {

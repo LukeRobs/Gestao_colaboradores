@@ -1,4 +1,4 @@
-import { FileText, Download, Calendar, User, Upload } from "lucide-react";
+﻿import { FileText, Download, Calendar, User, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MedidasDisciplinaresAPI } from "../services/medidasDisciplinares";
 
@@ -110,7 +110,7 @@ export default function MedidaDisciplinarCard({ medida }) {
               </div>
 
               <div className="flex items-center gap-1">
-                <Calendar size={12} className="text-white" />
+                <Calendar size={12} className="text-muted" />
                 {dataAplicacao}
               </div>
 
@@ -158,7 +158,7 @@ export default function MedidaDisciplinarCard({ medida }) {
 
       <div className="mt-6">
 
-        <p className="text-sm text-[#BFBFC3] leading-relaxed line-clamp-4">
+        <p className="text-sm text-muted leading-relaxed line-clamp-4">
           {medida.motivo || "Gerado automaticamente pelo sistema"}
         </p>
 
@@ -210,7 +210,7 @@ export default function MedidaDisciplinarCard({ medida }) {
               bg-[#1F1F22]
               border border-[#2A2A2D]
               hover:border-[#FA4C00]/50
-              hover:bg-[#1A1A1C]
+              hover:bg-surface
               transition-all
             "
           >

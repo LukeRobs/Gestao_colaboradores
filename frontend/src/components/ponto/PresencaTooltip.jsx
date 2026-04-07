@@ -1,4 +1,4 @@
-export default function PresencaTooltip({ open, children, above = false }) {
+﻿export default function PresencaTooltip({ open, children, above = false }) {
   if (!open) return null;
 
   return (
@@ -9,12 +9,12 @@ export default function PresencaTooltip({ open, children, above = false }) {
         ${above ? "bottom-full mb-2" : "top-full mt-2"}
         w-64 max-w-[260px]
         rounded-xl
-        border border-[#3D3D40]
+        border border-default
         bg-[#121214]
         shadow-xl
         p-3
         text-xs
-        text-[#EDEDED]
+        text-page
         wrap-break-words whitespace-normal
         pointer-events-none
       `}

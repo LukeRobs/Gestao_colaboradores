@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -52,7 +52,7 @@ const SINTOMA_CIDS = Object.entries(CID_DESCRICOES).reduce((acc, [codigo, sintom
 /* ─── SKELETON ───────────────────────────────────────────────────── */
 function Skeleton({ style = {} }) {
   return (
-    <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 10, animation: "pulse 1.5s ease-in-out infinite", ...style }} />
+    <div style={{ background: "var(--color-border)", borderRadius: 10, animation: "pulse 1.5s ease-in-out infinite", ...style }} />
   )
 }
 
@@ -83,18 +83,18 @@ function KpiCard({ label, value, loading }) {
   const { Icon = IconDoc, color = BRAND, desc = "" } = KPI_META[label] || {}
   return (
     <div
-      style={{ background: "#111111", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `3px solid ${color}`, borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8, cursor: "default", transition: "background 0.2s" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#161616")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "#111111")}
+      style={{ background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.07)", borderLeft: `3px solid ${color}`, borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8, cursor: "default", transition: "background 0.2s" }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-3)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <Icon c={color} s={13} />
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: 500, margin: 0 }}>{label}</p>
+        <p style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 500, margin: 0 }}>{label}</p>
       </div>
       {loading ? <Skeleton style={{ height: 28, width: "55%" }} /> : (
-        <p style={{ fontSize: 26, fontWeight: 700, color: "#F0F0F0", margin: 0, lineHeight: 1, letterSpacing: "-0.02em" }}>{value ?? "—"}</p>
+        <p style={{ fontSize: 26, fontWeight: 700, color: "var(--color-text)", margin: 0, lineHeight: 1, letterSpacing: "-0.02em" }}>{value ?? "—"}</p>
       )}
-      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", margin: 0 }}>{desc}</p>
+      <p style={{ fontSize: 10, color: "var(--color-subtle)", margin: 0 }}>{desc}</p>
     </div>
   )
 }
@@ -104,7 +104,7 @@ function SectionLabel({ num, title }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
       <span style={{ fontSize: 10, fontWeight: 800, color: BRAND, textTransform: "uppercase", letterSpacing: "0.16em" }}>{num}</span>
-      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", letterSpacing: "0.16em" }}>{title}</span>
+      <span style={{ fontSize: 10, color: "var(--color-subtle)", textTransform: "uppercase", letterSpacing: "0.16em" }}>{title}</span>
     </div>
   )
 }
@@ -112,7 +112,7 @@ function SectionLabel({ num, title }) {
 /* ─── CARD ───────────────────────────────────────────────────────── */
 function Card({ title, subtitle, icon, children, style = {} }) {
   return (
-    <div style={{ background: "#111111", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16, minWidth: 0, width: "100%", boxSizing: "border-box", ...style }}>
+    <div style={{ background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16, minWidth: 0, width: "100%", boxSizing: "border-box", ...style }}>
       {title && (
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           {icon && (
@@ -121,8 +121,8 @@ function Card({ title, subtitle, icon, children, style = {} }) {
             </div>
           )}
           <div>
-            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.88)" }}>{title}</h2>
-            {subtitle && <p style={{ margin: "3px 0 0", fontSize: 11, color: "rgba(255,255,255,0.30)" }}>{subtitle}</p>}
+            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>{title}</h2>
+            {subtitle && <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--color-subtle)" }}>{subtitle}</p>}
           </div>
         </div>
       )}
@@ -135,12 +135,12 @@ function Card({ title, subtitle, icon, children, style = {} }) {
 function DateInput({ label, value, onChange }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</label>
+      <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</label>
       <input
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{ background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", outline: "none", cursor: "pointer" }}
+        style={{ background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.08)", color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", outline: "none", cursor: "pointer" }}
       />
     </div>
   )
@@ -158,22 +158,22 @@ function SelectEmpresa({ value, onChange, options }) {
   }, [])
   return (
     <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
+      <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
       <div
         onClick={() => setOpen(!open)}
-        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+        style={{ background: "var(--color-surface)", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "var(--color-border)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
       >
-        <span style={{ color: selected ? "#fff" : "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+        <span style={{ color: selected ? "#fff" : "var(--color-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
           {selected ? selected.razaoSocial : "Todas as empresas"}
         </span>
-        <IconChevronDown c="rgba(255,255,255,0.35)" />
+        <IconChevronDown c="var(--color-subtle)" />
       </div>
       {open && (
-        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
           <div
             onClick={() => { onChange(""); setOpen(false) }}
-            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "var(--color-muted)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             Todas as empresas
@@ -182,7 +182,7 @@ function SelectEmpresa({ value, onChange, options }) {
             <div
               key={e.idEmpresa}
               onClick={() => { onChange(String(e.idEmpresa)); setOpen(false) }}
-              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "rgba(255,255,255,0.65)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "var(--color-muted)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
               onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
               onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
             >
@@ -207,22 +207,22 @@ function SelectCID({ value, onChange, options }) {
   }, [])
   return (
     <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>CID</label>
+      <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>CID</label>
       <div
         onClick={() => setOpen(!open)}
-        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 160, userSelect: "none", transition: "border-color 0.2s" }}
+        style={{ background: "var(--color-surface)", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "var(--color-border)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 160, userSelect: "none", transition: "border-color 0.2s" }}
       >
-        <span style={{ color: selected ? "#fff" : "rgba(255,255,255,0.35)" }}>
+        <span style={{ color: selected ? "#fff" : "var(--color-subtle)" }}>
           {selected ? `${selected.codigo} (${selected.total})` : "Todos os CIDs"}
         </span>
-        <IconChevronDown c="rgba(255,255,255,0.35)" />
+        <IconChevronDown c="var(--color-subtle)" />
       </div>
       {open && (
-        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
           <div
             onClick={() => { onChange(""); setOpen(false) }}
-            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "var(--color-muted)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             Todos os CIDs
@@ -231,12 +231,12 @@ function SelectCID({ value, onChange, options }) {
             <div
               key={c.codigo}
               onClick={() => { onChange(c.codigo); setOpen(false) }}
-              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: value === c.codigo ? BRAND : "rgba(255,255,255,0.65)", fontWeight: value === c.codigo ? 600 : 400 }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: value === c.codigo ? BRAND : "var(--color-muted)", fontWeight: value === c.codigo ? 600 : 400 }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(250,76,0,0.08)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               {c.codigo} — {CID_DESCRICOES[c.codigo] || "CID"}{" "}
-              <span style={{ color: "rgba(255,255,255,0.30)" }}>({c.total})</span>
+              <span style={{ color: "var(--color-subtle)" }}>({c.total})</span>
             </div>
           ))}
         </div>
@@ -257,22 +257,22 @@ function SelectSintoma({ value, onChange }) {
   }, [])
   return (
     <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Sintoma</label>
+      <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Sintoma</label>
       <div
         onClick={() => setOpen(!open)}
-        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : value ? "rgba(250,76,0,0.35)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+        style={{ background: "var(--color-surface)", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : value ? "rgba(250,76,0,0.35)" : "var(--color-border)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
       >
-        <span style={{ color: value ? "#fff" : "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+        <span style={{ color: value ? "#fff" : "var(--color-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
           {value || "Todos os sintomas"}
         </span>
-        <IconChevronDown c="rgba(255,255,255,0.35)" />
+        <IconChevronDown c="var(--color-subtle)" />
       </div>
       {open && (
-        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
           <div
             onClick={() => { onChange(""); setOpen(false) }}
-            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "var(--color-muted)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             Todos os sintomas
@@ -281,12 +281,12 @@ function SelectSintoma({ value, onChange }) {
             <div
               key={s}
               onClick={() => { onChange(s); setOpen(false) }}
-              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: value === s ? BRAND : "rgba(255,255,255,0.65)", fontWeight: value === s ? 600 : 400 }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: value === s ? BRAND : "var(--color-muted)", fontWeight: value === s ? 600 : 400 }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(250,76,0,0.08)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <span>{s}</span>
-              <span style={{ marginLeft: 8, fontSize: 11, color: "rgba(255,255,255,0.28)" }}>
+              <span style={{ marginLeft: 8, fontSize: 11, color: "var(--color-subtle)" }}>
                 ({SINTOMA_CIDS[s].join(", ")})
               </span>
             </div>
@@ -305,10 +305,10 @@ function BarBlock({ data }) {
     <div className="h-[280px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={safeData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-          <XAxis dataKey="name" tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-          <YAxis allowDecimals={false} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-          <Tooltip contentStyle={{ background: "#232323", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
+          <CartesianGrid stroke="var(--color-border)" />
+          <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
+          <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
+          <Tooltip contentStyle={{ background: "var(--color-surface-2)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
           <Bar dataKey="value" fill={BRAND}>
             <LabelList dataKey="value" position="top" style={{ fill: "#FFF", fontSize: 12, fontWeight: 600 }} />
           </Bar>
@@ -331,10 +331,10 @@ function BarBlockHorizontal({ data }) {
     <div className="h-[280px] sm:h-80 lg:h-[360px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={formatted} layout="vertical" margin={{ left: 20, right: 20 }}>
-          <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-          <XAxis type="number" allowDecimals={false} domain={[0, "dataMax + 2"]} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-          <YAxis type="category" dataKey="name" width={140} tick={{ fill: "#BFBFC3", fontSize: 11 }} />
-          <Tooltip contentStyle={{ background: "#232323", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
+          <CartesianGrid stroke="var(--color-border)" />
+          <XAxis type="number" allowDecimals={false} domain={[0, "dataMax + 2"]} tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
+          <YAxis type="category" dataKey="name" width={140} tick={{ fill: "var(--color-muted)", fontSize: 11 }} />
+          <Tooltip contentStyle={{ background: "var(--color-surface-2)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
           <Bar dataKey="value" fill={BRAND}>
             <LabelList dataKey="value" position="right" style={{ fill: "#FFF", fontSize: 12, fontWeight: 600 }} />
           </Bar>
@@ -353,12 +353,12 @@ function BarBlockHorizontalCID({ data }) {
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={safeData} layout="vertical" barSize={18} barCategoryGap="18%" margin={{ top: 5, right: 28, left: 10, bottom: 5 }}>
-          <CartesianGrid stroke="rgba(255,255,255,0.06)" />
-          <XAxis type="number" allowDecimals={false} domain={[0, (dataMax) => dataMax + 0.3]} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-          <YAxis type="category" dataKey="name" width={120} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
+          <CartesianGrid stroke="var(--color-border)" />
+          <XAxis type="number" allowDecimals={false} domain={[0, (dataMax) => dataMax + 0.3]} tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
+          <YAxis type="category" dataKey="name" width={120} tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
           <Tooltip
             formatter={(value, _, props) => [`${value} atestados`, props.payload.full || props.payload.name]}
-            contentStyle={{ background: "#232323", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
+            contentStyle={{ background: "var(--color-surface-2)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
           />
           <Bar dataKey="value" fill={BRAND} radius={[0, 6, 6, 0]}>
             <LabelList dataKey="value" position="right" style={{ fill: "#FFFFFF", fontSize: 12, fontWeight: 600 }} />
@@ -380,7 +380,7 @@ function PieBlock({ data }) {
           <Pie data={safeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
             {safeData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
           </Pie>
-          <Tooltip contentStyle={{ background: "#232323", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
+          <Tooltip contentStyle={{ background: "var(--color-surface-2)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
         </PieChart>
       </ResponsiveContainer>
     </div>
@@ -463,9 +463,9 @@ function ColaboradoresTable({ data, loading, filtroTempoCasa, setFiltroTempoCasa
       <div style={{ overflowX: "auto", borderRadius: 14, border: "1px solid rgba(255,255,255,0.06)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700, fontSize: 13 }}>
           <thead>
-            <tr style={{ background: "#0D0D0D", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <tr style={{ background: "var(--color-page)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               {COLS.map((h) => (
-                <th key={h} style={{ textAlign: "left", padding: "12px 16px", fontSize: 10, color: "rgba(255,255,255,0.28)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.10em", whiteSpace: "nowrap" }}>{h}</th>
+                <th key={h} style={{ textAlign: "left", padding: "12px 16px", fontSize: 10, color: "var(--color-subtle)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.10em", whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -477,7 +477,7 @@ function ColaboradoresTable({ data, loading, filtroTempoCasa, setFiltroTempoCasa
                 </tr>
               ))
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={COLS.length} style={{ padding: "48px 16px", textAlign: "center", color: "rgba(255,255,255,0.18)", fontSize: 13 }}>Nenhum resultado encontrado</td></tr>
+              <tr><td colSpan={COLS.length} style={{ padding: "48px 16px", textAlign: "center", color: "var(--color-subtle)", fontSize: 13 }}>Nenhum resultado encontrado</td></tr>
             ) : (
               filtered.map((c, i) => {
                 const atst = c.totalAtestados || 0
@@ -485,13 +485,13 @@ function ColaboradoresTable({ data, loading, filtroTempoCasa, setFiltroTempoCasa
                 const atstBg = atst >= 3 ? "#EF444418" : atst >= 2 ? "#F59E0B18" : `${BRAND}14`
                 return (
                   <tr key={c.opsId || i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.15s" }} onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                    <td style={{ padding: "11px 16px", fontWeight: 500, color: "rgba(255,255,255,0.80)", whiteSpace: "nowrap" }}>{c.nome}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.empresa}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.setor}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.turno}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.escala}</td>
+                    <td style={{ padding: "11px 16px", fontWeight: 500, color: "var(--color-text)", whiteSpace: "nowrap" }}>{c.nome}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.empresa}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.setor}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.turno}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.escala}</td>
                     <td style={{ padding: "11px 16px", whiteSpace: "nowrap" }}>
-                      <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 8, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", fontSize: 12 }}>{c.tempoCasa}</span>
+                      <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 8, background: "var(--color-border)", color: "var(--color-muted)", fontSize: 12 }}>{c.tempoCasa}</span>
                     </td>
                     <td style={{ padding: "11px 16px", whiteSpace: "nowrap" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 8, background: atstBg, color: atstColor, fontWeight: 700, fontSize: 13 }}>{atst}</span>
@@ -504,7 +504,7 @@ function ColaboradoresTable({ data, loading, filtroTempoCasa, setFiltroTempoCasa
         </table>
         {!loading && filtered.length > 0 && (
           <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.04)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", margin: 0 }}>{filtered.length} de {data.length} colaboradores</p>
+            <p style={{ fontSize: 11, color: "var(--color-subtle)", margin: 0 }}>{filtered.length} de {data.length} colaboradores</p>
           </div>
         )}
       </div>
@@ -612,7 +612,7 @@ export default function DashboardAtestados() {
   `
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#080808", color: "#fff" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-page)", color: "var(--color-text)" }}>
       <style>{pulseStyle}</style>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -628,7 +628,7 @@ export default function DashboardAtestados() {
                 <div style={{ width: 4, height: 26, borderRadius: 4, background: BRAND }} />
                 <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em" }}>Dashboard de Atestados</h1>
               </div>
-              <p style={{ margin: "0 0 0 14px", fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
+              <p style={{ margin: "0 0 0 14px", fontSize: 13, color: "var(--color-subtle)" }}>
                 Visão completa de impacto, recorrência e diagnóstico de ausências médicas
               </p>
             </div>
@@ -648,7 +648,7 @@ export default function DashboardAtestados() {
               <button
                 onClick={fetchAll}
                 disabled={loading}
-                style={{ height: 42, padding: "0 24px", borderRadius: 12, background: loading ? "#333" : BRAND, color: "#fff", fontWeight: 700, fontSize: 13, border: "none", cursor: loading ? "not-allowed" : "pointer", transition: "background 0.2s", whiteSpace: "nowrap", alignSelf: "flex-end" }}
+                style={{ height: 42, padding: "0 24px", borderRadius: 12, background: loading ? "#333" : BRAND, color: "var(--color-text)", fontWeight: 700, fontSize: 13, border: "none", cursor: loading ? "not-allowed" : "pointer", transition: "background 0.2s", whiteSpace: "nowrap", alignSelf: "flex-end" }}
                 onMouseEnter={(e) => !loading && (e.target.style.background = "#e64500")}
                 onMouseLeave={(e) => !loading && (e.target.style.background = BRAND)}
               >
@@ -686,10 +686,10 @@ export default function DashboardAtestados() {
               <div className="h-[220px] sm:h-[260px] lg:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={Array.isArray(tendencia) ? tendencia : []}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                    <XAxis dataKey="data" tick={{ fill: "#BFBFC3", fontSize: 12 }} minTickGap={20} />
-                    <YAxis tick={{ fill: "#BFBFC3", fontSize: 12 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: "#1A1A1C", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
+                    <CartesianGrid stroke="var(--color-border)" />
+                    <XAxis dataKey="data" tick={{ fill: "var(--color-muted)", fontSize: 12 }} minTickGap={20} />
+                    <YAxis tick={{ fill: "var(--color-muted)", fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
                     <Line type="monotone" dataKey="total" stroke={BRAND} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }}>
                       <LabelList dataKey="total" position="top" style={{ fill: "#FFFFFF", fontSize: 12, fontWeight: 600 }} />
                     </Line>
@@ -721,10 +721,10 @@ export default function DashboardAtestados() {
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={porTempoCasa}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-                      <XAxis dataKey="name" tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-                      <YAxis allowDecimals={false} tick={{ fill: "#BFBFC3", fontSize: 12 }} />
-                      <Tooltip contentStyle={{ background: "#232323", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
+                      <CartesianGrid stroke="var(--color-border)" />
+                      <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
+                      <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 12 }} />
+                      <Tooltip contentStyle={{ background: "var(--color-surface-2)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }} />
                       <Bar dataKey="value" fill={BRAND}>
                         <LabelList dataKey="value" position="top" style={{ fill: "#FFF", fontSize: 12, fontWeight: 600 }} />
                       </Bar>

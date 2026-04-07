@@ -1,4 +1,4 @@
-// src/pages/DailyWorks/dwList.jsx
+﻿// src/pages/DailyWorks/dwList.jsx
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -65,7 +65,7 @@ export default function DwListPage() {
   }, [load]);
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       {/* SIDEBAR */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -80,7 +80,7 @@ export default function DwListPage() {
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Daily Works</h1>
-            <p className="text-sm text-[#BFBFC3]">
+            <p className="text-sm text-muted">
               Controle de diaristas planejados x realizados
             </p>
           </div>
@@ -89,7 +89,7 @@ export default function DwListPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-wrap">
               {/* DATA */}
-              <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl">
+              <div className="bg-surface px-4 py-2 rounded-xl">
                 <input
                   type="date"
                   value={data}
@@ -102,7 +102,7 @@ export default function DwListPage() {
               <select
                 value={turno}
                 onChange={(e) => setTurno(e.target.value)}
-                className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C]"
+                className="bg-surface text-sm px-4 py-2 rounded-xl text-muted outline-none hover:bg-surface-2"
               >
                 <option value="TODOS">Turnos</option>
                 <option value="1">T1</option>
@@ -114,7 +114,7 @@ export default function DwListPage() {
               <select
                 value={empresa}
                 onChange={(e) => setEmpresa(e.target.value)}
-                className="bg-[#1A1A1C] text-sm px-4 py-2 rounded-xl text-[#BFBFC3] outline-none hover:bg-[#2A2A2C]"
+                className="bg-surface text-sm px-4 py-2 rounded-xl text-muted outline-none hover:bg-surface-2"
               >
                 <option value="TODAS">Empresas</option>
                 {EMPRESAS_FIXAS.map((e) => (
@@ -126,7 +126,7 @@ export default function DwListPage() {
 
               <button
                 onClick={load}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A1A1C] hover:bg-[#2A2A2C] text-sm rounded-xl"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-surface hover:bg-surface-2 text-sm rounded-xl"
               >
                 <Search size={16} />
                 Filtrar
@@ -144,16 +144,16 @@ export default function DwListPage() {
           </div>
 
           {/* LISTA */}
-          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden">
+          <div className="bg-surface rounded-2xl overflow-hidden">
             {loading ? (
-              <div className="p-6 text-[#BFBFC3]">Carregando dados…</div>
+              <div className="p-6 text-muted">Carregando dados…</div>
             ) : lista.length === 0 ? (
-              <div className="p-6 text-center text-[#BFBFC3]">
+              <div className="p-6 text-center text-muted">
                 Nenhum registro encontrado.
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="border-b border-[#2A2A2C] text-[#BFBFC3]">
+                <thead className="border-b border-default text-muted">
                   <tr>
                     <th className="px-6 py-4 text-left">Data</th>
 
@@ -182,7 +182,7 @@ export default function DwListPage() {
                     return (
                       <tr
                         key={idx}
-                        className="border-t border-[#2A2A2C] hover:bg-[#242426]"
+                        className="border-t border-default hover:bg-surface-3"
                       >
                         <td className="px-6 py-4">{row.data}</td>
 
@@ -231,7 +231,7 @@ export default function DwListPage() {
                         <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => handleEditar(row)}
-                            className="p-2 rounded-lg hover:bg-[#2A2A2C] transition"
+                            className="p-2 rounded-lg hover:bg-surface-2 transition"
                           >
                             <Pencil size={16} className="text-[#FA4C00]" />
                           </button>

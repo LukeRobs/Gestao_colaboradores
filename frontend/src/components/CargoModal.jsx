@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Button } from "../components/UIComponents";
 import { X } from "lucide-react";
 
@@ -48,22 +48,22 @@ export default function CargoModal({ cargo, onClose, onSave }) {
           w-full
           max-w-lg
           max-h-[90vh]
-          bg-[#1A1A1C]
+          bg-surface
           rounded-t-2xl sm:rounded-xl
-          border border-[#3D3D40]
+          border border-default
           shadow-2xl
           flex flex-col
         "
       >
         {/* HEADER */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3D3D40]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-default">
           <h2 className="text-base sm:text-lg font-semibold text-white">
             {cargo ? "Editar Cargo" : "Novo Cargo"}
           </h2>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-[#2A2A2C] text-[#BFBFC3]"
+            className="p-2 rounded-md hover:bg-surface-2 text-muted"
           >
             <X size={18} />
           </button>
@@ -73,7 +73,7 @@ export default function CargoModal({ cargo, onClose, onSave }) {
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
           
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               Nome do Cargo
             </label>
             <input
@@ -81,15 +81,15 @@ export default function CargoModal({ cargo, onClose, onSave }) {
               onChange={(e) => handle("nomeCargo", e.target.value)}
               className="
                 w-full px-4 py-3 rounded-lg
-                bg-[#2A2A2C] border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2 border border-default
+                text-page text-sm
                 focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
               "
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               Nível
             </label>
             <input
@@ -98,15 +98,15 @@ export default function CargoModal({ cargo, onClose, onSave }) {
               placeholder="Ex: Júnior, Pleno, Sênior"
               className="
                 w-full px-4 py-3 rounded-lg
-                bg-[#2A2A2C] border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2 border border-default
+                text-page text-sm
                 focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
               "
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               Descrição
             </label>
             <textarea
@@ -115,15 +115,15 @@ export default function CargoModal({ cargo, onClose, onSave }) {
               onChange={(e) => handle("descricao", e.target.value)}
               className="
                 w-full px-4 py-3 rounded-lg
-                bg-[#2A2A2C] border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2 border border-default
+                text-page text-sm
                 focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
               "
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               Status
             </label>
             <select
@@ -131,8 +131,8 @@ export default function CargoModal({ cargo, onClose, onSave }) {
               onChange={(e) => handle("ativo", e.target.value === "true")}
               className="
                 w-full px-4 py-3 rounded-lg
-                bg-[#2A2A2C] border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2 border border-default
+                text-page text-sm
               "
             >
               <option value="true">Ativo</option>
@@ -142,7 +142,7 @@ export default function CargoModal({ cargo, onClose, onSave }) {
         </div>
 
         {/* FOOTER */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-[#3D3D40]">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-default">
           <Button.Secondary onClick={onClose} className="w-full sm:w-auto">
             Cancelar
           </Button.Secondary>

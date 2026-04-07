@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Button } from "../components/UIComponents";
 import { X } from "lucide-react";
 
@@ -48,22 +48,22 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
           w-full
           max-w-lg
           max-h-[92vh]
-          bg-[#1A1A1C]
-          border border-[#3D3D40]
+          bg-surface
+          border border-default
           rounded-t-2xl sm:rounded-xl
           shadow-2xl
           flex flex-col
         "
       >
         {/* HEADER */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3D3D40]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-default">
           <h2 className="text-base sm:text-lg font-semibold text-white">
             {form.idEmpresa ? "Editar Empresa" : "Nova Empresa"}
           </h2>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-[#2A2A2C] text-[#BFBFC3]"
+            className="p-2 rounded-md hover:bg-surface-2 text-muted"
           >
             <X size={18} />
           </button>
@@ -74,16 +74,16 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
           
           {form.idEmpresa && (
             <div>
-              <label className="block text-xs text-[#BFBFC3] mb-1">ID</label>
+              <label className="block text-xs text-muted mb-1">ID</label>
               <input
                 disabled
                 value={form.idEmpresa}
                 className="
                   w-full px-3 sm:px-4 py-2.5 sm:py-3
                   rounded-lg
-                  bg-[#2A2A2C]
-                  border border-[#3D3D40]
-                  text-[#BFBFC3]
+                  bg-surface-2
+                  border border-default
+                  text-muted
                   text-sm
                 "
               />
@@ -91,7 +91,7 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
           )}
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               Razão Social
             </label>
             <input
@@ -100,16 +100,16 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
               className="
                 w-full px-3 sm:px-4 py-2.5 sm:py-3
                 rounded-lg
-                bg-[#2A2A2C]
-                border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2
+                border border-default
+                text-page text-sm
                 focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
               "
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               CNPJ
             </label>
             <input
@@ -118,16 +118,16 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
               className="
                 w-full px-3 sm:px-4 py-2.5 sm:py-3
                 rounded-lg
-                bg-[#2A2A2C]
-                border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2
+                border border-default
+                text-page text-sm
                 focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
               "
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">
+            <label className="block text-xs text-muted mb-1">
               Status
             </label>
             <select
@@ -136,9 +136,9 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
               className="
                 w-full px-3 sm:px-4 py-2.5 sm:py-3
                 rounded-lg
-                bg-[#2A2A2C]
-                border border-[#3D3D40]
-                text-white text-sm
+                bg-surface-2
+                border border-default
+                text-page text-sm
               "
             >
               <option value="true">Ativa</option>
@@ -148,7 +148,7 @@ export default function EmpresaModal({ empresa = null, onClose, onSave }) {
         </div>
 
         {/* FOOTER */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-[#3D3D40]">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-default">
           <Button.Secondary
             onClick={onClose}
             className="w-full sm:w-auto"

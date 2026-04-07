@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+﻿import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Shield,
@@ -222,7 +222,7 @@ export default function SPI() {
 
   if (loadingSafety && loadingDDSMA && loadingOPA) {
     return (
-      <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+      <div className="flex min-h-screen bg-page text-page">
         <Sidebar isOpen={false} onClose={() => {}} />
         <div className="flex-1 lg:ml-64">
           <Header onMenuClick={() => {}} />
@@ -267,14 +267,14 @@ export default function SPI() {
 
   if (erro) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0D0D0D] text-[#FF453A]">
+      <div className="h-screen flex items-center justify-center bg-page text-[#FF453A]">
         {erro}
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 lg:ml-64">
@@ -293,8 +293,8 @@ export default function SPI() {
             {/* CARD SAFETY WALK */}
             <div 
               onClick={() => setAbaAtiva("safety")}
-              className={`bg-[#1A1A1C] border-2 rounded-xl p-6 transition-all cursor-pointer hover:shadow-xl ${
-                abaAtiva === "safety" ? "border-[#007AFF]" : "border-[#2A2A2C] hover:border-[#007AFF]/50"
+              className={`bg-surface border-2 rounded-xl p-6 transition-all cursor-pointer hover:shadow-xl ${
+                abaAtiva === "safety" ? "border-[#007AFF]" : "border-default hover:border-[#007AFF]/50"
               }`}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -303,7 +303,7 @@ export default function SPI() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">Safety Walk</h3>
-                  <p className="text-xs text-[#BFBFC3]">Inspeções de Segurança</p>
+                  <p className="text-xs text-muted">Inspeções de Segurança</p>
                 </div>
               </div>
               <div className="text-center mb-4">
@@ -315,17 +315,17 @@ export default function SPI() {
                 <p className="text-xs text-[#6F6F73] mt-1">Taxa de Conclusão</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 bg-[#0D0D0D] rounded-xl">
+                <div className="text-center p-3 bg-page rounded-xl">
                   <p className="text-xl font-bold text-white">{kpisSafety.total}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Total</p>
+                  <p className="text-xs text-muted mt-1">Total</p>
                 </div>
                 <div className="text-center p-3 bg-[#34C759]/10 rounded-xl">
                   <p className="text-xl font-bold text-[#34C759]">{kpisSafety.realizadas}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Realizadas</p>
+                  <p className="text-xs text-muted mt-1">Realizadas</p>
                 </div>
                 <div className="text-center p-3 bg-[#FF9F0A]/10 rounded-xl">
                   <p className="text-xl font-bold text-[#FF9F0A]">{kpisSafety.pendentes}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Pendentes</p>
+                  <p className="text-xs text-muted mt-1">Pendentes</p>
                 </div>
               </div>
             </div>
@@ -333,8 +333,8 @@ export default function SPI() {
             {/* CARD DDSMA */}
             <div 
               onClick={() => setAbaAtiva("ddsma")}
-              className={`bg-[#1A1A1C] border-2 rounded-xl p-6 transition-all cursor-pointer hover:shadow-xl ${
-                abaAtiva === "ddsma" ? "border-[#FF9F0A]" : "border-[#2A2A2C] hover:border-[#FF9F0A]/50"
+              className={`bg-surface border-2 rounded-xl p-6 transition-all cursor-pointer hover:shadow-xl ${
+                abaAtiva === "ddsma" ? "border-[#FF9F0A]" : "border-default hover:border-[#FF9F0A]/50"
               }`}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -343,7 +343,7 @@ export default function SPI() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">DDSMA</h3>
-                  <p className="text-xs text-[#BFBFC3]">Diálogo Diário de Segurança</p>
+                  <p className="text-xs text-muted">Diálogo Diário de Segurança</p>
                 </div>
               </div>
               <div className="text-center mb-4">
@@ -355,17 +355,17 @@ export default function SPI() {
                 <p className="text-xs text-[#6F6F73] mt-1">Taxa de Conclusão</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 bg-[#0D0D0D] rounded-xl">
+                <div className="text-center p-3 bg-page rounded-xl">
                   <p className="text-xl font-bold text-white">{kpisDDSMA.total}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Total</p>
+                  <p className="text-xs text-muted mt-1">Total</p>
                 </div>
                 <div className="text-center p-3 bg-[#34C759]/10 rounded-xl">
                   <p className="text-xl font-bold text-[#34C759]">{kpisDDSMA.realizadas}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Realizadas</p>
+                  <p className="text-xs text-muted mt-1">Realizadas</p>
                 </div>
                 <div className="text-center p-3 bg-[#FF9F0A]/10 rounded-xl">
                   <p className="text-xl font-bold text-[#FF9F0A]">{kpisDDSMA.pendentes}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Pendentes</p>
+                  <p className="text-xs text-muted mt-1">Pendentes</p>
                 </div>
               </div>
             </div>
@@ -373,8 +373,8 @@ export default function SPI() {
             {/* CARD OPA */}
             <div 
               onClick={() => setAbaAtiva("opa")}
-              className={`bg-[#1A1A1C] border-2 rounded-xl p-6 transition-all cursor-pointer hover:shadow-xl ${
-                abaAtiva === "opa" ? "border-[#FF453A]" : "border-[#2A2A2C] hover:border-[#FF453A]/50"
+              className={`bg-surface border-2 rounded-xl p-6 transition-all cursor-pointer hover:shadow-xl ${
+                abaAtiva === "opa" ? "border-[#FF453A]" : "border-default hover:border-[#FF453A]/50"
               }`}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -383,7 +383,7 @@ export default function SPI() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">OPA</h3>
-                  <p className="text-xs text-[#BFBFC3]">Observação Preventiva de Atos</p>
+                  <p className="text-xs text-muted">Observação Preventiva de Atos</p>
                 </div>
               </div>
               <div className="text-center mb-4">
@@ -395,17 +395,17 @@ export default function SPI() {
                 <p className="text-xs text-[#6F6F73] mt-1">Taxa de Conclusão</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 bg-[#0D0D0D] rounded-xl">
+                <div className="text-center p-3 bg-page rounded-xl">
                   <p className="text-xl font-bold text-white">{kpisOPA.total}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Total</p>
+                  <p className="text-xs text-muted mt-1">Total</p>
                 </div>
                 <div className="text-center p-3 bg-[#34C759]/10 rounded-xl">
                   <p className="text-xl font-bold text-[#34C759]">{kpisOPA.realizadas}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Realizadas</p>
+                  <p className="text-xs text-muted mt-1">Realizadas</p>
                 </div>
                 <div className="text-center p-3 bg-[#FF9F0A]/10 rounded-xl">
                   <p className="text-xl font-bold text-[#FF9F0A]">{kpisOPA.pendentes}</p>
-                  <p className="text-xs text-[#BFBFC3] mt-1">Pendentes</p>
+                  <p className="text-xs text-muted mt-1">Pendentes</p>
                 </div>
               </div>
             </div>
@@ -416,21 +416,21 @@ export default function SPI() {
             {/* Traço Safety Walk */}
             <div 
               className={`h-1 w-16 rounded-full transition-all duration-300 ${
-                abaAtiva === "safety" ? "bg-[#007AFF]" : "bg-[#2A2A2C]"
+                abaAtiva === "safety" ? "bg-[#007AFF]" : "bg-surface-2"
               }`}
             ></div>
             
             {/* Traço DDSMA */}
             <div 
               className={`h-1 w-16 rounded-full transition-all duration-300 ${
-                abaAtiva === "ddsma" ? "bg-[#FF9F0A]" : "bg-[#2A2A2C]"
+                abaAtiva === "ddsma" ? "bg-[#FF9F0A]" : "bg-surface-2"
               }`}
             ></div>
             
             {/* Traço OPA */}
             <div 
               className={`h-1 w-16 rounded-full transition-all duration-300 ${
-                abaAtiva === "opa" ? "bg-[#FF453A]" : "bg-[#2A2A2C]"
+                abaAtiva === "opa" ? "bg-[#FF453A]" : "bg-surface-2"
               }`}
             ></div>
           </div>
@@ -455,7 +455,7 @@ export default function SPI() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   periodo === "semana_atual"
                     ? "bg-[#FA4C00] text-white"
-                    : "bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#222]"
+                    : "bg-surface text-muted hover:bg-surface-3"
                 }`}
               >
                 Esta Semana {semanaAtual && `(${semanaAtual})`}
@@ -465,7 +465,7 @@ export default function SPI() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   periodo === "semana_especifica"
                     ? "bg-[#FA4C00] text-white"
-                    : "bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#222]"
+                    : "bg-surface text-muted hover:bg-surface-3"
                 }`}
               >
                 Por Semana
@@ -476,7 +476,7 @@ export default function SPI() {
               <select
                 value={semanaSelecionada}
                 onChange={(e) => setSemanaSelecionada(e.target.value)}
-                className="bg-[#1A1A1C] border border-[#2A2A2C] px-4 py-2 rounded-lg text-sm scrollbar-hide overflow-y-hidden"
+                className="bg-surface border border-default px-4 py-2 rounded-lg text-sm scrollbar-hide overflow-y-hidden"
                 size={1}
               >
                 <option value="">Selecione uma semana</option>
@@ -491,7 +491,7 @@ export default function SPI() {
             <select
               value={filtroTurno}
               onChange={(e) => setFiltroTurno(e.target.value)}
-              className="bg-[#1A1A1C] border border-[#2A2A2C] px-4 py-2 rounded-lg text-sm"
+              className="bg-surface border border-default px-4 py-2 rounded-lg text-sm"
             >
               <option value="TODOS">Todos os Turnos</option>
               <option value="T1">Turno 1</option>
@@ -506,7 +506,7 @@ export default function SPI() {
                 loadDDSMA();
                 loadOPA();
               }}
-              className="ml-auto bg-[#1A1A1C] border border-[#2A2A2C] px-4 py-2 rounded-lg text-sm hover:bg-[#222] flex items-center gap-2"
+              className="ml-auto bg-surface border border-default px-4 py-2 rounded-lg text-sm hover:bg-surface-3 flex items-center gap-2"
             >
               <RefreshCw size={16} />
               Atualizar
@@ -521,7 +521,7 @@ export default function SPI() {
           {/* TABELAS LADO A LADO: PENDENTES E REALIZADOS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* PENDENTES */}
-            <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl p-6">
+            <div className="bg-surface border border-default rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Responsáveis Pendentes</h3>
                 <div className="flex items-center gap-3">
@@ -530,12 +530,12 @@ export default function SPI() {
                   </span>
                   <button
                     onClick={() => setPendentesExpandido(!pendentesExpandido)}
-                    className="p-1 hover:bg-[#2A2A2C] rounded transition-colors"
+                    className="p-1 hover:bg-surface-2 rounded transition-colors"
                   >
                     {pendentesExpandido ? (
-                      <ChevronUp size={20} className="text-[#BFBFC3]" />
+                      <ChevronUp size={20} className="text-muted" />
                     ) : (
-                      <ChevronDown size={20} className="text-[#BFBFC3]" />
+                      <ChevronDown size={20} className="text-muted" />
                     )}
                   </button>
                 </div>
@@ -544,20 +544,20 @@ export default function SPI() {
               {pendentesExpandido && (
                 <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-hide">
                   <table className="w-full">
-                    <thead className="sticky top-0 bg-[#1A1A1C] z-10">
-                      <tr className="border-b border-[#2A2A2C]">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                    <thead className="sticky top-0 bg-surface z-10">
+                      <tr className="border-b border-default">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                           Nome
                         </th>
                         {abaAtiva === "ddsma" && (
-                          <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                             Progresso
                           </th>
                         )}
-                        <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                           Cargo
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                           Turno
                         </th>
                       </tr>
@@ -565,7 +565,7 @@ export default function SPI() {
                     <tbody>
                       {pessoasPendentesUnicas.length === 0 ? (
                         <tr>
-                          <td colSpan={abaAtiva === "ddsma" ? "4" : "3"} className="text-center py-8 text-[#BFBFC3]">
+                          <td colSpan={abaAtiva === "ddsma" ? "4" : "3"} className="text-center py-8 text-muted">
                             Nenhum pendente
                           </td>
                         </tr>
@@ -573,7 +573,7 @@ export default function SPI() {
                         pessoasPendentesUnicas.map((reg, idx) => (
                           <tr
                             key={idx}
-                            className="border-b border-[#2A2A2C] hover:bg-[#222] transition-colors"
+                            className="border-b border-default hover:bg-surface-3 transition-colors"
                           >
                             <td className="py-3 px-4 text-sm">{reg.responsavel}</td>
                             {abaAtiva === "ddsma" && (
@@ -583,9 +583,9 @@ export default function SPI() {
                                 </span>
                               </td>
                             )}
-                            <td className="py-3 px-4 text-sm text-[#BFBFC3]">{reg.cargo || '-'}</td>
+                            <td className="py-3 px-4 text-sm text-muted">{reg.cargo || '-'}</td>
                             <td className="py-3 px-4 text-sm">
-                              <span className="px-2 py-1 rounded text-xs font-medium bg-[#2A2A2C] text-[#BFBFC3]">
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-surface-2 text-muted">
                                 {reg.turno}
                               </span>
                             </td>
@@ -599,7 +599,7 @@ export default function SPI() {
             </div>
 
             {/* REALIZADOS */}
-            <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl p-6">
+            <div className="bg-surface border border-default rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Responsáveis Realizados</h3>
                 <div className="flex items-center gap-3">
@@ -608,12 +608,12 @@ export default function SPI() {
                   </span>
                   <button
                     onClick={() => setRealizadosExpandido(!realizadosExpandido)}
-                    className="p-1 hover:bg-[#2A2A2C] rounded transition-colors"
+                    className="p-1 hover:bg-surface-2 rounded transition-colors"
                   >
                     {realizadosExpandido ? (
-                      <ChevronUp size={20} className="text-[#BFBFC3]" />
+                      <ChevronUp size={20} className="text-muted" />
                     ) : (
-                      <ChevronDown size={20} className="text-[#BFBFC3]" />
+                      <ChevronDown size={20} className="text-muted" />
                     )}
                   </button>
                 </div>
@@ -622,15 +622,15 @@ export default function SPI() {
               {realizadosExpandido && (
                 <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-hide">
                   <table className="w-full">
-                    <thead className="sticky top-0 bg-[#1A1A1C] z-10">
-                      <tr className="border-b border-[#2A2A2C]">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                    <thead className="sticky top-0 bg-surface z-10">
+                      <tr className="border-b border-default">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                           Nome
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                           Cargo
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-[#BFBFC3]">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-muted">
                           Turno
                         </th>
                       </tr>
@@ -638,7 +638,7 @@ export default function SPI() {
                     <tbody>
                       {pessoasRealizadasUnicas.length === 0 ? (
                         <tr>
-                          <td colSpan="3" className="text-center py-8 text-[#BFBFC3]">
+                          <td colSpan="3" className="text-center py-8 text-muted">
                             Nenhum realizado
                           </td>
                         </tr>
@@ -646,12 +646,12 @@ export default function SPI() {
                         pessoasRealizadasUnicas.map((reg, idx) => (
                           <tr
                             key={idx}
-                            className="border-b border-[#2A2A2C] hover:bg-[#222] transition-colors"
+                            className="border-b border-default hover:bg-surface-3 transition-colors"
                           >
                             <td className="py-3 px-4 text-sm">{reg.responsavel}</td>
-                            <td className="py-3 px-4 text-sm text-[#BFBFC3]">{reg.cargo || '-'}</td>
+                            <td className="py-3 px-4 text-sm text-muted">{reg.cargo || '-'}</td>
                             <td className="py-3 px-4 text-sm">
-                              <span className="px-2 py-1 rounded text-xs font-medium bg-[#2A2A2C] text-[#BFBFC3]">
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-surface-2 text-muted">
                                 {reg.turno}
                               </span>
                             </td>
@@ -684,7 +684,7 @@ export default function SPI() {
                     return (
                       <div
                         key={turno.turno}
-                        className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl p-6 flex flex-col items-center"
+                        className="bg-surface border border-default rounded-xl p-6 flex flex-col items-center"
                       >
                         <div className="relative w-40 h-40 mb-4">
                           <svg className="transform -rotate-90 w-40 h-40">
@@ -721,15 +721,15 @@ export default function SPI() {
                         <h4 className="text-lg font-semibold mb-3">{turno.turno}</h4>
                         <div className="w-full space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-[#BFBFC3]">✓ Realizadas</span>
+                            <span className="text-muted">✓ Realizadas</span>
                             <span className="font-medium text-[#34C759]">{turno.realizadas}</span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-[#BFBFC3]">⏰ Pendentes</span>
+                            <span className="text-muted">⏰ Pendentes</span>
                             <span className="font-medium text-[#FF9F0A]">{pendentes}</span>
                           </div>
-                          <div className="flex items-center justify-between text-sm pt-2 border-t border-[#2A2A2C]">
-                            <span className="text-[#BFBFC3]">Total</span>
+                          <div className="flex items-center justify-between text-sm pt-2 border-t border-default">
+                            <span className="text-muted">Total</span>
                             <span className="font-medium text-white">{turno.total}</span>
                           </div>
                         </div>
@@ -740,13 +740,13 @@ export default function SPI() {
                     return (
                       <div
                         key={turno.turno}
-                        className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl p-6 flex flex-col items-center"
+                        className="bg-surface border border-default rounded-xl p-6 flex flex-col items-center"
                       >
                         <h4 className="text-lg font-semibold mb-4">{turno.turno}</h4>
                         <div className="flex items-end justify-center gap-4 h-48 mb-4">
                           {/* Barra de Realizadas */}
                           <div className="flex flex-col items-center">
-                            <div className="relative w-16 bg-[#2A2A2C] rounded-t-lg overflow-hidden" style={{ height: '192px' }}>
+                            <div className="relative w-16 bg-surface-2 rounded-t-lg overflow-hidden" style={{ height: '192px' }}>
                               <div
                                 className="absolute bottom-0 w-full bg-[#34C759] transition-all duration-1000 ease-out rounded-t-lg flex items-end justify-center pb-2"
                                 style={{
@@ -756,11 +756,11 @@ export default function SPI() {
                                 <span className="text-xs font-bold text-white">{turno.realizadas}</span>
                               </div>
                             </div>
-                            <span className="text-xs text-[#BFBFC3] mt-2">Realizadas</span>
+                            <span className="text-xs text-muted mt-2">Realizadas</span>
                           </div>
                           {/* Barra de Pendentes */}
                           <div className="flex flex-col items-center">
-                            <div className="relative w-16 bg-[#2A2A2C] rounded-t-lg overflow-hidden" style={{ height: '192px' }}>
+                            <div className="relative w-16 bg-surface-2 rounded-t-lg overflow-hidden" style={{ height: '192px' }}>
                               <div
                                 className="absolute bottom-0 w-full bg-[#FF9F0A] transition-all duration-1000 ease-out rounded-t-lg flex items-end justify-center pb-2"
                                 style={{
@@ -770,7 +770,7 @@ export default function SPI() {
                                 <span className="text-xs font-bold text-white">{pendentes}</span>
                               </div>
                             </div>
-                            <span className="text-xs text-[#BFBFC3] mt-2">Pendentes</span>
+                            <span className="text-xs text-muted mt-2">Pendentes</span>
                           </div>
                         </div>
                         <div className="w-full text-center">
@@ -788,10 +788,10 @@ export default function SPI() {
                     return (
                       <div
                         key={turno.turno}
-                        className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl p-6"
+                        className="bg-surface border border-default rounded-xl p-6"
                       >
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm font-medium text-[#BFBFC3]">
+                          <span className="text-sm font-medium text-muted">
                             {turno.turno}
                           </span>
                           <span
@@ -801,7 +801,7 @@ export default function SPI() {
                             {turno.percentual}%
                           </span>
                         </div>
-                        <div className="w-full bg-[#2A2A2C] rounded-full h-3 mb-3">
+                        <div className="w-full bg-surface-2 rounded-full h-3 mb-3">
                           <div
                             className="h-3 rounded-full transition-all"
                             style={{
@@ -826,13 +826,13 @@ export default function SPI() {
           </div>
 
           {/* GRÁFICO DE ADERÊNCIA GERAL */}
-          <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl p-6">
+          <div className="bg-surface border border-default rounded-xl p-6">
             <h3 className="text-lg font-semibold mb-6">
               Aderência Geral - Todos os Turnos
             </h3>
             <div className="space-y-6">
-              <div className="text-center py-6 border-b border-[#2A2A2C]">
-                <p className="text-sm text-[#BFBFC3] mb-2">
+              <div className="text-center py-6 border-b border-default">
+                <p className="text-sm text-muted mb-2">
                   Taxa de Conclusão Geral
                 </p>
                 <p
@@ -852,12 +852,12 @@ export default function SPI() {
                   {dados?.realizadas || 0} de {dados?.totalInspecoes || 0} pessoas realizaram
                 </p>
 
-                <div className="flex justify-center gap-8 mt-6 pt-4 border-t border-[#2A2A2C]">
+                <div className="flex justify-center gap-8 mt-6 pt-4 border-t border-default">
                   {dados?.conclusaoPorTurno
                     ?.filter((t) => t.turno === "T1" || t.turno === "T2" || t.turno === "T3")
                     .map((turno) => (
                       <div key={turno.turno} className="text-center">
-                        <p className="text-xs text-[#BFBFC3] mb-1">{turno.turno}</p>
+                        <p className="text-xs text-muted mb-1">{turno.turno}</p>
                         <p
                           className="text-2xl font-bold"
                           style={{
@@ -880,7 +880,7 @@ export default function SPI() {
               </div>
 
               <div className="space-y-4">
-                <p className="text-sm font-medium text-[#BFBFC3] mb-4">
+                <p className="text-sm font-medium text-muted mb-4">
                   Comparativo por Turno
                 </p>
                 {dados?.conclusaoPorTurno?.map((turno) => (
@@ -890,7 +890,7 @@ export default function SPI() {
                         {turno.turno}
                       </span>
                       <div className="flex-1 mx-4">
-                        <div className="w-full bg-[#2A2A2C] rounded-full h-8 relative overflow-hidden">
+                        <div className="w-full bg-surface-2 rounded-full h-8 relative overflow-hidden">
                           <div
                             className="h-8 rounded-full transition-all flex items-center justify-end pr-3"
                             style={{
@@ -909,7 +909,7 @@ export default function SPI() {
                           </div>
                         </div>
                       </div>
-                      <span className="text-sm text-[#BFBFC3] min-w-[100px] text-right">
+                      <span className="text-sm text-muted min-w-[100px] text-right">
                         {turno.realizadas}/{turno.total}
                       </span>
                     </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 
@@ -159,12 +159,12 @@ export default function NovaMedidaDisciplinar() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
 
       {/* MODAL DE CONFLITO */}
       {conflito && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
+          <div className="bg-surface border border-default rounded-2xl p-6 max-w-md w-full mx-4 space-y-4">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-[#F59E0B]/15 flex items-center justify-center shrink-0 mt-0.5">
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -173,13 +173,13 @@ export default function NovaMedidaDisciplinar() {
               </div>
               <div>
                 <h3 className="font-semibold text-white">Sugestão automática pendente</h3>
-                <p className="text-sm text-[#BFBFC3] mt-1">
+                <p className="text-sm text-muted mt-1">
                   Já existe uma sugestão gerada automaticamente pelo sistema para esta violação em{" "}
                   <span className="text-white font-medium">
                     {new Date(conflito.dataReferencia).toLocaleDateString("pt-BR")}
                   </span>.
                 </p>
-                <p className="text-sm text-[#BFBFC3] mt-2">
+                <p className="text-sm text-muted mt-2">
                   Ao continuar, a sugestão automática será <span className="text-[#EF4444] font-medium">rejeitada</span> e a MD manual será criada no lugar.
                 </p>
               </div>
@@ -187,7 +187,7 @@ export default function NovaMedidaDisciplinar() {
             <div className="flex gap-3 justify-end pt-2">
               <button
                 onClick={() => setConflito(null)}
-                className="px-4 py-2 rounded-lg bg-[#2A2A2C] hover:bg-[#3A3A3C] text-sm cursor-pointer transition-all"
+                className="px-4 py-2 rounded-lg bg-surface-2 hover:bg-[#3A3A3C] text-sm cursor-pointer transition-all"
               >
                 Cancelar
               </button>
@@ -223,7 +223,7 @@ export default function NovaMedidaDisciplinar() {
 
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 rounded-lg bg-[#1A1A1C] hover:bg-[#2A2A2C]"
+                className="p-2 rounded-lg bg-surface hover:bg-surface-2"
               >
                 <ArrowLeft size={18} />
               </button>
@@ -233,7 +233,7 @@ export default function NovaMedidaDisciplinar() {
                   Nova Medida Disciplinar
                 </h1>
 
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   Registro manual de medida disciplinar
                 </p>
 
@@ -382,8 +382,8 @@ export default function NovaMedidaDisciplinar() {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6">
-      <h2 className="text-sm font-semibold text-[#BFBFC3] mb-6 uppercase">
+    <div className="bg-surface border border-default rounded-2xl p-6">
+      <h2 className="text-sm font-semibold text-muted mb-6 uppercase">
         {title}
       </h2>
 
@@ -397,11 +397,11 @@ function Section({ title, children }) {
 function Input({ label, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
 
       <input
         {...props}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40]
+        className="px-4 py-2.5 bg-surface-2 border border-default
         rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
@@ -412,11 +412,11 @@ function Select({ label, options = [], ...props }) {
   return (
     <div className="flex flex-col gap-1">
 
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
 
       <select
         {...props}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40]
+        className="px-4 py-2.5 bg-surface-2 border border-default
         rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       >
 
@@ -438,12 +438,12 @@ function Textarea({ label, ...props }) {
   return (
     <div className="flex flex-col gap-1 md:col-span-2">
 
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
 
       <textarea
         {...props}
         rows={3}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40]
+        className="px-4 py-2.5 bg-surface-2 border border-default
         rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
 
@@ -455,7 +455,7 @@ function ReadOnly({ label, value }) {
   return (
     <div className="flex flex-col gap-1">
 
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
 
       <div className="px-4 py-2.5 bg-[#1E1E20] border border-[#2F2F33] rounded-xl text-sm">
         {value || "-"}

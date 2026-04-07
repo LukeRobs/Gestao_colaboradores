@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useMemo } from "react"
 import {
@@ -365,10 +365,10 @@ function BarBlock({ data }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={sorted} margin={{ top: 22, right: 16, bottom: 0, left: -12 }}>
-        <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+        <CartesianGrid stroke="var(--color-border)" vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           tickMargin={8}
@@ -376,7 +376,7 @@ function BarBlock({ data }) {
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           width={26}
@@ -405,17 +405,17 @@ function BarBlockH({ data }) {
         data={sorted.map((d) => ({ ...d, name: fmt(d.name) }))}
         margin={{ top: 0, right: 36, bottom: 0, left: 0 }}
       >
-        <CartesianGrid stroke="rgba(255,255,255,0.04)" horizontal={false} />
+        <CartesianGrid stroke="var(--color-border)" horizontal={false} />
         <XAxis
           type="number"
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           dataKey="name"
           type="category"
-          tick={{ fill: "#888", fontSize: 12 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
           width={110}

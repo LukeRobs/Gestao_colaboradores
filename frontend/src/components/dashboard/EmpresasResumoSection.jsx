@@ -1,4 +1,4 @@
-export default function EmpresasResumoSection({ empresas = [] }) {
+﻿export default function EmpresasResumoSection({ empresas = [] }) {
   if (!empresas.length) return null;
 
   const analiseGeral = empresas.filter((e) =>
@@ -19,7 +19,7 @@ export default function EmpresasResumoSection({ empresas = [] }) {
       <div
         key={e.empresa || "sem-empresa"}
         className="
-          bg-[#1A1A1C]
+          bg-surface
           rounded-2xl
           p-4 sm:p-6
           space-y-5
@@ -104,7 +104,7 @@ export default function EmpresasResumoSection({ empresas = [] }) {
 
   const Metric = ({ label, value = 0, color }) => (
     <div className="min-w-0">
-      <span className="text-[#BFBFC3] text-xs sm:text-sm truncate block">
+      <span className="text-muted text-xs sm:text-sm truncate block">
         {label}
       </span>
       <p
@@ -120,7 +120,7 @@ export default function EmpresasResumoSection({ empresas = [] }) {
     <section className="space-y-10">
       {analiseGeral.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+          <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
             Análise Geral
           </h2>
 
@@ -132,7 +132,7 @@ export default function EmpresasResumoSection({ empresas = [] }) {
 
       {analiseBPO.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+          <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
             Análise BPO
           </h2>
 

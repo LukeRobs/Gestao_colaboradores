@@ -1,4 +1,4 @@
-export default function DashboardHeader({
+﻿export default function DashboardHeader({
   title,
   subtitle,
   date,
@@ -38,12 +38,12 @@ export default function DashboardHeader({
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Título */}
-      <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white tracking-tight">
+      <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-page tracking-tight">
         {title}
       </h1>
 
       {/* Subtitulo + Badges */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-[#BFBFC3]">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted">
         {(subtitle || date) && (
           <span className="truncate">
             {subtitle}
@@ -57,8 +57,8 @@ export default function DashboardHeader({
             className="
               px-3 py-1
               rounded-md
-              bg-[#2A2A2C]
-              text-white
+              bg-surface-2
+              text-page
               text-xs
               sm:text-sm
               whitespace-nowrap

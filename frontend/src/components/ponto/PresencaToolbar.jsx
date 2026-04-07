@@ -1,4 +1,4 @@
-import { Search, FileSpreadsheet } from "lucide-react";
+﻿import { Search, FileSpreadsheet } from "lucide-react";
 
 export default function PresencaToolbar({
   mes,
@@ -56,13 +56,13 @@ export default function PresencaToolbar({
           value={mes}
           onChange={(e) => onMesChange(e.target.value)}
           className="
-            bg-[#1A1A1C]
+            bg-surface
             text-sm
             px-4 py-2
             rounded-xl
-            text-[#BFBFC3]
+            text-muted
             outline-none
-            hover:bg-[#2A2A2C]
+            hover:bg-surface-2
           "
         />
 
@@ -71,13 +71,13 @@ export default function PresencaToolbar({
           value={turno}
           onChange={(e) => onTurnoChange(e.target.value)}
           className="
-            bg-[#1A1A1C]
+            bg-surface
             text-sm
             px-4 py-2
             rounded-xl
-            text-[#BFBFC3]
+            text-muted
             outline-none
-            hover:bg-[#2A2A2C]
+            hover:bg-surface-2
           "
         >
           {turnos.map((t) => (
@@ -92,13 +92,13 @@ export default function PresencaToolbar({
           value={escala}
           onChange={(e) => onEscalaChange(e.target.value)}
           className="
-            bg-[#1A1A1C]
+            bg-surface
             text-sm
             px-4 py-2
             rounded-xl
-            text-[#BFBFC3]
+            text-muted
             outline-none
-            hover:bg-[#2A2A2C]
+            hover:bg-surface-2
           "
         >
           <option value="TODOS">Escala • Todas</option>
@@ -112,13 +112,13 @@ export default function PresencaToolbar({
           value={lider}
           onChange={(e) => onLiderChange(e.target.value)}
           className="
-            bg-[#1A1A1C]
+            bg-surface
             text-sm
             px-4 py-2
             rounded-xl
-            text-[#BFBFC3]
+            text-muted
             outline-none
-            hover:bg-[#2A2A2C]
+            hover:bg-surface-2
           "
         >
           <option value="TODOS">Líder • Todos</option>
@@ -132,11 +132,11 @@ export default function PresencaToolbar({
         {/* PENDÊNCIA DE SAÍDA */}
         <label className="
           flex items-center gap-2
-          text-sm text-[#BFBFC3]
+          text-sm text-muted
           px-3 py-2
           rounded-xl
-          bg-[#1A1A1C]
-          hover:bg-[#2A2A2C]
+          bg-surface
+          hover:bg-surface-2
           cursor-pointer
         ">
           <input
@@ -159,7 +159,7 @@ export default function PresencaToolbar({
             transition
             ${pendentesHoje 
               ? 'bg-[#FA4C00] text-white' 
-              : 'bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#2A2A2C]'
+              : 'bg-surface text-muted hover:bg-surface-2'
             }
           `}
         >
@@ -182,7 +182,7 @@ export default function PresencaToolbar({
             transition
             ${filtroFalta
               ? 'bg-red-600 text-white'
-              : 'bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#2A2A2C]'
+              : 'bg-surface text-muted hover:bg-surface-2'
             }
           `}
         >
@@ -205,7 +205,7 @@ export default function PresencaToolbar({
             transition
             ${filtroOn
               ? 'bg-orange-500 text-white'
-              : 'bg-[#1A1A1C] text-[#BFBFC3] hover:bg-[#2A2A2C]'
+              : 'bg-surface text-muted hover:bg-surface-2'
             }
           `}
         >
@@ -219,8 +219,8 @@ export default function PresencaToolbar({
       </div>
 
       {/* BUSCA */}
-      <div className="flex items-center gap-2 bg-[#1A1A1C] px-4 py-2 rounded-xl w-full sm:w-auto">
-        <Search size={16} className="text-[#BFBFC3]" />
+      <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl w-full sm:w-auto">
+        <Search size={16} className="text-muted" />
         <input
           value={busca}
           onChange={(e) => onBuscaChange(e.target.value)}

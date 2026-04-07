@@ -1,4 +1,4 @@
-// src/pages/acidentes/novo.jsx
+﻿// src/pages/acidentes/novo.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Upload, Image as ImageIcon } from "lucide-react";
@@ -225,7 +225,7 @@ export default function NovoAcidente() {
 
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
       <div className="flex-1 lg:ml-64">
@@ -237,14 +237,14 @@ export default function NovoAcidente() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 rounded-lg bg-[#1A1A1C] hover:bg-[#2A2A2C]"
+                className="p-2 rounded-lg bg-surface hover:bg-surface-2"
               >
                 <ArrowLeft size={18} />
               </button>
 
               <div>
                 <h1 className="text-2xl font-semibold">Novo Acidente</h1>
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   Registro de ocorrência + evidências (1–5 fotos)
                 </p>
               </div>
@@ -293,8 +293,8 @@ export default function NovoAcidente() {
 
             {/* Dados do colaborador acidentado */}
             {colaborador ? (
-              <div className="md:col-span-2 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4">
-                <p className="text-xs uppercase text-[#BFBFC3]">
+              <div className="md:col-span-2 bg-page border border-default rounded-xl p-4">
+                <p className="text-xs uppercase text-muted">
                   Dados do colaborador
                 </p>
 
@@ -312,7 +312,7 @@ export default function NovoAcidente() {
                 Carregando dados do colaborador...
               </div>
             ) : (
-              <div className="md:col-span-2 text-xs text-[#BFBFC3]">
+              <div className="md:col-span-2 text-xs text-muted">
                 Digite o CPF e saia do campo para carregar os dados do colaborador.
               </div>
             )}
@@ -436,18 +436,18 @@ export default function NovoAcidente() {
           {/* Seção 4: Evidências */}
           <Section title="Evidências (Fotos)">
             <div className="md:col-span-2">
-              <label className="text-xs text-[#BFBFC3]">
+              <label className="text-xs text-muted">
                 Fotos (1 a 5) * — JPG/PNG/WEBP/HEIC
               </label>
 
               <label
                 className="
                   mt-1 flex items-center gap-3 px-4 py-3
-                  bg-[#2A2A2C] border border-[#3D3D40]
-                  rounded-xl cursor-pointer hover:bg-[#242426]
+                  bg-surface-2 border border-default
+                  rounded-xl cursor-pointer hover:bg-surface-3
                 "
               >
-                <Upload size={16} className="text-[#BFBFC3]" />
+                <Upload size={16} className="text-muted" />
                 <span className="text-sm text-white">
                   {fotosCount ? `${fotosCount} foto(s) selecionada(s)` : "Selecionar fotos"}
                 </span>
@@ -465,14 +465,14 @@ export default function NovoAcidente() {
                 {fotos.map((f, idx) => (
                   <div
                     key={`${f.name}-${idx}`}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-[#0D0D0D] border border-[#3D3D40] rounded-lg"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-page border border-default rounded-lg"
                   >
-                    <ImageIcon size={16} className="text-[#BFBFC3]" />
+                    <ImageIcon size={16} className="text-muted" />
                     <span className="text-xs text-white">{f.name}</span>
                     <button
                       type="button"
                       onClick={() => setFotos((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-xs text-[#BFBFC3] hover:text-white"
+                      className="text-xs text-muted hover:text-white"
                       title="Remover"
                     >
                       ×
@@ -481,7 +481,7 @@ export default function NovoAcidente() {
                 ))}
               </div>
 
-              <p className="text-xs text-[#BFBFC3] mt-2">
+              <p className="text-xs text-muted mt-2">
                 Dica: selecione no máximo 5 fotos. Se passar, o sistema mantém apenas as 5 primeiras.
               </p>
             </div>
@@ -496,8 +496,8 @@ export default function NovoAcidente() {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6">
-      <h2 className="text-sm font-semibold text-[#BFBFC3] mb-6 uppercase">{title}</h2>
+    <div className="bg-surface border border-default rounded-2xl p-6">
+      <h2 className="text-sm font-semibold text-muted mb-6 uppercase">{title}</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{children}</div>
     </div>
   );
@@ -506,10 +506,10 @@ function Section({ title, children }) {
 function Input({ label, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
       <input
         {...props}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
+        className="px-4 py-2.5 bg-surface-2 border border-default rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
   );
@@ -518,10 +518,10 @@ function Input({ label, ...props }) {
 function Select({ label, options, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
       <select
         {...props}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
+        className="px-4 py-2.5 bg-surface-2 border border-default rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -536,11 +536,11 @@ function Select({ label, options, ...props }) {
 function Textarea({ label, ...props }) {
   return (
     <div className="flex flex-col gap-1 md:col-span-2">
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
       <textarea
         {...props}
         rows={4}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
+        className="px-4 py-2.5 bg-surface-2 border border-default rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
   );
@@ -549,7 +549,7 @@ function Textarea({ label, ...props }) {
 function Info({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-[#BFBFC3]">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="text-sm font-medium text-white">{value || "-"}</p>
     </div>
   );

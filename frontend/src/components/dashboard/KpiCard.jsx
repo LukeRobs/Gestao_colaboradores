@@ -1,34 +1,45 @@
-export default function KpiCard({
+﻿export default function KpiCard({
   icon: Icon,
   label,
   value,
   color = "#FFFFFF",
-  bgColor = "#2A2A2C",
+  bgColor,
   suffix,
   tooltip,
 }) {
+  // No light mode, white icons (#FFFFFF) ficam invisíveis — usa text-muted como fallback
+  const isDefaultWhite = color === "#FFFFFF";
+
   return (
     <div
       className="
-        bg-[#1A1A1C]
-        border border-[#2A2A2C]
+        bg-surface
+        border border-default
         rounded-2xl
         p-4
         flex items-center gap-4
         min-h-[90px]
         transition
-        hover:border-[#3A3A3C]
+        hover:border-default-2
       "
     >
       {/* ICON */}
       <div
-        className="
+        className={`
           w-11 h-11
           rounded-xl
+          bg-surface-2
           flex items-center justify-center
           shrink-0
-        "
-        style={{ backgroundColor: bgColor, color }}
+          ${isDefaultWhite && !bgColor ? "text-muted" : ""}
+        `}
+        style={
+          bgColor
+            ? { backgroundColor: bgColor, color }
+            : !isDefaultWhite
+            ? { color }
+            : undefined
+        }
         title={tooltip}
       >
         {Icon && <Icon size={20} />}
@@ -36,13 +47,13 @@ export default function KpiCard({
 
       {/* CONTENT */}
       <div className="min-w-0">
-        <p className="text-xs sm:text-sm text-[#BFBFC3] truncate">
+        <p className="text-xs sm:text-sm text-muted truncate">
           {label}
         </p>
 
         <p
-          className="text-2xl sm:text-3xl font-semibold leading-tight"
-          style={{ color }}
+          className="text-2xl sm:text-3xl font-semibold leading-tight text-page"
+          style={color !== "#FFFFFF" ? { color } : undefined}
         >
           {value}
           {suffix && (

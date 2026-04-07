@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
+﻿import { CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
 
 export const Alert = ({ type = "info", title, message }) => {
   const styles = {

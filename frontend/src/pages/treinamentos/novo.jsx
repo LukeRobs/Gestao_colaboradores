@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+﻿import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Search, Users, Calendar, BookOpen, MapPin, CheckCircle2, Circle } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
@@ -174,7 +174,7 @@ export default function NovoTreinamento() {
 
   /* ================= RENDER ================= */
   return (
-    <div className="flex min-h-screen bg-[#0A0A0B]">
+    <div className="flex min-h-screen bg-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -186,7 +186,7 @@ export default function NovoTreinamento() {
         
         <main className="min-h-screen pb-24 lg:pb-8">
           {/* MOBILE HEADER */}
-          <div className="sticky top-0 z-10 bg-[#0A0A0B]/95 backdrop-blur-xl border-b border-white/5 px-4 py-3 lg:hidden">
+          <div className="sticky top-0 z-10 bg-page/95 backdrop-blur-xl border-b border-white/5 px-4 py-3 lg:hidden">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate("/treinamentos")}
@@ -294,12 +294,12 @@ export default function NovoTreinamento() {
                       setForm({ ...form, soc: e.target.value })
                     }
                   >
-                    <option value="" className="bg-[#1A1A1C]">Selecione o SOC</option>
+                    <option value="" className="bg-surface">Selecione o SOC</option>
                     {estacoes.map((e) => (
                       <option
                         key={e.idEstacao}
                         value={e.stationCode || e.codigo}
-                        className="bg-[#1A1A1C]"
+                        className="bg-surface"
                       >
                         {e.stationCode || e.codigo} — {e.nomeEstacao}
                       </option>
@@ -507,7 +507,7 @@ export default function NovoTreinamento() {
           </div>
 
           {/* MOBILE BOTTOM BAR */}
-          <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-[#0A0A0B]/95 backdrop-blur-xl border-t border-white/10 p-4 z-20">
+          <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-page/95 backdrop-blur-xl border-t border-white/10 p-4 z-20">
             <button
               onClick={submit}
               disabled={loading || !isFormValid}

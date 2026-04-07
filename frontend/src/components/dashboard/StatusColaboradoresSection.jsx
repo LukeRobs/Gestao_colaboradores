@@ -1,4 +1,4 @@
-export default function StatusColaboradoresSection({
+﻿export default function StatusColaboradoresSection({
   title = "Status dos Colaboradores",
   items = [],
   footer = "",
@@ -21,9 +21,9 @@ export default function StatusColaboradoresSection({
   };
 
   return (
-    <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-2xl p-6 space-y-6">
+    <div className="bg-surface border border-default rounded-2xl p-6 space-y-6">
       {title && (
-        <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+        <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
           {title}
         </h2>
       )}
@@ -45,10 +45,10 @@ export default function StatusColaboradoresSection({
           return (
             <div
               key={`${label}-${i}`}
-              className="flex items-center justify-between bg-[#121214] border border-[#2A2A2C] rounded-xl px-6 py-5 hover:border-[#3A3A3C] transition"
+              className="flex items-center justify-between bg-[#121214] border border-default rounded-xl px-6 py-5 hover:border-[#3A3A3C] transition"
             >
               {/* Label */}
-              <div className="text-sm text-[#BFBFC3] w-40">
+              <div className="text-sm text-muted w-40">
                 {label}
               </div>
 
@@ -67,7 +67,7 @@ export default function StatusColaboradoresSection({
                     cx="22"
                     cy="22"
                     r="18"
-                    stroke="#2A2A2C"
+                    stroke="var(--color-border)"
                     strokeWidth="4"
                     fill="none"
                   />
@@ -86,7 +86,7 @@ export default function StatusColaboradoresSection({
                     />
                   )}
                 </svg>
-                <div className="absolute text-[11px] text-[#BFBFC3] font-medium">
+                <div className="absolute text-[11px] text-muted font-medium">
                   {percentage.toFixed(1)}%
                 </div>
               </div>
@@ -96,7 +96,7 @@ export default function StatusColaboradoresSection({
       </div>
 
       {footer && (
-        <div className="pt-4 border-t border-[#2A2A2C] text-sm text-[#BFBFC3]">
+        <div className="pt-4 border-t border-default text-sm text-muted">
           {footer}
         </div>
       )}

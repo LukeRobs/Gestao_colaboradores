@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+﻿import { useState, useContext, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, UserPlus } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
@@ -71,15 +71,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] px-4">
-      <div className="w-full max-w-lg bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-10 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-page px-4">
+      <div className="w-full max-w-lg bg-surface border border-default rounded-2xl p-10 shadow-2xl">
 
         {/* HEADER */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
             Gestão RH
           </h1>
-          <p className="text-sm text-[#BFBFC3]">
+          <p className="text-sm text-muted">
             Acesse sua conta para continuar
           </p>
         </div>
@@ -107,7 +107,7 @@ export default function Login() {
 
           {/* EMAIL */}
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#BFBFC3]" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
             <input
               type="email"
               placeholder="E-mail"
@@ -115,11 +115,11 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               className="
                 w-full pl-12 pr-4 py-3
-                bg-[#2A2A2C]
-                border border-[#3D3D40]
+                bg-surface-2
+                border border-default
                 rounded-xl
-                text-white
-                placeholder:text-[#BFBFC3]
+                text-page
+                placeholder:text-muted
                 focus:outline-none
                 focus:ring-1 focus:ring-[#FA4C00]
               "
@@ -128,7 +128,7 @@ export default function Login() {
 
           {/* SENHA */}
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#BFBFC3]" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Senha"
@@ -136,11 +136,11 @@ export default function Login() {
               onChange={(e) => setSenha(e.target.value)}
               className="
                 w-full pl-12 pr-12 py-3
-                bg-[#2A2A2C]
-                border border-[#3D3D40]
+                bg-surface-2
+                border border-default
                 rounded-xl
-                text-white
-                placeholder:text-[#BFBFC3]
+                text-page
+                placeholder:text-muted
                 focus:outline-none
                 focus:ring-1 focus:ring-[#FA4C00]
               "
@@ -148,7 +148,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#BFBFC3] hover:text-white"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-white"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -174,7 +174,7 @@ export default function Login() {
         {/* DIVIDER */}
         <div className="flex items-center gap-3 my-6">
           <div className="flex-1 h-px bg-[#3D3D40]" />
-          <span className="text-xs text-[#BFBFC3]">ou</span>
+          <span className="text-xs text-muted">ou</span>
           <div className="flex-1 h-px bg-[#3D3D40]" />
         </div>
 
@@ -184,10 +184,10 @@ export default function Login() {
           className="
             w-full flex items-center justify-center gap-2
             py-3 rounded-xl
-            border border-[#3D3D40]
-            bg-[#1A1A1C]
-            hover:bg-[#2A2A2C]
-            text-[#BFBFC3]
+            border border-default
+            bg-surface
+            hover:bg-surface-2
+            text-muted
             transition
           "
         >

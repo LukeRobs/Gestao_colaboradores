@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+﻿import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";import {
   ArrowLeft,
   CheckCircle,
@@ -181,7 +181,7 @@ export default function DetalhesTreinamento() {
 
   /* ================= RENDER ================= */
   if (loading) {
-    return <div className="h-screen flex items-center justify-center text-[#BFBFC3]">Carregando…</div>;
+    return <div className="h-screen flex items-center justify-center text-muted">Carregando…</div>;
   }
   if (!treinamento) return null;
 
@@ -193,7 +193,7 @@ export default function DetalhesTreinamento() {
       : "text-[#FFD60A]";
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
       <div className="flex-1 lg:ml-64">
@@ -202,7 +202,7 @@ export default function DetalhesTreinamento() {
         <main className="p-8 space-y-8 max-w-6xl">
           {/* HEADER */}
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/treinamentos")} className="text-[#BFBFC3] hover:text-white">
+            <button onClick={() => navigate("/treinamentos")} className="text-muted hover:text-white">
               <ArrowLeft />
             </button>
             <div>
@@ -212,37 +212,37 @@ export default function DetalhesTreinamento() {
           </div>
 
           {/* CARD PRINCIPAL */}
-          <div className="bg-[#1A1A1C] rounded-2xl p-6 space-y-6">
+          <div className="bg-surface rounded-2xl p-6 space-y-6">
             {/* INFO */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-[#BFBFC3]">Data</span>
+                <span className="text-muted">Data</span>
                 <p>{new Date(treinamento.dataTreinamento).toLocaleDateString("pt-BR")}</p>
               </div>
               <div>
-                <span className="text-[#BFBFC3]">SOC</span>
+                <span className="text-muted">SOC</span>
                 <p>{treinamento.soc}</p>
               </div>
               <div>
-                <span className="text-[#BFBFC3]">Processo</span>
+                <span className="text-muted">Processo</span>
                 <p>{treinamento.processo}</p>
               </div>
               <div>
-                <span className="text-[#BFBFC3]">Tema</span>
+                <span className="text-muted">Tema</span>
                 <p>{treinamento.tema}</p>
               </div>
               <div>
-                <span className="text-[#BFBFC3]">Líder Responsável</span>
+                <span className="text-muted">Líder Responsável</span>
                 <p>{treinamento.liderResponsavel?.nomeCompleto}</p>
               </div>
             </div>
 
             {/* SETORES */}
             <div>
-              <h3 className="text-sm text-[#BFBFC3] mb-2">Setores</h3>
+              <h3 className="text-sm text-muted mb-2">Setores</h3>
               <div className="flex flex-wrap gap-2">
                 {treinamento.setores.map((s) => (
-                  <span key={s.idTreinamentoSetor} className="px-3 py-1 rounded-full text-xs bg-[#262628]">
+                  <span key={s.idTreinamentoSetor} className="px-3 py-1 rounded-full text-xs bg-surface-2">
                     {s.setor?.nomeSetor}
                   </span>
                 ))}
@@ -252,7 +252,7 @@ export default function DetalhesTreinamento() {
             {/* PARTICIPANTES */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm text-[#BFBFC3]">
+                <h3 className="text-sm text-muted">
                   Participantes ({treinamento.participantes.length})
                 </h3>
                 {treinamento.status === "ABERTO" && (
@@ -277,14 +277,14 @@ export default function DetalhesTreinamento() {
                 )}
               </div>
 
-              <div className="border border-[#2A2A2C] rounded-xl overflow-hidden">
+              <div className="border border-default rounded-xl overflow-hidden">
                 {treinamento.participantes.map((p) => (
                   <div
                     key={p.idTreinamentoParticipante}
-                    className="px-4 py-2 flex justify-between text-sm border-b border-[#2A2A2C] last:border-b-0"
+                    className="px-4 py-2 flex justify-between text-sm border-b border-default last:border-b-0"
                   >
                     <span>{p.colaborador?.nomeCompleto || p.opsId}</span>
-                    <span className="text-[#BFBFC3]">{p.cpf || "-"}</span>
+                    <span className="text-muted">{p.cpf || "-"}</span>
                   </div>
                 ))}
               </div>
@@ -294,7 +294,7 @@ export default function DetalhesTreinamento() {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => printAtaTreinamento(treinamento)}
-                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-[#262628] hover:bg-[#3A3A3C]"
+                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C]"
               >
                 <Printer size={16} />
                 Imprimir Ata
@@ -365,7 +365,7 @@ export default function DetalhesTreinamento() {
       {/* ===================== MODAL EDITAR PARTICIPANTES ===================== */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#1A1A1C] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-white/10 shadow-2xl">
+          <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-white/10 shadow-2xl">
             {/* HEADER MODAL */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <div className="flex items-center gap-2">
@@ -471,7 +471,7 @@ export default function DetalhesTreinamento() {
       {/* ===================== MODAL CANCELAR TREINAMENTO ===================== */}
       {cancelModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#1A1A1C] rounded-2xl w-full max-w-md border border-white/10 shadow-2xl">
+          <div className="bg-surface rounded-2xl w-full max-w-md border border-white/10 shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <XCircle size={18} className="text-[#FF453A]" />
@@ -483,7 +483,7 @@ export default function DetalhesTreinamento() {
             </div>
 
             <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-[#BFBFC3]">
+              <p className="text-sm text-muted">
                 Informe o motivo do cancelamento. Esta ação não pode ser desfeita.
               </p>
               <textarea

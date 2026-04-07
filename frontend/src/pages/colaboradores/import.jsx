@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
@@ -186,7 +186,7 @@ export default function ImportarColaboradores() {
   const isSubmitDisabled = !file || loading || checkingStatus
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
       <div className="flex-1 lg:ml-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
@@ -195,13 +195,13 @@ export default function ImportarColaboradores() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/colaboradores")}
-              className="p-2 rounded-lg bg-[#1A1A1C] hover:bg-[#2A2A2C]"
+              className="p-2 rounded-lg bg-surface hover:bg-surface-2"
             >
               <ArrowLeft size={18} />
             </button>
             <div>
               <h1 className="text-2xl font-semibold">Importar Colaboradores</h1>
-              <p className="text-sm text-[#BFBFC3]">Envie um CSV para iniciar a importação automática</p>
+              <p className="text-sm text-muted">Envie um CSV para iniciar a importação automática</p>
             </div>
           </div>
 
@@ -241,10 +241,10 @@ export default function ImportarColaboradores() {
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
-            className="bg-[#1A1A1C] border border-dashed border-[#3D3D40] rounded-2xl p-8 text-center hover:border-orange-500 transition"
+            className="bg-surface border border-dashed border-default rounded-2xl p-8 text-center hover:border-orange-500 transition"
           >
             <Upload size={30} className="mx-auto text-orange-400 mb-3" />
-            <p className="text-sm text-[#BFBFC3] mb-3">Arraste o arquivo CSV ou XLSX aqui</p>
+            <p className="text-sm text-muted mb-3">Arraste o arquivo CSV ou XLSX aqui</p>
             <input
               id="fileInput"
               type="file"
@@ -254,19 +254,19 @@ export default function ImportarColaboradores() {
             />
             <button
               onClick={() => document.getElementById("fileInput").click()}
-              className="px-4 py-2 rounded-lg bg-[#2A2A2C] hover:bg-[#3D3D40]"
+              className="px-4 py-2 rounded-lg bg-surface-2 hover:bg-[#3D3D40]"
             >
               Selecionar arquivo
             </button>
           </div>
 
           {file && (
-            <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-surface border border-default rounded-xl p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FileText className="text-orange-400" />
                 <div>
                   <p className="font-medium">{file.name}</p>
-                  <p className="text-xs text-[#BFBFC3]">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p className="text-xs text-muted">{(file.size / 1024).toFixed(1)} KB</p>
                 </div>
               </div>
               <button onClick={() => setFile(null)} className="text-red-400 text-sm hover:underline">
@@ -276,12 +276,12 @@ export default function ImportarColaboradores() {
           )}
 
           {loading && (
-            <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-xl p-4">
+            <div className="bg-surface border border-default rounded-xl p-4">
               <div className="flex justify-between text-xs mb-1">
                 <span>Enviando arquivo...</span>
                 <span>{progress}%</span>
               </div>
-              <div className="w-full bg-[#2A2A2C] h-2 rounded">
+              <div className="w-full bg-surface-2 h-2 rounded">
                 <div
                   style={{ width: `${progress}%` }}
                   className="bg-orange-500 h-2 rounded transition-all"
@@ -296,7 +296,7 @@ export default function ImportarColaboradores() {
             disabled={isSubmitDisabled}
             className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition ${
               isSubmitDisabled
-                ? "bg-[#2A2A2C] text-[#BFBFC3] cursor-not-allowed"
+                ? "bg-surface-2 text-muted cursor-not-allowed"
                 : "bg-orange-500 hover:bg-orange-600"
             }`}
           >
@@ -305,13 +305,13 @@ export default function ImportarColaboradores() {
 
           {/* IGNORADOS COM MOTIVO */}
           {skippedDetails.length > 0 && (
-            <div className="bg-[#1A1A1C] border border-yellow-500/30 rounded-2xl p-6 space-y-3">
+            <div className="bg-surface border border-yellow-500/30 rounded-2xl p-6 space-y-3">
               <p className="text-sm font-semibold text-yellow-400">
                 Registros ignorados ({skippedDetails.length})
               </p>
               <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
                 {skippedDetails.map((d, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-[#BFBFC3] border-b border-[#2A2A2C] pb-1">
+                  <div key={idx} className="flex items-start gap-2 text-xs text-muted border-b border-default pb-1">
                     <span className="font-mono text-white shrink-0">L{d.linha}</span>
                     <span className="text-[#6B6B6F] shrink-0">·</span>
                     <span className="font-mono text-yellow-400 shrink-0">{d.ops_id}</span>
@@ -323,7 +323,7 @@ export default function ImportarColaboradores() {
             </div>
           )}
 
-          <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6 space-y-4">
+          <div className="bg-surface border border-default rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-white">Modelo CSV</p>
               <button
@@ -340,7 +340,7 @@ export default function ImportarColaboradores() {
                   a.click()
                   URL.revokeObjectURL(url)
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#2A2A2C] hover:bg-[#3D3D40] text-sm text-orange-400 transition"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-[#3D3D40] text-sm text-orange-400 transition"
               >
                 <FileText size={14} />
                 Baixar modelo
@@ -348,7 +348,7 @@ export default function ImportarColaboradores() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs text-[#BFBFC3] font-medium uppercase tracking-wide">Campos obrigatórios</p>
+              <p className="text-xs text-muted font-medium uppercase tracking-wide">Campos obrigatórios</p>
               <div className="flex flex-wrap gap-2">
                 {[
                   "ops_id","nome_completo","matricula","cpf","data_admissao",
@@ -365,12 +365,12 @@ export default function ImportarColaboradores() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs text-[#BFBFC3] font-medium uppercase tracking-wide">Campos opcionais</p>
+              <p className="text-xs text-muted font-medium uppercase tracking-wide">Campos opcionais</p>
               <div className="flex flex-wrap gap-2">
                 {["genero","data_nascimento","email","telefone","hora_inicio_jornada"].map((campo) => (
                   <span
                     key={campo}
-                    className="px-2 py-1 rounded-md bg-[#2A2A2C] border border-[#3D3D40] text-[#BFBFC3] text-xs font-mono"
+                    className="px-2 py-1 rounded-md bg-surface-2 border border-default text-muted text-xs font-mono"
                   >
                     {campo}
                   </span>
@@ -378,15 +378,15 @@ export default function ImportarColaboradores() {
               </div>
             </div>
 
-            <div className="text-xs text-[#BFBFC3] space-y-1 pt-1 border-t border-[#3D3D40]">
+            <div className="text-xs text-muted space-y-1 pt-1 border-t border-default">
               <p>📅 Datas: <span className="font-mono">DD/MM/YYYY</span> ou <span className="font-mono">YYYY-MM-DD</span></p>
               <p>⏰ Horário: <span className="font-mono">HH:MM</span> — padrão <span className="font-mono">05:25</span> se omitido</p>
               <p>✅ Todos os colaboradores importados entram com status <span className="font-mono">ATIVO</span> automaticamente</p>
             </div>
 
             {refs && (
-              <div className="space-y-4 pt-2 border-t border-[#3D3D40]">
-                <p className="text-xs text-[#BFBFC3] font-medium uppercase tracking-wide">Referências de IDs</p>
+              <div className="space-y-4 pt-2 border-t border-default">
+                <p className="text-xs text-muted font-medium uppercase tracking-wide">Referências de IDs</p>
                 {refGroups.map(
                   ({ label, items }) =>
                     items.length > 0 && (
@@ -394,7 +394,7 @@ export default function ImportarColaboradores() {
                         <p className="text-xs font-mono text-orange-400 mb-1">{label}</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                           {items.map((item) => (
-                            <div key={item.id} className="flex items-center gap-2 text-xs text-[#BFBFC3]">
+                            <div key={item.id} className="flex items-center gap-2 text-xs text-muted">
                               <span className="font-mono text-white">{item.id}</span>
                               <span className="text-[#6B6B6F]">→</span>
                               <span className="truncate">

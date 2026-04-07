@@ -1,4 +1,4 @@
-import {
+﻿import {
   ComposedChart,
   Bar,
   Line,
@@ -14,7 +14,7 @@ import {
 export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false }) {
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-8 text-[#BFBFC3]">
+      <div className="text-center py-8 text-muted">
         Sem dados disponíveis
       </div>
     );
@@ -26,28 +26,19 @@ export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload;
-      
-      // Determinar cor baseada na performance
       const getPerformanceColor = (percentual) => {
-        if (percentual >= 100) return "text-green-400";
-        if (percentual >= 95) return "text-yellow-400";
-        return "text-red-400";
+        if (percentual >= 100) return "text-green-500";
+        if (percentual >= 95) return "text-yellow-500";
+        return "text-red-500";
       };
-      
       return (
-        <div className="bg-[#1A1A1C] border border-[#2A2A2C] p-4 rounded shadow-lg">
-          <p className="font-semibold text-white">
+        <div className="bg-surface border border-default p-4 rounded shadow-lg">
+          <p className="font-semibold text-page">
             Hora: {String(parseInt(d.hora)).padStart(2, "0")}-{String((parseInt(d.hora) + 1) % 24).padStart(2, "0")}
           </p>
-          <p className="text-blue-400">
-            Meta: {d.meta.toLocaleString("pt-BR")}
-          </p>
-          <p className={getPerformanceColor(d.percentual)}>
-            Realizado: {d.realizado.toLocaleString("pt-BR")}
-          </p>
-          <p className={getPerformanceColor(d.percentual)}>
-            Performance: {d.percentual}%
-          </p>
+          <p className="text-blue-500">Meta: {d.meta.toLocaleString("pt-BR")}</p>
+          <p className={getPerformanceColor(d.percentual)}>Realizado: {d.realizado.toLocaleString("pt-BR")}</p>
+          <p className={getPerformanceColor(d.percentual)}>Performance: {d.percentual}%</p>
         </div>
       );
     }
@@ -80,7 +71,7 @@ export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false
       <text
         x={x + width / 2}
         y={y - 6}
-        fill="#ffffff"
+        fill="var(--color-text)"
         fontSize={11}
         fontWeight="bold"
         textAnchor="middle"
@@ -97,17 +88,17 @@ export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false
           data={dadosFiltrados}
           margin={{ top: 30, right: 20, left: 10, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2C" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
 
           <XAxis
             dataKey="hora"
-            tick={{ fill: "#BFBFC3", fontSize: 12 }}
-            axisLine={{ stroke: "#2A2A2C" }}
+            tick={{ fill: "var(--color-muted)", fontSize: 12 }}
+            axisLine={{ stroke: "var(--color-border)" }}
             tickLine={false}
           />
 
           <YAxis
-            tick={{ fill: "#BFBFC3", fontSize: 12 }}
+            tick={{ fill: "var(--color-muted)", fontSize: 12 }}
             axisLine={false}
             tickLine={false}
           />
@@ -194,7 +185,7 @@ export default function ProducaoChart({ data, kpis, desabilitarAnimacoes = false
           return (
             <div
               key={i}
-              className="text-center font-bold text-white text-sm py-2 bg-[#1e3a5f] rounded"
+              className="text-center font-bold text-page text-sm py-2 bg-surface-2 rounded"
             >
               {String(h).padStart(2, "0")}-{String(proxHora).padStart(2, "0")}
             </div>

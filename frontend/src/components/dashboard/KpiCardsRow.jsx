@@ -1,10 +1,10 @@
-import KpiCard from "./KpiCard";
+﻿import KpiCard from "./KpiCard";
 
 export default function KpiCardsRow({ items = [] }) {
   if (!items.length) return null;
 
   return (
-    <div className="bg-[#1A1A1C] rounded-2xl p-4 sm:p-6">
+    <div className="bg-surface rounded-2xl p-4 sm:p-6">
       <div
         className="
           grid

@@ -1,4 +1,4 @@
-import { TrendingUp } from "lucide-react";
+﻿import { TrendingUp } from "lucide-react";
 
 export default function ResumoOperacaoCard({
   title,
@@ -8,8 +8,8 @@ export default function ResumoOperacaoCard({
   return (
     <div
       className="
-        bg-[#1A1A1C]
-        border border-[#2A2A2C]
+        bg-surface
+        border border-default
         rounded-2xl
         p-5
         space-y-5
@@ -20,18 +20,18 @@ export default function ResumoOperacaoCard({
     >
       {/* HEADER */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base sm:text-lg font-semibold text-white">
+        <h3 className="text-base sm:text-lg font-semibold text-page">
           {title}
         </h3>
 
-        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2A2A2C]">
+        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-2">
           <TrendingUp size={16} className="text-[#FA4C00]" />
         </div>
       </div>
 
       {/* CONTENT */}
       {data.length === 0 ? (
-        <div className="text-sm text-[#BFBFC3]">
+        <div className="text-sm text-muted">
           Nenhum dado no período
         </div>
       ) : (
@@ -56,12 +56,12 @@ export default function ResumoOperacaoCard({
                   text-sm
                 "
               >
-                <div className="truncate max-w-[65%] text-[#E5E5E5]">
+                <div className="truncate max-w-[65%] text-page">
                   {item[labelKey]}
                 </div>
 
                 <div className="flex items-center gap-3 min-w-[110px] justify-end">
-                  <span className="text-[#BFBFC3]">
+                  <span className="text-muted">
                     {total}
                   </span>
 

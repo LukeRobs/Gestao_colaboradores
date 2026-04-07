@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, Upload } from "lucide-react";
 
@@ -138,7 +138,7 @@ const [uploading, setUploading] = useState(false);
 
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -154,7 +154,7 @@ const [uploading, setUploading] = useState(false);
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(-1)}
-                className="p-2 rounded-lg bg-[#1A1A1C]"
+                className="p-2 rounded-lg bg-surface"
               >
                 <ArrowLeft size={18} />
               </button>
@@ -163,7 +163,7 @@ const [uploading, setUploading] = useState(false);
                 <h1 className="text-2xl font-semibold">
                   Novo Atestado Médico
                 </h1>
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   Upload de PDF obrigatório
                 </p>
               </div>
@@ -234,10 +234,10 @@ const [uploading, setUploading] = useState(false);
 
             {/* PDF */}
             <div className="md:col-span-2">
-              <label className="text-xs text-[#BFBFC3]">
+              <label className="text-xs text-muted">
                 PDF do Atestado
               </label>
-              <label className="flex items-center gap-3 px-4 py-3 bg-[#2A2A2C] rounded-xl cursor-pointer">
+              <label className="flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-xl cursor-pointer">
                 <Upload size={16} />
                 <span>{file ? file.name : "Selecionar PDF"}</span>
                 <input
@@ -260,8 +260,8 @@ const [uploading, setUploading] = useState(false);
 
 function Section({ title, children }) {
   return (
-    <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6">
-      <h2 className="text-sm font-semibold text-[#BFBFC3] mb-6 uppercase">
+    <div className="bg-surface border border-default rounded-2xl p-6">
+      <h2 className="text-sm font-semibold text-muted mb-6 uppercase">
         {title}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -274,10 +274,10 @@ function Section({ title, children }) {
 function Input({ label, ...props }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
       <input
         {...props}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
+        className="px-4 py-2.5 bg-surface-2 border border-default rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
   );
@@ -286,11 +286,11 @@ function Input({ label, ...props }) {
 function Textarea({ label, ...props }) {
   return (
     <div className="flex flex-col gap-1 md:col-span-2">
-      <label className="text-xs text-[#BFBFC3]">{label}</label>
+      <label className="text-xs text-muted">{label}</label>
       <textarea
         {...props}
         rows={3}
-        className="px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
+        className="px-4 py-2.5 bg-surface-2 border border-default rounded-xl outline-none focus:ring-1 focus:ring-[#FA4C00]"
       />
     </div>
   );
@@ -299,7 +299,7 @@ function Textarea({ label, ...props }) {
 function Info({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-[#BFBFC3]">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="text-sm font-medium">{value}</p>
     </div>
   );

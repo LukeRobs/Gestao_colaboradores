@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+﻿import { useMemo, useState, useRef } from "react";
 import clsx from "clsx";
 import PresencaTooltip from "./PresencaTooltip";
 
@@ -126,7 +126,7 @@ export default function PresencaCell({
   const showTooltip = hover && (canEdit || registro?.status);
 
   return (
-    <td ref={cellRef} className="border-r border-[#2A2A2C] min-w-12 sm:min-w-14">
+    <td ref={cellRef} className="border-r border-default min-w-12 sm:min-w-14">
       <div
         className={clsx(
           "relative px-2 py-2 text-center cursor-pointer select-none transition",
@@ -166,22 +166,22 @@ export default function PresencaCell({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold">{cfg.label}</span>
-              <span className="text-[#BFBFC3]">
+              <span className="text-muted">
                 {dia?.label || dia?.date || ""}
               </span>
             </div>
 
-            <div className="h-px bg-[#2A2A2C]" />
+            <div className="h-px bg-surface-2" />
 
-            <div className="space-y-1 text-[#BFBFC3]">
+            <div className="space-y-1 text-muted">
               <div>
-                <span className="text-[#EDEDED]">Colab:</span>{" "}
+                <span className="text-page">Colab:</span>{" "}
                 {colaborador?.nome || "-"}
               </div>
 
               {(horaEntrada || horaSaida) && (
                 <div>
-                  <span className="text-[#EDEDED]">Ponto:</span>{" "}
+                  <span className="text-page">Ponto:</span>{" "}
                   {horaEntrada ? `Entrada ${horaEntrada}` : ""}
                   {horaEntrada && horaSaida ? " • " : ""}
                   {horaSaida ? `Saída ${horaSaida}` : ""}
@@ -200,12 +200,12 @@ export default function PresencaCell({
                 <div className="text-orange-400 text-[11px] font-medium">
                   ⏳ Ajuste manual
                   {registro?.registradoPor && (
-                    <span className="text-[#BFBFC3] font-normal">
+                    <span className="text-muted font-normal">
                       {" "}· por {registro.registradoPor}
                     </span>
                   )}
                   {registro?.justificativa && (
-                    <div className="text-[#BFBFC3] font-normal mt-0.5">
+                    <div className="text-muted font-normal mt-0.5">
                       Motivo: {JUSTIFICATIVA_LABEL[registro.justificativa] || registro.justificativa}
                     </div>
                   )}
@@ -214,7 +214,7 @@ export default function PresencaCell({
 
               {registro?.registradoPor && !registro?.manual && (
                 <div>
-                  <span className="text-[#EDEDED]">Registrado por:</span>{" "}
+                  <span className="text-page">Registrado por:</span>{" "}
                   {registro.registradoPor}
                 </div>
               )}

@@ -1,4 +1,4 @@
-const MEDALS = ["🥇", "🥈", "🥉"];
+﻿const MEDALS = ["🥇", "🥈", "🥉"];
 const ACCENT = "#E8410A";
 
 const EmptyState = () => (

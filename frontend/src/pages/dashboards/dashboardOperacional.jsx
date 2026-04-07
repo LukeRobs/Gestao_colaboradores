@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo, useRef } from "react";
+﻿import { useState, useEffect, useContext, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, Clock, TrendingUp, Building2 } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -307,7 +307,7 @@ export default function DashboardOperacional() {
   ===================================================== */
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center text-[#BFBFC3]">
+      <div className="h-screen flex items-center justify-center text-muted">
         Carregando…
       </div>
     );
@@ -322,7 +322,7 @@ export default function DashboardOperacional() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
+    <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 lg:ml-64 min-w-0">
@@ -350,7 +350,7 @@ export default function DashboardOperacional() {
           <div className="relative w-fit" ref={calendarRef}>
             <button
               onClick={() => setCalendarOpen((v) => !v)}
-              className="bg-[#1A1A1C] border border-[#2A2A2C] px-4 py-2 rounded-lg text-sm hover:bg-[#222]"
+              className="bg-surface border border-default px-4 py-2 rounded-lg text-sm hover:bg-surface-3"
             >
               📅{" "}
               {appliedRange.from
@@ -361,7 +361,7 @@ export default function DashboardOperacional() {
             </button>
 
             {calendarOpen && (
-              <div className="absolute z-50 mt-2 bg-[#0D0D0D] border border-[#2A2A2C] rounded-xl p-4 shadow-xl">
+              <div className="absolute z-50 mt-2 bg-page border border-default rounded-xl p-4 shadow-xl">
                 <DayPicker
                   mode="range"
                   selected={draftRange}
@@ -376,7 +376,7 @@ export default function DashboardOperacional() {
                       setDraftRange({ from: null, to: null });
                       setCalendarOpen(false);
                     }}
-                    className="text-xs text-[#BFBFC3]"
+                    className="text-xs text-muted"
                   >
                     Cancelar
                   </button>
@@ -410,12 +410,12 @@ export default function DashboardOperacional() {
             onClick={handleExportReport}
             className="
               flex items-center gap-2
-              bg-[#1A1A1C]
-              border border-[#2A2A2C]
+              bg-surface
+              border border-default
               px-4 py-2
               rounded-lg
               text-sm
-              hover:bg-[#222]
+              hover:bg-surface-3
               transition
             "
           >

@@ -1,4 +1,4 @@
-// src/components/AcidenteCard-compact.jsx
+﻿// src/components/AcidenteCard-compact.jsx
 // VERSÃO COM LOGS PARA DEBUG
 import { useContext, useState } from "react";
 import {
@@ -220,7 +220,7 @@ export default function AcidenteCardCompact({ acidente, onCancelado }) {
     {/* MODAL CANCELAR ACIDENTE */}
     {cancelModalOpen && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div className="bg-[#1A1A1C] rounded-2xl w-full max-w-md border border-white/10 shadow-2xl">
+        <div className="bg-surface rounded-2xl w-full max-w-md border border-white/10 shadow-2xl">
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
             <div className="flex items-center gap-2">
               <XCircle size={18} className="text-[#FF453A]" />
@@ -232,7 +232,7 @@ export default function AcidenteCardCompact({ acidente, onCancelado }) {
           </div>
 
           <div className="px-5 py-4 space-y-3">
-            <p className="text-sm text-[#BFBFC3]">
+            <p className="text-sm text-muted">
               Informe o motivo do cancelamento. Esta ação não pode ser desfeita.
             </p>
             <textarea

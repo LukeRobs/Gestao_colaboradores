@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useEstacao } from "../../context/EstacaoContext";
 import { Calendar, Package, Send } from "lucide-react";
 import api from "../../services/api";
@@ -275,10 +275,10 @@ export default function GestaoOperacional() {
 
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
+      <div className="h-screen flex flex-col items-center justify-center bg-page text-muted">
         <div className="relative">
           {/* Círculo animado */}
-          <div className="w-16 h-16 border-4 border-[#2A2A2C] border-t-[#E8491D] rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-default border-t-[#E8491D] rounded-full animate-spin"></div>
         </div>
         <p className="mt-4 text-lg">Carregando dados...</p>
       </div>
@@ -288,17 +288,17 @@ export default function GestaoOperacional() {
   if (erro) {
     if (erro === 'SHEETS_NOT_CONFIGURED') {
       return (
-        <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+        <div className="flex min-h-screen bg-page text-page">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 lg:ml-64">
             <Header onMenuClick={() => setSidebarOpen(true)} />
             <div className="flex flex-col items-center justify-center h-[80vh] gap-6 text-center px-4">
-              <div className="w-20 h-20 rounded-full bg-[#1A1A1C] border border-[#3D3D40] flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-surface border border-default flex items-center justify-center">
                 <span className="text-4xl">🔧</span>
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white mb-2">Funcionalidade em configuração</h2>
-                <p className="text-[#BFBFC3] text-sm max-w-sm">
+                <p className="text-muted text-sm max-w-sm">
                   A planilha de produtividade desta estação ainda está sendo configurada.
                   Em breve os dados estarão disponíveis aqui.
                 </p>
@@ -313,10 +313,10 @@ export default function GestaoOperacional() {
     }
 
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0D0D0D]">
+      <div className="h-screen flex items-center justify-center bg-page">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-2">Erro</div>
-          <div className="text-[#BFBFC3]">{erro}</div>
+          <div className="text-muted">{erro}</div>
         </div>
       </div>
     );
@@ -325,7 +325,7 @@ export default function GestaoOperacional() {
   const kpis = dashboardData?.kpis || {};
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
+    <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Alerta de Salvamento Pendente */}
@@ -344,8 +344,8 @@ export default function GestaoOperacional() {
                 <span className="text-xl font-bold">PACKING</span>
               </div>
               {/* Indicador de filtros ativos */}
-              <div className="text-sm text-[#BFBFC3] flex items-center gap-2">
-                <span className="font-semibold text-white">{turno}</span> | {new Date(data + 'T00:00:00').toLocaleDateString('pt-BR')}
+              <div className="text-sm text-muted flex items-center gap-2">
+                <span className="font-semibold text-page">{turno}</span> | {new Date(data + 'T00:00:00').toLocaleDateString('pt-BR')}
                 {loading && (
                   <div className="flex items-center gap-2 ml-2">
                     <div className="w-4 h-4 border-2 border-[#E8491D] border-t-transparent rounded-full animate-spin"></div>
@@ -391,11 +391,11 @@ export default function GestaoOperacional() {
               
               {/* Filtro de Turno */}
               <div className="flex items-center gap-2">
-                <label className="text-sm text-[#BFBFC3]">Turno:</label>
+                <label className="text-sm text-muted">Turno:</label>
                 <select
                   value={turno}
                   onChange={(e) => setTurno(e.target.value)}
-                  className="px-4 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg text-white"
+                  className="px-4 py-2 bg-surface border border-default rounded-lg text-page"
                 >
                   <option value="T1">T1</option>
                   <option value="T2">T2</option>
@@ -405,12 +405,12 @@ export default function GestaoOperacional() {
 
               {/* Filtro de Data */}
               <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-white" />
+                <Calendar className="w-5 h-5 text-muted" />
                 <input
                   type="date"
                   value={data}
                   onChange={(e) => setData(e.target.value)}
-                  className="px-4 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg text-white"
+                  className="px-4 py-2 bg-surface border border-default rounded-lg text-page"
                 />
               </div>
             </div>
@@ -418,11 +418,11 @@ export default function GestaoOperacional() {
           )}
 
           {/* KPIs Header - Estilo da imagem */}
-          <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg overflow-hidden shadow-lg">
+          <div className="bg-surface border border-default rounded-lg overflow-hidden shadow-lg">
             {/* Indicador de Turno e Data */}
-            <div className="bg-[#2A2A2C] px-6 py-2 text-center">
-              <span className="text-sm text-[#BFBFC3]">
-                Dados de: <span className="font-bold text-white">{dashboardData?.turno || turno}</span> - {dashboardData?.dataReferencia ? new Date(dashboardData.dataReferencia + 'T00:00:00').toLocaleDateString('pt-BR') : 'Carregando...'}
+            <div className="bg-surface-2 px-6 py-2 text-center">
+              <span className="text-sm text-muted">
+                Dados de: <span className="font-bold text-page">{dashboardData?.turno || turno}</span> - {dashboardData?.dataReferencia ? new Date(dashboardData.dataReferencia + 'T00:00:00').toLocaleDateString('pt-BR') : 'Carregando...'}
                 {dashboardData?.ultimaAtualizacao && (
                   <span className="ml-4 text-xs opacity-75">
                     | Última atualização: {new Date(dashboardData.ultimaAtualizacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -431,29 +431,28 @@ export default function GestaoOperacional() {
               </span>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 divide-x divide-[#2A2A2C]">
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-x divide-default">
               {/* Meta do Dia */}
-              <div className="bg-[#1a1a1c] text-white p-6 text-center">
-                <div className="text-sm font-semibold mb-2">META DO DIA</div>
-                <div className="text-4xl font-bold">
+              <div className="bg-surface text-page p-6 text-center">
+                <div className="text-sm font-semibold text-muted mb-2">META DO DIA</div>
+                <div className="text-4xl font-bold text-page">
                   {kpis.metaDia?.toLocaleString("pt-BR") || "0"}
                 </div>
               </div>
 
               {/* Meta Hora Atual */}
-              <div className="bg-[#1a1a1c] text-white p-6 text-center">
-                <div className="text-sm font-semibold mb-2">
-                  META HORA ATUAL {kpis.horaAtual !== undefined && `(${kpis.horaAtual}h)`}
+              <div className="bg-surface text-page p-6 text-center">
+                <div className="text-sm font-semibold text-muted mb-2">META HORA ATUAL {kpis.horaAtual !== undefined && `(${kpis.horaAtual}h)`}
                 </div>
-                <div className="text-4xl font-bold">
+                <div className="text-4xl font-bold text-page">
                   {kpis.metaHoraAtual?.toLocaleString("pt-BR") || "0"}
                 </div>
               </div>
 
               {/* Meta de Produtividade */}
-              <div className="bg-[#1a1a1c] text-white p-6 text-center">
-                <div className="text-sm font-semibold mb-2">META DE PRODUTIVIDADE</div>
-                <div className="text-4xl font-bold">
+              <div className="bg-surface text-page p-6 text-center">
+                <div className="text-sm font-semibold text-muted mb-2">META DE PRODUTIVIDADE</div>
+                <div className="text-4xl font-bold text-page">
                   770
                 </div>
               </div>
@@ -572,22 +571,22 @@ export default function GestaoOperacional() {
           })()}
 
           {/* Card Principal - Performance e Gráfico */}
-          <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg shadow-lg p-6">
+          <div className="bg-surface border border-default rounded-lg shadow-lg p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               {/* Performance Box */}
               <div className="space-y-4">
-                <div className="bg-[#1e3a5f] text-white p-4 rounded">
-                  <div className="text-sm font-semibold mb-2">PEFORMANCE</div>
+                <div className="bg-surface text-page p-4 rounded">
+                  <div className="text-sm font-semibold text-muted mb-2">PEFORMANCE</div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs">Média Hora Realizado</span>
+                      <span className="text-xs text-muted">Média Hora Realizado</span>
                       <span className="text-2xl font-bold">
                         {kpis.mediaHoraRealizado?.toLocaleString("pt-BR") || "0"}
                       </span>
                     </div>
-                    <div className="h-px bg-white/20"></div>
+                    <div className="h-px bg-default"></div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs">Produtividade</span>
+                      <span className="text-xs text-muted">Produtividade</span>
                       <span className={`text-2xl font-bold ${(kpis.produtividade || 0) >= 770 ? 'text-green-400' : 'text-red-400'}`}>
                         {kpis.produtividade || "0"}
                       </span>
@@ -599,8 +598,8 @@ export default function GestaoOperacional() {
               {/* Meta X Realizado */}
               <div className="flex flex-col items-center justify-center">
                 <div className="text-center">
-                  <div className="text-lg font-semibold text-white mb-4">
-                    Meta <span className="text-[#BFBFC3]">X</span>{" "}
+                  <div className="text-lg font-semibold text-page mb-4">
+                    Meta <span className="text-muted">X</span>{" "}
                     <span className="text-[#E8491D]">Realizado</span>
                   </div>
                   <div className="flex gap-12 justify-center items-baseline">
@@ -627,7 +626,7 @@ export default function GestaoOperacional() {
                       cy="50"
                       r="40"
                       fill="none"
-                      stroke="#2A2A2C"
+                      stroke="var(--color-border)"
                       strokeWidth="12"
                     />
                     <circle
@@ -642,7 +641,7 @@ export default function GestaoOperacional() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-white">
+                    <span className="text-3xl font-bold text-page">
                       {kpis.performance?.toFixed(2) || "0"}%
                     </span>
                   </div>
@@ -667,16 +666,16 @@ export default function GestaoOperacional() {
               Futuramente criar tabela no banco para armazenar histórico de produção por hora
               Permitindo consultar dados de dias anteriores e análise histórica
           */}
-          {/* <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg shadow-lg p-6">
+          {/* <div className="bg-surface border border-default rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Capacidade por Hora</h2>
             <CapacidadeTable data={dashboardData?.capacidadePorHora || []} />
           </div> */}
 
           {/* Ranking Top 15 Produtividade */}
           {!ocultarRanking && (
-            <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg shadow-lg p-6">
+            <div className="bg-surface border border-default rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Top 15 - Produtividade</h2>
-            <p className="text-sm text-[#BFBFC3] mb-6">
+            <p className="text-sm text-muted mb-6">
               Ranking dos colaboradores com maior produção no dia selecionado
             </p>
             
@@ -692,8 +691,8 @@ export default function GestaoOperacional() {
                         <div className="text-4xl mb-2">
                           {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
                         </div>
-                        <div className="w-full bg-[#2A2A2C] rounded-lg p-4 text-center">
-                          <div className="text-xs text-[#BFBFC3] mb-2">{index + 1}º Lugar</div>
+                        <div className="w-full bg-surface-2 rounded-lg p-4 text-center">
+                          <div className="text-xs text-muted mb-2">{index + 1}º Lugar</div>
                           <div className="text-sm font-semibold text-white mb-2 truncate" title={colaborador.nome}>
                             {colaborador.nome}
                           </div>
@@ -710,22 +709,22 @@ export default function GestaoOperacional() {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-[#2A2A2C]">
-                        <th className="border border-[#3A3A3C] p-3 text-center font-semibold text-white">Posição</th>
-                        <th className="border border-[#3A3A3C] p-3 text-left font-semibold text-white">Nome</th>
-                        <th className="border border-[#3A3A3C] p-3 text-center font-semibold text-white">Total Produzido</th>
+                      <tr className="bg-surface-2">
+                        <th className="border border-default p-3 text-center font-semibold text-page">Posição</th>
+                        <th className="border border-default p-3 text-left font-semibold text-page">Nome</th>
+                        <th className="border border-default p-3 text-center font-semibold text-page">Total Produzido</th>
                       </tr>
                     </thead>
                     <tbody>
                       {dashboardData.rankingProdutividade.map((colaborador, index) => (
-                        <tr key={index} className="hover:bg-[#242426]">
-                          <td className="border border-[#3A3A3C] p-3 text-center text-white font-bold">
+                        <tr key={index} className="hover:bg-surface-3">
+                          <td className="border border-default p-3 text-center text-page font-bold">
                             {index + 1}º
                           </td>
-                          <td className="border border-[#3A3A3C] p-3 text-left text-white">
+                          <td className="border border-default p-3 text-left text-page">
                             {colaborador.nome}
                           </td>
-                          <td className="border border-[#3A3A3C] p-3 text-center text-white font-semibold">
+                          <td className="border border-default p-3 text-center text-page font-semibold">
                             {colaborador.total.toLocaleString("pt-BR")}
                           </td>
                         </tr>
@@ -735,7 +734,7 @@ export default function GestaoOperacional() {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-[#BFBFC3]">Sem dados disponíveis</div>
+              <div className="text-center py-8 text-muted">Sem dados disponíveis</div>
             )}
           </div>
           )}

@@ -1,12 +1,22 @@
+﻿import { useContext } from "react";
 import { Button, Badge } from "../components/UIComponents";
+import { ThemeContext } from "../context/ThemeContext";
 
-const ESCALA_STYLE = {
+const ESCALA_DARK = {
   A: "bg-[#1E293B] border-[#334155] text-[#E5E7EB]",
   B: "bg-[#3A2F1B] border-[#5C3B10] text-[#FFE8C7]",
   C: "bg-[#2A1E3B] border-[#443366] text-[#E9D5FF]",
 };
 
+const ESCALA_LIGHT = {
+  A: { background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1E40AF" },
+  B: { background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" },
+  C: { background: "#F5F3FF", border: "1px solid #DDD6FE", color: "#5B21B6" },
+};
+
 export default function EmployeeTable({ employees = [], onView }) {
+  const { isDark } = useContext(ThemeContext);
+
   if (!employees.length) {
     return (
       <div className="p-8 text-center text-muted">
@@ -22,7 +32,7 @@ export default function EmployeeTable({ employees = [], onView }) {
       <div className="hidden md:block overflow-x-auto rounded-xl bg-surface">
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
-            <tr className="bg-[#121214] text-xs uppercase tracking-wide text-textSecondary">
+            <tr className="bg-surface-2 text-xs uppercase tracking-wide text-muted">
               {[
                 "Nome",
                 "Cargo",
@@ -57,47 +67,56 @@ export default function EmployeeTable({ employees = [], onView }) {
                   key={emp.opsId}
                   className={`
                     transition-colors
-                    ${index % 2 === 0 ? "bg-surface" : "bg-[#1E1E20]"}
-                    hover:bg-[#242426]
+                    ${index % 2 === 0 ? "bg-surface" : "bg-surface-3"}
+                    hover:bg-surface-3
                   `}
                 >
-                  <td className="px-5 py-4 font-medium text-text">
+                  <td className="px-5 py-4 font-medium text-page">
                     {emp.nomeCompleto}
                   </td>
 
-                  <td className="px-5 py-4 text-textSecondary">
+                  <td className="px-5 py-4 text-muted">
                     {emp.cargo?.nomeCargo || "-"}
                   </td>
 
-                  <td className="px-5 py-4 text-textSecondary">
+                  <td className="px-5 py-4 text-muted">
                     {emp.setor?.nomeSetor || "-"}
                   </td>
 
-                  <td className="px-5 py-4 text-textSecondary">
+                  <td className="px-5 py-4 text-muted">
                     {emp.empresa?.razaoSocial || "-"}
                   </td>
 
                   <td className="px-5 py-4">
                     {escala ? (
-                      <span
-                        title={escala.descricao}
-                        className={`inline-flex items-center justify-center min-w-7 px-2 py-1 text-xs font-semibold rounded-lg border ${
-                          ESCALA_STYLE[escala.nomeEscala] ||
-                          "bg-[#2A2A2C] border-[#3D3D40] text-white"
-                        }`}
-                      >
-                        {escala.nomeEscala}
-                      </span>
+                      isDark ? (
+                        <span
+                          title={escala.descricao}
+                          className={`inline-flex items-center justify-center min-w-7 px-2 py-1 text-xs font-semibold rounded-lg border ${
+                            ESCALA_DARK[escala.nomeEscala] || "bg-surface-2 border-default text-page"
+                          }`}
+                        >
+                          {escala.nomeEscala}
+                        </span>
+                      ) : (
+                        <span
+                          title={escala.descricao}
+                          className="inline-flex items-center justify-center min-w-7 px-2 py-1 text-xs font-semibold rounded-lg"
+                          style={ESCALA_LIGHT[escala.nomeEscala] || { background: "#F3F4F6", border: "1px solid #D1D5DB", color: "#374151" }}
+                        >
+                          {escala.nomeEscala}
+                        </span>
+                      )
                     ) : (
                       <span className="text-xs text-muted">—</span>
                     )}
                   </td>
 
-                  <td className="px-5 py-4 text-textSecondary">
+                  <td className="px-5 py-4 text-muted">
                     {emp.turno?.nomeTurno || "-"}
                   </td>
 
-                  <td className="px-5 py-4 text-textSecondary">
+                  <td className="px-5 py-4 text-muted">
                     {emp.dataAdmissao
                       ? new Date(emp.dataAdmissao).toLocaleDateString()
                       : "-"}
@@ -137,7 +156,7 @@ export default function EmployeeTable({ employees = [], onView }) {
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white font-semibold text-sm">
+                  <p className="text-page font-semibold text-sm">
                     {emp.nomeCompleto}
                   </p>
 
@@ -168,14 +187,22 @@ export default function EmployeeTable({ employees = [], onView }) {
 
               {escala && (
                 <div>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-lg border ${
-                      ESCALA_STYLE[escala.nomeEscala] ||
-                      "bg-[#2A2A2C] border-[#3D3D40] text-white"
-                    }`}
-                  >
-                    Escala {escala.nomeEscala}
-                  </span>
+                  {isDark ? (
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-lg border ${
+                        ESCALA_DARK[escala.nomeEscala] || "bg-surface-2 border-default text-page"
+                      }`}
+                    >
+                      Escala {escala.nomeEscala}
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex px-2 py-1 text-xs font-semibold rounded-lg"
+                      style={ESCALA_LIGHT[escala.nomeEscala] || { background: "#F3F4F6", border: "1px solid #D1D5DB", color: "#374151" }}
+                    >
+                      Escala {escala.nomeEscala}
+                    </span>
+                  )}
                 </div>
               )}
 
