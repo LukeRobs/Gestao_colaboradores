@@ -6,15 +6,15 @@ const {
   sincronizarManual,
   exportarDados,
 } = require('../controllers/safetyWalk.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
+const onlyEstacao = require('../middlewares/onlyEstacao');
 
 /**
  * Rotas do Safety Walk
  * Base: /api/safety-walk
+ * Restrito à estação 1 — authenticate e injectDbContext já aplicados globalmente
  */
 
-// Todas as rotas requerem autenticação
-router.use(authenticate);
+router.use(onlyEstacao([1]));
 
 // GET /api/safety-walk - Buscar dados com filtros
 router.get('/', getDadosSafetyWalk);

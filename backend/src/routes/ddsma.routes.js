@@ -6,15 +6,15 @@ const {
   sincronizarManual,
   exportarDados,
 } = require('../controllers/ddsma.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
+const onlyEstacao = require('../middlewares/onlyEstacao');
 
 /**
  * Rotas do DDSMA
  * Base: /api/ddsma
+ * Restrito à estação 1 — authenticate e injectDbContext já aplicados globalmente
  */
 
-// Todas as rotas requerem autenticação
-router.use(authenticate);
+router.use(onlyEstacao([1]));
 
 // GET /api/ddsma - Buscar dados com filtros
 router.get('/', getDadosDDSMA);

@@ -68,6 +68,7 @@ export default function EditarPresencaModal({
   const [justificativa, setJustificativa] = useState("");
   const [loading, setLoading] = useState(false);
   const isOnboarding = status === "ON";
+  const isFaltaInjustificada = status === "F";
   /* =============================
      INIT
   ============================= */
@@ -87,12 +88,14 @@ export default function EditarPresencaModal({
     setRenderKey((k) => k + 1);
   }, [open, registro]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (isOnboarding) {
       setJustificativa("ON");
       setHoraEntrada("");
       setHoraSaida("");
       setRenderKey((k) => k + 1);
+    } else if (isFaltaInjustificada) {
+      setJustificativa("FALTA_INJUSTIFICADA");
     }
   }, [status]);
 
@@ -269,7 +272,7 @@ export default function EditarPresencaModal({
           </label>
           <select
             value={justificativa}
-            disabled={isOnboarding}
+            disabled={isOnboarding || isFaltaInjustificada}
             onChange={(e) => setJustificativa(e.target.value)}
             className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2 disabled:opacity-50"
           >

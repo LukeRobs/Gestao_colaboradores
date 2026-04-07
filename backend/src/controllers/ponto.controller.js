@@ -565,7 +565,6 @@ const getControlePresenca = async (req, res) => {
             "Auxiliar de Logística I - PCD",
             "Auxiliar de Returns I",
             "Auxilíar de Returns II",
-            "Fiscal de pátio"
           ]
         }
       },
@@ -953,6 +952,7 @@ const ajusteManualPresenca = async (req, res) => {
       "SINERGIA_ENVIADA",
       "HORA_EXTRA",
       "LICENCA",
+      "FALTA_INJUSTIFICADA",
       "ON",
     ];
 

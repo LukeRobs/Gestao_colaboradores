@@ -4,13 +4,18 @@ const path = require("path");
 const storage = multer.memoryStorage(); // ✅ Memory para buffer (não salva em disco)
 
 const fileFilter = (req, file, cb) => {
-  if (
-    file.originalname.toLowerCase().endsWith(".csv") &&
-    (file.mimetype === "text/csv" || file.mimetype === "application/vnd.ms-excel")
-  ) {
+  const name = file.originalname.toLowerCase();
+  const isXlsx =
+    name.endsWith(".xlsx") &&
+    file.mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const isCsv =
+    name.endsWith(".csv") &&
+    (file.mimetype === "text/csv" || file.mimetype === "application/vnd.ms-excel");
+
+  if (isXlsx || isCsv) {
     cb(null, true);
   } else {
-    cb(new Error("Apenas arquivos CSV são permitidos"), false);
+    cb(new Error("Apenas arquivos CSV ou XLSX são permitidos"), false);
   }
 };
 

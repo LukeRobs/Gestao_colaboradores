@@ -68,9 +68,15 @@ export default function EditarColaborador() {
         ]);
 
         const c = resColab.data.data.colaborador;
+        const listaLideres = resLideres.data.data || resLideres.data || [];
+
+        // Garante que o líder atual do colaborador apareça na lista
+        if (c.lider?.opsId && !listaLideres.find(l => l.opsId === c.lider.opsId)) {
+          listaLideres.unshift({ opsId: c.lider.opsId, nomeCompleto: c.lider.nomeCompleto, cargo: null });
+        }
 
         setEscalas(resEscalas.data || []);
-        setLideres(resLideres.data.data || resLideres.data || []);
+        setLideres(listaLideres);
 
         setForm({
           nomeCompleto: c.nomeCompleto || "",
@@ -82,7 +88,7 @@ export default function EditarColaborador() {
           contatoEmergenciaNome: c.contatoEmergenciaNome || "",
           contatoEmergenciaTelefone: c.contatoEmergenciaTelefone || "",
           idEscala: c.escala?.idEscala ?? "",
-          idLider: c.idLider || "",
+          idLider: c.lider?.opsId || c.idLider || "",
           dataAdmissao: c.dataAdmissao
             ? c.dataAdmissao.substring(0, 10)
             : "",

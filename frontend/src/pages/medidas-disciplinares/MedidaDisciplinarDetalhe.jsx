@@ -332,25 +332,46 @@ export default function MedidaDisciplinarDetalhe() {
                     <Upload size={20} className="text-[#FA4C00]" />
                     <h2 className="font-semibold text-lg">Finalizar Medida (Upload da Carta Assinada)</h2>
                   </div>
-                  
+
                   <p className="text-[#BFBFC3] text-sm mb-4">
                     Faça o upload do PDF da medida disciplinar devidamente assinado para finalizar o processo.
                   </p>
 
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) => setFile(e.target.files[0])}
-                    className="block text-sm mb-4"
-                  />
-                  
+                  {/* Drop zone customizada */}
+                  <label className={`flex flex-col items-center justify-center gap-2 w-full border-2 border-dashed rounded-xl px-6 py-8 cursor-pointer transition
+                    ${file
+                      ? "border-[#FA4C00] bg-[#FA4C00]/5"
+                      : "border-[#3D3D40] bg-[#1A1A1C] hover:border-[#FA4C00]/60 hover:bg-[#FA4C00]/5"
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => setFile(e.target.files[0])}
+                      className="hidden"
+                    />
+                    {file ? (
+                      <>
+                        <CheckCircle2 size={28} className="text-[#FA4C00]" />
+                        <span className="text-sm font-medium text-[#EDEDED] text-center break-all">{file.name}</span>
+                        <span className="text-xs text-[#BFBFC3]">Clique para trocar o arquivo</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={28} className="text-[#BFBFC3]" />
+                        <span className="text-sm font-medium text-[#EDEDED]">Clique para selecionar o PDF</span>
+                        <span className="text-xs text-[#BFBFC3]">Apenas arquivos .pdf</span>
+                      </>
+                    )}
+                  </label>
+
                   <button
                     onClick={enviarPdf}
                     disabled={uploading || !file}
-                    className={`flex items-center gap-2 px-6 py-2 rounded-xl
+                    className={`mt-4 flex items-center gap-2 px-6 py-2 rounded-xl font-medium transition
                       ${uploading || !file
-                        ? "bg-[#3A3A3C] cursor-not-allowed"
-                        : "bg-[#FA4C00] hover:bg-[#D84300]"
+                        ? "bg-[#3A3A3C] text-[#BFBFC3] cursor-not-allowed"
+                        : "bg-[#FA4C00] hover:bg-[#D84300] text-white"
                       }`}
                   >
                     <CheckCircle2 size={16} />
