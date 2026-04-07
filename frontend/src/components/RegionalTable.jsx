@@ -1,11 +1,12 @@
 import { useContext, useState } from "react";
-import { MapPin, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Radio, Pencil, Trash2 } from "lucide-react";
 import { ThemeContext } from "../context/ThemeContext";
 
 const THEME = {
   dark: {
     card: "#111113", cardBorder: "#27272A",
     textMain: "#F4F4F5", textMuted: "#A1A1AA", textSubtle: "#71717A",
+    tagBg: "#1E293B", tagBorder: "#334155", tagText: "#94A3B8",
     editBg: "#18181B", editBorder: "#27272A", editText: "#A1A1AA", editHover: "#27272A",
     deleteBg: "#200F0F", deleteBorder: "#7F1D1D", deleteText: "#F87171", deleteHover: "#2D0F0F",
     avatarBg: "#1E293B", avatarText: "#94A3B8",
@@ -14,6 +15,7 @@ const THEME = {
   light: {
     card: "#FFFFFF", cardBorder: "#E4E4E7",
     textMain: "#18181B", textMuted: "#52525B", textSubtle: "#A1A1AA",
+    tagBg: "#F1F5F9", tagBorder: "#CBD5E1", tagText: "#475569",
     editBg: "#FFFFFF", editBorder: "#E4E4E7", editText: "#52525B", editHover: "#F9FAFB",
     deleteBg: "#FEF2F2", deleteBorder: "#FECACA", deleteText: "#DC2626", deleteHover: "#FEE2E2",
     avatarBg: "#F1F5F9", avatarText: "#475569",
@@ -47,7 +49,8 @@ export default function RegionalTable({ regionais, onEdit, onDelete }) {
 
 function RegionalCard({ regional: r, T, onEdit, onDelete }) {
   const [hov, setHov] = useState(false);
-  const inicial = r.nome?.[0]?.toUpperCase() || "?";
+  const inicial  = r.nome?.[0]?.toUpperCase() || "?";
+  const estacoes = r.estacoes || [];
 
   return (
     <div
@@ -76,6 +79,34 @@ function RegionalCard({ regional: r, T, onEdit, onDelete }) {
           <p style={{ margin: "2px 0 0", fontSize: 11, color: T.textSubtle }}>ID #{r.idRegional}</p>
         </div>
       </div>
+
+      {/* estações */}
+      {estacoes.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
+            <Radio size={11} style={{ color: T.textSubtle }} />
+            <span style={{ fontSize: 11, color: T.textSubtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Estações ({estacoes.length})
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {estacoes.map((e) => (
+              <span key={e.idEstacao} style={{
+                padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500,
+                background: T.tagBg, border: `1px solid ${T.tagBorder}`, color: T.tagText,
+              }}>
+                {e.nomeEstacao}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {estacoes.length === 0 && (
+        <p style={{ margin: 0, fontSize: 12, color: T.textSubtle, fontStyle: "italic" }}>
+          Nenhuma estação vinculada
+        </p>
+      )}
 
       {/* ações */}
       <div style={{ display: "flex", gap: 8, paddingTop: 10, borderTop: `1px solid ${T.cardBorder}` }}>

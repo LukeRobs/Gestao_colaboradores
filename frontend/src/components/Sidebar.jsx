@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
   );
 
   const [organizacaoOpen, setOrganizacaoOpen] = useState(
-    ["/empresas", "/regionais", "/estacoes", "/setores", "/cargos", "/turnos"].some((p) =>
+    ["/empresas", "/regionais", "/estacoes", "/setores", "/cargos", "/turnos", "/escalas"].some((p) =>
       location.pathname.startsWith(p)
     )
   );
@@ -310,6 +310,7 @@ export default function Sidebar({ isOpen, onClose }) {
                   <SidebarSubItem label="Setores" onClick={() => go("/setores")} />
                   <SidebarSubItem label="Cargos" onClick={() => go("/cargos")} />
                   <SidebarSubItem label="Turnos" onClick={() => go("/turnos")} />
+                  <SidebarSubItem label="Escalas" onClick={() => go("/escalas")} />
                 </div>
               )}
             </div>

@@ -2,7 +2,25 @@ const { prisma } = require('../config/database');
 const { successResponse, createdResponse, deletedResponse, notFoundResponse, paginatedResponse } = require('../utils/response');
 
 const getAllTurnos = async (req, res) => {
-  const turnos = await prisma.turno.findMany({ orderBy: { nomeTurno: 'asc' } });
+  const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    ? req.dbContext.estacaoId
+    : null;
+
+  const colaboradoresWhere = {
+    status: 'ATIVO',
+    ...(estacaoId ? { idEstacao: estacaoId } : {}),
+  };
+
+  const turnos = await prisma.turno.findMany({
+    orderBy: { nomeTurno: 'asc' },
+    include: {
+      _count: {
+        select: {
+          colaboradores: { where: colaboradoresWhere },
+        },
+      },
+    },
+  });
   return successResponse(res, turnos);
 };
 

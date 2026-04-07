@@ -1,46 +1,45 @@
 import { useState, useEffect, useCallback, useContext } from "react";
-import { Plus, Search, Clock } from "lucide-react";
+import { Plus, Search, CalendarDays } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
-import TurnoModal from "../../components/TurnoModal";
-import TurnoTable from "../../components/TurnoTable";
-import { TurnosAPI } from "../../services/turnos";
+import EscalaModal from "../../components/EscalaModal";
+import EscalaTable from "../../components/EscalaTable";
+import { EscalasAPI } from "../../services/escalas";
 import { ThemeContext } from "../../context/ThemeContext";
 
-export default function TurnosPage() {
+export default function EscalasPage() {
   const navigate = useNavigate();
   const { isDark } = useContext(ThemeContext);
-  const [turnos, setTurnos] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [query, setQuery] = useState("");
+  const [escalas,     setEscalas]     = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [modalOpen,   setModalOpen]   = useState(false);
+  const [selected,    setSelected]    = useState(null);
+  const [query,       setQuery]       = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const bg        = isDark ? "#0D0D0D" : "#F3F4F6";
-  const textMain  = isDark ? "#F4F4F5" : "#18181B";
-  const textMuted = isDark ? "#A1A1AA" : "#52525B";
-  const cardBg    = isDark ? "#111113" : "#FFFFFF";
-  const cardBorder= isDark ? "#27272A" : "#E4E4E7";
-  const inputBg   = isDark ? "#18181B" : "#FFFFFF";
+  const bg         = isDark ? "#0D0D0D" : "#F3F4F6";
+  const textMain   = isDark ? "#F4F4F5" : "#18181B";
+  const textMuted  = isDark ? "#A1A1AA" : "#52525B";
+  const cardBg     = isDark ? "#111113" : "#FFFFFF";
+  const cardBorder = isDark ? "#27272A" : "#E4E4E7";
+  const inputBg    = isDark ? "#18181B" : "#FFFFFF";
   const inputBorder= isDark ? "#3F3F46" : "#D4D4D8";
-  const inputText = isDark ? "#F4F4F5" : "#18181B";
-  const placeholderColor = isDark ? "#71717A" : "#A1A1AA";
-  const countBg   = isDark ? "#1C1C3B" : "#EEF2FF";
+  const inputText  = isDark ? "#F4F4F5" : "#18181B";
+  const countBg    = isDark ? "#1C1C3B" : "#EEF2FF";
   const countBorder= isDark ? "#312E81" : "#C7D2FE";
-  const countText = isDark ? "#818CF8" : "#4338CA";
+  const countText  = isDark ? "#818CF8" : "#4338CA";
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await TurnosAPI.listar();
-      setTurnos(Array.isArray(list) ? list : []);
+      const list = await EscalasAPI.listar();
+      setEscalas(Array.isArray(list) ? list : []);
     } catch (err) {
-      console.error("Erro ao carregar turnos", err);
-      setTurnos([]);
+      console.error("Erro ao carregar escalas", err);
+      setEscalas([]);
     } finally {
       setLoading(false);
     }
@@ -48,8 +47,8 @@ export default function TurnosPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = turnos.filter((t) =>
-    t.nomeTurno.toLowerCase().includes(query.toLowerCase())
+  const filtered = escalas.filter((e) =>
+    e.nomeEscala.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -68,17 +67,17 @@ export default function TurnosPage() {
                 background: "rgba(250,76,0,0.12)", color: "#FA4C00",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Clock size={20} />
+                <CalendarDays size={20} />
               </div>
               <div>
-                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: textMain }}>Turnos</h1>
-                <p style={{ margin: 0, fontSize: 13, color: textMuted }}>Gestão de turnos e horários de trabalho</p>
+                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: textMain }}>Escalas</h1>
+                <p style={{ margin: 0, fontSize: 13, color: textMuted }}>Gestão de escalas de trabalho</p>
               </div>
               <span style={{
                 padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600,
                 background: countBg, border: `1px solid ${countBorder}`, color: countText,
               }}>
-                {turnos.length}
+                {escalas.length}
               </span>
             </div>
             <button
@@ -93,7 +92,7 @@ export default function TurnosPage() {
               onMouseLeave={(e) => (e.currentTarget.style.background = "#FA4C00")}
             >
               <Plus size={16} />
-              Novo Turno
+              Nova Escala
             </button>
           </div>
 
@@ -101,12 +100,12 @@ export default function TurnosPage() {
           <div style={{ position: "relative", width: 288 }}>
             <Search size={15} style={{
               position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)",
-              color: placeholderColor, pointerEvents: "none",
+              color: textMuted, pointerEvents: "none",
             }} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar turno"
+              placeholder="Buscar escala"
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
               style={{
@@ -119,26 +118,26 @@ export default function TurnosPage() {
             />
           </div>
 
-          {/* table card */}
+          {/* card container */}
           <div style={{
             background: cardBg, border: `1px solid ${cardBorder}`,
             borderRadius: 16, overflow: "hidden",
           }}>
             {loading ? (
               <div style={{ padding: 32, textAlign: "center", color: textMuted, fontSize: 14 }}>
-                Carregando turnos...
+                Carregando escalas...
               </div>
             ) : (
-              <TurnoTable
-                turnos={filtered}
-                onEdit={(t) => { setSelected(t); setModalOpen(true); }}
-                onDelete={async (t) => {
-                  if (!window.confirm(`Excluir o turno "${t.nomeTurno}"?`)) return;
+              <EscalaTable
+                escalas={filtered}
+                onEdit={(e) => { setSelected(e); setModalOpen(true); }}
+                onDelete={async (e) => {
+                  if (!window.confirm(`Excluir a escala "${e.nomeEscala}"?`)) return;
                   try {
-                    await TurnosAPI.excluir(t.idTurno);
+                    await EscalasAPI.excluir(e.idEscala);
                     load();
                   } catch (err) {
-                    alert(err?.response?.data?.message || "Erro ao excluir turno");
+                    alert(err?.response?.data?.message || "Erro ao excluir escala");
                   }
                 }}
               />
@@ -148,20 +147,20 @@ export default function TurnosPage() {
       </div>
 
       {modalOpen && (
-        <TurnoModal
-          turno={selected}
+        <EscalaModal
+          escala={selected}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
             try {
               if (selected) {
-                await TurnosAPI.atualizar(selected.idTurno, data);
+                await EscalasAPI.atualizar(selected.idEscala, data);
               } else {
-                await TurnosAPI.criar(data);
+                await EscalasAPI.criar(data);
               }
               setModalOpen(false);
               load();
             } catch (err) {
-              alert(err?.response?.data?.message || "Erro ao salvar turno");
+              alert(err?.response?.data?.message || "Erro ao salvar escala");
             }
           }}
         />

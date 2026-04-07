@@ -239,17 +239,35 @@ const registrarPontoCPF = async (req, res) => {
 
     /* ==========================================
        BLOQUEIO ANTECIPAÇÃO T3
+       — Cobre também saída T3 sem jornada aberta
+         (clock-in falhou / Render cold start)
     ========================================== */
 
-    if (
-      !aberta &&
-      colaborador.turno?.nomeTurno === "T3" &&
-      turnoAtual !== "T3"
-    ) {
+    const isT3Worker =
+      colaborador.turno?.nomeTurno?.toUpperCase().includes("T3") ||
+      colaborador.turno?.nomeTurno?.toUpperCase().includes("NOTURNO");
+
+    if (!aberta && isT3Worker && turnoAtual !== "T3") {
       return errorResponse(
         res,
         "Ponto liberado para o T3 somente a partir das 20:50",
         400
+      );
+    }
+
+    /* ==========================================
+       BLOQUEIO SAÍDA T3 SEM JORNADA ABERTA
+       — Impede criar nova ENTRADA durante janela
+         de saída T3 (T1 = 05:00–13:00) quando
+         não há frequência aberta do dia anterior.
+         Ocorre quando clock-in do T3 não foi salvo.
+    ========================================== */
+
+    if (!aberta && turnoAtual === "T1" && isT3Worker) {
+      return errorResponse(
+        res,
+        "Saída T3: nenhuma jornada aberta encontrada. Verifique se a entrada foi registrada ou solicite ajuste ao RH.",
+        409
       );
     }
 
@@ -377,9 +395,12 @@ const registrarPontoCPF = async (req, res) => {
 
     /* ==========================================
        CORRIGE REGISTRO INCONSISTENTE
+       — Só roda quando NÃO há entrada aberta de dia
+         anterior: garante que nunca sobrescreva DSR
+         de um dia que já pertence à saída T3.
     ========================================== */
 
-    if (frequenciaDia && !frequenciaDia.horaEntrada) {
+    if (!aberta && frequenciaDia && !frequenciaDia.horaEntrada) {
 
       const tipoPresencaFix = await prisma.tipoAusencia.findFirst({
         where: { codigo: "P" },
@@ -407,7 +428,30 @@ const registrarPontoCPF = async (req, res) => {
 
     /* ==========================================
        CRIA ENTRADA
+       — Guarda de segurança 1: se ainda há uma entrada
+         aberta de outro dia (estado corrompido), não
+         cria nova frequência — exige ajuste manual.
+       — Guarda de segurança 2: bloqueia registro de
+         nova ENTRADA na janela do T3 (T1 e T2)
+         para qualquer colaborador sem jornada aberta,
+         caso os bloqueios anteriores tenham falhado.
     ========================================== */
+
+    if (aberta) {
+      return errorResponse(
+        res,
+        "Existe uma jornada aberta sem saída registrada. Solicite ajuste ao RH.",
+        409
+      );
+    }
+
+    if (turnoAtual === "T1" && isT3Worker) {
+      return errorResponse(
+        res,
+        "Horário incompatível para nova entrada T3. Solicite ajuste ao RH.",
+        409
+      );
+    }
 
     const tipoPresenca = await prisma.tipoAusencia.findFirst({
       where: { codigo: "P" },

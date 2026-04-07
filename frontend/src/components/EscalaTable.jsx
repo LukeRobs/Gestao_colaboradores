@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { Clock, Users, Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Users, Pencil, Trash2 } from "lucide-react";
 import { ThemeContext } from "../context/ThemeContext";
 
 const THEME = {
@@ -9,7 +9,7 @@ const THEME = {
     countBg: "#1E293B", countBorder: "#334155", countText: "#94A3B8",
     statusActiveBg: "#14532D", statusActiveBorder: "#166534", statusActiveText: "#4ADE80",
     statusInactiveBg: "#450A0A", statusInactiveBorder: "#7F1D1D", statusInactiveText: "#F87171",
-    timeBg: "#18181B", timeBorder: "#27272A", timeText: "#A1A1AA",
+    tagBg: "#1C1C3B", tagBorder: "#312E81", tagText: "#818CF8",
     editBg: "#18181B", editBorder: "#27272A", editText: "#A1A1AA", editHover: "#27272A",
     deleteBg: "#200F0F", deleteBorder: "#7F1D1D", deleteText: "#F87171", deleteHover: "#2D0F0F",
     avatarBg: "#1C1C3B", avatarText: "#818CF8",
@@ -21,7 +21,7 @@ const THEME = {
     countBg: "#EFF6FF", countBorder: "#BFDBFE", countText: "#1D4ED8",
     statusActiveBg: "#F0FDF4", statusActiveBorder: "#BBF7D0", statusActiveText: "#15803D",
     statusInactiveBg: "#FEF2F2", statusInactiveBorder: "#FECACA", statusInactiveText: "#DC2626",
-    timeBg: "#F9FAFB", timeBorder: "#E4E4E7", timeText: "#52525B",
+    tagBg: "#EEF2FF", tagBorder: "#C7D2FE", tagText: "#4338CA",
     editBg: "#FFFFFF", editBorder: "#E4E4E7", editText: "#52525B", editHover: "#F9FAFB",
     deleteBg: "#FEF2F2", deleteBorder: "#FECACA", deleteText: "#DC2626", deleteHover: "#FEE2E2",
     avatarBg: "#EEF2FF", avatarText: "#4338CA",
@@ -29,44 +29,38 @@ const THEME = {
   },
 };
 
-function formatTime(val) {
-  if (!val) return "--:--";
-  const d = new Date(val);
-  if (isNaN(d)) return "--:--";
-  return d.toISOString().slice(11, 16);
-}
-
-export default function TurnoTable({ turnos, onEdit, onDelete }) {
+export default function EscalaTable({ escalas, onEdit, onDelete }) {
   const { isDark } = useContext(ThemeContext);
   const T = THEME[isDark ? "dark" : "light"];
 
-  if (!turnos?.length) {
+  if (!escalas?.length) {
     return (
       <div style={{ padding: "60px 20px", textAlign: "center", color: T.emptyText, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-        <Clock size={40} strokeWidth={1.2} style={{ opacity: 0.4 }} />
-        <p style={{ fontSize: 14 }}>Nenhum turno cadastrado</p>
+        <CalendarDays size={40} strokeWidth={1.2} style={{ opacity: 0.4 }} />
+        <p style={{ fontSize: 14 }}>Nenhuma escala cadastrada</p>
       </div>
     );
   }
 
-  const cols = Math.min(turnos.length, 3);
+  const cols = Math.min(escalas.length, 3);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 16, padding: 20 }}>
-      {turnos.map((t) => (
-        <TurnoCard key={t.idTurno} turno={t} T={T} onEdit={onEdit} onDelete={onDelete} />
+      {escalas.map((e) => (
+        <EscalaCard key={e.idEscala} escala={e} T={T} onEdit={onEdit} onDelete={onDelete} />
       ))}
     </div>
   );
 }
 
-function TurnoCard({ turno: t, T, onEdit, onDelete }) {
+function EscalaCard({ escala: e, T, onEdit, onDelete }) {
   const [hov, setHov] = useState(false);
-  const inicial = t.nomeTurno?.[0]?.toUpperCase() || "?";
-  const ativo   = t.ativo !== false;
-  const inicio  = formatTime(t.horarioInicio);
-  const fim     = formatTime(t.horarioFim);
-  const ativos  = t._count?.colaboradores ?? 0;
+  const inicial = e.nomeEscala?.[0]?.toUpperCase() || "?";
+  const ativo   = e.ativo !== false;
+  const ativos  = e._count?.colaboradores ?? 0;
+  const regime  = (e.diasTrabalhados != null && e.diasFolga != null)
+    ? `${e.diasTrabalhados}x${e.diasFolga}`
+    : null;
 
   return (
     <div
@@ -92,8 +86,8 @@ function TurnoCard({ turno: t, T, onEdit, onDelete }) {
             {inicial}
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.textMain }}>{t.nomeTurno}</p>
-            <p style={{ margin: "2px 0 0", fontSize: 11, color: T.textSubtle }}>ID #{t.idTurno}</p>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.textMain }}>{e.nomeEscala}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 11, color: T.textSubtle }}>ID #{e.idEscala}</p>
           </div>
         </div>
         <span style={{
@@ -106,21 +100,36 @@ function TurnoCard({ turno: t, T, onEdit, onDelete }) {
         </span>
       </div>
 
-      {/* horários + count */}
+      {/* info */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {/* horário */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 11, color: T.textSubtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>Horário</span>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            padding: "3px 10px", borderRadius: 7, fontSize: 12, fontWeight: 600,
-            background: T.timeBg, border: `1px solid ${T.timeBorder}`, color: T.timeText,
-            fontVariantNumeric: "tabular-nums",
-          }}>
-            <Clock size={11} />
-            {inicio} — {fim}
-          </span>
-        </div>
+        {/* tipo */}
+        {e.tipoEscala && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 11, color: T.textSubtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tipo</span>
+            <span style={{
+              padding: "3px 9px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+              background: T.tagBg, border: `1px solid ${T.tagBorder}`, color: T.tagText,
+            }}>
+              {e.tipoEscala}
+            </span>
+          </div>
+        )}
+
+        {/* regime (dias trab x folga) */}
+        {regime && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 11, color: T.textSubtle, textTransform: "uppercase", letterSpacing: "0.06em" }}>Regime</span>
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "3px 10px", borderRadius: 7, fontSize: 12, fontWeight: 600,
+              background: T.tagBg, border: `1px solid ${T.tagBorder}`, color: T.tagText,
+              fontVariantNumeric: "tabular-nums",
+            }}>
+              <CalendarDays size={11} />
+              {regime}
+            </span>
+          </div>
+        )}
 
         {/* colaboradores ativos */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -136,10 +145,17 @@ function TurnoCard({ turno: t, T, onEdit, onDelete }) {
         </div>
       </div>
 
+      {/* descrição */}
+      {e.descricao && (
+        <p style={{ margin: 0, fontSize: 12, color: T.textMuted, lineHeight: 1.5, borderTop: `1px solid ${T.cardBorder}`, paddingTop: 10 }}>
+          {e.descricao}
+        </p>
+      )}
+
       {/* ações */}
       <div style={{ display: "flex", gap: 8, paddingTop: 10, borderTop: `1px solid ${T.cardBorder}` }}>
-        <ActionBtn label="Editar"  icon={<Pencil size={13}/>} bg={T.editBg}   border={T.editBorder}   color={T.editText}   hover={T.editHover}   onClick={() => onEdit(t)} />
-        <ActionBtn label="Excluir" icon={<Trash2 size={13}/>} bg={T.deleteBg} border={T.deleteBorder} color={T.deleteText} hover={T.deleteHover} onClick={() => onDelete(t)} />
+        <ActionBtn label="Editar"  icon={<Pencil size={13}/>} bg={T.editBg}   border={T.editBorder}   color={T.editText}   hover={T.editHover}   onClick={() => onEdit(e)} />
+        <ActionBtn label="Excluir" icon={<Trash2 size={13}/>} bg={T.deleteBg} border={T.deleteBorder} color={T.deleteText} hover={T.deleteHover} onClick={() => onDelete(e)} />
       </div>
     </div>
   );

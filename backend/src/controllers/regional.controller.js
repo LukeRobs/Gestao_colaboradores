@@ -5,6 +5,12 @@ const listarRegionais = async (req, res) => {
   try {
     const regionais = await prisma.regional.findMany({
       orderBy: { nome: "asc" },
+      include: {
+        estacoes: {
+          select: { idEstacao: true, nomeEstacao: true },
+          orderBy: { nomeEstacao: "asc" },
+        },
+      },
     });
     return res.json({ success: true, data: regionais });
   } catch (error) {
