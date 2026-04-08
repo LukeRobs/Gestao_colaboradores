@@ -300,7 +300,7 @@ export default function EditarColaborador() {
               onChange={handleChange}
               options={escalas.map((e) => ({
                 value: e.idEscala,
-                label: `${e.nomeEscala} — ${e.descricao}`,
+                label: e.descricao ? `${e.nomeEscala} — ${e.descricao}` : e.nomeEscala,
               }))}
             />
 
@@ -330,7 +330,11 @@ export default function EditarColaborador() {
               label="Início da Jornada"
               value={form.horarioInicioJornada}
               onChange={handleChange}
-              options={HORARIOS}
+              options={
+                form.horarioInicioJornada && !HORARIOS.includes(form.horarioInicioJornada)
+                  ? [form.horarioInicioJornada, ...HORARIOS]
+                  : HORARIOS
+              }
             />
 
             <Select
