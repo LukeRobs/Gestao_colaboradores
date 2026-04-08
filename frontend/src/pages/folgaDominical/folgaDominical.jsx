@@ -964,13 +964,8 @@ export default function FolgaDominicalPage() {
                               <span style={{ fontWeight: 700, color: BRAND }}>{colab.opsId}</span>
                             </TD>
                             <TD>
-<<<<<<< Updated upstream
-                              <span style={{ color: "#fff", fontWeight: 500 }}>
-                                {colab.nome}
-=======
                               <span style={{ color: "var(--color-text)", fontWeight: 500 }}>
                                 {colab.nome?.split(" ").slice(0, 3).join(" ")}
->>>>>>> Stashed changes
                               </span>
                             </TD>
                             <TD center><Badge value={colab.turno} map={TURNO_COLORS} /></TD>
