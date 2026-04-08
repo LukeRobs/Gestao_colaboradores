@@ -705,6 +705,44 @@ const updateColaborador = async (req, res) => {
       data.idLider = idLider || null;
     }
 
+    if (dataAdmissao !== undefined && dataAdmissao) {
+      const dt = new Date(`${dataAdmissao}T00:00:00`);
+      if (!isNaN(dt.getTime())) data.dataAdmissao = dt;
+    }
+
+    if (horarioInicioJornada !== undefined && horarioInicioJornada) {
+      const parsed = new Date(`1970-01-01T${horarioInicioJornada}:00Z`);
+      if (!isNaN(parsed.getTime())) {
+        data.horarioInicioJornada = parsed;
+      }
+    }
+
+    if (dataDesligamento !== undefined) {
+      data.dataDesligamento = dataDesligamento
+        ? new Date(`${dataDesligamento}T00:00:00`)
+        : null;
+    }
+
+    if (motivoDesligamento !== undefined) {
+      data.motivoDesligamento = motivoDesligamento || null;
+    }
+
+    if (tipoDesligamento !== undefined) {
+      data.tipoDesligamento = tipoDesligamento || null;
+    }
+
+    if (dataInicioStatus !== undefined) {
+      data.dataInicioStatus = dataInicioStatus
+        ? new Date(`${dataInicioStatus}T00:00:00`)
+        : null;
+    }
+
+    if (dataFimStatus !== undefined) {
+      data.dataFimStatus = dataFimStatus
+        ? new Date(`${dataFimStatus}T00:00:00`)
+        : null;
+    }
+
     /* =============================
        ESCALA
     ============================== */

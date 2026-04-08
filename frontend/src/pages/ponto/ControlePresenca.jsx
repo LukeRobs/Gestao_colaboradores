@@ -269,12 +269,8 @@ export default function ControlePresenca() {
         dia={modalData?.dia}
         registro={modalData?.registro}
         onClose={() => setModalOpen(false)}
-        onSuccess={(payload) => {
-          if (pendenciaSaida) {
-            loadPresenca();
-          } else {
-            aplicarAjusteLocal(payload);
-          }
+        onSuccess={() => {
+          loadPresenca();
           setModalOpen(false);
         }}
       />

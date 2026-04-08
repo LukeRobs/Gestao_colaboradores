@@ -228,6 +228,7 @@ const registrarPontoCPF = async (req, res) => {
       where: {
         opsId: colaborador.opsId,
         horaSaida: null,
+        horaEntrada: { not: null }, // ignora registros DSR (horaEntrada = null)
         dataReferencia: {
           lte: dataReferenciaOperacional,
         },
@@ -953,6 +954,7 @@ const ajusteManualPresenca = async (req, res) => {
       "SINERGIA_ENVIADA",
       "HORA_EXTRA",
       "LICENCA",
+      "FALTA_INJUSTIFICADA",
       "ON",
     ];
 
