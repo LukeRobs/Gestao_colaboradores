@@ -1,6 +1,14 @@
 import api from "./api";
 
 /**
+ * Deletar registro de frequência (ADMIN)
+ */
+export async function deletarFrequencia(idFrequencia) {
+  const res = await api.delete(`/frequencias/${idFrequencia}`);
+  return res.data;
+}
+
+/**
  * Ajuste manual de presença (LIDER / GESTÃO)
  */
 export async function ajustarPresencaManual(payload) {

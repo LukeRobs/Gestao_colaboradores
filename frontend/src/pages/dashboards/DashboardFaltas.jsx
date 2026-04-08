@@ -2,6 +2,7 @@
 import React, { useContext, useEffect, useMemo, useState } from "react"
 import { AuthContext } from "../../context/AuthContext"
 import { useEstacao } from "../../context/EstacaoContext"
+import MainLayout from "../../components/MainLayout";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -884,8 +885,7 @@ export default function DashboardFaltas() {
       <style>{pulseStyle}</style>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}
-           className="lg:ml-64">
+      <MainLayout style={{ display: "flex", flexDirection: "column" }}>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main
@@ -1086,7 +1086,7 @@ export default function DashboardFaltas() {
           </section>
 
         </main>
-      </div>
+      </MainLayout>
     </div>
   )
 }

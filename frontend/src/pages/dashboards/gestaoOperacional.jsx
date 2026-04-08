@@ -8,6 +8,7 @@ import ProducaoChart from "../../components/gestaoOperacional/ProducaoChart";
 import AlertaSalvamentoPendente from "../../components/gestaoOperacional/AlertaSalvamentoPendente";
 import domtoimage from "dom-to-image-more";
 import toast from "react-hot-toast";
+import MainLayout from "../../components/MainLayout";
 // import CapacidadeTable from "../../components/gestaoOperacional/CapacidadeTable"; // Comentado - será usado futuramente
 
 export default function GestaoOperacional() {
@@ -290,7 +291,7 @@ export default function GestaoOperacional() {
       return (
         <div className="flex min-h-screen bg-page text-page">
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          <div className="flex-1 lg:ml-64">
+          <MainLayout>
             <Header onMenuClick={() => setSidebarOpen(true)} />
             <div className="flex flex-col items-center justify-center h-[80vh] gap-6 text-center px-4">
               <div className="w-20 h-20 rounded-full bg-surface border border-default flex items-center justify-center">
@@ -307,7 +308,7 @@ export default function GestaoOperacional() {
                 Em breve
               </div>
             </div>
-          </div>
+          </MainLayout>
         </div>
       );
     }
@@ -331,7 +332,7 @@ export default function GestaoOperacional() {
       {/* Alerta de Salvamento Pendente */}
       <AlertaSalvamentoPendente />
 
-      <div className="flex-1 lg:ml-64 min-w-0">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main ref={mainContentRef} className="p-6 xl:p-10 2xl:px-20 space-y-6 max-w-[1600px] mx-auto">
@@ -739,7 +740,7 @@ export default function GestaoOperacional() {
           </div>
           )}
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

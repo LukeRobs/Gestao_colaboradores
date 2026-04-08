@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useEffect, useState, useMemo } from "react"
+import MainLayout from "../../components/MainLayout";
 import {
   ResponsiveContainer,
   BarChart,
@@ -541,8 +542,7 @@ export default function DashboardDesligamento() {
       <style>{css}</style>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}
-           className="lg:ml-64">
+      <MainLayout style={{ display: "flex", flexDirection: "column" }}>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main
@@ -767,7 +767,7 @@ export default function DashboardDesligamento() {
           </section>
 
         </main>
-      </div>
+      </MainLayout>
     </div>
   )
 }

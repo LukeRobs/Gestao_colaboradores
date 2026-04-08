@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../components/MainLayout";
 import {
   Plus,
   FileText,
@@ -127,7 +128,7 @@ export default function TreinamentosPage() {
       <div className="flex min-h-screen bg-page text-page">
         <style>{`@keyframes shimmer { from { background-position: -600px 0 } to { background-position: 600px 0 } }`}</style>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
-        <div className="flex-1 lg:ml-64">
+        <MainLayout>
           <Header onMenuClick={() => setSidebarOpen(true)} />
           <main className="p-8 space-y-8">
             {/* header */}
@@ -171,7 +172,7 @@ export default function TreinamentosPage() {
               ))}
             </div>
           </main>
-        </div>
+        </MainLayout>
       </div>
     );
   }
@@ -192,7 +193,7 @@ export default function TreinamentosPage() {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 space-y-8">
@@ -223,7 +224,7 @@ export default function TreinamentosPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted mb-1">Total</p>
-                  <p className="text-2xl font-bold text-white">{total}</p>
+                  <p className="text-2xl font-bold text-page">{total}</p>
                 </div>
                 <div className="p-3 bg-[#FA4C00]/10 rounded-xl">
                   <TrendingUp size={24} className="text-[#FA4C00]" />
@@ -303,7 +304,7 @@ export default function TreinamentosPage() {
               <select
                 value={filtroLider}
                 onChange={(e) => setFiltroLider(e.target.value)}
-                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 appearance-none min-w-[180px]"
+                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-page focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 appearance-none min-w-[180px]"
               >
                 <option value="">Todos os líderes</option>
                 {lideres.map(l => (
@@ -317,7 +318,7 @@ export default function TreinamentosPage() {
                 type="date"
                 value={filtroDataInicio}
                 onChange={(e) => setFiltroDataInicio(e.target.value)}
-                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
+                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-page focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -326,13 +327,13 @@ export default function TreinamentosPage() {
                 type="date"
                 value={filtroDataFim}
                 onChange={(e) => setFiltroDataFim(e.target.value)}
-                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
+                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-page focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
               />
             </div>
             {(filtroLider || filtroDataInicio || filtroDataFim) && (
               <button
                 onClick={() => { setFiltroLider(""); setFiltroDataInicio(""); setFiltroDataFim(""); }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-muted transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-2 hover:bg-surface-3 text-sm text-muted transition-colors cursor-pointer border border-default"
               >
                 <XCircle size={14} /> Limpar filtros
               </button>
@@ -388,7 +389,7 @@ export default function TreinamentosPage() {
             </table>
           </div>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

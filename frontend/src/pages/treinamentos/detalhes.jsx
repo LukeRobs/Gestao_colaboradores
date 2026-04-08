@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";import {
+import { useParams, useNavigate } from "react-router-dom";import MainLayout from "../../components/MainLayout";
+import {
   ArrowLeft,
   CheckCircle,
   FileText,
@@ -199,10 +200,11 @@ export default function DetalhesTreinamento() {
       : "text-[#FFD60A]";
 
   return (
-    <div className="flex min-h-screen bg-page text-page">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
+    <>
+      <div className="flex min-h-screen bg-page text-page">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
-      <div className="flex-1 lg:ml-64">
+        <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 space-y-8 max-w-6xl">
@@ -396,9 +398,10 @@ export default function DetalhesTreinamento() {
             )}
           </div>
         </main>
-      </div>
+      </MainLayout>
+    </div>
 
-      {/* ===================== MODAL EDITAR PARTICIPANTES ===================== */}
+    {/* ===================== MODAL EDITAR PARTICIPANTES ===================== */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-white/10 shadow-2xl">
@@ -554,6 +557,6 @@ export default function DetalhesTreinamento() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

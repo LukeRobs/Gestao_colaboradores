@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -209,7 +210,7 @@ export default function NovaMedidaDisciplinar() {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
 
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
@@ -371,7 +372,7 @@ export default function NovaMedidaDisciplinar() {
 
         </main>
 
-      </div>
+      </MainLayout>
 
     </div>
   );

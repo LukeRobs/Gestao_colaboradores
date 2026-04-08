@@ -432,8 +432,14 @@ const sincronizarControlePresenca = async (prisma) => {
           continue;
         }
 
+        // DSR — verificar ANTES do atestado
+        const dow = dataCalendario.getDay();
+        const dsrDias = { E: [0, 1], G: [2, 3], C: [4, 5] };
+        const escalaKey = String(c.escala?.nomeEscala || '').toUpperCase();
+        const isDSR = dsrDias[escalaKey]?.includes(dow);
+
         // Status administrativo
-        const atestado = c.atestadosMedicos?.find(
+        const atestado = !isDSR && c.atestadosMedicos?.find(
           a => dataCalendario >= new Date(a.dataInicio) && dataCalendario <= new Date(a.dataFim)
         );
         if (atestado) {
@@ -467,10 +473,7 @@ const sincronizarControlePresenca = async (prisma) => {
         }
 
         // DSR
-        const dow = dataCalendario.getDay();
-        const dsrMap = { A: [0, 3], B: [1, 2], C: [4, 5] };
-        const dias = dsrMap[String(c.escala?.nomeEscala || '').toUpperCase()];
-        if (dias?.includes(dow)) {
+        if (isDSR) {
           diasMap[dataISO] = { status: 'DSR', manual: false };
           continue;
         }

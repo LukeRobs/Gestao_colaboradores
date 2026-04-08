@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../../components/MainLayout";
 import {
   Shield,
   ClipboardCheck,
@@ -224,7 +225,7 @@ export default function SPI() {
     return (
       <div className="flex min-h-screen bg-page text-page">
         <Sidebar isOpen={false} onClose={() => {}} />
-        <div className="flex-1 lg:ml-64">
+        <MainLayout>
           <Header onMenuClick={() => {}} />
           <main className="p-8 space-y-8">
             {/* Header */}
@@ -260,7 +261,7 @@ export default function SPI() {
             {/* Aderência geral */}
             <Skeleton h="h-48" />
           </main>
-        </div>
+        </MainLayout>
       </div>
     );
   }
@@ -277,7 +278,7 @@ export default function SPI() {
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 space-y-8">
@@ -919,7 +920,7 @@ export default function SPI() {
             </div>
           </div>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

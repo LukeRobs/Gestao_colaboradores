@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -138,7 +139,7 @@ export default function DwNovoPage() {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 max-w-4xl mx-auto space-y-8">
@@ -199,18 +200,22 @@ export default function DwNovoPage() {
 
           {/* ================= QUANTIDADES ================= */}
           <Section title="Quantidade Real por Empresa">
-            {EMPRESAS.map((e) => (
-              <Input
-                key={e.idEmpresa}
-                type="number"
-                min="0"
-                label={`${e.nome} *`}
-                value={form.quantidades[e.idEmpresa]}
-                onChange={(ev) =>
-                  handleQuantidade(e.idEmpresa, ev.target.value)
-                }
-              />
-            ))}
+            {loadingDw ? (
+              <div className="md:col-span-2 text-sm text-muted">Carregando...</div>
+            ) : (
+              EMPRESAS.map((e) => (
+                <Input
+                  key={e.idEmpresa}
+                  type="number"
+                  min="0"
+                  label={`${e.nome} *`}
+                  value={form.quantidades[e.idEmpresa]}
+                  onChange={(ev) =>
+                    handleQuantidade(e.idEmpresa, ev.target.value)
+                  }
+                />
+              ))
+            )}
           </Section>
 
           {/* ================= OBS ================= */}
@@ -224,7 +229,7 @@ export default function DwNovoPage() {
             />
           </Section>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

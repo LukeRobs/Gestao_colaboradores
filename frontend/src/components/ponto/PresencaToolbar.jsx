@@ -1,4 +1,4 @@
-﻿import { Search, FileSpreadsheet } from "lucide-react";
+﻿import { Search, FileSpreadsheet, Download } from "lucide-react";
 
 export default function PresencaToolbar({
   mes,
@@ -21,6 +21,8 @@ export default function PresencaToolbar({
   onBuscaChange,
   onLiderChange,
   onExportarSheets,
+  onExportarCsv,
+  isAdmin = false,
   loading = false,
 }) {
   const turnos = ["TODOS", "T1", "T2", "T3"];
@@ -29,26 +31,51 @@ export default function PresencaToolbar({
     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
       {/* FILTROS */}
       <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-        {/* EXPORTAR GOOGLE SHEETS */}
-        <button
-          onClick={onExportarSheets}
-          disabled={loading}
-          className="
-            inline-flex items-center gap-2
-            px-4 py-2
-            bg-[#34C759]
-            hover:bg-[#28A745]
-            disabled:bg-[#3A3A3C]
-            disabled:cursor-not-allowed
-            text-sm font-medium
-            rounded-xl
-            transition
-          "
-          title="Exportar controle de presença para Google Sheets"
-        >
-          <FileSpreadsheet size={16} />
-          {loading ? 'Exportando...' : 'Exportar Sheets'}
-        </button>
+        {/* EXPORTAR GOOGLE SHEETS — só Admin e Alta Gestão */}
+        {isAdmin && (
+          <button
+            onClick={onExportarSheets}
+            disabled={loading}
+            className="
+              inline-flex items-center gap-2
+              px-4 py-2
+              bg-[#34C759]
+              hover:bg-[#28A745]
+              disabled:bg-[#3A3A3C]
+              disabled:cursor-not-allowed
+              text-sm font-medium
+              rounded-xl
+              transition
+            "
+            title="Exportar controle de presença para Google Sheets"
+          >
+            <FileSpreadsheet size={16} />
+            {loading ? 'Exportando...' : 'Exportar Sheets'}
+          </button>
+        )}
+
+        {/* EXPORTAR CSV — para demais cargos */}
+        {!isAdmin && (
+          <button
+            onClick={onExportarCsv}
+            disabled={loading}
+            className="
+              inline-flex items-center gap-2
+              px-4 py-2
+              bg-surface
+              hover:bg-surface-2
+              disabled:opacity-50
+              disabled:cursor-not-allowed
+              text-sm font-medium text-muted
+              rounded-xl
+              transition
+            "
+            title="Exportar controle de presença em CSV"
+          >
+            <Download size={16} />
+            {loading ? 'Exportando...' : 'Exportar CSV'}
+          </button>
+        )}
 
         {/* MÊS */}
         <input
@@ -225,7 +252,7 @@ export default function PresencaToolbar({
           value={busca}
           onChange={(e) => onBuscaChange(e.target.value)}
           placeholder="Buscar colaborador..."
-          className="bg-transparent outline-none text-sm text-white placeholder-[#BFBFC3] w-full sm:w-56"
+          className="bg-transparent outline-none text-sm text-page placeholder-muted w-full sm:w-56"
         />
       </div>
     </div>

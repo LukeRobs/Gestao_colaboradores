@@ -1,23 +1,46 @@
 const CHANGELOG = {
-  version: "1.9.0",
+  version: "1.9.2",
   titulo: "Novidades do Sistema",
   categorias: [
     {
-      nome: "Novidades",
+      nome: "Escalas",
+      icone: "🗓️",
       itens: [
-        "Tela de Escalas com CRUD completo (criar, editar, excluir escalas por turno)",
-        "Tabela de Turnos atualizada com visualização de escalas vinculadas",
-        "Tabela de Regionais com melhorias de exibição",
+        "Novo campo 'Dias de DSR' no cadastro de escalas — agora é possível configurar os dias de folga diretamente no modal de escala",
+        "Geração de DSR estendida para todas as escalas com base nos dias configurados",
+      ],
+    },
+    {
+      nome: "Treinamentos",
+      icone: "📚",
+      itens: [
+        "Download de documentos de treinamento agora disponível na tela de detalhes",
+      ],
+    },
+    {
+      nome: "Perfil do Colaborador",
+      icone: "👤",
+      itens: [
+        "Redesign completo da tela de perfil com nova interface",
+        "Correção no carregamento ao editar escala e horário",
       ],
     },
     {
       nome: "Correções",
+      icone: "🔧",
       itens: [
-        "Fix ponto T3: saída em janela DSR agora protege contra sobrescrita de DSR e criação de nova frequência indevida",
-        "Controle de presença: ao selecionar status 'Falta não justificada', o motivo é preenchido automaticamente",
-        "Carta de Medida Disciplinar: data da ocorrência exibida corretamente (corrigido problema de fuso UTC)",
-        "Sugestão de Medida Disciplinar: data de referência da falta exibida corretamente (campo migrado de TIMESTAMP para DATE)",
-        "Upload da carta assinada: interface redesenhada com drop zone estilizada",
+        "Nome completo corrigido na tela de Folga Dominical",
+        "Validação de domínio @shopee.com e estação obrigatória no cadastro de usuário",
+      ],
+    },
+    {
+      nome: "Controle de Presença",
+      icone: "📋",
+      itens: [
+        "Botão 'Exportar Sheets' agora visível apenas para Admin e Alta Gestão",
+        "Demais cargos passam a ter botão 'Exportar CSV' para baixar o controle localmente",
+        "Novo botão 'Apagar registro' no modal de edição — disponível apenas para Admin quando há registro no banco",
+        "Correção: exportação para Google Sheets agora respeita DSR — atestados médicos (AM) não sobrescrevem mais dias de folga da escala",
       ],
     },
   ],

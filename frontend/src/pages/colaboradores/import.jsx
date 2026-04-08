@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { Upload, ArrowLeft, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar"
 import Header from "../../components/Header"
@@ -188,7 +189,7 @@ export default function ImportarColaboradores() {
   return (
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="p-8 max-w-2xl mx-auto space-y-6">
 
@@ -414,7 +415,7 @@ export default function ImportarColaboradores() {
           </div>
 
         </main>
-      </div>
+      </MainLayout>
     </div>
   )
 }

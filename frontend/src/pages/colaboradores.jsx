@@ -2,6 +2,7 @@
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import MainLayout from "../components/MainLayout";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -180,7 +181,7 @@ export default function ColaboradoresPage() {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto">
@@ -197,13 +198,13 @@ export default function ColaboradoresPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 w-full xl:w-auto">
               
               {/* BUSCA */}
-              <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl">
+              <div className="flex items-center gap-2 bg-surface border border-default px-4 py-2 rounded-xl">
                 <Search size={16} className="text-muted" />
                 <input
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
                   placeholder="Buscar colaborador..."
-                  className="bg-transparent outline-none text-sm text-white w-full"
+                  className="bg-transparent outline-none text-sm text-page w-full placeholder:text-muted"
                 />
               </div>
 
@@ -211,7 +212,7 @@ export default function ColaboradoresPage() {
               <select
                 value={turnoSelecionado}
                 onChange={(e) => handleTurnoChange(e.target.value)}
-                className="bg-surface px-4 py-2 rounded-xl text-sm"
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 {turnos.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -224,7 +225,7 @@ export default function ColaboradoresPage() {
               <select
                 value={escalaSelecionada}
                 onChange={(e) => handleEscalaChange(e.target.value)}
-                className="bg-surface px-4 py-2 rounded-xl text-sm"
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 <option value="TODOS">Escalas</option>
 
@@ -239,7 +240,7 @@ export default function ColaboradoresPage() {
               <select
                 value={cargoSelecionado}
                 onChange={(e) => handleCargoChange(e.target.value)}
-                className="bg-surface px-4 py-2 rounded-xl text-sm"
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 <option value="TODOS">Cargos</option>
                 {cargos.map((cargo) => (
@@ -253,7 +254,7 @@ export default function ColaboradoresPage() {
               <select
                 value={liderSelecionado}
                 onChange={(e) => handleLiderChange(e.target.value)}
-                className="bg-surface px-4 py-2 rounded-xl text-sm"
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 <option value="TODOS">Líderes</option>
                 {lideres.map((lider) => (
@@ -267,7 +268,7 @@ export default function ColaboradoresPage() {
               <select
                 value={statusSelecionado}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className="bg-surface px-4 py-2 rounded-xl text-sm"
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 <option value="TODOS">Status</option>
                 <option value="ATIVO">Ativo</option>
@@ -281,7 +282,7 @@ export default function ColaboradoresPage() {
             {(permissions.isAdmin || permissions.isAltaGestao) && (
               <button
                 onClick={() => navigate("/colaboradores/novo")}
-                className="px-5 py-2.5 bg-[#FA4C00] rounded-xl"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#FA4C00] text-white rounded-xl font-medium text-sm"
               >
                 <Plus size={16} />
                 Novo Colaborador
@@ -327,7 +328,7 @@ export default function ColaboradoresPage() {
             )}
           </div>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

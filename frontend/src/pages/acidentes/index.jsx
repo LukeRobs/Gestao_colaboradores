@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -39,7 +40,7 @@ export default function AcidentesPage() {
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 max-w-5xl mx-auto space-y-6">
@@ -76,7 +77,7 @@ export default function AcidentesPage() {
             </div>
           )}
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

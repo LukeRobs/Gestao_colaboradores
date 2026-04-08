@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useEffect, useState, useContext } from "react"
+import MainLayout from "../../components/MainLayout";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -86,7 +87,7 @@ export default function DashboardColaboradoresExecutivo() {
   return (
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header />
 
         <main className="p-8 space-y-10">
@@ -292,7 +293,7 @@ export default function DashboardColaboradoresExecutivo() {
           <CandidatosInternalizacaoTable data={candidatosInternalizacao || []} isAdmin={permissions?.isAdmin} navigate={navigate} />
 
         </main>
-      </div>
+      </MainLayout>
     </div>
   )
 }

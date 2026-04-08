@@ -107,31 +107,15 @@ export default function Header({ onMenuClick }) {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 20px 0 16px",
-          background: T.header,
+          backgroundColor: T.header,
           borderBottom: `1px solid ${T.headerBorder}`,
           position: "sticky",
           top: 0,
           zIndex: 40,
-          backdropFilter: "blur(12px)",
         }}
       >
         {/* ── esquerda ────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            className="lg:hidden"
-            onClick={onMenuClick}
-            onMouseEnter={(e) => (e.currentTarget.style.background = T.btnHover)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            style={{
-              width: 36, height: 36, borderRadius: 8, border: "none",
-              background: "transparent", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: T.breadcrumb, transition: "background 0.15s",
-            }}
-          >
-            <Menu size={20} />
-          </button>
-
           <span
             className="hidden sm:block"
             style={{ fontSize: 13, color: T.breadcrumb }}

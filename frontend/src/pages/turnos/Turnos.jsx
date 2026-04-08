@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback, useContext } from "react";
 import { Plus, Search, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -56,7 +57,7 @@ export default function TurnosPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: bg, color: textMain }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main style={{ padding: "24px 32px", maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
@@ -145,7 +146,7 @@ export default function TurnosPage() {
             )}
           </div>
         </main>
-      </div>
+      </MainLayout>
 
       {modalOpen && (
         <TurnoModal

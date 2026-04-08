@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback, useContext } from "react";
 import { Plus, Search, Briefcase } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../components/MainLayout";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -54,7 +55,7 @@ export default function CargosPage() {
     <div style={{ display: "flex", minHeight: "100vh", background: bg, color: textMain }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="px-8 py-6 space-y-6 max-w-7xl mx-auto">
@@ -154,7 +155,7 @@ export default function CargosPage() {
             )}
           </section>
         </main>
-      </div>
+      </MainLayout>
 
       {modalOpen && (
         <CargoModal

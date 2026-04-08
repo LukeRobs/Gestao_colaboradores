@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useCallback, useContext, useMemo } from "react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
+import MainLayout from "../../components/MainLayout";
 import api from "../../services/api.jsx";
 import toast from "react-hot-toast";
 import { AuthContext } from "../../context/AuthContext";
@@ -48,6 +49,39 @@ export default function ControlePresenca() {
     setModalData(data);
     setModalOpen(true);
   }
+
+  /* ================== EXPORTAR CSV ================== */
+  const exportarCsv = () => {
+    if (colaboradores.length === 0) {
+      toast.error("Nenhum dado para exportar.");
+      return;
+    }
+
+    const [ano, mesNum] = mes.split("-").map(Number);
+    const diasDoMes = dias;
+
+    const header = ["Colaborador", "Turno", "Escala", ...diasDoMes.map((d) => String(d).padStart(2, "0"))];
+
+    const rows = colaboradores.map((c) => {
+      const celulas = diasDoMes.map((d) => {
+        const dataISO = `${ano}-${String(mesNum).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        return c.dias?.[dataISO]?.status || "-";
+      });
+      return [c.nome, c.turno || "", c.escala || "", ...celulas];
+    });
+
+    const csvContent = [header, ...rows]
+      .map((row) => row.map((v) => `"${v}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `presenca-${mes}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   /* ================== EXPORTAR GOOGLE SHEETS ================== */
   const exportarSheets = async () => {
@@ -199,7 +233,7 @@ export default function ControlePresenca() {
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 lg:ml-64 min-w-0">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="px-8 py-6 space-y-6 max-w-full overflow-hidden">
@@ -233,6 +267,8 @@ export default function ControlePresenca() {
             onBuscaChange={setBusca}
             onLiderChange={setLider}
             onExportarSheets={exportarSheets}
+            onExportarCsv={exportarCsv}
+            isAdmin={isAdmin}
             loading={exportando}
           />
 
@@ -259,7 +295,7 @@ export default function ControlePresenca() {
             )}
           </div>
         </main>
-      </div>
+      </MainLayout>
 
       {/* MODAL DO LÍDER */}
       <PresencaModal
@@ -271,6 +307,17 @@ export default function ControlePresenca() {
         onClose={() => setModalOpen(false)}
         onSuccess={() => {
           loadPresenca();
+          setModalOpen(false);
+        }}
+        onDelete={({ opsId, dataReferencia }) => {
+          setColaboradoresRaw((prev) =>
+            prev.map((c) => {
+              if (c.opsId !== opsId) return c;
+              const dias = { ...c.dias };
+              delete dias[dataReferencia];
+              return { ...c, dias };
+            })
+          );
           setModalOpen(false);
         }}
       />

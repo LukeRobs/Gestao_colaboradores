@@ -4,6 +4,7 @@ import { Users, Clock, TrendingUp, Building2 } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "date-fns/locale";
 import "react-day-picker/dist/style.css";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -32,7 +33,7 @@ export default function DashboardOperacional() {
   ===================================================== */
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dados, setDados] = useState(null);
-  const [turnoSelecionado, setTurnoSelecionado] = useState("T1"); // default T1
+  const [turnoSelecionado, setTurnoSelecionado] = useState("T2"); // default T2
   const [turnoAtual, setTurnoAtual] = useState(null); // informativo
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
@@ -325,7 +326,7 @@ export default function DashboardOperacional() {
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 lg:ml-64 min-w-0">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
       <main
@@ -468,7 +469,7 @@ export default function DashboardOperacional() {
             emptyMessage="Nenhum ausente no turno"
           />
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

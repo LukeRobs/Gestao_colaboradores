@@ -6,6 +6,7 @@ import Header from "../../components/Header";
 import { MedidasDisciplinaresAPI } from "../../services/medidasDisciplinares";
 import { AuthContext } from "../../context/AuthContext";
 import { printCartaMedidaDisciplinar } from "../../utils/Printcartamedidadisciplinar";
+import MainLayout from "../../components/MainLayout";
 
 export default function MedidaDisciplinarDetalhe() {
   const { id } = useParams();
@@ -169,7 +170,7 @@ export default function MedidaDisciplinarDetalhe() {
         navigate={navigate}
       />
       
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="p-8 space-y-8 max-w-6xl">
@@ -409,7 +410,7 @@ export default function MedidaDisciplinarDetalhe() {
             )}
           </div>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

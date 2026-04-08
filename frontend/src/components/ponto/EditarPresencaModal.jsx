@@ -1,6 +1,6 @@
-﻿import { X, Save } from "lucide-react";
+﻿import { X, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ajustarPresencaManual } from "../../services/presenca";
+import { ajustarPresencaManual, deletarFrequencia } from "../../services/presenca";
 
 /* =============================
    STATUS PERMITIDOS
@@ -60,6 +60,7 @@ export default function EditarPresencaModal({
   registro,
   isAdmin = false,
   onSuccess, // opcional: recarregar grade
+  onDelete,  // opcional: callback após deletar
 }) {
   const [status, setStatus] = useState("") ;
   const [renderKey, setRenderKey] = useState(0);
@@ -103,8 +104,25 @@ export default function EditarPresencaModal({
 
   const permiteHorario = STATUS_COM_HORARIO.includes(status);
 
-  async function handleSave() {
-    if (!status) {
+  async function handleDelete() {
+    if (!registro?.idFrequencia) return;
+    if (!window.confirm("Apagar este registro de frequência? Esta ação não pode ser desfeita.")) return;
+
+    try {
+      setLoading(true);
+      await deletarFrequencia(registro.idFrequencia);
+      alert("Registro apagado com sucesso");
+      onDelete?.({ opsId: colaborador.opsId, dataReferencia: dia.date });
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.message || "Erro ao apagar registro");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {    if (!status) {
       alert("Status é obrigatório");
       return;
     }
@@ -294,6 +312,19 @@ export default function EditarPresencaModal({
           >
             Cancelar
           </button>
+
+          {/* APAGAR — só admin/alta gestão e só quando há registro */}
+          {isAdmin && registro?.idFrequencia && (
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              title="Apagar registro"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-700 hover:bg-red-600 rounded-lg font-medium disabled:opacity-60"
+            >
+              <Trash2 size={13} />
+              {loading ? "Apagando..." : "Apagar"}
+            </button>
+          )}
 
           <button
             onClick={handleSave}

@@ -22,8 +22,8 @@ export default function Pagination({
     <div
       className="
         mt-6
-        bg-[#141416]
-        border border-[#2A2A2D]
+        bg-surface-2
+        border border-default
         rounded-2xl
         p-4
         space-y-4
@@ -49,7 +49,7 @@ export default function Pagination({
               border border-default
               rounded-lg
               px-3 py-1.5
-              text-white
+              text-page
               outline-none
               focus:ring-1 focus:ring-[#FA4C00]
             "
@@ -84,7 +84,7 @@ export default function Pagination({
           </IconButton>
 
           {/* PÁGINA ATUAL */}
-          <div className="px-4 py-2 text-sm bg-surface rounded-xl border border-[#2A2A2D]">
+          <div className="px-4 py-2 text-sm bg-surface rounded-xl border border-default">
             Página <span className="text-white font-semibold">{page}</span> de{" "}
             <span className="text-white font-semibold">
               {effectiveTotalPages}

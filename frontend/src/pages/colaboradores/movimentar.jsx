@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -152,7 +153,7 @@ useEffect(() => {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 max-w-4xl mx-auto space-y-8">
@@ -282,7 +283,7 @@ useEffect(() => {
             />
           </Section>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

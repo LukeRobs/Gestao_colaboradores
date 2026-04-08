@@ -79,7 +79,7 @@ export default function PontoPage() {
         />
       )}
 
-      <div className={`flex-1 ${!isKiosk ? "lg:ml-64" : ""}`}>
+      <MainLayout disabled={isKiosk}>
         {/* HEADER */}
         {!isKiosk && <Header onMenuClick={() => setSidebarOpen(true)} />}
 
@@ -191,7 +191,7 @@ export default function PontoPage() {
             )}
           </section>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

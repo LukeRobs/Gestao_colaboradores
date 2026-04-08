@@ -8,6 +8,7 @@ import { SugestoesAPI } from "../../services/medidasDisciplinares";
 import { ColaboradoresAPI } from "../../services/colaboradores";
 import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
+import MainLayout from "../../components/MainLayout";
 
 const STATUS_LABEL = {
   PENDENTE:  { label: "Pendente",  color: "text-yellow-400 bg-yellow-400/10", icon: Clock },
@@ -44,7 +45,7 @@ function CounterCard({ label, value, color, icon: Icon, onClick, active }) {
       </div>
       <div className="text-left">
         <p className="text-2xl font-semibold">{value ?? "—"}</p>
-        <p className="text-xs text-[#6B7280]">{label}</p>
+        <p className="text-xs text-muted">{label}</p>
       </div>
     </button>
   );
@@ -189,7 +190,7 @@ export default function SugestoesMedidaDisciplinar() {
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-8 max-w-6xl mx-auto space-y-6">
@@ -242,21 +243,21 @@ export default function SugestoesMedidaDisciplinar() {
 
           {/* FILTROS */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
-              <Search size={14} className="text-[#6B7280]" />
+            <div className="bg-surface border border-default px-4 py-2 rounded-xl flex items-center gap-2">
+              <Search size={14} className="text-muted" />
               <input
                 type="text"
                 placeholder="Buscar colaborador ou OpsId"
                 value={filtroNome}
                 onChange={(e) => setFiltroNome(e.target.value)}
-                className="bg-transparent outline-none text-sm text-white placeholder-[#6B7280] w-48"
+                className="bg-transparent outline-none text-sm text-page placeholder:text-muted w-48"
               />
             </div>
 
             <select
               value={filtroStatus}
               onChange={(e) => setFiltroStatus(e.target.value)}
-              className="bg-surface px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer"
+              className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page outline-none cursor-pointer"
             >
               <option value="">Todos os status</option>
               <option value="PENDENTE">Pendente</option>
@@ -267,7 +268,7 @@ export default function SugestoesMedidaDisciplinar() {
             <select
               value={filtroTurno}
               onChange={(e) => setFiltroTurno(e.target.value)}
-              className="bg-surface px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer"
+              className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page outline-none cursor-pointer"
             >
               <option value="">Todos os turnos</option>
               {turnos.map((t) => (
@@ -280,7 +281,7 @@ export default function SugestoesMedidaDisciplinar() {
             <select
               value={filtroLider}
               onChange={(e) => setFiltroLider(e.target.value)}
-              className="bg-surface px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer max-w-[200px]"
+              className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page outline-none cursor-pointer max-w-[200px]"
             >
               <option value="">Todos os líderes</option>
               {lideres.map((l) => (
@@ -289,23 +290,23 @@ export default function SugestoesMedidaDisciplinar() {
             </select>
             )}
 
-            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
-              <span className="text-xs text-[#6B7280]">De</span>
+            <div className="bg-surface border border-default px-4 py-2 rounded-xl flex items-center gap-2">
+              <span className="text-xs text-muted">De</span>
               <input
                 type="date"
                 value={filtroDataInicio}
                 onChange={(e) => setFiltroDataInicio(e.target.value)}
-                className="bg-transparent outline-none text-sm text-white"
+                className="bg-transparent outline-none text-sm text-page"
               />
             </div>
 
-            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
-              <span className="text-xs text-[#6B7280]">Até</span>
+            <div className="bg-surface border border-default px-4 py-2 rounded-xl flex items-center gap-2">
+              <span className="text-xs text-muted">Até</span>
               <input
                 type="date"
                 value={filtroDataFim}
                 onChange={(e) => setFiltroDataFim(e.target.value)}
-                className="bg-transparent outline-none text-sm text-white"
+                className="bg-transparent outline-none text-sm text-page"
               />
             </div>
 
@@ -383,7 +384,7 @@ export default function SugestoesMedidaDisciplinar() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-[#6B7280]">
+                          <span className="text-xs text-muted">
                             {user?.role === "ADMIN" ? (s.aprovadoPorEmail ?? "—") : "—"}
                           </span>
                         )}
@@ -395,7 +396,7 @@ export default function SugestoesMedidaDisciplinar() {
             </div>
           )}
         </main>
-      </div>
+      </MainLayout>
 
       {/* MODAL CONFIRMAÇÃO */}
       {acao && (
@@ -415,7 +416,7 @@ export default function SugestoesMedidaDisciplinar() {
                 onChange={(e) => setMotivoRejeicao(e.target.value)}
                 placeholder="Motivo da rejeição (opcional)"
                 rows={3}
-                className="w-full bg-page border border-default rounded-xl px-4 py-2 text-sm text-white placeholder-[#6B7280] outline-none resize-none"
+                className="w-full bg-page border border-default rounded-xl px-4 py-2 text-sm text-page placeholder:text-muted outline-none resize-none"
               />
             )}
             <div className="flex gap-3 justify-end">

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -73,7 +74,7 @@ export default function DwListPage() {
         navigate={navigate}
       />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="px-8 py-6 space-y-6 max-w-7xl mx-auto">
@@ -244,7 +245,7 @@ export default function DwListPage() {
             )}
           </div>
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

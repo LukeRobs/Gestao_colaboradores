@@ -1,6 +1,7 @@
 import { AuthContext } from "../../context/AuthContext";
 import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import MainLayout from "../../components/MainLayout";
 import {
   ArrowLeft,
   Pencil,
@@ -124,7 +125,7 @@ export default function PerfilColaborador() {
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
-      <div className="flex-1 lg:ml-64">
+      <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6 pb-16">
@@ -518,7 +519,7 @@ export default function PerfilColaborador() {
           </ProfileSection>
 
         </main>
-      </div>
+      </MainLayout>
     </div>
   );
 }

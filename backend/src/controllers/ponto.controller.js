@@ -806,6 +806,7 @@ const getControlePresenca = async (req, res) => {
           const f = freqMap[key];
 
           diasMap[dataISO] = {
+            idFrequencia: f.idFrequencia,
             status: f.tipoAusencia?.codigo || "-",
             entrada: f.horaEntrada,
             saida: f.horaSaida,
@@ -844,6 +845,7 @@ const getControlePresenca = async (req, res) => {
           const f = freqMap[key];
 
           diasMap[dataISO] = {
+            idFrequencia: f.idFrequencia,
             status: f.tipoAusencia?.codigo || "-",
             entrada: f.horaEntrada,
             saida: f.horaSaida,
@@ -1359,8 +1361,12 @@ const exportarPresencaSheets = async (req, res) => {
         const dataISO = ymd(dataCalendario);
         const key = `${c.opsId}_${dataISO}`;
 
-        // Atestado médico tem prioridade máxima
-        const atestadoDia = c.atestadosMedicos?.find(
+        // DSR — verificar ANTES do atestado
+        const escalaDia = getEscalaNoDia(c.opsId, dataCalendario, historicoMap, c.escala?.nomeEscala);
+        const diaDSR = isDiaDSR(dataCalendario, escalaDia);
+
+        // Atestado médico tem prioridade máxima (exceto em dias de DSR)
+        const atestadoDia = !diaDSR && c.atestadosMedicos?.find(
           (a) =>
             dataCalendario >= startOfDay(a.dataInicio) &&
             dataCalendario <= startOfDay(a.dataFim)
@@ -1412,8 +1418,7 @@ const exportarPresencaSheets = async (req, res) => {
         }
 
         // DSR
-        const escalaDia = getEscalaNoDia(c.opsId, dataCalendario, historicoMap, c.escala?.nomeEscala);
-        if (isDiaDSR(dataCalendario, escalaDia)) {
+        if (diaDSR) {
           diasMap[dataISO] = {
             status: "DSR",
             manual: false,

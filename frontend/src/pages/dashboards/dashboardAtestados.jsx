@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
+import MainLayout from "../../components/MainLayout";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -616,7 +617,7 @@ export default function DashboardAtestados() {
       <style>{pulseStyle}</style>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }} className="lg:ml-64">
+      <MainLayout style={{ display: "flex", flexDirection: "column" }}>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         <main style={{ flex: 1, padding: "32px 24px 64px", maxWidth: 1600, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 40 }}>
@@ -785,7 +786,7 @@ export default function DashboardAtestados() {
           </section>
 
         </main>
-      </div>
+      </MainLayout>
     </div>
   )
 }
