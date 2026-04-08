@@ -1,5 +1,5 @@
 const CHANGELOG = {
-  version: "1.9.2",
+  version: "1.9.1",
   titulo: "Novidades do Sistema",
   categorias: [
     {
