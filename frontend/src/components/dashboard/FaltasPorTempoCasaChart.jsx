@@ -1,4 +1,4 @@
-import {
+﻿import {
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -32,7 +32,7 @@ export default function FaltasPorTempoCasaChart({ data = [], title }) {
     return (
       <div
         style={{
-          backgroundColor: "#121214",
+          backgroundColor: "var(--color-surface)",
           border: "1px solid #2A2A2C",
           borderRadius: 10,
           padding: "10px 14px",
@@ -55,9 +55,9 @@ export default function FaltasPorTempoCasaChart({ data = [], title }) {
   };
 
   return (
-    <div className="bg-[#1A1A1C] border border-[#2A2A2C] rounded-2xl p-6 space-y-6">
+    <div className="bg-surface border border-default rounded-2xl p-6 space-y-6">
       {title && (
-        <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+        <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
           {title}
         </h2>
       )}
@@ -70,7 +70,7 @@ export default function FaltasPorTempoCasaChart({ data = [], title }) {
             barCategoryGap="30%"
           >
             <CartesianGrid
-              stroke="#2A2A2C"
+              stroke="var(--color-border)"
               strokeDasharray="2 4"
               vertical={false}
             />

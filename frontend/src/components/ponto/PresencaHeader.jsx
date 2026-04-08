@@ -1,4 +1,4 @@
-export default function PresencaHeader({ dias = [], ano, mes }) {
+﻿export default function PresencaHeader({ dias = [], ano, mes }) {
 
   function isWeekend(dia) {
     if (!ano || !mes) return false;
@@ -10,9 +10,9 @@ export default function PresencaHeader({ dias = [], ano, mes }) {
   }
 
   return (
-    <thead className="sticky top-0 z-30 bg-[#1A1A1C]">
+    <thead className="sticky top-0 z-30 bg-surface">
       <tr>
-        <th className="sticky left-0 z-40 bg-[#1A1A1C] px-4 py-3 border-r border-[#2A2A2C] text-left min-w-[220px] sm:min-w-[260px]">
+        <th className="sticky left-0 z-40 bg-surface px-4 py-3 border-r border-default text-left min-w-[220px] sm:min-w-[260px]">
           Colaborador
         </th>
 
@@ -23,12 +23,12 @@ export default function PresencaHeader({ dias = [], ano, mes }) {
             <th
               key={`dia-${dia}`}
               className={`
-                px-2 py-3 text-center border-r border-[#2A2A2C] text-xs min-w-12 sm:min-w-14
-                bg-[#1A1A1C]
+                px-2 py-3 text-center border-r border-default text-xs min-w-12 sm:min-w-14
+                bg-surface
                 ${
                   weekend
                     ? "bg-[#141416] text-[#FA4C00] font-semibold"
-                    : "text-[#BFBFC3]"
+                    : "text-muted"
                 }
               `}
             >

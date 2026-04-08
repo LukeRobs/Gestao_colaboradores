@@ -1,4 +1,4 @@
-export const Button = {
+﻿export const Button = {
   Primary: ({ children, icon, disabled, ...props }) => (
     <button
       {...props}
@@ -26,7 +26,7 @@ export const Button = {
       className="
         inline-flex items-center gap-2
         px-5 py-2.5 rounded-lg text-sm font-medium
-        bg-surfaceHover hover:bg-[#242426]
+        bg-surfaceHover hover:bg-surface-3
         text-text transition
       "
     >
@@ -50,7 +50,7 @@ export const Button = {
 
   IconButton: ({ children, variant = "default", ...props }) => {
     const variants = {
-      default: "bg-surfaceHover hover:bg-[#242426] text-text",
+      default: "bg-surfaceHover hover:bg-surface-3 text-text",
       danger: "bg-danger/10 hover:bg-danger/20 text-danger",
       success: "bg-success/10 hover:bg-success/20 text-success",
     };

@@ -1,4 +1,4 @@
-const INSIGHT_CONFIG = [
+﻿const INSIGHT_CONFIG = [
   {
     key: "principalMotivo",
     label: "Principal Motivo",

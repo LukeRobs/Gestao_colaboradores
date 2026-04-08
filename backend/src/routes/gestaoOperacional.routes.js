@@ -3,6 +3,11 @@ const router = express.Router();
 const { carregarGestaoOperacional, consultarHistoricoProducao } = require("../controllers/gestaoOperacional.controller");
 const { buscarMetasProducao, limparCache } = require("../services/googleSheetsMetaProducao.service");
 const { testarSalvamentoManual } = require("../jobs/salvarProducaoHistorico.job");
+const { adminAltaGestaoLideranca } = require("../utils/roles");
+const onlyEstacao = require("../middlewares/onlyEstacao");
+
+// Exclusivo estação 1 — ADMIN global passa direto
+router.use(adminAltaGestaoLideranca, onlyEstacao([1]));
 
 router.get("/", carregarGestaoOperacional);
 router.get("/historico", consultarHistoricoProducao);

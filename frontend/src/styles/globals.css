@@ -1,60 +1,130 @@
 @import "tailwindcss";
 
+/* =====================================================
+   CSS CUSTOM PROPERTIES — TEMA SEMÂNTICO
+   Dark  = classe .dark no <html>
+   Light = padrão (sem classe)
+===================================================== */
+:root {
+  /* Fundos */
+  --color-page:      #F3F4F6;
+  --color-surface:   #FFFFFF;
+  --color-surface-2: #F0F0F2;
+  --color-surface-3: #E8E8EA;
+
+  /* Bordas */
+  --color-border:    #D1D1D6;
+  --color-border-2:  #C0C0C8;
+
+  /* Textos */
+  --color-text:      #111113;
+  --color-muted:     #52525B;
+  --color-subtle:    #71717A;
+
+  /* Input */
+  --color-input-bg:  #FFFFFF;
+}
+
+.dark {
+  /* Fundos */
+  --color-page:      #0D0D0D;
+  --color-surface:   #1A1A1C;
+  --color-surface-2: #262628;
+  --color-surface-3: #1F1F22;
+
+  /* Bordas */
+  --color-border:    #2A2A2C;
+  --color-border-2:  #3D3D40;
+
+  /* Textos */
+  --color-text:      #FFFFFF;
+  --color-muted:     #BFBFC3;
+  --color-subtle:    #71717A;
+
+  /* Input */
+  --color-input-bg:  #1A1A1C;
+}
+
+/* =====================================================
+   CLASSES UTILITÁRIAS SEMÂNTICAS
+===================================================== */
+@layer utilities {
+  .bg-page      { background-color: var(--color-page); }
+  .bg-surface   { background-color: var(--color-surface); }
+  .bg-surface-2 { background-color: var(--color-surface-2); }
+  .bg-surface-3 { background-color: var(--color-surface-3); }
+  .bg-input     { background-color: var(--color-input-bg); }
+
+  .border-default   { border-color: var(--color-border); }
+  .border-default-2 { border-color: var(--color-border-2); }
+
+  .text-page   { color: var(--color-text); }
+  .text-muted  { color: var(--color-muted); }
+  .text-subtle { color: var(--color-subtle); }
+
+  .hover\:bg-surface-3:hover { background-color: var(--color-surface-3); }
+  .divide-default > * + * { border-color: var(--color-border); }
+}
+
+/* =====================================================
+   BASE
+===================================================== */
 @layer base {
   body {
-    @apply bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white;
+    background-color: var(--color-page);
+    color: var(--color-text);
   }
 }
 
+/* =====================================================
+   COMPONENTE .input
+===================================================== */
+.input {
+  width: 100%;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  outline: none;
+}
+.input::placeholder { color: var(--color-subtle); }
+.input:focus { box-shadow: 0 0 0 2px #FA4C00; }
+
+/* =====================================================
+   OCULTAR SCROLLBAR
+===================================================== */
 @layer utilities {
-  /* Ocultar scrollbar mas manter funcionalidade */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
+    display: none;
   }
-  
-  /* Animação de slide da direita */
+
   @keyframes slide-in-right {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
   }
-  
   .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out;
   }
 }
 
-.input {
-  @apply w-full bg-[#262628] border border-[#2A2A2C]
-  rounded-xl px-4 py-2 text-sm text-white
-  placeholder:text-[#6F6F73]
-  focus:outline-none focus:ring-2 focus:ring-[#FA4C00];
-}
-/* ================= EXPORT MODE ================= */
-
-/* Esconde botões de ação no export */
+/* =====================================================
+   EXPORT MODE
+===================================================== */
 body.exporting-report .export-hide,
-body.exporting-report [data-export-hide] {
-  display: none !important;
-}
+body.exporting-report [data-export-hide] { display: none !important; }
 
-/* Garante que elementos não sejam cortados */
 body.exporting-report #operational-report,
 body.exporting-report #operational-report-clone {
   overflow: visible !important;
   min-height: auto !important;
 }
 
-/* Remove TODAS bordas, transformações e filtros */
 body.exporting-report *,
 body.exporting-report #operational-report *,
 body.exporting-report #operational-report-clone * {
@@ -67,14 +137,12 @@ body.exporting-report #operational-report-clone * {
   overflow: visible !important;
 }
 
-/* Garante que SVGs sejam renderizados corretamente */
 body.exporting-report svg {
   overflow: visible !important;
   display: block !important;
   border: none !important;
 }
 
-/* Remove bordas dos gráficos Recharts */
 body.exporting-report .recharts-wrapper,
 body.exporting-report .recharts-surface,
 body.exporting-report .recharts-cartesian-grid,
@@ -83,25 +151,51 @@ body.exporting-report .recharts-pie {
   outline: none !important;
 }
 
-/* Modo normal - mostra botões */
 .export-hide,
-[data-export-hide] {
-  display: flex;
-}
+[data-export-hide] { display: flex; }
 
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
 
-/* ================= DATE INPUT — ícone do calendário branco ================= */
-input[type="date"] {
-  color-scheme: dark;
-}
+/* =====================================================
+   DATE INPUT
+===================================================== */
+.dark input[type="date"] { color-scheme: dark; }
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
   cursor: pointer;
   opacity: 0.7;
 }
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+/* =====================================================
+   OVERRIDES LIGHT MODE — classes hardcoded remanescentes
+===================================================== */
+html:not(.dark) .bg-\[\#1E1E20\]  { background-color: #F3F4F6 !important; }
+html:not(.dark) .bg-\[\#121214\]  { background-color: #F0F0F2 !important; }
+html:not(.dark) .bg-\[\#0A0A0B\]  { background-color: #F3F4F6 !important; }
+html:not(.dark) .bg-\[\#1E293B\]  { background-color: #EFF6FF !important; }
+html:not(.dark) .bg-\[\#3A2F1B\]  { background-color: #FFFBEB !important; }
+html:not(.dark) .bg-\[\#2A1E3B\]  { background-color: #F5F3FF !important; }
+
+/* Sidebar item ativo em light */
+html:not(.dark) .bg-surface-2.text-page {
+  background-color: #FFF0EB !important;
+  color: #FA4C00 !important;
+}
+
+/* Sidebar borda direita em light */
+html:not(.dark) aside.bg-surface {
+  border-right: 1px solid #E5E7EB;
+}
+
+/* Texto branco sobre fundos coloridos — mantém branco em light */
+html:not(.dark) .bg-\[\#FA4C00\] .text-white,
+html:not(.dark) [class*="bg-red-"] .text-white,
+html:not(.dark) [class*="bg-green-"] .text-white,
+html:not(.dark) [class*="bg-blue-"] .text-white {
+  color: #FFFFFF !important;
 }

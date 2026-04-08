@@ -1,4 +1,4 @@
-// src/pages/folgaDominical/folgaDominical.jsx
+﻿// src/pages/folgaDominical/folgaDominical.jsx
 "use client";
 
 import { useEffect, useState, useCallback, useContext, useMemo } from "react";

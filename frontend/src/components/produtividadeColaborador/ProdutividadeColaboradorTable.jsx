@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { ChevronUp, ChevronDown, Search, Trophy, Medal, Award } from "lucide-react";
 
 export default function ProdutividadeColaboradorTable({ colaboradores, horasTurno, turno }) {
@@ -18,7 +18,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
 
   if (!colaboradores || colaboradores.length === 0) {
     return (
-      <div className="text-center py-8 text-[#BFBFC3]">
+      <div className="text-center py-8 text-muted">
         Nenhum colaborador encontrado para este turno
       </div>
     );
@@ -88,7 +88,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
       {/* Filtro de busca */}
       <div className="mb-6">
         <div className="relative max-w-full sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#BFBFC3] w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted w-4 h-4" />
           <input
             type="text"
             placeholder="Buscar colaborador..."
@@ -97,10 +97,10 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
               setFiltro(e.target.value);
               setPaginaAtual(1);
             }}
-            className="w-full pl-10 pr-4 py-2 bg-[#2A2A2C] border border-[#3A3A3C] rounded-md text-white placeholder-[#BFBFC3] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full pl-10 pr-4 py-2 bg-surface-2 border border-[#3A3A3C] rounded-md text-white placeholder-[#BFBFC3] focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
-        <div className="mt-2 text-xs sm:text-sm text-[#BFBFC3]">
+        <div className="mt-2 text-xs sm:text-sm text-muted">
           Mostrando {colaboradoresFiltrados.length} de {colaboradores.length} colaboradores
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-[#2A2A2C]">
+              <tr className="bg-surface-2">
                 <th className="border border-[#3A3A3C] p-2 text-left font-semibold text-white text-xs w-12">
                   #
                 </th>
@@ -156,8 +156,8 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
               {colaboradoresPaginados.map((colaborador, index) => {
                 const posicaoGeral = indiceInicio + index + 1;
                 return (
-                  <tr key={colaborador.opsId} className="hover:bg-[#242426]">
-                    <td className="border border-[#3A3A3C] p-2 text-center text-[#BFBFC3] text-xs">
+                  <tr key={colaborador.opsId} className="hover:bg-surface-3">
+                    <td className="border border-[#3A3A3C] p-2 text-center text-muted text-xs">
                       {obterIconeRanking(posicaoGeral)}
                       {posicaoGeral}
                     </td>
@@ -166,10 +166,10 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
                         {colaborador.nomeCompleto}
                       </div>
                     </td>
-                    <td className="border border-[#3A3A3C] p-2 text-[#BFBFC3] text-xs">
+                    <td className="border border-[#3A3A3C] p-2 text-muted text-xs">
                       {colaborador.opsId}
                     </td>
-                    <td className="border border-[#3A3A3C] p-2 text-[#BFBFC3] text-xs">
+                    <td className="border border-[#3A3A3C] p-2 text-muted text-xs">
                       <div className="truncate max-w-[100px]" title={colaborador.setor}>
                         {colaborador.setor}
                       </div>
@@ -201,12 +201,12 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
         {colaboradoresPaginados.map((colaborador, index) => {
           const posicaoGeral = indiceInicio + index + 1;
           return (
-            <div key={colaborador.opsId} className="bg-[#2A2A2C] rounded-lg p-4 border border-[#3A3A3C]">
+            <div key={colaborador.opsId} className="bg-surface-2 rounded-lg p-4 border border-[#3A3A3C]">
               {/* Header do card */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   {obterIconeRanking(posicaoGeral)}
-                  <span className="text-[#BFBFC3] text-sm">#{posicaoGeral}</span>
+                  <span className="text-muted text-sm">#{posicaoGeral}</span>
                 </div>
                 <div className={`text-lg font-bold ${obterCorQuantidade(colaborador.total)}`}>
                   {colaborador.total.toLocaleString('pt-BR')}
@@ -216,7 +216,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
               {/* Nome e informações */}
               <div className="mb-3">
                 <h3 className="text-white font-medium text-sm mb-1">{colaborador.nomeCompleto}</h3>
-                <div className="flex flex-wrap gap-2 text-xs text-[#BFBFC3]">
+                <div className="flex flex-wrap gap-2 text-xs text-muted">
                   <span>ID: {colaborador.opsId}</span>
                   <span>•</span>
                   <span>{colaborador.setor}</span>
@@ -227,7 +227,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                 {horasTurno.map(hora => (
                   <div key={hora} className="text-center">
-                    <div className="text-xs text-[#BFBFC3] mb-1">{hora}</div>
+                    <div className="text-xs text-muted mb-1">{hora}</div>
                     <div className={`text-sm font-medium ${obterCorQuantidade(colaborador[hora])}`}>
                       {colaborador[hora] > 0 ? colaborador[hora].toLocaleString('pt-BR') : '0'}
                     </div>
@@ -242,14 +242,14 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
       {/* Paginação */}
       {totalPaginas > 1 && (
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-[#BFBFC3]">
+          <div className="text-sm text-muted">
             Página {paginaAtual} de {totalPaginas}
           </div>
           <div className="flex gap-2 flex-wrap justify-center">
             <button
               onClick={() => setPaginaAtual(prev => Math.max(1, prev - 1))}
               disabled={paginaAtual === 1}
-              className="px-3 py-1 bg-[#2A2A2C] border border-[#3A3A3C] rounded text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3A3A3C] text-sm"
+              className="px-3 py-1 bg-surface-2 border border-[#3A3A3C] rounded text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3A3A3C] text-sm"
             >
               Anterior
             </button>
@@ -276,7 +276,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
                   className={`px-3 py-1 border border-[#3A3A3C] rounded text-sm ${
                     paginaAtual === numeroPagina
                       ? 'bg-blue-600 text-white'
-                      : 'bg-[#2A2A2C] text-white hover:bg-[#3A3A3C]'
+                      : 'bg-surface-2 text-white hover:bg-[#3A3A3C]'
                   }`}
                 >
                   {numeroPagina}
@@ -287,7 +287,7 @@ export default function ProdutividadeColaboradorTable({ colaboradores, horasTurn
             <button
               onClick={() => setPaginaAtual(prev => Math.min(totalPaginas, prev + 1))}
               disabled={paginaAtual === totalPaginas}
-              className="px-3 py-1 bg-[#2A2A2C] border border-[#3A3A3C] rounded text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3A3A3C] text-sm"
+              className="px-3 py-1 bg-surface-2 border border-[#3A3A3C] rounded text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#3A3A3C] text-sm"
             >
               Próxima
             </button>

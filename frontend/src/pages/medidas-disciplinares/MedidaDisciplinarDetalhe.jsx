@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+﻿import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Upload, FileText, Clock, User, AlertCircle, CheckCircle2, XCircle, ArrowLeft, Download, Printer } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
@@ -128,7 +128,7 @@ export default function MedidaDisciplinarDetalhe() {
       },
       RASCUNHO: {
         label: "Rascunho",
-        color: "text-[#BFBFC3]",
+        color: "text-muted",
         bgColor: "bg-[#BFBFC3]/10",
         borderColor: "border-[#BFBFC3]/40",
         icon: FileText
@@ -150,7 +150,7 @@ export default function MedidaDisciplinarDetalhe() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
+      <div className="h-screen flex items-center justify-center bg-page text-muted">
         Carregando…
       </div>
     );
@@ -162,7 +162,7 @@ export default function MedidaDisciplinarDetalhe() {
   const StatusIcon = statusInfo.icon;
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -178,7 +178,7 @@ export default function MedidaDisciplinarDetalhe() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate("/medidas-disciplinares")}
-                className="text-[#BFBFC3] hover:text-white transition-colors"
+                className="text-muted hover:text-white transition-colors"
               >
                 <ArrowLeft size={24} />
               </button>
@@ -196,14 +196,14 @@ export default function MedidaDisciplinarDetalhe() {
             <div className="flex gap-3">
               <button
                 onClick={() => printCartaMedidaDisciplinar(medida)}
-                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-[#262628] hover:bg-[#3A3A3C] transition-colors"
+                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors"
               >
                 <Printer size={16} />
                 Imprimir Carta
               </button>
               <button
                 onClick={baixarCarta}
-                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-[#262628] hover:bg-[#3A3A3C] transition-colors"
+                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors"
               >
                 <Download size={16} />
                 Baixar Carta
@@ -217,7 +217,7 @@ export default function MedidaDisciplinarDetalhe() {
               <AlertCircle className={statusInfo.color} size={20} />
               <div>
                 <h3 className={`font-semibold ${statusInfo.color} mb-1`}>Ação Necessária</h3>
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   Esta medida disciplinar está aguardando o upload do documento assinado para ser finalizada.
                 </p>
               </div>
@@ -225,7 +225,7 @@ export default function MedidaDisciplinarDetalhe() {
           )}
 
           {/* CARD PRINCIPAL */}
-          <div className="bg-[#1A1A1C] rounded-2xl p-6 space-y-6">
+          <div className="bg-surface rounded-2xl p-6 space-y-6">
             {/* Informações do Colaborador */}
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -235,23 +235,23 @@ export default function MedidaDisciplinarDetalhe() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-[#BFBFC3]">Nome Completo</span>
+                  <span className="text-muted">Nome Completo</span>
                   <p className="text-white font-medium mt-1">
                     {medida.colaborador?.nomeCompleto || "—"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[#BFBFC3]">Staff ID (OPS)</span>
+                  <span className="text-muted">Staff ID (OPS)</span>
                   <p className="text-white font-medium mt-1">{medida.opsId || "—"}</p>
                 </div>
                 <div>
-                  <span className="text-[#BFBFC3]">Cargo</span>
+                  <span className="text-muted">Cargo</span>
                   <p className="text-white font-medium mt-1">
                     {medida.colaborador?.cargo || "—"}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[#BFBFC3]">Matrícula</span>
+                  <span className="text-muted">Matrícula</span>
                   <p className="text-white font-medium mt-1">
                     {medida.colaborador?.matricula || "—"}
                   </p>
@@ -259,7 +259,7 @@ export default function MedidaDisciplinarDetalhe() {
               </div>
             </div>
 
-            <div className="border-t border-[#2A2A2C]"></div>
+            <div className="border-t border-default"></div>
 
             {/* Detalhes da Medida */}
             <div>
@@ -270,19 +270,19 @@ export default function MedidaDisciplinarDetalhe() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-5">
                 <div>
-                  <span className="text-[#BFBFC3]">Tipo de Medida</span>
+                  <span className="text-muted">Tipo de Medida</span>
                   <p className="text-white font-medium mt-1">{medida.tipoMedida || "—"}</p>
                 </div>
                 <div>
-                  <span className="text-[#BFBFC3]">Violação</span>
+                  <span className="text-muted">Violação</span>
                   <p className="text-white font-medium mt-1">{medida.violacao || "—"}</p>
                 </div>
               </div>
 
               <div className="mb-5">
-                <span className="text-[#BFBFC3] text-sm block mb-2">Motivo / Descrição</span>
-                <div className="bg-[#0D0D0D] border border-[#2A2A2C] rounded-xl p-4">
-                  <p className="text-[#BFBFC3] text-sm whitespace-pre-wrap">
+                <span className="text-muted text-sm block mb-2">Motivo / Descrição</span>
+                <div className="bg-page border border-default rounded-xl p-4">
+                  <p className="text-muted text-sm whitespace-pre-wrap">
                     {medida.motivo || "—"}
                   </p>
                 </div>
@@ -290,9 +290,9 @@ export default function MedidaDisciplinarDetalhe() {
 
               {medida.observacoes && (
                 <div className="mb-5">
-                  <span className="text-[#BFBFC3] text-sm block mb-2">Observações</span>
-                  <div className="bg-[#0D0D0D] border border-[#2A2A2C] rounded-xl p-4">
-                    <p className="text-[#BFBFC3] text-sm whitespace-pre-wrap">
+                  <span className="text-muted text-sm block mb-2">Observações</span>
+                  <div className="bg-page border border-default rounded-xl p-4">
+                    <p className="text-muted text-sm whitespace-pre-wrap">
                       {medida.observacoes}
                     </p>
                   </div>
@@ -301,14 +301,14 @@ export default function MedidaDisciplinarDetalhe() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-[#BFBFC3]">Data de Criação</span>
+                  <span className="text-muted">Data de Criação</span>
                   <p className="text-white font-medium mt-1">
                     {formatDate(medida.createdAt)}
                   </p>
                 </div>
                 {medida.dataFinalizacao && (
                   <div>
-                    <span className="text-[#BFBFC3]">Data de Finalização</span>
+                    <span className="text-muted">Data de Finalização</span>
                     <p className="text-white font-medium mt-1">
                       {formatDate(medida.dataFinalizacao)}
                     </p>
@@ -316,7 +316,7 @@ export default function MedidaDisciplinarDetalhe() {
                 )}
                 {medida.responsavel && (
                   <div>
-                    <span className="text-[#BFBFC3]">Responsável</span>
+                    <span className="text-muted">Responsável</span>
                     <p className="text-white font-medium mt-1">{medida.responsavel}</p>
                   </div>
                 )}
@@ -326,31 +326,52 @@ export default function MedidaDisciplinarDetalhe() {
             {/* Upload de Documento */}
             {medida.status === "PENDENTE_ASSINATURA" && (
               <>
-                <div className="border-t border-[#2A2A2C]"></div>
+                <div className="border-t border-default"></div>
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Upload size={20} className="text-[#FA4C00]" />
                     <h2 className="font-semibold text-lg">Finalizar Medida (Upload da Carta Assinada)</h2>
                   </div>
-                  
-                  <p className="text-[#BFBFC3] text-sm mb-4">
+
+                  <p className="text-muted text-sm mb-4">
                     Faça o upload do PDF da medida disciplinar devidamente assinado para finalizar o processo.
                   </p>
 
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) => setFile(e.target.files[0])}
-                    className="block text-sm mb-4"
-                  />
-                  
+                  {/* Drop zone customizada */}
+                  <label className={`flex flex-col items-center justify-center gap-2 w-full border-2 border-dashed rounded-xl px-6 py-8 cursor-pointer transition
+                    ${file
+                      ? "border-[#FA4C00] bg-[#FA4C00]/5"
+                      : "border-default bg-surface hover:border-[#FA4C00]/60 hover:bg-[#FA4C00]/5"
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => setFile(e.target.files[0])}
+                      className="hidden"
+                    />
+                    {file ? (
+                      <>
+                        <CheckCircle2 size={28} className="text-[#FA4C00]" />
+                        <span className="text-sm font-medium text-page text-center break-all">{file.name}</span>
+                        <span className="text-xs text-muted">Clique para trocar o arquivo</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={28} className="text-muted" />
+                        <span className="text-sm font-medium text-page">Clique para selecionar o PDF</span>
+                        <span className="text-xs text-muted">Apenas arquivos .pdf</span>
+                      </>
+                    )}
+                  </label>
+
                   <button
                     onClick={enviarPdf}
                     disabled={uploading || !file}
-                    className={`flex items-center gap-2 px-6 py-2 rounded-xl
+                    className={`mt-4 flex items-center gap-2 px-6 py-2 rounded-xl font-medium transition
                       ${uploading || !file
-                        ? "bg-[#3A3A3C] cursor-not-allowed"
-                        : "bg-[#FA4C00] hover:bg-[#D84300]"
+                        ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
+                        : "bg-[#FA4C00] hover:bg-[#D84300] text-white"
                       }`}
                   >
                     <CheckCircle2 size={16} />
@@ -363,14 +384,14 @@ export default function MedidaDisciplinarDetalhe() {
             {/* Documento Finalizado */}
             {medida.status === "ASSINADO" && medida.documentoAssinadoUrl && (
               <>
-                <div className="border-t border-[#2A2A2C]"></div>
+                <div className="border-t border-default"></div>
                 <div className={`${statusInfo.bgColor} border ${statusInfo.borderColor} rounded-xl p-4`}>
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className={statusInfo.color} size={20} />
                       <div>
                         <h3 className={`font-semibold ${statusInfo.color} mb-1`}>Documento Enviado</h3>
-                        <p className="text-sm text-[#BFBFC3]">
+                        <p className="text-sm text-muted">
                           O documento assinado foi enviado e a medida disciplinar foi finalizada com sucesso.
                         </p>
                       </div>

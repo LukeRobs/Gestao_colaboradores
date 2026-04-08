@@ -1,4 +1,4 @@
-// src/components/Pagination.jsx
+﻿// src/components/Pagination.jsx
 import {
   ChevronLeft,
   ChevronRight,
@@ -33,20 +33,20 @@ export default function Pagination({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
         {/* INFO */}
-        <div className="text-sm text-[#BFBFC3] text-center sm:text-left">
+        <div className="text-sm text-muted text-center sm:text-left">
           Total: <span className="text-white font-medium">{totalItems}</span>{" "}
           registros
         </div>
 
         {/* LIMIT */}
         <div className="flex items-center justify-center sm:justify-end gap-2 text-sm">
-          <span className="text-[#BFBFC3]">Mostrar</span>
+          <span className="text-muted">Mostrar</span>
           <select
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
             className="
-              bg-[#1A1A1C]
-              border border-[#3D3D40]
+              bg-surface
+              border border-default
               rounded-lg
               px-3 py-1.5
               text-white
@@ -58,7 +58,7 @@ export default function Pagination({
             <option value={25}>25</option>
             <option value={100}>100</option>
           </select>
-          <span className="text-[#BFBFC3]">por página</span>
+          <span className="text-muted">por página</span>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export default function Pagination({
           </IconButton>
 
           {/* PÁGINA ATUAL */}
-          <div className="px-4 py-2 text-sm bg-[#1A1A1C] rounded-xl border border-[#2A2A2D]">
+          <div className="px-4 py-2 text-sm bg-surface rounded-xl border border-[#2A2A2D]">
             Página <span className="text-white font-semibold">{page}</span> de{" "}
             <span className="text-white font-semibold">
               {effectiveTotalPages}
@@ -123,12 +123,12 @@ function IconButton({ disabled, onClick, children }) {
         w-9 h-9
         flex items-center justify-center
         rounded-xl
-        border border-[#3D3D40]
+        border border-default
         transition-all
         ${
           disabled
             ? "opacity-40 cursor-not-allowed"
-            : "hover:bg-[#2A2A2C] hover:border-[#FA4C00]/50"
+            : "hover:bg-surface-2 hover:border-[#FA4C00]/50"
         }
       `}
     >

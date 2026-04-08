@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import React, { useContext, useEffect, useMemo, useState } from "react"
 import { AuthContext } from "../../context/AuthContext"
 import { useEstacao } from "../../context/EstacaoContext"
@@ -48,7 +48,7 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div
       style={{
-        background: "#1A1A1A",
+        background: "var(--color-surface)",
         border: "1px solid rgba(255,255,255,0.10)",
         borderRadius: 12,
         padding: "10px 16px",
@@ -61,7 +61,7 @@ function CustomTooltip({ active, payload, label }) {
         </p>
       )}
       {payload.map((p, i) => (
-        <p key={i} style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: 0 }}>
+        <p key={i} style={{ color: "var(--color-text)", fontSize: 14, fontWeight: 600, margin: 0 }}>
           <span style={{ color: p.color || BRAND }}>● </span>
           {p.value}
         </p>
@@ -75,7 +75,7 @@ function Skeleton({ style = {} }) {
   return (
     <div
       style={{
-        background: "rgba(255,255,255,0.05)",
+        background: "var(--color-border)",
         borderRadius: 10,
         animation: "pulse 1.5s ease-in-out infinite",
         ...style,
@@ -168,7 +168,7 @@ function KpiCard({ label, value, loading }) {
   return (
     <div
       style={{
-        background: "#111111",
+        background: "var(--color-surface)",
         border: "1px solid rgba(255,255,255,0.07)",
         borderLeft: `3px solid ${color}`,
         borderRadius: 12,
@@ -179,23 +179,23 @@ function KpiCard({ label, value, loading }) {
         cursor: "default",
         transition: "background 0.2s",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "#161616")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "#111111")}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-3)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <Icon c={color} s={13} />
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: 500, margin: 0 }}>
+        <p style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 500, margin: 0 }}>
           {label}
         </p>
       </div>
       {loading ? (
         <Skeleton style={{ height: 28, width: "55%" }} />
       ) : (
-        <p style={{ fontSize: 26, fontWeight: 700, color: "#F0F0F0", margin: 0, lineHeight: 1, letterSpacing: "-0.02em" }}>
+        <p style={{ fontSize: 26, fontWeight: 700, color: "var(--color-text)", margin: 0, lineHeight: 1, letterSpacing: "-0.02em" }}>
           {value ?? "—"}
         </p>
       )}
-      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", margin: 0 }}>{desc}</p>
+      <p style={{ fontSize: 10, color: "var(--color-subtle)", margin: 0 }}>{desc}</p>
     </div>
   )
 }
@@ -207,7 +207,7 @@ function SectionLabel({ num, title }) {
       <span style={{ fontSize: 10, fontWeight: 800, color: BRAND, textTransform: "uppercase", letterSpacing: "0.16em" }}>
         {num}
       </span>
-      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textTransform: "uppercase", letterSpacing: "0.16em" }}>
+      <span style={{ fontSize: 10, color: "var(--color-subtle)", textTransform: "uppercase", letterSpacing: "0.16em" }}>
         {title}
       </span>
     </div>
@@ -219,7 +219,7 @@ function Card({ title, subtitle, icon, children, style = {} }) {
   return (
     <div
       style={{
-        background: "#111111",
+        background: "var(--color-surface)",
         border: "1px solid rgba(255,255,255,0.06)",
         borderRadius: 18,
         padding: "20px 24px",
@@ -252,11 +252,11 @@ function Card({ title, subtitle, icon, children, style = {} }) {
             </div>
           )}
           <div>
-            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.88)" }}>
+            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
               {title}
             </h2>
             {subtitle && (
-              <p style={{ margin: "3px 0 0", fontSize: 11, color: "rgba(255,255,255,0.30)" }}>
+              <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--color-subtle)" }}>
                 {subtitle}
               </p>
             )}
@@ -275,7 +275,7 @@ function DateInput({ label, value, onChange }) {
       <label
         style={{
           fontSize: 10,
-          color: "#fff",
+          color: "var(--color-text)",
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.12em",
@@ -288,9 +288,9 @@ function DateInput({ label, value, onChange }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         style={{
-          background: "#1A1A1A",
+          background: "var(--color-surface)",
           border: "1px solid rgba(255,255,255,0.08)",
-          color: "#fff",
+          color: "var(--color-text)",
           fontSize: 13,
           borderRadius: 12,
           padding: "9px 14px",
@@ -299,7 +299,7 @@ function DateInput({ label, value, onChange }) {
           colorScheme: "dark",
         }}
         onFocus={(e) => (e.target.style.borderColor = "rgba(250,76,0,0.5)")}
-        onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+        onBlur={(e) => (e.target.style.borderColor = "var(--color-border)")}
       />
     </div>
   )
@@ -314,7 +314,7 @@ function Empty() {
         alignItems: "center",
         justifyContent: "center",
         height: 160,
-        color: "rgba(255,255,255,0.18)",
+        color: "var(--color-subtle)",
         fontSize: 13,
       }}
     >
@@ -335,22 +335,22 @@ function AreaBlock({ data }) {
             <stop offset="95%" stopColor={BRAND} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+        <CartesianGrid stroke="var(--color-border)" vertical={false} />
         <XAxis
           dataKey="data"
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           tickMargin={8}
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           width={28}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.06)", strokeWidth: 1 }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
         <Area
           dataKey="total"
           stroke={BRAND}
@@ -362,7 +362,7 @@ function AreaBlock({ data }) {
           <LabelList
             dataKey="total"
             position="top"
-            style={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 600 }}
+            style={{ fill: "var(--color-muted)", fontSize: 10, fontWeight: 600 }}
           />
         </Area>
       </AreaChart>
@@ -376,10 +376,10 @@ function BarBlock({ data }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={sorted} margin={{ top: 22, right: 16, bottom: 0, left: -12 }}>
-        <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+        <CartesianGrid stroke="var(--color-border)" vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           tickMargin={8}
@@ -387,12 +387,12 @@ function BarBlock({ data }) {
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           width={26}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-border)" }} />
         <Bar dataKey="value" fill={BRAND} radius={[6, 6, 0, 0]} maxBarSize={44}>
           <LabelList dataKey="value" position="top" style={{ fill: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600 }} />
         </Bar>
@@ -416,24 +416,24 @@ function BarBlockH({ data }) {
         data={sorted.map((d) => ({ ...d, name: fmt(d.name) }))}
         margin={{ top: 0, right: 36, bottom: 0, left: 0 }}
       >
-        <CartesianGrid stroke="rgba(255,255,255,0.04)" horizontal={false} />
+        <CartesianGrid stroke="var(--color-border)" horizontal={false} />
         <XAxis
           type="number"
-          tick={{ fill: "#4B4B4B", fontSize: 11 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           dataKey="name"
           type="category"
-          tick={{ fill: "#888", fontSize: 12 }}
+          tick={{ fill: "var(--color-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
           width={96}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-border)" }} />
         <Bar dataKey="value" fill={BRAND} radius={[0, 6, 6, 0]} maxBarSize={18}>
-          <LabelList dataKey="value" position="right" style={{ fill: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 600 }} />
+          <LabelList dataKey="value" position="right" style={{ fill: "var(--color-muted)", fontSize: 11, fontWeight: 600 }} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -475,7 +475,7 @@ function PieBlock({ data }) {
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 24, fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1 }}>
+          <p style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", margin: 0, lineHeight: 1 }}>
             {total}
           </p>
           <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: "3px 0 0" }}>total</p>
@@ -496,11 +496,11 @@ function PieBlock({ data }) {
                   flexShrink: 0,
                 }}
               />
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{d.name}</span>
+              <span style={{ fontSize: 11, color: "var(--color-muted)" }}>{d.name}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: CHART_COLORS[i % CHART_COLORS.length] }}>
                 {d.value}
               </span>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.30)" }}>({pct}%)</span>
+              <span style={{ fontSize: 10, color: "var(--color-subtle)" }}>({pct}%)</span>
             </div>
           )
         })}
@@ -515,22 +515,22 @@ function SelectEmpresa({ value, onChange, options }) {
   const selected = options.find((e) => String(e.idEmpresa) === String(value))
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
-      <label style={{ fontSize: 10, color: "#fff", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
+      <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
       <div
         onClick={() => setOpen(!open)}
-        style={{ background: "#1A1A1A", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "#fff", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+        style={{ background: "var(--color-surface)", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "var(--color-border)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
       >
-        <span style={{ color: selected ? "#fff" : "rgba(255,255,255,0.35)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+        <span style={{ color: selected ? "#fff" : "var(--color-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
           {selected ? selected.razaoSocial : "Todas as empresas"}
         </span>
-        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="var(--color-subtle)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
       </div>
       {open && (
-        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "#1A1A1A", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
           <div
             onClick={() => { onChange(""); setOpen(false) }}
-            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "rgba(255,255,255,0.65)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "var(--color-muted)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             Todas as empresas
@@ -539,7 +539,7 @@ function SelectEmpresa({ value, onChange, options }) {
             <div
               key={e.idEmpresa}
               onClick={() => { onChange(String(e.idEmpresa)); setOpen(false) }}
-              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "rgba(255,255,255,0.65)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
+              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "var(--color-muted)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
               onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
               onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
             >
@@ -614,7 +614,7 @@ function AbsenceTable({ data, loading }) {
             left: 12,
             top: "50%",
             transform: "translateY(-50%)",
-            color: "rgba(255,255,255,0.25)",
+            color: "var(--color-subtle)",
             pointerEvents: "none",
             display: "flex",
           }}
@@ -628,9 +628,9 @@ function AbsenceTable({ data, loading }) {
           onChange={(e) => setSearch(e.target.value)}
           style={{
             width: "100%",
-            background: "#1A1A1A",
+            background: "var(--color-surface)",
             border: "1px solid rgba(255,255,255,0.08)",
-            color: "#fff",
+            color: "var(--color-text)",
             fontSize: 13,
             borderRadius: 12,
             padding: "9px 14px 9px 38px",
@@ -638,7 +638,7 @@ function AbsenceTable({ data, loading }) {
             boxSizing: "border-box",
           }}
           onFocus={(e) => (e.target.style.borderColor = "rgba(250,76,0,0.45)")}
-          onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+          onBlur={(e) => (e.target.style.borderColor = "var(--color-border)")}
         />
       </div>
         <button
@@ -651,8 +651,8 @@ function AbsenceTable({ data, loading }) {
             padding: "9px 14px",
             borderRadius: 12,
             border: "1px solid rgba(255,255,255,0.08)",
-            background: "#1A1A1A",
-            color: loading || filtered.length === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.70)",
+            background: "var(--color-surface)",
+            color: loading || filtered.length === 0 ? "var(--color-subtle)" : "var(--color-muted)",
             fontSize: 13,
             fontWeight: 500,
             cursor: loading || filtered.length === 0 ? "not-allowed" : "pointer",
@@ -660,7 +660,7 @@ function AbsenceTable({ data, loading }) {
             transition: "border-color 0.15s, color 0.15s",
           }}
           onMouseEnter={(e) => { if (!loading && filtered.length > 0) { e.currentTarget.style.borderColor = "rgba(250,76,0,0.45)"; e.currentTarget.style.color = "#fff" } }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = loading || filtered.length === 0 ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.70)" }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = loading || filtered.length === 0 ? "var(--color-subtle)" : "var(--color-muted)" }}
         >
           <IconDownload />
           Exportar CSV
@@ -677,7 +677,7 @@ function AbsenceTable({ data, loading }) {
       >
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700, fontSize: 13 }}>
           <thead>
-            <tr style={{ background: "#0D0D0D", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <tr style={{ background: "var(--color-page)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               {cols.map((h) => (
                 <th
                   key={h}
@@ -685,7 +685,7 @@ function AbsenceTable({ data, loading }) {
                     textAlign: "left",
                     padding: "12px 16px",
                     fontSize: 10,
-                    color: "rgba(255,255,255,0.28)",
+                    color: "var(--color-subtle)",
                     fontWeight: 600,
                     textTransform: "uppercase",
                     letterSpacing: "0.10em",
@@ -710,7 +710,7 @@ function AbsenceTable({ data, loading }) {
               ))
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ padding: "48px 16px", textAlign: "center", color: "rgba(255,255,255,0.18)", fontSize: 13 }}>
+                <td colSpan={8} style={{ padding: "48px 16px", textAlign: "center", color: "var(--color-subtle)", fontSize: 13 }}>
                   Nenhum resultado encontrado
                 </td>
               </tr>
@@ -726,14 +726,14 @@ function AbsenceTable({ data, loading }) {
                     onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
-                    <td style={{ padding: "11px 16px", fontWeight: 500, color: "rgba(255,255,255,0.80)", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "11px 16px", fontWeight: 500, color: "var(--color-text)", whiteSpace: "nowrap" }}>
                       {c.nome?.split(" ").slice(0, 2).join(" ")}
                     </td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.empresa}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.setor}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.turno}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.escala}</td>
-                    <td style={{ padding: "11px 16px", color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>{c.tempoCasa}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.empresa}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.setor}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.turno}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.escala}</td>
+                    <td style={{ padding: "11px 16px", color: "var(--color-muted)", whiteSpace: "nowrap" }}>{c.tempoCasa}</td>
                     <td style={{ padding: "11px 16px", whiteSpace: "nowrap" }}>
                       <span
                         style={{
@@ -771,7 +771,7 @@ function AbsenceTable({ data, loading }) {
                           Sim
                         </span>
                       ) : (
-                        <span style={{ color: "rgba(255,255,255,0.18)", fontSize: 12 }}>—</span>
+                        <span style={{ color: "var(--color-subtle)", fontSize: 12 }}>—</span>
                       )}
                     </td>
                   </tr>
@@ -791,7 +791,7 @@ function AbsenceTable({ data, loading }) {
               alignItems: "center",
             }}
           >
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", margin: 0 }}>
+            <p style={{ fontSize: 11, color: "var(--color-subtle)", margin: 0 }}>
               {filtered.length} de {data.length} colaboradores
             </p>
           </div>
@@ -880,7 +880,7 @@ export default function DashboardFaltas() {
   `
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#080808", color: "#fff" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--color-page)", color: "var(--color-text)" }}>
       <style>{pulseStyle}</style>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -918,7 +918,7 @@ export default function DashboardFaltas() {
                   Dashboard de Faltas
                 </h1>
               </div>
-              <p style={{ margin: "0 0 0 14px", fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
+              <p style={{ margin: "0 0 0 14px", fontSize: 13, color: "var(--color-subtle)" }}>
                 Panorama completo de ausências — impacto, recorrência e distribuição
               </p>
             </div>
@@ -935,7 +935,7 @@ export default function DashboardFaltas() {
                   padding: "0 24px",
                   borderRadius: 12,
                   background: loading ? "#333" : BRAND,
-                  color: "#fff",
+                  color: "var(--color-text)",
                   fontWeight: 700,
                   fontSize: 13,
                   border: "none",

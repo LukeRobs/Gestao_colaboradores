@@ -1,4 +1,4 @@
-export const Badge = {
+﻿export const Badge = {
   Status: ({ children, variant = "default" }) => {
     const variants = {
       default: "bg-surfaceHover text-muted",

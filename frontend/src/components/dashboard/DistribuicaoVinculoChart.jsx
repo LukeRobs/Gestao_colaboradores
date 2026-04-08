@@ -1,4 +1,4 @@
-import {
+﻿import {
   PieChart,
   Pie,
   Cell,
@@ -22,7 +22,7 @@ export default function DistribuicaoVinculoChart({ title, data = [] }) {
 
   if (!safeData.length) {
     return (
-      <div className="bg-[#1A1A1C] rounded-2xl p-4 sm:p-6 text-[#BFBFC3]">
+      <div className="bg-surface rounded-2xl p-4 sm:p-6 text-muted">
         Nenhum dado disponível
       </div>
     );
@@ -40,9 +40,9 @@ export default function DistribuicaoVinculoChart({ title, data = [] }) {
   };
 
   return (
-    <section className="bg-[#1A1A1C] rounded-2xl p-4 sm:p-6 space-y-4 w-full overflow-hidden">
+    <section className="bg-surface rounded-2xl p-4 sm:p-6 space-y-4 w-full overflow-hidden">
       {title && (
-        <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+        <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
           {title}
         </h2>
       )}
@@ -51,10 +51,10 @@ export default function DistribuicaoVinculoChart({ title, data = [] }) {
       <div className="h-60 sm:h-[280px] lg:h-80 relative">
         {/* TOTAL CENTRAL */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+          <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-page">
             {total}
           </span>
-          <span className="text-[10px] sm:text-xs text-[#BFBFC3] tracking-wide">
+          <span className="text-[10px] sm:text-xs text-muted tracking-wide">
             TOTAL
           </span>
         </div>
@@ -92,11 +92,11 @@ export default function DistribuicaoVinculoChart({ title, data = [] }) {
                 return [`${v} (${percent.toFixed(1)}%)`, name];
               }}
               contentStyle={{
-                backgroundColor: "#FFFFFF",
+                backgroundColor: "var(--color-surface)",
                 border: "1px solid #3D3D40",
                 borderRadius: "8px",
               }}
-              labelStyle={{ color: "#111" }}
+              labelStyle={{ color: "var(--color-text)" }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -114,7 +114,7 @@ export default function DistribuicaoVinculoChart({ title, data = [] }) {
                 className="w-3 h-3 rounded-full shrink-0"
                 style={{ backgroundColor: COLORS[d.name] || "#888" }}
               />
-              <span className="text-[#E5E5E5] truncate">
+              <span className="text-muted truncate">
                 {d.name} — {value} ({percent}%)
               </span>
             </div>

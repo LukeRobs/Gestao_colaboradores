@@ -1,11 +1,11 @@
-export default function EmpresasSection({
+﻿export default function EmpresasSection({
   title = "Quantidade por Empresa",
   items = [],
   emptyMessage = "Nenhum registro encontrado",
 }) {
   if (!items || items.length === 0) {
     return (
-      <div className="text-[#BFBFC3] text-sm">
+      <div className="text-muted text-sm">
         {emptyMessage}
       </div>
     );
@@ -14,7 +14,7 @@ export default function EmpresasSection({
   return (
     <section className="space-y-6">
       {title && (
-        <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+        <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
           {title}
         </h2>
       )}
@@ -48,10 +48,10 @@ export default function EmpresasSection({
               key={`${item.empresa}-${i}`}
               className="
                 rounded-2xl
-                bg-[#1A1A1C]
+                bg-surface
                 p-5
                 space-y-4
-                border border-[#2A2A2C]
+                border border-default
                 transition
                 hover:border-[#3A3A3C]
                 w-full
@@ -59,22 +59,22 @@ export default function EmpresasSection({
               "
             >
               {/* Empresa */}
-              <div className="text-sm sm:text-base text-[#E5E5E5] font-medium truncate">
+              <div className="text-sm sm:text-base text-page font-medium truncate">
                 {item.empresa}
               </div>
 
               {/* Total */}
-              <div className="text-3xl font-semibold text-white">
+              <div className="text-3xl font-semibold text-page">
                 {item.total}
               </div>
 
               {/* Métricas */}
-              <div className="space-y-2 text-sm text-[#BFBFC3]">
+              <div className="space-y-2 text-sm text-muted">
                 <Metric label="Faltas" value={faltas} color="#FF453A" />
                 <Metric label="Atestados" value={atestados} color="#FF9F0A" />
                 <Metric label="Ausências" value={ausencias} color="#d6000e" />
 
-                <div className="flex justify-between pt-3 border-t border-[#2A2A2C]">
+                <div className="flex justify-between pt-3 border-t border-default">
                   <span>Absenteísmo</span>
                   <strong style={{ color: absColor }}>
                     {absenteismo.toFixed(2)}%

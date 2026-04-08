@@ -1,17 +1,18 @@
-/* =====================================================
+﻿/* =====================================================
    CARTA MEDIDA DISCIPLINAR — TEMPLATE (HTML PRINT A4)
 ===================================================== */
 
 function fmtDateBR(dateLike) {
   if (!dateLike) return "-";
   const d = new Date(dateLike);
-  return d.toLocaleDateString("pt-BR");
+  return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 function fmtDateLong(dateLike) {
   if (!dateLike) return "-";
   const d = new Date(dateLike);
   return d.toLocaleDateString("pt-BR", {
+    timeZone: "UTC",
     day: "numeric",
     month: "long",
     year: "numeric",

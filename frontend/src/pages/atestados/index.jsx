@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -61,7 +61,7 @@ export default function AtestadosPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -76,7 +76,7 @@ export default function AtestadosPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold">Atestados Médicos</h1>
-              <p className="text-sm text-[#BFBFC3]">
+              <p className="text-sm text-muted">
                 Gestão de afastamentos médicos
               </p>
             </div>
@@ -100,7 +100,7 @@ export default function AtestadosPage() {
           {/* 🔎 FILTROS */}
           <div className="flex flex-wrap items-center gap-3">
             {/* DATA */}
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl">
+            <div className="bg-surface px-4 py-2 rounded-xl">
               <input
                 type="date"
                 value={filtroData}
@@ -110,7 +110,7 @@ export default function AtestadosPage() {
             </div>
 
             {/* COLABORADOR */}
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
               <Search size={14} className="text-[#6B7280]" />
               <input
                 type="text"
@@ -123,7 +123,7 @@ export default function AtestadosPage() {
 
             <button
               onClick={load}
-              className="px-4 py-2 rounded-xl bg-[#1A1A1C] hover:bg-[#2A2A2C] text-sm"
+              className="px-4 py-2 rounded-xl bg-surface hover:bg-surface-2 text-sm"
             >
               Filtrar
             </button>
@@ -133,7 +133,7 @@ export default function AtestadosPage() {
           {loading ? (
             <LoadingScreen message="Carregando atestados..." />
           ) : atestados.length === 0 ? (
-            <div className="text-[#BFBFC3]">
+            <div className="text-muted">
               Nenhum atestado médico encontrado
             </div>
           ) : (

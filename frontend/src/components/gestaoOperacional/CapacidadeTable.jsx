@@ -1,8 +1,8 @@
-import React from "react";
+﻿import React from "react";
 
 export default function CapacidadeTable({ data }) {
   if (!data || data.length === 0) {
-    return <div className="text-center py-8 text-[#BFBFC3]">Sem dados disponíveis</div>;
+    return <div className="text-center py-8 text-muted">Sem dados disponíveis</div>;
   }
 
   // Ordenar por hora
@@ -19,7 +19,7 @@ export default function CapacidadeTable({ data }) {
     <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="bg-[#2A2A2C]">
+          <tr className="bg-surface-2">
             <th className="border border-[#3A3A3C] p-3 text-center font-semibold text-white">Hora</th>
             <th className="border border-[#3A3A3C] p-3 text-center font-semibold text-white">Capacidade</th>
             <th className="border border-[#3A3A3C] p-3 text-center font-semibold text-white">Realizado</th>
@@ -28,7 +28,7 @@ export default function CapacidadeTable({ data }) {
         </thead>
         <tbody>
           {dadosOrdenados.map((item, index) => (
-            <tr key={index} className="hover:bg-[#242426]">
+            <tr key={index} className="hover:bg-surface-3">
               <td className="border border-[#3A3A3C] p-3 text-center text-white">{item.hora}</td>
               <td className="border border-[#3A3A3C] p-3 text-center text-white">
                 {item.capacidade.toLocaleString("pt-BR")}

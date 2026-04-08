@@ -4,6 +4,7 @@
 
 const { prisma } = require("../config/database");
 const csv = require("csvtojson");
+const XLSX = require("xlsx");
 const {
   successResponse,
   createdResponse,
@@ -702,7 +703,28 @@ const updateColaborador = async (req, res) => {
     }
 
     if (idLider !== undefined) {
-      data.idLider = idLider || null;
+      if (idLider) {
+        data.lider = { connect: { opsId: idLider } };
+      } else {
+        data.lider = { disconnect: true };
+      }
+    }
+
+    if (dataDesligamento !== undefined) data.dataDesligamento = dataDesligamento ? new Date(`${dataDesligamento}T00:00:00`) : null;
+    if (motivoDesligamento !== undefined) data.motivoDesligamento = motivoDesligamento || null;
+    if (tipoDesligamento !== undefined) data.tipoDesligamento = tipoDesligamento || null;
+    if (dataInicioStatus !== undefined) data.dataInicioStatus = dataInicioStatus ? new Date(`${dataInicioStatus}T00:00:00`) : null;
+    if (dataFimStatus !== undefined) data.dataFimStatus = dataFimStatus ? new Date(`${dataFimStatus}T00:00:00`) : null;
+
+    if (dataAdmissao !== undefined) {
+      data.dataAdmissao = dataAdmissao ? new Date(`${dataAdmissao}T00:00:00`) : undefined;
+    }
+
+    if (horarioInicioJornada !== undefined && horarioInicioJornada !== "") {
+      if (!HORARIOS_PERMITIDOS.includes(horarioInicioJornada)) {
+        return errorResponse(res, `Horário inválido. Permitidos: ${HORARIOS_PERMITIDOS.join(", ")}`, 400);
+      }
+      data.horarioInicioJornada = new Date(`1970-01-01T${horarioInicioJornada}:00Z`);
     }
 
     if (dataAdmissao !== undefined && dataAdmissao) {
@@ -760,6 +782,17 @@ const updateColaborador = async (req, res) => {
       novaEscalaId = parsed;
     }
 
+    // Converte idEscala para connect/disconnect para o Prisma
+    if (data.idEscala !== undefined) {
+      const escalaVal = data.idEscala;
+      delete data.idEscala;
+      if (escalaVal) {
+        data.escala = { connect: { idEscala: escalaVal } };
+      } else {
+        data.escala = { disconnect: true };
+      }
+    }
+
     console.log("📦 DATA FINAL:", data);
 
     const colaborador = await prisma.$transaction(async (tx) => {
@@ -767,13 +800,55 @@ const updateColaborador = async (req, res) => {
 
       const atual = await tx.colaborador.findUnique({
         where: { opsId },
-        select: { idEscala: true },
+        select: {
+          idEscala: true,
+          idEmpresa: true,
+          idEstacao: true,
+          status: true,
+          dataDesligamento: true,
+          motivoDesligamento: true,
+          tipoDesligamento: true,
+        },
       });
 
       const atualizado = await tx.colaborador.update({
         where: { opsId },
         data,
       });
+
+      /* =========================
+         REGISTRAR DESLIGAMENTO
+         Cria registro na tabela desligamento
+         quando o status muda para INATIVO
+      ========================= */
+      const virouInativo =
+        data.status === "INATIVO" && atual?.status !== "INATIVO";
+
+      if (virouInativo) {
+        const dataDesl = dataDesligamento
+          ? new Date(dataDesligamento)
+          : hoje;
+
+        // Evita duplicidade: só cria se não existir registro para o mesmo opsId + data
+        const jaExiste = await tx.desligamento.findFirst({
+          where: { opsId, dataDesligamento: dataDesl },
+        });
+
+        if (!jaExiste) {
+          await tx.desligamento.create({
+            data: {
+              opsId,
+              idEmpresa: atual.idEmpresa ?? null,
+              idEstacao: atual.idEstacao ?? null,
+              dataDesligamento: dataDesl,
+              tipo: tipoDesligamento ?? atual.tipoDesligamento ?? "NAO_INFORMADO",
+              motivo: motivoDesligamento ?? atual.motivoDesligamento ?? "NAO_INFORMADO",
+              observacao: null,
+              registradoPor: req.user?.id ?? null,
+            },
+          });
+        }
+      }
 
       const tipoDSR = await tx.tipoAusencia.findFirst({
         where: { codigo: "DSR" },
@@ -861,8 +936,11 @@ const updateColaborador = async (req, res) => {
       "Colaborador atualizado com sucesso"
     );
   } catch (err) {
-    console.error("❌ ERRO UPDATE COLABORADOR:", err);
-    return errorResponse(res, "Erro ao atualizar colaborador", 400, err);
+    console.error("❌ ERRO UPDATE COLABORADOR:", err?.message || err);
+    if (err?.name === "PrismaClientValidationError") {
+      console.error("📋 Prisma validation detail:", err.message);
+    }
+    return errorResponse(res, "Erro ao atualizar colaborador", 400, { name: err?.name, message: err?.message, detail: err?.message?.split('\n').slice(0,10).join(' | ') });
   }
 };
 
@@ -891,39 +969,22 @@ const listarLideres = async (req, res) => {
         ...estacaoFilter,
         status: "ATIVO",
         OR: [
-          {
-            // Líderes (que têm subordinados)
-            subordinados: {
-              some: {}, // tem pelo menos 1 subordinado
-            },
-          },
-          {
-            // Analistas de Logística JR (específico)
-            cargo: {
-              nomeCargo: {
-                contains: "Analista De Logística JR",
-                mode: "insensitive",
-              },
-            },
-          },
-          {
-            // Outras variações de Analista de Logística
-            cargo: {
-              nomeCargo: {
-                contains: "Analista de Logística",
-                mode: "insensitive",
-              },
-            },
-          },
+          // Quem já tem subordinados cadastrados
+          { subordinados: { some: {} } },
+          // Qualquer cargo que contenha "lider" ou "líder" ou "analista"
+          { cargo: { nomeCargo: { contains: "lider", mode: "insensitive" } } },
+          { cargo: { nomeCargo: { contains: "líder", mode: "insensitive" } } },
+          { cargo: { nomeCargo: { contains: "analista", mode: "insensitive" } } },
+          { cargo: { nomeCargo: { contains: "supervisor", mode: "insensitive" } } },
+          { cargo: { nomeCargo: { contains: "coordenador", mode: "insensitive" } } },
+          { cargo: { nomeCargo: { contains: "gerente", mode: "insensitive" } } },
         ],
       },
       select: {
         opsId: true,
         nomeCompleto: true,
         cargo: {
-          select: {
-            nomeCargo: true,
-          },
+          select: { nomeCargo: true },
         },
       },
       orderBy: { nomeCompleto: "asc" },
@@ -1006,12 +1067,54 @@ const importColaboradores = async (req, res) => {
   }
 
   try {
-    const csvString = req.file.buffer.toString("utf-8");
-    const rows = await csv({ delimiter: "," }).fromString(csvString);
+    const isXlsx = req.file.originalname.toLowerCase().endsWith(".xlsx");
+    let rows;
+
+    if (isXlsx) {
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+      // Converte para array de arrays para tratar headers manualmente
+      const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+      // Encontra a linha de header: primeira linha que contém "ops_id" (com ou sem espaços/asteriscos)
+      const headerRowIdx = raw.findIndex((row) =>
+        row.some((cell) => String(cell).replace(/[\s*]/g, "").toLowerCase() === "ops_id")
+      );
+
+      if (headerRowIdx === -1) {
+        return errorResponse(res, "Cabeçalho não encontrado no arquivo. Certifique-se que a planilha contém a coluna ops_id.", 400);
+      }
+
+      // Sanitiza os headers: remove espaços e asteriscos
+      const headers = raw[headerRowIdx].map((h) =>
+        String(h).replace(/[\s*]/g, "").toLowerCase()
+      );
+
+      // Monta os objetos de dados
+      rows = raw.slice(headerRowIdx + 1)
+        .filter((row) => row.some((cell) => String(cell).trim() !== ""))
+        .map((row) => {
+          const obj = {};
+          headers.forEach((h, i) => {
+            if (h) obj[h] = row[i] !== undefined ? String(row[i]) : "";
+          });
+          return obj;
+        });
+    } else {
+      const csvString = req.file.buffer.toString("utf-8");
+      rows = await csv({ delimiter: "," }).fromString(csvString);
+    }
 
     if (!rows.length) {
       return errorResponse(res, "CSV vazio", 400);
     }
+
+    // Captura o contexto de estação antes de enviar a resposta (req pode ser destruído)
+    const dbContextSnapshot = {
+      isGlobal: req.dbContext?.isGlobal ?? false,
+      estacaoId: req.dbContext?.estacaoId ?? null,
+    };
 
     res.json({
       success: true,
@@ -1026,6 +1129,7 @@ const importColaboradores = async (req, res) => {
       let atualizados = 0;
       let skipped = 0;
       const errors = [];
+      const skippedDetails = [];
 
       const parseHorario = (v) => {
         if (!v) return null;
@@ -1042,6 +1146,12 @@ const importColaboradores = async (req, res) => {
         if (!v) return null;
         const s = String(v).trim();
 
+        // Número serial do Excel (ex: 46479)
+        if (/^\d{4,5}$/.test(s)) {
+          const date = XLSX.SSF.parse_date_code(Number(s));
+          if (date) return new Date(date.y, date.m - 1, date.d);
+        }
+
         // Formato DD/MM/YYYY
         const brMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
         if (brMatch) {
@@ -1049,7 +1159,7 @@ const importColaboradores = async (req, res) => {
           return isNaN(d.getTime()) ? null : d;
         }
 
-        // Formato YYYY-MM-DD (ISO) — anexa T00:00:00 para evitar interpretação UTC
+        // Formato YYYY-MM-DD (ISO)
         const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (isoMatch) {
           const d = new Date(`${s}T00:00:00`);
@@ -1069,20 +1179,50 @@ const importColaboradores = async (req, res) => {
           const opsId = String(row["ops_id"] || "").trim();
           if (!opsId) {
             skipped++;
+            skippedDetails.push({ linha: i + 1, ops_id: "N/A", motivo: "ops_id ausente" });
             continue;
           }
 
           const nomeCompleto = String(row["nome_completo"] || "").trim();
           const matricula = String(row["matricula"] || "").trim();
+          const cpf = row["cpf"] ? String(row["cpf"]).trim() : "";
+          const idLider = String(row["id_lider"] || "").trim();
+          const idSetor = row["id_setor"] ? Number(row["id_setor"]) : null;
+          const idCargo = row["id_cargo"] ? Number(row["id_cargo"]) : null;
+          const idEmpresa = row["id_empresa"] ? Number(row["id_empresa"]) : null;
+          const idTurno = row["id_turno"] ? Number(row["id_turno"]) : null;
+          const idEscala = row["id_escala"] ? Number(row["id_escala"]) : null;
+          const idEstacao = row["id_estacao"] ? Number(row["id_estacao"]) : null;
 
-          if (!nomeCompleto || !matricula) {
+          // Validação de estação: ignora linhas com estação diferente da estação atual
+          const estacaoContexto = dbContextSnapshot.estacaoId;
+          if (!dbContextSnapshot.isGlobal && estacaoContexto && idEstacao && idEstacao !== estacaoContexto) {
             skipped++;
+            skippedDetails.push({ linha: i + 1, ops_id: opsId, motivo: `Estação ${idEstacao} não corresponde à estação atual (${estacaoContexto})` });
+            continue;
+          }
+
+          if (!nomeCompleto || !matricula || !cpf || !idLider || !idSetor || !idCargo || !idEmpresa || !idTurno || !idEscala) {
+            const faltando = [
+              !nomeCompleto && "nome_completo",
+              !matricula    && "matricula",
+              !cpf          && "cpf",
+              !idLider      && "id_lider",
+              !idSetor      && "id_setor",
+              !idCargo      && "id_cargo",
+              !idEmpresa    && "id_empresa",
+              !idTurno      && "id_turno",
+              !idEscala     && "id_escala",
+            ].filter(Boolean);
+            skipped++;
+            skippedDetails.push({ linha: i + 1, ops_id: opsId, motivo: `Campos obrigatórios ausentes: ${faltando.join(", ")}` });
             continue;
           }
 
           const dataAdmissao = parseDate(row["data_admissao"]);
           if (!dataAdmissao) {
             skipped++;
+            skippedDetails.push({ linha: i + 1, ops_id: opsId, motivo: "data_admissao inválida ou ausente" });
             continue;
           }
 
@@ -1102,17 +1242,18 @@ const importColaboradores = async (req, res) => {
             matricula,
             dataAdmissao,
             horarioInicioJornada,
-            status: row["status"] || "ATIVO",
+            status: "ATIVO",
             cpf: row["cpf"] ? String(row["cpf"]) : null,
             dataNascimento: parseDate(row["data_nascimento"]),
             email: row["email"] || null,
             telefone: row["telefone"] ? String(row["telefone"]) : null,
-            idSetor: row["id_setor"] ? Number(row["id_setor"]) : null,
-            idCargo: row["id_cargo"] ? Number(row["id_cargo"]) : null,
-            idEmpresa: row["id_empresa"] ? Number(row["id_empresa"]) : null,
-            idTurno: row["id_turno"] ? Number(row["id_turno"]) : null,
-            idEscala: row["id_escala"] ? Number(row["id_escala"]) : null,
-            idLider: row["id_lider"] || null,
+            idSetor: idSetor,
+            idCargo: idCargo,
+            idEmpresa: idEmpresa,
+            idEstacao: idEstacao,
+            idTurno: idTurno,
+            idEscala: idEscala,
+            idLider: idLider || null,
           };
 
           const colab = await prisma.colaborador.upsert({
@@ -1164,11 +1305,21 @@ const importColaboradores = async (req, res) => {
 
           existing ? atualizados++ : criados++;
 
+          // Onboarding: apenas para colaboradores novos
+          if (!existing) {
+            try {
+              await gerarOnboardingColaborador({ opsId: colab.opsId, dataAdmissao });
+            } catch (onboardErr) {
+              console.warn(`⚠ Onboarding falhou para ${colab.opsId}: ${onboardErr.message}`);
+            }
+          }
+
         } catch (err) {
           skipped++;
-          errors.push(
-            `Linha ${i + 1} (Ops ${row["ops_id"] || "N/A"}): ${err.message}`
-          );
+          const opsId = String(row["ops_id"] || "N/A").trim();
+          const msg = `Linha ${i + 1} (Ops ${opsId}): ${err.message}`;
+          errors.push(msg);
+          skippedDetails.push({ linha: i + 1, ops_id: opsId, motivo: `Erro: ${err.message}` });
         }
       }
 
@@ -1178,6 +1329,7 @@ const importColaboradores = async (req, res) => {
         atualizados,
         skipped,
         erros: errors.length,
+        skippedDetails,
         finalizado: true,
         data: new Date(),
       };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+﻿import { useState, useEffect, useContext } from "react";
 import { Button } from "./UIComponents";
 import { X } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
@@ -52,13 +52,13 @@ export default function SetorModal({ setor, onClose, onSave }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 sm:px-6">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-lg max-h-[92vh] bg-[#1A1A1C] border border-[#3D3D40] rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col">
+      <div className="relative z-10 w-full max-w-lg max-h-[92vh] bg-surface border border-default rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col">
         {/* HEADER */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3D3D40]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-default">
           <h2 className="text-base sm:text-lg font-semibold text-white">
             {setor ? "Editar Setor" : "Novo Setor"}
           </h2>
-          <button onClick={onClose} className="p-2 rounded-md hover:bg-[#2A2A2C] text-[#BFBFC3]">
+          <button onClick={onClose} className="p-2 rounded-md hover:bg-surface-2 text-muted">
             <X size={18} />
           </button>
         </div>
@@ -68,11 +68,11 @@ export default function SetorModal({ setor, onClose, onSave }) {
 
           {precisaEscolherEstacao && (
             <div>
-              <label className="block text-xs text-[#BFBFC3] mb-1">Estação</label>
+              <label className="block text-xs text-muted mb-1">Estação</label>
               <select
                 value={form.idEstacao}
                 onChange={(e) => handle("idEstacao", e.target.value)}
-                className="w-full px-3 sm:px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl text-white text-sm"
+                className="w-full px-3 sm:px-4 py-2.5 bg-surface-2 border border-default rounded-xl text-page text-sm"
               >
                 <option value="">Selecione a estação</option>
                 {estacoes.map((e) => (
@@ -83,30 +83,30 @@ export default function SetorModal({ setor, onClose, onSave }) {
           )}
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">Nome do Setor</label>
+            <label className="block text-xs text-muted mb-1">Nome do Setor</label>
             <input
               value={form.nomeSetor}
               onChange={(e) => handle("nomeSetor", e.target.value)}
-              className="w-full px-3 sm:px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#FA4C00]"
+              className="w-full px-3 sm:px-4 py-2.5 bg-surface-2 border border-default rounded-xl text-page text-sm focus:outline-none focus:ring-1 focus:ring-[#FA4C00]"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">Descrição</label>
+            <label className="block text-xs text-muted mb-1">Descrição</label>
             <textarea
               rows={3}
               value={form.descricao}
               onChange={(e) => handle("descricao", e.target.value)}
-              className="w-full px-3 sm:px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#FA4C00]"
+              className="w-full px-3 sm:px-4 py-2.5 bg-surface-2 border border-default rounded-xl text-page text-sm focus:outline-none focus:ring-1 focus:ring-[#FA4C00]"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-[#BFBFC3] mb-1">Status</label>
+            <label className="block text-xs text-muted mb-1">Status</label>
             <select
               value={form.ativo ? "true" : "false"}
               onChange={(e) => handle("ativo", e.target.value === "true")}
-              className="w-full px-3 sm:px-4 py-2.5 bg-[#2A2A2C] border border-[#3D3D40] rounded-xl text-white text-sm"
+              className="w-full px-3 sm:px-4 py-2.5 bg-surface-2 border border-default rounded-xl text-page text-sm"
             >
               <option value="true">Ativo</option>
               <option value="false">Inativo</option>
@@ -115,7 +115,7 @@ export default function SetorModal({ setor, onClose, onSave }) {
         </div>
 
         {/* FOOTER */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-[#3D3D40]">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-default">
           <Button.Secondary onClick={onClose} className="w-full sm:w-auto">Cancelar</Button.Secondary>
           <Button.Primary onClick={handleSave} disabled={saving || !isValid} className="w-full sm:w-auto">
             {saving ? "Salvando..." : setor ? "Salvar alterações" : "Criar setor"}

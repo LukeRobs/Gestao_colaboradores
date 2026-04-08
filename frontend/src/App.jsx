@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { useVersionCheck } from "./hooks/useVersionCheck";
 import WhatsNewModal from "./components/WhatsNewModal";
 import { AuthContext } from "./context/AuthContext";
+import { ThemeContext } from "./context/ThemeContext";
 
 /* ================= AUTH ================= */
 import Login from "./pages/login";
@@ -73,6 +74,11 @@ import ReportRoute from "./routes/report";
 export default function App() {
   const { show, dismiss } = useVersionCheck();
   const { isAuthenticated } = useContext(AuthContext);
+  const { isDark } = useContext(ThemeContext);
+
+  const toastStyle = isDark
+    ? { background: "#1A1A1C", color: "#fff", border: "1px solid #2A2A2C" }
+    : { background: "#FFFFFF", color: "#111827", border: "1px solid #E5E7EB" };
 
   return (
     <>
@@ -81,22 +87,12 @@ export default function App() {
         position="top-right"
         toastOptions={{
           duration: 4000,
-          style: {
-            background: "#1A1A1C",
-            color: "#fff",
-            border: "1px solid #2A2A2C",
-          },
+          style: toastStyle,
           success: {
-            iconTheme: {
-              primary: "#22c55e",
-              secondary: "#fff",
-            },
+            iconTheme: { primary: "#22c55e", secondary: isDark ? "#fff" : "#fff" },
           },
           error: {
-            iconTheme: {
-              primary: "#ef4444",
-              secondary: "#fff",
-            },
+            iconTheme: { primary: "#ef4444", secondary: isDark ? "#fff" : "#fff" },
           },
         }}
       />

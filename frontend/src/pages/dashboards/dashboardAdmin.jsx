@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo } from "react";
+﻿import { useState, useEffect, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -335,7 +335,7 @@ export default function DashboardAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-page text-page overflow-x-hidden">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -397,8 +397,8 @@ export default function DashboardAdmin() {
           ">
 
           {/* ================= ESTRUTURA ================= */}
-          <div className="bg-[#111111] rounded-2xl p-6 border border-[#1F1F1F] h-full flex flex-col">
-            <h3 className="text-sm text-[#BFBFC3] mb-8">
+          <div className="bg-page rounded-2xl p-6 border border-default h-full flex flex-col">
+            <h3 className="text-sm text-muted mb-8">
               Estrutura do Time
             </h3>
 
@@ -412,11 +412,11 @@ export default function DashboardAdmin() {
                 const Icon = item.icon;
                 return (
                   <div key={idx} className="flex items-center gap-4 min-h-16">
-                    <div className="w-12 h-12 rounded-xl bg-[#1A1A1A] flex items-center justify-center">
-                      <Icon size={20} className="text-[#BFBFC3]" />
+                    <div className="w-12 h-12 rounded-xl bg-surface flex items-center justify-center">
+                      <Icon size={20} className="text-muted" />
                     </div>
                     <div>
-                      <p className="text-sm text-[#BFBFC3] leading-tight">{item.label}</p>
+                      <p className="text-sm text-muted leading-tight">{item.label}</p>
                       <p className="text-2xl font-semibold text-white">
                         {item.value}
                       </p>
@@ -428,8 +428,8 @@ export default function DashboardAdmin() {
           </div>
 
           {/* ================= PERFORMANCE ================= */}
-          <div className="bg-[#111111] rounded-2xl p-6 border border-[#1F1F1F] h-full flex flex-col">
-            <h3 className="text-sm text-[#BFBFC3] mb-8">
+          <div className="bg-page rounded-2xl p-6 border border-default h-full flex flex-col">
+            <h3 className="text-sm text-muted mb-8">
               Performance Operacional
             </h3>
 
@@ -443,11 +443,11 @@ export default function DashboardAdmin() {
                 const Icon = item.icon;
                 return (
                   <div key={idx} className="flex items-center gap-4 min-h-16">
-                    <div className="w-12 h-12 rounded-xl bg-[#1A1A1A] flex items-center justify-center">
-                      <Icon size={20} className={item.color || "text-[#BFBFC3]"} />
+                    <div className="w-12 h-12 rounded-xl bg-surface flex items-center justify-center">
+                      <Icon size={20} className={item.color || "text-muted"} />
                     </div>
                     <div>
-                      <p className="text-sm text-[#BFBFC3] leading-tight">{item.label}</p>
+                      <p className="text-sm text-muted leading-tight">{item.label}</p>
                       <p
                         className="text-2xl font-semibold"
                         style={{ color: item.color || "white" }}
@@ -463,8 +463,8 @@ export default function DashboardAdmin() {
           </div>
 
           {/* ================= PESSOAS ================= */}
-          <div className="bg-[#111111] rounded-2xl p-6 border border-[#1F1F1F] h-full flex flex-col">
-            <h3 className="text-sm text-[#BFBFC3] mb-8">
+          <div className="bg-page rounded-2xl p-6 border border-default h-full flex flex-col">
+            <h3 className="text-sm text-muted mb-8">
               Pessoas & Saúde
             </h3>
 
@@ -478,11 +478,11 @@ export default function DashboardAdmin() {
                 const Icon = item.icon;
                 return (
                   <div key={idx} className="flex items-center gap-4 min-h-16">
-                    <div className="w-12 h-12 rounded-xl bg-[#1A1A1A] flex items-center justify-center">
-                      <Icon size={20} className={item.color || "text-[#BFBFC3]"} />
+                    <div className="w-12 h-12 rounded-xl bg-surface flex items-center justify-center">
+                      <Icon size={20} className={item.color || "text-muted"} />
                     </div>
                     <div>
-                      <p className="text-sm text-[#BFBFC3] leading-tight">{item.label}</p>
+                      <p className="text-sm text-muted leading-tight">{item.label}</p>
                       <p
                         className="text-2xl font-semibold"
                         style={{ color: item.color || "white" }}
@@ -527,7 +527,7 @@ export default function DashboardAdmin() {
           <EmpresasResumoSection empresas={dados.empresasResumo} />
 
           {/* ================= HEADCOUNT & MOVIMENTAÇÕES ================= */}
-          <div className="bg-[#1A1A1C] rounded-xl p-6">
+          <div className="bg-surface rounded-xl p-6">
             <h2 className="text-white font-semibold text-base mb-4">Headcount & Movimentações</h2>
             <ResponsiveContainer width="100%" height={350}>
               <ComposedChart

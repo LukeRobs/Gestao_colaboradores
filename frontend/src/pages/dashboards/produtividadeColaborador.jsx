@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+﻿import { useState, useEffect, useContext } from "react";
 import { Calendar, Users, TrendingUp, ArrowLeft, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
@@ -61,7 +61,7 @@ function SyncBadge({ turno, data, onSyncComplete }) {
           ? "bg-blue-500/15 border-blue-500/40 text-blue-400"
           : quaseSync
           ? "bg-green-500/15 border-green-500/40 text-green-400"
-          : "bg-[#1A1A1C] border-[#2A2A2C] text-[#BFBFC3]"
+          : "bg-surface border-default text-muted"
       }`}
     >
       <RefreshCw className={`w-3 h-3 ${syncing || quaseSync ? "animate-spin" : ""}`} />
@@ -135,7 +135,7 @@ export default function ProdutividadeColaborador() {
                 {isOperacao && (
                   <button
                     onClick={() => navigate("/ponto")}
-                    className="p-2 rounded-lg border border-[#2A2A2C] text-[#BFBFC3] hover:bg-[#2A2A2C] transition"
+                    className="p-2 rounded-lg border border-default text-muted hover:bg-surface-2 transition"
                     title="Voltar ao Ponto"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -148,7 +148,7 @@ export default function ProdutividadeColaborador() {
                     </h1>
                     <SyncBadge turno={turno} data={data} onSyncComplete={carregarDados} />
                   </div>
-                  <p className="text-[#BFBFC3] text-sm sm:text-base">
+                  <p className="text-muted text-sm sm:text-base">
                     Acompanhe a produtividade individual de cada colaborador por turno
                   </p>
                 </div>
@@ -165,7 +165,7 @@ export default function ProdutividadeColaborador() {
                         className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
                           turno === t
                             ? "bg-blue-600 border-blue-600 text-white"
-                            : "bg-[#1A1A1C] border-[#2A2A2C] text-[#BFBFC3] hover:bg-[#2A2A2C]"
+                            : "bg-surface border-default text-muted hover:bg-surface-2"
                         }`}
                       >
                         {t}
@@ -178,27 +178,27 @@ export default function ProdutividadeColaborador() {
 
             {/* Filtros — apenas para não-OPERACAO */}
             {!isOperacao && (
-              <div className="bg-[#1A1A1C] rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-[#2A2A2C]">
+              <div className="bg-surface rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-default">
                 <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
                   <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-[#BFBFC3] mb-2">
+                    <label className="block text-sm font-medium text-muted mb-2">
                       <Calendar className="inline w-4 h-4 mr-1 text-white" />Data
                     </label>
                     <input
                       type="date"
                       value={data}
                       onChange={(e) => setData(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#2A2A2C] border border-[#3A3A3C] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="w-full px-3 py-2 bg-surface-2 border border-[#3A3A3C] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-[#BFBFC3] mb-2">
+                    <label className="block text-sm font-medium text-muted mb-2">
                       <Users className="inline w-4 h-4 mr-1" />Turno
                     </label>
                     <select
                       value={turno}
                       onChange={(e) => setTurno(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#2A2A2C] border border-[#3A3A3C] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="w-full px-3 py-2 bg-surface-2 border border-[#3A3A3C] rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                       <option value="T1">T1 - 06:00 às 14:00</option>
                       <option value="T2">T2 - 14:00 às 22:00</option>
@@ -219,33 +219,33 @@ export default function ProdutividadeColaborador() {
 
             {/* Resumo — apenas para não-OPERACAO */}
             {!isOperacao && dashboardData && (
-              <div className="bg-[#1A1A1C] rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-[#2A2A2C]">
+              <div className="bg-surface rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-default">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4 text-xs sm:text-sm">
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-white block">Data:</span>
                     <span className="truncate block">{formatarData(dashboardData.data)}</span>
                   </div>
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-white block">Turno:</span>
                     <span>{dashboardData.turno}</span>
                   </div>
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-white block">Colaboradores:</span>
                     <span>{dashboardData.totalColaboradores}</span>
                   </div>
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-green-400 block">Total Geral:</span>
                     <span>{dashboardData.resumo.totalGeral.toLocaleString("pt-BR")}</span>
                   </div>
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-blue-400 block">Média:</span>
                     <span>{dashboardData.resumo.mediaColaborador.toLocaleString("pt-BR")}</span>
                   </div>
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-yellow-400 block">Maior:</span>
                     <span>{dashboardData.resumo.maiorProducao.toLocaleString("pt-BR")}</span>
                   </div>
-                  <div className="text-[#BFBFC3]">
+                  <div className="text-muted">
                     <span className="font-medium text-red-400 block">Ativos:</span>
                     <span>{dashboardData.resumo.colaboradoresAtivos}/{dashboardData.totalColaboradores}</span>
                   </div>
@@ -255,24 +255,24 @@ export default function ProdutividadeColaborador() {
 
             {/* Tabela */}
             {loading ? (
-              <div className="bg-[#1A1A1C] rounded-lg p-6 sm:p-8 border border-[#2A2A2C]">
+              <div className="bg-surface rounded-lg p-6 sm:p-8 border border-default">
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <span className="ml-3 text-[#BFBFC3] text-sm sm:text-base">Carregando dados...</span>
+                  <span className="ml-3 text-muted text-sm sm:text-base">Carregando dados...</span>
                 </div>
               </div>
             ) : erro ? (
-              <div className="bg-[#1A1A1C] rounded-lg p-6 sm:p-8 border border-red-500/20">
+              <div className="bg-surface rounded-lg p-6 sm:p-8 border border-red-500/20">
                 <div className="text-center">
                   <div className="text-red-400 text-lg font-semibold mb-2">Erro ao carregar dados</div>
-                  <div className="text-[#BFBFC3] mb-4 text-sm sm:text-base">{erro}</div>
+                  <div className="text-muted mb-4 text-sm sm:text-base">{erro}</div>
                   <button onClick={carregarDados} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-sm sm:text-base">
                     Tentar novamente
                   </button>
                 </div>
               </div>
             ) : dashboardData ? (
-              <div className="bg-[#1A1A1C] rounded-lg border border-[#2A2A2C] overflow-hidden">
+              <div className="bg-surface rounded-lg border border-default overflow-hidden">
                 <ProdutividadeColaboradorTable
                   colaboradores={dashboardData.colaboradores}
                   horasTurno={dashboardData.horasTurno}
@@ -280,8 +280,8 @@ export default function ProdutividadeColaborador() {
                 />
               </div>
             ) : (
-              <div className="bg-[#1A1A1C] rounded-lg p-6 sm:p-8 border border-[#2A2A2C]">
-                <div className="text-center text-[#BFBFC3] text-sm sm:text-base">
+              <div className="bg-surface rounded-lg p-6 sm:p-8 border border-default">
+                <div className="text-center text-muted text-sm sm:text-base">
                   Nenhum dado disponível para os filtros selecionados
                 </div>
               </div>

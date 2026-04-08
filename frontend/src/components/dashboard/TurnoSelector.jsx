@@ -1,4 +1,4 @@
-export default function TurnoSelector({
+﻿export default function TurnoSelector({
   value,
   onChange,
   options = ["ALL", "T1", "T2", "T3"],
@@ -13,8 +13,8 @@ export default function TurnoSelector({
     <div
       className="
         inline-flex
-        bg-[#121214]
-        border border-[#2A2A2C]
+        bg-surface-2
+        border border-default
         rounded-xl
         p-1
         gap-1
@@ -35,7 +35,7 @@ export default function TurnoSelector({
               ${
                 active
                   ? "bg-[#FA4C00] text-white shadow-sm"
-                  : "text-[#BFBFC3] hover:text-white hover:bg-[#1A1A1C]"
+                  : "text-muted hover:text-page hover:bg-surface"
               }
             `}
           >

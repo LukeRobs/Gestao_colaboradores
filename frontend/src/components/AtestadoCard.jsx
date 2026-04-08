@@ -1,4 +1,4 @@
-import {
+﻿import {
   FileText,
   Calendar,
   Clock,
@@ -41,7 +41,7 @@ export default function AtestadoCard({
         rounded-2xl
         p-4 sm:p-5 lg:p-6
         space-y-5
-        hover:border-[#3D3D40]
+        hover:border-default
         transition-all
       `}
     >
@@ -50,7 +50,7 @@ export default function AtestadoCard({
         
         {/* BLOCO ESQUERDO */}
         <div className="flex items-center gap-4 min-w-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#2A2A2C] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-surface-2 flex items-center justify-center shrink-0">
             <FileText size={20} className="text-orange-400" />
           </div>
 
@@ -84,7 +84,7 @@ export default function AtestadoCard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[#0E0E0F] border border-[#2C2C2F] rounded-xl p-3 sm:p-4">
         
         <div className="flex items-center gap-3 text-xs sm:text-sm text-white">
-          <Calendar size={15} className="text-white" />
+          <Calendar size={15} className="text-muted" />
           <span className="wrap-break-words">
             {formatDateBR(atestado.dataInicio)} →{" "}
             {formatDateBR(atestado.dataFim)}

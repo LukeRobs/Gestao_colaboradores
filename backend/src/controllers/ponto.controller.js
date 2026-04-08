@@ -566,7 +566,6 @@ const getControlePresenca = async (req, res) => {
             "Auxiliar de Logística I - PCD",
             "Auxiliar de Returns I",
             "Auxilíar de Returns II",
-            "Fiscal de pátio"
           ]
         }
       },

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useContext } from "react";
+﻿import { useEffect, useState, useCallback, useContext } from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -173,7 +173,7 @@ export default function ColaboradoresPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -187,7 +187,7 @@ export default function ColaboradoresPage() {
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Colaboradores</h1>
-            <p className="text-sm text-[#BFBFC3]">
+            <p className="text-sm text-muted">
               Gestão e controle de colaboradores ativos
             </p>
           </div>
@@ -197,8 +197,8 @@ export default function ColaboradoresPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 w-full xl:w-auto">
               
               {/* BUSCA */}
-              <div className="flex items-center gap-2 bg-[#1A1A1C] px-4 py-2 rounded-xl">
-                <Search size={16} className="text-[#BFBFC3]" />
+              <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl">
+                <Search size={16} className="text-muted" />
                 <input
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
@@ -211,7 +211,7 @@ export default function ColaboradoresPage() {
               <select
                 value={turnoSelecionado}
                 onChange={(e) => handleTurnoChange(e.target.value)}
-                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+                className="bg-surface px-4 py-2 rounded-xl text-sm"
               >
                 {turnos.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -224,7 +224,7 @@ export default function ColaboradoresPage() {
               <select
                 value={escalaSelecionada}
                 onChange={(e) => handleEscalaChange(e.target.value)}
-                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+                className="bg-surface px-4 py-2 rounded-xl text-sm"
               >
                 <option value="TODOS">Escalas</option>
 
@@ -239,7 +239,7 @@ export default function ColaboradoresPage() {
               <select
                 value={cargoSelecionado}
                 onChange={(e) => handleCargoChange(e.target.value)}
-                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+                className="bg-surface px-4 py-2 rounded-xl text-sm"
               >
                 <option value="TODOS">Cargos</option>
                 {cargos.map((cargo) => (
@@ -253,7 +253,7 @@ export default function ColaboradoresPage() {
               <select
                 value={liderSelecionado}
                 onChange={(e) => handleLiderChange(e.target.value)}
-                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+                className="bg-surface px-4 py-2 rounded-xl text-sm"
               >
                 <option value="TODOS">Líderes</option>
                 {lideres.map((lider) => (
@@ -267,7 +267,7 @@ export default function ColaboradoresPage() {
               <select
                 value={statusSelecionado}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm"
+                className="bg-surface px-4 py-2 rounded-xl text-sm"
               >
                 <option value="TODOS">Status</option>
                 <option value="ATIVO">Ativo</option>
@@ -290,7 +290,7 @@ export default function ColaboradoresPage() {
           </div>
 
           {/* LISTA */}
-          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden">
+          <div className="bg-surface rounded-2xl overflow-hidden">
             {loading ? (
               <LoadingScreen />
             ) : (

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState, useContext } from "react"
 import {
@@ -84,7 +84,7 @@ export default function DashboardColaboradoresExecutivo() {
   const hcEscala = hc?.hcPorEscala || []
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar />
       <div className="flex-1 lg:ml-64">
         <Header />
@@ -278,12 +278,12 @@ export default function DashboardColaboradoresExecutivo() {
           {/* ================= TOP 10 ================= */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card title="+90 dias · Sem Falta · Sem Medida">
-              <p className="text-xs text-[#BFBFC3] mb-3">+90 dias, sem falta, sem medida e exatamente 1 atestado (candidatos plenos estão em Internalização)</p>
+              <p className="text-xs text-muted mb-3">+90 dias, sem falta, sem medida e exatamente 1 atestado (candidatos plenos estão em Internalização)</p>
               <RankingListCriterios data={semFaltaComTempo || []} />
             </Card>
 
             <Card title="+90 dias · Reprovados">
-              <p className="text-xs text-[#BFBFC3] mb-3">Têm tempo de casa mas falharam em outro critério</p>
+              <p className="text-xs text-muted mb-3">Têm tempo de casa mas falharam em outro critério</p>
               <RankingListReprovados data={reprovadosComTempo || []} />
             </Card>
           </div>
@@ -301,7 +301,7 @@ export default function DashboardColaboradoresExecutivo() {
 
 function Card({ title, children }) {
   return (
-    <div className="bg-[#1A1A1C] rounded-xl p-6">
+    <div className="bg-surface rounded-xl p-6">
       <h2 className="mb-4 font-semibold">{title}</h2>
       {children}
     </div>
@@ -310,8 +310,8 @@ function Card({ title, children }) {
 
 function KpiCard({ label, value }) {
   return (
-    <div className="bg-[#1A1A1C] rounded-xl p-6">
-      <div className="text-xs text-[#BFBFC3]">{label}</div>
+    <div className="bg-surface rounded-xl p-6">
+      <div className="text-xs text-muted">{label}</div>
       <div className="text-2xl font-semibold mt-2">{value}</div>
     </div>
   )
@@ -331,7 +331,7 @@ function RankingList({ data }) {
 }
 
 function RankingListCriterios({ data }) {
-  if (!data.length) return <p className="text-xs text-[#BFBFC3] text-center py-4">Nenhum colaborador.</p>
+  if (!data.length) return <p className="text-xs text-muted text-center py-4">Nenhum colaborador.</p>
   return (
     <div className="space-y-2 max-h-64 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {data.map((c, i) => (
@@ -343,7 +343,7 @@ function RankingListCriterios({ data }) {
               {c.qtdAtestados} atestado{c.qtdAtestados !== 1 ? "s" : ""}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#34C759]/20 text-[#34C759]">0 medidas</span>
-            <span className="text-[#BFBFC3] font-semibold">{c.diasCasa}d</span>
+            <span className="text-muted font-semibold">{c.diasCasa}d</span>
           </div>
         </div>
       ))}
@@ -352,7 +352,7 @@ function RankingListCriterios({ data }) {
 }
 
 function RankingListReprovados({ data }) {
-  if (!data.length) return <p className="text-xs text-[#BFBFC3] text-center py-4">Nenhum colaborador.</p>
+  if (!data.length) return <p className="text-xs text-muted text-center py-4">Nenhum colaborador.</p>
   return (
     <div className="space-y-2 max-h-64 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {data.map((c, i) => (
@@ -425,14 +425,14 @@ function CandidatosInternalizacaoTable({ data, isAdmin, navigate }) {
     return true
   })
 
-  const selectClass = "bg-[#0D0D0D] border border-white/10 text-[#BFBFC3] text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#FA4C00]"
+  const selectClass = "bg-page border border-white/10 text-muted text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#FA4C00]"
 
   return (
-    <div className="bg-[#1A1A1C] rounded-xl p-6">
+    <div className="bg-surface rounded-xl p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h2 className="font-semibold text-white">Candidatos à Internalização</h2>
-          <p className="text-xs text-[#BFBFC3] mt-1">
+          <p className="text-xs text-muted mt-1">
             BPO · Ativos · +90 dias de casa · Sem atestado, falta ou medida disciplinar
           </p>
         </div>
@@ -443,7 +443,7 @@ function CandidatosInternalizacaoTable({ data, isAdmin, navigate }) {
           <select value={filtroLider} onChange={e => setFiltroLider(e.target.value)} className={selectClass}>
             {lideres.map(l => <option key={l} value={l}>{l === "ALL" ? "Todos os líderes" : l}</option>)}
           </select>
-          <span className="text-sm text-[#BFBFC3]">{filtrado.length} colaborador{filtrado.length !== 1 ? "es" : ""}</span>
+          <span className="text-sm text-muted">{filtrado.length} colaborador{filtrado.length !== 1 ? "es" : ""}</span>
           <button
             onClick={() => exportarCSV(filtrado)}
             disabled={filtrado.length === 0}
@@ -455,12 +455,12 @@ function CandidatosInternalizacaoTable({ data, isAdmin, navigate }) {
       </div>
 
       {filtrado.length === 0 ? (
-        <p className="text-sm text-[#BFBFC3] text-center py-8">Nenhum candidato encontrado.</p>
+        <p className="text-sm text-muted text-center py-8">Nenhum candidato encontrado.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[#BFBFC3] border-b border-white/10">
+              <tr className="text-muted border-b border-white/10">
                 <th className="text-left py-2 pr-4 font-medium">Nome</th>
                 <th className="text-left py-2 pr-4 font-medium">Empresa</th>
                 <th className="text-left py-2 pr-4 font-medium">Turno</th>
@@ -475,11 +475,11 @@ function CandidatosInternalizacaoTable({ data, isAdmin, navigate }) {
               {filtrado.map((c, i) => (
                 <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   <td className="py-2 pr-4 text-white">{c.nome}</td>
-                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.empresa}</td>
-                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.turno}</td>
-                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.setor}</td>
-                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.lider}</td>
-                  <td className="py-2 pr-4 text-[#BFBFC3]">{c.dataAdmissao}</td>
+                  <td className="py-2 pr-4 text-muted">{c.empresa}</td>
+                  <td className="py-2 pr-4 text-muted">{c.turno}</td>
+                  <td className="py-2 pr-4 text-muted">{c.setor}</td>
+                  <td className="py-2 pr-4 text-muted">{c.lider}</td>
+                  <td className="py-2 pr-4 text-muted">{c.dataAdmissao}</td>
                   <td className="py-2 pr-4 text-right text-[#34C759] font-semibold">{c.diasCasa}d</td>
                   <td className="py-2 text-right">
                     <button

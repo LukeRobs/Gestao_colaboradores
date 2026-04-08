@@ -10,7 +10,7 @@ const { upload } = require("../middlewares/uploadCsv.middleware");
 router.post(
   "/import",
   authenticate,
-  authorize("ADMIN", "MANAGER"),
+  authorize("ADMIN", "MANAGER", "ALTA_GESTAO"),
   upload.single("file"),
   asyncHandler(controller.importColaboradores)
 );
@@ -18,7 +18,7 @@ router.post(
 router.get(
   "/import-status", 
   authenticate,
-  authorize("ADMIN"),
+  authorize("ADMIN", "MANAGER", "ALTA_GESTAO"),
   asyncHandler(controller.getStatusImport)
 );
 /* ================= LÍDERES ================= */

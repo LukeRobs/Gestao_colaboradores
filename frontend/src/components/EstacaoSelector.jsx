@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Building2, ChevronDown } from "lucide-react";
 import { useEstacao } from "../context/EstacaoContext";
 import { EstacoesAPI } from "../services/estacoes";
@@ -22,7 +22,7 @@ export default function EstacaoSelector() {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1A1A1C] border border-[#2C2C2F] hover:border-[#FA4C00]/50 transition text-sm text-[#BFBFC3]"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface border border-[#2C2C2F] hover:border-[#FA4C00]/50 transition text-sm text-muted"
       >
         <Building2 size={14} className="text-[#FA4C00] shrink-0" />
         <span className="max-w-[140px] truncate">{label}</span>
@@ -30,10 +30,10 @@ export default function EstacaoSelector() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 bg-[#1A1A1C] border border-[#2C2C2F] rounded-xl shadow-2xl py-1 z-50">
+        <div className="absolute right-0 mt-2 w-56 bg-surface border border-[#2C2C2F] rounded-xl shadow-2xl py-1 z-50">
           <button
             onClick={() => { selecionarEstacao(null); setOpen(false); }}
-            className={`w-full px-4 py-2 text-left text-sm transition hover:bg-[#2A2A2C] ${!estacaoId ? "text-[#FA4C00]" : "text-[#BFBFC3]"}`}
+            className={`w-full px-4 py-2 text-left text-sm transition hover:bg-surface-2 ${!estacaoId ? "text-[#FA4C00]" : "text-muted"}`}
           >
             Todas as estações
           </button>
@@ -44,7 +44,7 @@ export default function EstacaoSelector() {
             <button
               key={e.idEstacao}
               onClick={() => { selecionarEstacao(e.idEstacao); setOpen(false); }}
-              className={`w-full px-4 py-2 text-left text-sm transition hover:bg-[#2A2A2C] truncate ${estacaoId === e.idEstacao ? "text-[#FA4C00]" : "text-[#BFBFC3]"}`}
+              className={`w-full px-4 py-2 text-left text-sm transition hover:bg-surface-2 truncate ${estacaoId === e.idEstacao ? "text-[#FA4C00]" : "text-muted"}`}
             >
               {e.nomeEstacao}
             </button>

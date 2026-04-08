@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 
 /* =====================================================
    COMPONENT
@@ -31,10 +31,10 @@ export default function HierarquiaSection({
 
   return (
     <div className="
-      bg-[#111111]
+      bg-page
       rounded-2xl
       border
-      border-[#1F1F1F]
+      border-default
       p-4
       sm:p-6
       lg:p-8
@@ -43,7 +43,7 @@ export default function HierarquiaSection({
 
       {/* HEADER */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-sm text-[#BFBFC3] tracking-wider">
+        <h2 className="text-sm text-muted tracking-wider">
           ANÁLISE HIERÁRQUICA
         </h2>
 
@@ -113,7 +113,7 @@ function ToggleButton({ active, children, onClick }) {
       className={`px-4 py-2 rounded-lg text-sm transition-all border ${
         active
           ? "bg-[#1F1F1F] border-[#2A2A2A]"
-          : "bg-transparent border-[#1F1F1F] hover:bg-[#151515]"
+          : "bg-transparent border-default hover:bg-[#151515]"
       }`}
     >
       {children}
@@ -129,7 +129,7 @@ function MiniCard({ label, value, subtitle, color }) {
     <div className="
       bg-[#0F0F0F]
       border
-      border-[#1F1F1F]
+      border-default
       rounded-xl
       p-4
       sm:p-6"
@@ -174,7 +174,7 @@ function ArvoreHierarquica({ data }) {
         return (
           <div
             key={gerente.id}
-            className="bg-[#0F0F0F] border border-[#1F1F1F] rounded-xl"
+            className="bg-[#0F0F0F] border border-default rounded-xl"
           >
             {/* GERENTE */}
             <div
@@ -191,7 +191,7 @@ function ArvoreHierarquica({ data }) {
                   {gerente.nome}
                 </span>
 
-                <span className="text-xs text-[#6B7280] bg-[#1A1A1A] px-2 py-0.5 rounded-md">
+                <span className="text-xs text-[#6B7280] bg-surface px-2 py-0.5 rounded-md">
                   {gerente.totalColaboradores ?? 0} colab
                 </span>
 
@@ -262,7 +262,7 @@ function ArvoreHierarquica({ data }) {
                             {sup.supervisionadosDiretos.map((c) => (
                                 <div
                                 key={c.opsId}
-                                className="flex justify-between text-sm text-[#BFBFC3]"
+                                className="flex justify-between text-sm text-muted"
                                 >
                                 <span>{c.nome}</span>
                                 <span className="text-[#6B7280]">
@@ -279,7 +279,7 @@ function ArvoreHierarquica({ data }) {
                                 {lider.colaboradores.map((c) => (
                                   <div
                                     key={c.opsId}
-                                    className="flex justify-between text-sm text-[#BFBFC3]"
+                                    className="flex justify-between text-sm text-muted"
                                   >
                                     <span>{c.nome}</span>
                                     <span className="text-[#6B7280]">
@@ -327,7 +327,7 @@ function MetricasLinha({ node }) {
   );
 }
 
-function MetricItem({ label, value, color = "text-[#BFBFC3]" }) {
+function MetricItem({ label, value, color = "text-muted" }) {
   return (
     <div className="flex gap-1 whitespace-nowrap">
       <span className="text-[#6B7280]">{label}</span>
@@ -388,7 +388,7 @@ function PorNivelHierarquia({ data }) {
 ===================================================== */
 function NivelCard({ title, items, color }) {
   return (
-    <div className="bg-[#0F0F0F] border border-[#1F1F1F] rounded-xl p-6">
+    <div className="bg-[#0F0F0F] border border-default rounded-xl p-6">
       <p className="text-sm text-[#7A7A7A] mb-4 tracking-wide">
         {title}
       </p>
@@ -413,7 +413,7 @@ function NivelCard({ title, items, color }) {
                   {item.nome}
                 </span>
 
-                <span className="text-sm text-[#BFBFC3]">
+                <span className="text-sm text-muted">
                   {item.totalColaboradores}
                 </span>
               </div>

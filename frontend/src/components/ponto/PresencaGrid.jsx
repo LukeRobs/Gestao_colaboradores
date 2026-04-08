@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+﻿import { useRef, useCallback } from "react";
 import PresencaHeader from "./PresencaHeader";
 import PresencaRow from "./PresencaRow";
 
@@ -88,7 +88,7 @@ export default function PresencaGrid({
   return (
     <div
       ref={containerRef}
-      className="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-2xl border border-[#2A2A2C] touch-pan-x touch-pan-y w-full scrollbar-hide"
+      className="overflow-x-auto overflow-y-auto max-h-[70vh] rounded-2xl border border-default touch-pan-x touch-pan-y w-full scrollbar-hide"
       style={{ cursor: "grab" }}
       onMouseDown={onMouseDown}
     >

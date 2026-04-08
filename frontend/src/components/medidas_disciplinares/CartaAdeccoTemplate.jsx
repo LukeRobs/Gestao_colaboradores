@@ -1,4 +1,4 @@
-/* =====================================================
+﻿/* =====================================================
    CARTA MEDIDA DISCIPLINAR — TEMPLATE ADECCO / ADILLIS
    Fiel ao modelo PDF v2 – Revisão 26/08/2025
 ===================================================== */
@@ -7,6 +7,7 @@ function fmtDateLong(dateLike) {
   if (!dateLike) return "-";
   const d = new Date(dateLike);
   return d.toLocaleDateString("pt-BR", {
+    timeZone: "UTC",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -15,7 +16,7 @@ function fmtDateLong(dateLike) {
 
 function fmtDateBR(dateLike) {
   if (!dateLike) return "-";
-  return new Date(dateLike).toLocaleDateString("pt-BR");
+  return new Date(dateLike).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
 export default function CartaAdeccoTemplate({ medida, nomeEmpresa = "Adecco Recursos Humanos S/A" }) {

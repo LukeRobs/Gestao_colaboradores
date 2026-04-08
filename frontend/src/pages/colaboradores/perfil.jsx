@@ -1,4 +1,4 @@
-import { AuthContext } from "../../context/AuthContext";
+﻿import { AuthContext } from "../../context/AuthContext";
 import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -72,7 +72,7 @@ export default function PerfilColaborador() {
 
   if (!colaborador) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] text-[#BFBFC3]">
+      <div className="min-h-screen flex items-center justify-center bg-page text-muted">
         Colaborador não encontrado
       </div>
     );
@@ -93,7 +93,7 @@ export default function PerfilColaborador() {
 console.log("INDICADORES ATESTADO:", indicadoresAtestado);
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -109,13 +109,13 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate("/colaboradores")}
-                className="p-2 rounded-lg bg-[#1A1A1C] hover:bg-[#2A2A2C]"
+                className="p-2 rounded-lg bg-surface hover:bg-surface-2"
               >
                 <ArrowLeft size={18} />
               </button>
 
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#2A2A2C] flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-surface-2 flex items-center justify-center">
                   <User size={28} />
                 </div>
 
@@ -123,7 +123,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                   <h1 className="text-2xl font-semibold">
                     {colaborador.nomeCompleto}
                   </h1>
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   OPS ID: {colaborador.opsId}
                 </p>
 
@@ -252,7 +252,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
             <div className="col-span-2 mt-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Histórico de Atestados */}
               <div>
-                <p className="text-xs text-[#BFBFC3] uppercase mb-3">Histórico de Atestados</p>
+                <p className="text-xs text-muted uppercase mb-3">Histórico de Atestados</p>
                 {(indicadoresAtestado.itens || []).length > 0 ? (
                   <div className="space-y-3">
                     {(indicadoresAtestado.itens || []).map((at) => {
@@ -265,39 +265,39 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                       return (
                         <div
                           key={at.idAtestado}
-                          className="bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4 flex items-start gap-4"
+                          className="bg-page border border-default rounded-xl p-4 flex items-start gap-4"
                         >
                           <FileText size={18} className="text-blue-400 mt-1 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                               <div>
-                                <p className="text-xs text-[#BFBFC3] uppercase mb-0.5">Início</p>
+                                <p className="text-xs text-muted uppercase mb-0.5">Início</p>
                                 <p>{new Date(at.dataInicio).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-[#BFBFC3] uppercase mb-0.5">Fim</p>
+                                <p className="text-xs text-muted uppercase mb-0.5">Fim</p>
                                 <p>{new Date(at.dataFim).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-[#BFBFC3] uppercase mb-0.5">Dias</p>
+                                <p className="text-xs text-muted uppercase mb-0.5">Dias</p>
                                 <p>{at.diasAfastamento}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-[#BFBFC3] uppercase mb-0.5">Status</p>
+                                <p className="text-xs text-muted uppercase mb-0.5">Status</p>
                                 <p className={`font-medium ${statusColor}`}>{at.status}</p>
                               </div>
                             </div>
                             {(at.cid || at.observacao) && (
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-2 pt-2 border-t border-[#3D3D40]">
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mt-2 pt-2 border-t border-default">
                                 {at.cid && (
                                   <div>
-                                    <p className="text-xs text-[#BFBFC3] uppercase mb-0.5">CID</p>
+                                    <p className="text-xs text-muted uppercase mb-0.5">CID</p>
                                     <p>{at.cid}</p>
                                   </div>
                                 )}
                                 {at.observacao && (
                                   <div className="col-span-2">
-                                    <p className="text-xs text-[#BFBFC3] uppercase mb-0.5">Observação</p>
+                                    <p className="text-xs text-muted uppercase mb-0.5">Observação</p>
                                     <p className="break-words">{at.observacao}</p>
                                   </div>
                                 )}
@@ -309,13 +309,13 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                     })}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#BFBFC3]">Nenhum atestado registrado.</p>
+                  <p className="text-sm text-muted">Nenhum atestado registrado.</p>
                 )}
               </div>
 
               {/* Histórico de Faltas */}
               <div>
-                <p className="text-xs text-[#BFBFC3] uppercase mb-3">Histórico de Faltas</p>
+                <p className="text-xs text-muted uppercase mb-3">Histórico de Faltas</p>
                 {(indicadoresFaltas.itens || []).length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {(indicadoresFaltas.itens || []).map((f) => (
@@ -324,20 +324,20 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                         className={`flex flex-col px-3 py-2 rounded-lg border text-sm ${
                           f.temMD
                             ? "border-orange-500/50 bg-orange-500/10"
-                            : "border-[#3D3D40] bg-[#0D0D0D]"
+                            : "border-default bg-page"
                         }`}
                       >
                         <span>{new Date(f.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</span>
                         {f.temMD ? (
                           <span className="text-xs text-orange-400 font-medium mt-1">MD aplicada</span>
                         ) : (
-                          <span className="text-xs text-[#BFBFC3] mt-1">Sem MD</span>
+                          <span className="text-xs text-muted mt-1">Sem MD</span>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#BFBFC3]">Nenhuma falta registrada.</p>
+                  <p className="text-sm text-muted">Nenhuma falta registrada.</p>
                 )}
               </div>
             </div>
@@ -353,7 +353,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
               />
 
               {medidas.length === 0 && (
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   Nenhuma medida disciplinar registrada.
                 </p>
               )}
@@ -361,13 +361,13 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
               {medidas.map((md) => (
                 <div
                   key={md.idMedida}
-                  className="flex items-start gap-4 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4"
+                  className="flex items-start gap-4 bg-page border border-default rounded-xl p-4"
                 >
                   <FileText size={18} className="text-orange-400 mt-1" />
 
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{md.tipoMedida}</p>
-                    <p className="text-xs text-[#BFBFC3]">
+                    <p className="text-xs text-muted">
                       {new Date(md.dataAplicacao).toLocaleDateString()}
                     </p>
                     <p className="text-sm mt-2">{md.motivo}</p>
@@ -387,7 +387,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
               />
 
               {acidentes.length === 0 && (
-                <p className="text-sm text-[#BFBFC3]">
+                <p className="text-sm text-muted">
                   Nenhum acidente registrado para este colaborador.
                 </p>
               )}
@@ -395,7 +395,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
               {acidentes.map((acidente) => (
                 <div
                   key={acidente.idAcidente}
-                  className="flex items-start gap-4 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4"
+                  className="flex items-start gap-4 bg-page border border-default rounded-xl p-4"
                 >
                   <FileText size={18} className="text-red-400 mt-1" />
 
@@ -404,12 +404,12 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                       {acidente.tipoOcorrencia}
                     </p>
 
-                    <p className="text-xs text-[#BFBFC3]">
+                    <p className="text-xs text-muted">
                       Data:{" "}
                       {new Date(acidente.dataOcorrencia).toLocaleDateString()}
                     </p>
 
-                    <p className="text-xs text-[#BFBFC3]">
+                    <p className="text-xs text-muted">
                       Local: {acidente.localOcorrencia}
                     </p>
 
@@ -442,7 +442,7 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
             </div>
 
             {indicadoresTreinamentos.total === 0 ? (
-              <p className="text-sm text-[#BFBFC3] mt-4">
+              <p className="text-sm text-muted mt-4">
                 Nenhum treinamento registrado para este colaborador.
               </p>
             ) : (
@@ -450,13 +450,13 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
                 {indicadoresTreinamentos.itens.map((t, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-4 bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4"
+                    className="flex items-start gap-4 bg-page border border-default rounded-xl p-4"
                   >
                     <FileText size={18} className="text-blue-400 mt-1" />
 
                     <div className="flex-1">
                       <p className="text-sm font-semibold">{t.tema}</p>
-                      <p className="text-xs text-[#BFBFC3]">
+                      <p className="text-xs text-muted">
                         {new Date(t.data).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
@@ -475,8 +475,8 @@ console.log("INDICADORES ATESTADO:", indicadoresAtestado);
 
 function Section({ title, children }) {
   return (
-    <div className="bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl p-6">
-      <h2 className="text-sm font-semibold text-[#BFBFC3] mb-6 uppercase">
+    <div className="bg-surface border border-default rounded-2xl p-6">
+      <h2 className="text-sm font-semibold text-muted mb-6 uppercase">
         {title}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -489,7 +489,7 @@ function Section({ title, children }) {
 function Info({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-[#BFBFC3]">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="text-sm font-medium">{value || "-"}</p>
     </div>
   );
@@ -497,8 +497,8 @@ function Info({ label, value }) {
 
 function Indicator({ label, value, color = "text-white" }) {
   return (
-    <div className="bg-[#0D0D0D] border border-[#3D3D40] rounded-xl p-4">
-      <p className="text-xs text-[#BFBFC3] uppercase">{label}</p>
+    <div className="bg-page border border-default rounded-xl p-4">
+      <p className="text-xs text-muted uppercase">{label}</p>
       <p className={`text-2xl font-semibold mt-1 ${color}`}>{value}</p>
     </div>
   );
@@ -515,7 +515,7 @@ function ActionButton({ icon, label, onClick, danger }) {
         ${
           danger
             ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-            : "bg-[#1A1A1C] hover:bg-[#2A2A2C]"
+            : "bg-surface hover:bg-surface-2"
         }
       `}
     >

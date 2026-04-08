@@ -180,6 +180,7 @@ model Estacao {
   colaboradores          Colaborador[]
   users                  User[]
   setores                Setor[]
+  desligamentos          Desligamento[]
   regional               Regional?     @relation(fields: [idRegional], references: [idRegional], onUpdate: NoAction, map: "fk_estacao_regional")
 
   @@index([idRegional], map: "idx_estacao_id_regional")
@@ -388,7 +389,7 @@ model SugestaoMedidaDisciplinar {
 
   colaborador Colaborador @relation(fields: [opsId], references: [opsId])
 
-  dataReferencia DateTime @map("data_referencia")
+  dataReferencia DateTime @map("data_referencia") @db.Date
 
   violacao String @db.VarChar(200)
 
@@ -461,6 +462,7 @@ model Desligamento {
   id_desligamento  Int         @id @default(autoincrement())
   opsId            String      @map("ops_id") @db.VarChar(50)
   idEmpresa        Int?        @map("id_empresa")
+  idEstacao        Int?        @map("id_estacao")
   dataDesligamento DateTime    @map("data_desligamento") @db.Date
   tipo             String      @db.VarChar(50)
   motivo           String      @db.VarChar(50)
@@ -469,9 +471,11 @@ model Desligamento {
   dataRegistro     DateTime    @default(now()) @map("data_registro") @db.Timestamp(6)
   colaborador      Colaborador @relation(fields: [opsId], references: [opsId], map: "fk_desligamento_colaborador")
   empresa          Empresa?    @relation(fields: [idEmpresa], references: [idEmpresa], map: "fk_desligamento_empresa")
+  estacao          Estacao?    @relation(fields: [idEstacao], references: [idEstacao], map: "fk_desligamento_estacao")
 
   @@index([dataDesligamento], map: "idx_desligamento_data")
   @@index([idEmpresa], map: "idx_desligamento_empresa")
+  @@index([idEstacao], map: "idx_desligamento_estacao")
   @@index([opsId], map: "idx_desligamento_ops_id")
   @@map("desligamento")
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -51,7 +51,7 @@ export default function MedidasDisciplinaresPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -69,7 +69,7 @@ export default function MedidasDisciplinaresPage() {
                 Medidas Disciplinares
               </h1>
 
-              <p className="text-sm text-[#BFBFC3]">
+              <p className="text-sm text-muted">
                 Histórico disciplinar dos colaboradores
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function MedidasDisciplinaresPage() {
           {/* 🔎 FILTROS */}
           <div className="flex flex-wrap items-center gap-3">
             {/* DATA */}
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl">
+            <div className="bg-surface px-4 py-2 rounded-xl">
               <input
                 type="date"
                 value={filtroData}
@@ -103,7 +103,7 @@ export default function MedidasDisciplinaresPage() {
             </div>
 
             {/* COLABORADOR */}
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
               <Search size={14} className="text-[#6B7280]" />
 
               <input
@@ -126,8 +126,8 @@ export default function MedidasDisciplinaresPage() {
               className="
                 px-4 py-2
                 rounded-xl
-                bg-[#1A1A1C]
-                hover:bg-[#2A2A2C]
+                bg-surface
+                hover:bg-surface-2
                 text-sm
               "
             >
@@ -138,11 +138,11 @@ export default function MedidasDisciplinaresPage() {
           {/* LISTA */}
 
           {loading ? (
-            <div className="text-[#BFBFC3]">
+            <div className="text-muted">
               Carregando medidas disciplinares…
             </div>
           ) : medidas.length === 0 ? (
-            <div className="text-[#BFBFC3]">
+            <div className="text-muted">
               Nenhuma medida disciplinar encontrada
             </div>
           ) : (

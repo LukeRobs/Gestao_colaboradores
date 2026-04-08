@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+﻿import { useEffect, useState, useContext } from "react";
 import { Search, CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +37,7 @@ function CounterCard({ label, value, color, icon: Icon, onClick, active }) {
     <button
       onClick={onClick}
       className={`flex-1 min-w-[140px] flex items-center gap-3 px-5 py-4 rounded-xl border transition-all cursor-pointer
-        ${active ? "border-[#FA4C00] bg-[#FA4C00]/10" : "border-[#2A2A2C] bg-[#1A1A1C] hover:border-[#3A3A3C]"}`}
+        ${active ? "border-[#FA4C00] bg-[#FA4C00]/10" : "border-default bg-surface hover:border-[#3A3A3C]"}`}
     >
       <div className={`p-2 rounded-lg ${color}`}>
         <Icon size={16} />
@@ -186,7 +186,7 @@ export default function SugestoesMedidaDisciplinar() {
   const temFiltroAtivo = filtroDataInicio || filtroDataFim || filtroStatus || filtroTurno || filtroLider || filtroNome;
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
 
       <div className="flex-1 lg:ml-64">
@@ -198,13 +198,13 @@ export default function SugestoesMedidaDisciplinar() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold">Sugestões de Medida Disciplinar</h1>
-              <p className="text-sm text-[#BFBFC3]">Faltas injustificadas detectadas automaticamente</p>
+              <p className="text-sm text-muted">Faltas injustificadas detectadas automaticamente</p>
             </div>
             {!isLideranca && (
               <button
                 onClick={executarBackfill}
                 disabled={backfillando}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1A1A1C] border border-[#2A2A2C] hover:border-[#FA4C00] text-sm text-[#BFBFC3] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-default hover:border-[#FA4C00] text-sm text-muted hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <RefreshCw size={14} className={backfillando ? "animate-spin" : ""} />
                 {backfillando ? "Varrendo..." : "Varrer faltas"}
@@ -242,7 +242,7 @@ export default function SugestoesMedidaDisciplinar() {
 
           {/* FILTROS */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
               <Search size={14} className="text-[#6B7280]" />
               <input
                 type="text"
@@ -256,7 +256,7 @@ export default function SugestoesMedidaDisciplinar() {
             <select
               value={filtroStatus}
               onChange={(e) => setFiltroStatus(e.target.value)}
-              className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer"
+              className="bg-surface px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer"
             >
               <option value="">Todos os status</option>
               <option value="PENDENTE">Pendente</option>
@@ -267,7 +267,7 @@ export default function SugestoesMedidaDisciplinar() {
             <select
               value={filtroTurno}
               onChange={(e) => setFiltroTurno(e.target.value)}
-              className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer"
+              className="bg-surface px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer"
             >
               <option value="">Todos os turnos</option>
               {turnos.map((t) => (
@@ -280,7 +280,7 @@ export default function SugestoesMedidaDisciplinar() {
             <select
               value={filtroLider}
               onChange={(e) => setFiltroLider(e.target.value)}
-              className="bg-[#1A1A1C] px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer max-w-[200px]"
+              className="bg-surface px-4 py-2 rounded-xl text-sm text-white outline-none cursor-pointer max-w-[200px]"
             >
               <option value="">Todos os líderes</option>
               {lideres.map((l) => (
@@ -289,7 +289,7 @@ export default function SugestoesMedidaDisciplinar() {
             </select>
             )}
 
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
               <span className="text-xs text-[#6B7280]">De</span>
               <input
                 type="date"
@@ -299,7 +299,7 @@ export default function SugestoesMedidaDisciplinar() {
               />
             </div>
 
-            <div className="bg-[#1A1A1C] px-4 py-2 rounded-xl flex items-center gap-2">
+            <div className="bg-surface px-4 py-2 rounded-xl flex items-center gap-2">
               <span className="text-xs text-[#6B7280]">Até</span>
               <input
                 type="date"
@@ -319,7 +319,7 @@ export default function SugestoesMedidaDisciplinar() {
             {temFiltroAtivo && (
               <button
                 onClick={() => { limparFiltros(); setTimeout(load, 0); }}
-                className="px-4 py-2 rounded-xl bg-[#1A1A1C] hover:bg-[#2A2A2C] text-sm text-[#BFBFC3] cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface hover:bg-surface-2 text-sm text-muted cursor-pointer"
               >
                 Limpar
               </button>
@@ -328,20 +328,20 @@ export default function SugestoesMedidaDisciplinar() {
 
           {/* CONTAGEM RESULTADO */}
           {!loading && (
-            <p className="text-sm text-[#BFBFC3]">
+            <p className="text-sm text-muted">
               {sugestoesFiltradas.length} sugestão(ões) encontrada(s)
             </p>
           )}
 
           {/* TABELA */}
           {loading ? (
-            <div className="text-[#BFBFC3]">Carregando…</div>
+            <div className="text-muted">Carregando…</div>
           ) : sugestoesFiltradas.length === 0 ? (
-            <div className="text-[#BFBFC3]">Nenhuma sugestão encontrada.</div>
+            <div className="text-muted">Nenhuma sugestão encontrada.</div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#2A2A2C]">
+            <div className="overflow-x-auto rounded-xl border border-default">
               <table className="w-full text-sm">
-                <thead className="bg-[#1A1A1C] text-[#BFBFC3]">
+                <thead className="bg-surface text-muted">
                   <tr>
                     <th className="text-left px-4 py-3 font-medium">Colaborador</th>
                     <th className="text-left px-4 py-3 font-medium">OpsId</th>
@@ -352,16 +352,16 @@ export default function SugestoesMedidaDisciplinar() {
                     <th className="text-left px-4 py-3 font-medium">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#2A2A2C]">
+                <tbody className="divide-y divide-default">
                   {sugestoesFiltradas.map((s) => (
-                    <tr key={s.idSugestao} className="bg-[#111113] hover:bg-[#1A1A1C] transition-colors">
+                    <tr key={s.idSugestao} className="bg-page hover:bg-surface transition-colors">
                       <td className="px-4 py-3 font-medium">{s.colaborador?.nomeCompleto ?? "—"}</td>
-                      <td className="px-4 py-3 text-[#BFBFC3]">{s.colaborador?.opsId ?? "—"}</td>
-                      <td className="px-4 py-3 text-[#BFBFC3]">
+                      <td className="px-4 py-3 text-muted">{s.colaborador?.opsId ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted">
                         {s.dataReferencia ? new Date(s.dataReferencia).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-[#BFBFC3]">Falta Injustificada</td>
-                      <td className="px-4 py-3 text-[#BFBFC3]">
+                      <td className="px-4 py-3 text-muted">Falta Injustificada</td>
+                      <td className="px-4 py-3 text-muted">
                         {CONSEQUENCIA_LABEL[s.consequencia] ?? s.consequencia}
                         {s.diasSuspensao ? ` (${s.diasSuspensao}d)` : ""}
                       </td>
@@ -400,11 +400,11 @@ export default function SugestoesMedidaDisciplinar() {
       {/* MODAL CONFIRMAÇÃO */}
       {acao && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1A1A1C] rounded-2xl p-6 w-full max-w-md space-y-4 border border-[#2A2A2C]">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-md space-y-4 border border-default">
             <h2 className="text-lg font-semibold">
               {acao.tipo === "aprovar" ? "Confirmar Aprovação" : "Confirmar Rejeição"}
             </h2>
-            <p className="text-sm text-[#BFBFC3]">
+            <p className="text-sm text-muted">
               {acao.tipo === "aprovar"
                 ? "Ao aprovar, uma Medida Disciplinar será gerada automaticamente para este colaborador."
                 : "Informe o motivo da rejeição desta sugestão."}
@@ -415,13 +415,13 @@ export default function SugestoesMedidaDisciplinar() {
                 onChange={(e) => setMotivoRejeicao(e.target.value)}
                 placeholder="Motivo da rejeição (opcional)"
                 rows={3}
-                className="w-full bg-[#0D0D0D] border border-[#2A2A2C] rounded-xl px-4 py-2 text-sm text-white placeholder-[#6B7280] outline-none resize-none"
+                className="w-full bg-page border border-default rounded-xl px-4 py-2 text-sm text-white placeholder-[#6B7280] outline-none resize-none"
               />
             )}
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => { setAcao(null); setMotivoRejeicao(""); }}
-                className="px-4 py-2 rounded-xl bg-[#2A2A2C] hover:bg-[#3A3A3C] text-sm cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] text-sm cursor-pointer"
               >
                 Cancelar
               </button>

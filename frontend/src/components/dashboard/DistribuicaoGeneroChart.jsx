@@ -1,4 +1,4 @@
-import {
+﻿import {
   PieChart,
   Pie,
   Cell,
@@ -27,9 +27,9 @@ export default function DistribuicaoGeneroChart({
       : "";
 
   return (
-    <div className="bg-[#1A1A1C] rounded-2xl p-4 sm:p-6 w-full space-y-4">
+    <div className="bg-surface rounded-2xl p-4 sm:p-6 w-full space-y-4">
       {title && (
-        <h2 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wide">
+        <h2 className="text-xs sm:text-sm font-semibold text-page uppercase tracking-wide">
           {title}
         </h2>
       )}
@@ -65,7 +65,7 @@ export default function DistribuicaoGeneroChart({
                 return [`${value} (${percent}%)`, name];
               }}
               contentStyle={{
-                backgroundColor: "#FFFFFF",
+                backgroundColor: "var(--color-surface)",
                 border: "1px solid #3D3D40",
                 borderRadius: "8px",
                 color: "#000000",
@@ -92,7 +92,7 @@ export default function DistribuicaoGeneroChart({
                 className="w-3 h-3 rounded-full shrink-0"
                 style={{ backgroundColor: colors[i % colors.length] }}
               />
-              <span className="text-[#BFBFC3] truncate">
+              <span className="text-muted truncate">
                 {d.name} — {d.value} ({percent}%)
               </span>
             </div>

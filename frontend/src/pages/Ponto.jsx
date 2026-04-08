@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+﻿import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -66,7 +66,7 @@ export default function PontoPage() {
 
   return (
     <div
-      className={`min-h-screen bg-[#0D0D0D] text-white ${
+      className={`min-h-screen bg-page text-page ${
         isKiosk ? "flex items-center justify-center" : "flex"
       }`}
     >
@@ -93,7 +93,7 @@ export default function PontoPage() {
         >
           <section
             className={`
-              bg-[#1A1A1C] border border-[#3D3D40] rounded-2xl space-y-8
+              bg-surface border border-default rounded-2xl space-y-8
               ${isKiosk ? "w-[520px] p-10" : "max-w-md mx-auto p-6"}
             `}
           >
@@ -107,7 +107,7 @@ export default function PontoPage() {
                 Registrar Ponto
               </h1>
               <p
-                className={`text-[#BFBFC3] ${
+                className={`text-muted ${
                   isKiosk ? "text-base" : "text-sm"
                 }`}
               >
@@ -117,7 +117,7 @@ export default function PontoPage() {
 
             {/* CPF */}
             <div>
-              <label className="block text-xs text-[#BFBFC3] mb-2 text-center">
+              <label className="block text-xs text-muted mb-2 text-center">
                 CPF do colaborador
               </label>
 
@@ -131,8 +131,8 @@ export default function PontoPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleRegistrar()}
                 className={`
                   w-full rounded-xl
-                  bg-[#2A2A2C]
-                  border border-[#3D3D40]
+                  bg-surface-2
+                  border border-default
                   text-white tracking-widest
                   placeholder:text-[#6F6F73]
                   focus:outline-none focus:ring-1 focus:ring-[#FA4C00]
@@ -162,7 +162,7 @@ export default function PontoPage() {
             {isKiosk && (
               <button
                 onClick={() => navigate("/dashboard/produtividade-colaborador")}
-                className="w-full rounded-xl font-semibold border border-[#3D3D40] text-[#BFBFC3] hover:bg-[#2A2A2C] transition h-12 text-base"
+                className="w-full rounded-xl font-semibold border border-default text-muted hover:bg-surface-2 transition h-12 text-base"
               >
                 Ver Produtividade por Colaborador
               </button>

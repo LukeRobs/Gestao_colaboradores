@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from "react";
+﻿import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -124,7 +124,7 @@ export default function TreinamentosPage() {
   /* ================= RENDER ================= */
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+      <div className="flex min-h-screen bg-page text-page">
         <style>{`@keyframes shimmer { from { background-position: -600px 0 } to { background-position: 600px 0 } }`}</style>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
         <div className="flex-1 lg:ml-64">
@@ -142,7 +142,7 @@ export default function TreinamentosPage() {
             {/* 3 cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C] space-y-4">
+                <div key={i} className="bg-surface rounded-2xl p-6 border border-default space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
                       <Sk h={12} w={140} />
@@ -156,14 +156,14 @@ export default function TreinamentosPage() {
             </div>
 
             {/* tabela */}
-            <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden border border-[#2A2A2C]">
-              <div className="bg-[#262628] px-4 py-3 flex gap-6">
+            <div className="bg-surface rounded-2xl overflow-hidden border border-default">
+              <div className="bg-surface-2 px-4 py-3 flex gap-6">
                 {[80, 160, 120, 80, 140, 80, 60].map((w, i) => (
                   <Sk key={i} h={12} w={w} />
                 ))}
               </div>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="px-4 py-3 flex gap-6 border-t border-[#2A2A2C]">
+                <div key={i} className="px-4 py-3 flex gap-6 border-t border-default">
                   {[80, 160, 120, 80, 140, 80, 60].map((w, j) => (
                     <Sk key={j} h={12} w={w} />
                   ))}
@@ -185,7 +185,7 @@ export default function TreinamentosPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -202,7 +202,7 @@ export default function TreinamentosPage() {
               <h1 className="text-2xl font-semibold">
                 Treinamentos
               </h1>
-              <p className="text-sm text-[#BFBFC3]">
+              <p className="text-sm text-muted">
                 Gestão e controle de treinamentos
               </p>
             </div>
@@ -219,10 +219,10 @@ export default function TreinamentosPage() {
           {/* ESTATÍSTICAS */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Card Total */}
-            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+            <div className="bg-surface rounded-2xl p-6 border border-default">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-[#BFBFC3] mb-1">Total</p>
+                  <p className="text-sm text-muted mb-1">Total</p>
                   <p className="text-2xl font-bold text-white">{total}</p>
                 </div>
                 <div className="p-3 bg-[#FA4C00]/10 rounded-xl">
@@ -232,10 +232,10 @@ export default function TreinamentosPage() {
             </div>
 
             {/* Card Realizados */}
-            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+            <div className="bg-surface rounded-2xl p-6 border border-default">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-[#BFBFC3] mb-1">Realizados</p>
+                  <p className="text-sm text-muted mb-1">Realizados</p>
                   <p className="text-2xl font-bold text-[#34C759]">{treinamentosFinalizados}</p>
                 </div>
                 <div className="p-3 bg-[#34C759]/10 rounded-xl">
@@ -243,21 +243,21 @@ export default function TreinamentosPage() {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="flex justify-between text-xs text-[#BFBFC3] mb-2">
+                <div className="flex justify-between text-xs text-muted mb-2">
                   <span>Progresso</span>
                   <span>{percentualRealizado}%</span>
                 </div>
-                <div className="w-full bg-[#2A2A2C] rounded-full h-2">
+                <div className="w-full bg-surface-2 rounded-full h-2">
                   <div className="bg-[#34C759] h-2 rounded-full transition-all duration-500" style={{ width: `${percentualRealizado}%` }} />
                 </div>
               </div>
             </div>
 
             {/* Card Pendentes */}
-            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+            <div className="bg-surface rounded-2xl p-6 border border-default">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-[#BFBFC3] mb-1">Pendentes</p>
+                  <p className="text-sm text-muted mb-1">Pendentes</p>
                   <p className="text-2xl font-bold text-[#FF9F0A]">{treinamentosPendentes}</p>
                 </div>
                 <div className="p-3 bg-[#FF9F0A]/10 rounded-xl">
@@ -266,19 +266,19 @@ export default function TreinamentosPage() {
               </div>
               <div className="mt-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1 bg-[#2A2A2C] rounded-full overflow-hidden">
+                  <div className="flex-1 h-1 bg-surface-2 rounded-full overflow-hidden">
                     <div className="h-full bg-[#FF9F0A] transition-all duration-500" style={{ width: `${total > 0 ? (treinamentosPendentes / total) * 100 : 0}%` }} />
                   </div>
-                  <span className="text-xs text-[#BFBFC3]">{total > 0 ? Math.round((treinamentosPendentes / total) * 100) : 0}%</span>
+                  <span className="text-xs text-muted">{total > 0 ? Math.round((treinamentosPendentes / total) * 100) : 0}%</span>
                 </div>
               </div>
             </div>
 
             {/* Card Cancelados */}
-            <div className="bg-[#1A1A1C] rounded-2xl p-6 border border-[#2A2A2C]">
+            <div className="bg-surface rounded-2xl p-6 border border-default">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-[#BFBFC3] mb-1">Cancelados</p>
+                  <p className="text-sm text-muted mb-1">Cancelados</p>
                   <p className="text-2xl font-bold text-[#FF453A]">{treinamentosCancelados}</p>
                 </div>
                 <div className="p-3 bg-[#FF453A]/10 rounded-xl">
@@ -287,10 +287,10 @@ export default function TreinamentosPage() {
               </div>
               <div className="mt-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1 bg-[#2A2A2C] rounded-full overflow-hidden">
+                  <div className="flex-1 h-1 bg-surface-2 rounded-full overflow-hidden">
                     <div className="h-full bg-[#FF453A] transition-all duration-500" style={{ width: `${total > 0 ? (treinamentosCancelados / total) * 100 : 0}%` }} />
                   </div>
-                  <span className="text-xs text-[#BFBFC3]">{total > 0 ? Math.round((treinamentosCancelados / total) * 100) : 0}%</span>
+                  <span className="text-xs text-muted">{total > 0 ? Math.round((treinamentosCancelados / total) * 100) : 0}%</span>
                 </div>
               </div>
             </div>
@@ -299,11 +299,11 @@ export default function TreinamentosPage() {
           {/* FILTROS */}
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#BFBFC3]">Líder</label>
+              <label className="text-xs text-muted">Líder</label>
               <select
                 value={filtroLider}
                 onChange={(e) => setFiltroLider(e.target.value)}
-                className="px-3 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 appearance-none min-w-[180px]"
+                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 appearance-none min-w-[180px]"
               >
                 <option value="">Todos os líderes</option>
                 {lideres.map(l => (
@@ -312,27 +312,27 @@ export default function TreinamentosPage() {
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#BFBFC3]">Data início</label>
+              <label className="text-xs text-muted">Data início</label>
               <input
                 type="date"
                 value={filtroDataInicio}
                 onChange={(e) => setFiltroDataInicio(e.target.value)}
-                className="px-3 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
+                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-[#BFBFC3]">Data fim</label>
+              <label className="text-xs text-muted">Data fim</label>
               <input
                 type="date"
                 value={filtroDataFim}
                 onChange={(e) => setFiltroDataFim(e.target.value)}
-                className="px-3 py-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
+                className="px-3 py-2 bg-surface border border-default rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
               />
             </div>
             {(filtroLider || filtroDataInicio || filtroDataFim) && (
               <button
                 onClick={() => { setFiltroLider(""); setFiltroDataInicio(""); setFiltroDataFim(""); }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-[#BFBFC3] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm text-muted transition-colors cursor-pointer"
               >
                 <XCircle size={14} /> Limpar filtros
               </button>
@@ -340,9 +340,9 @@ export default function TreinamentosPage() {
           </div>
 
           {/* LISTAGEM */}
-          <div className="bg-[#1A1A1C] rounded-2xl overflow-hidden">
+          <div className="bg-surface rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-[#262628] text-[#BFBFC3]">
+              <thead className="bg-surface-2 text-muted">
                 <tr>
                   <th className="px-4 py-3 text-left">Data</th>
                   <th className="px-4 py-3 text-left">Tema</th>
@@ -357,14 +357,14 @@ export default function TreinamentosPage() {
               <tbody>
                 {treinamentosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-[#BFBFC3]">
+                    <td colSpan={7} className="px-4 py-6 text-center text-muted">
                       {treinamentos.length === 0 ? "Nenhum treinamento cadastrado" : "Nenhum resultado para os filtros aplicados"}
                     </td>
                   </tr>
                 )}
 
                 {treinamentosFiltrados.map((t) => (
-                  <tr key={t.idTreinamento} className="border-t border-[#2A2A2C] hover:bg-[#1F1F22]">
+                  <tr key={t.idTreinamento} className="border-t border-default hover:bg-surface-3">
                     <td className="px-4 py-3">
                       {new Date(t.dataTreinamento).toLocaleDateString("pt-BR")}
                     </td>

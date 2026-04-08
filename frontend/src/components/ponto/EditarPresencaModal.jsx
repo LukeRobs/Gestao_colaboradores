@@ -1,4 +1,4 @@
-import { X, Save } from "lucide-react";
+﻿import { X, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ajustarPresencaManual } from "../../services/presenca";
 
@@ -68,6 +68,7 @@ export default function EditarPresencaModal({
   const [justificativa, setJustificativa] = useState("");
   const [loading, setLoading] = useState(false);
   const isOnboarding = status === "ON";
+  const isFaltaInjustificada = status === "F";
   /* =============================
      INIT
   ============================= */
@@ -87,12 +88,14 @@ export default function EditarPresencaModal({
     setRenderKey((k) => k + 1);
   }, [open, registro]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (isOnboarding) {
       setJustificativa("ON");
       setHoraEntrada("");
       setHoraSaida("");
       setRenderKey((k) => k + 1);
+    } else if (isFaltaInjustificada) {
+      setJustificativa("FALTA_INJUSTIFICADA");
     }
   }, [status]);
 
@@ -188,7 +191,7 @@ export default function EditarPresencaModal({
           max-w-md 
           max-h-[90vh] 
           overflow-y-auto
-          bg-[#1A1A1C] 
+          bg-surface 
           rounded-2xl 
           shadow-xl 
           p-6 
@@ -205,18 +208,18 @@ export default function EditarPresencaModal({
         </div>
 
         {/* INFO */}
-        <div className="text-sm text-[#BFBFC3] space-y-1">
+        <div className="text-sm text-muted space-y-1">
           <div><b>Colaborador:</b> {colaborador?.nome || "-"}</div>
           <div><b>Data:</b> {dia.label}</div>
         </div>
 
         {/* STATUS */}
         <div>
-          <label className="text-xs text-[#BFBFC3]">Status</label>
+          <label className="text-xs text-muted">Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2"
+            className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2"
           >
             <option value="">Selecione um status</option>
 
@@ -231,7 +234,7 @@ export default function EditarPresencaModal({
         {/* HORÁRIOS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-[#BFBFC3]">
+            <label className="text-xs text-muted">
               Hora Entrada
               {status === "P" && <span className="text-red-400 ml-1">*</span>}
             </label>
@@ -241,37 +244,37 @@ export default function EditarPresencaModal({
               value={horaEntrada}
               disabled={!permiteHorario}
               onChange={(e) => setHoraEntrada(e.target.value)}
-              className={`w-full bg-[#2A2A2C] border rounded-xl px-4 py-2 disabled:opacity-40 ${
+              className={`w-full bg-surface-2 border rounded-xl px-4 py-2 disabled:opacity-40 ${
                 status === "P" && !horaEntrada 
                   ? "border-red-400" 
-                  : "border-[#3D3D40]"
+                  : "border-default"
               }`}
             />
           </div>
 
           <div>
-            <label className="text-xs text-[#BFBFC3]">Hora Saída</label>
+            <label className="text-xs text-muted">Hora Saída</label>
             <input
               key={`saida-${renderKey}`}
               type="time"
               value={horaSaida}
               disabled={!permiteHorario}
               onChange={(e) => setHoraSaida(e.target.value)}
-              className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2 disabled:opacity-40"
+              className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2 disabled:opacity-40"
             />
           </div>
         </div>
 
         {/* JUSTIFICATIVA */}
         <div>
-          <label className="text-xs text-[#BFBFC3]">
+          <label className="text-xs text-muted">
             Justificativa <span className="text-red-400">*</span>
           </label>
           <select
             value={justificativa}
-            disabled={isOnboarding}
+            disabled={isOnboarding || isFaltaInjustificada}
             onChange={(e) => setJustificativa(e.target.value)}
-            className="w-full bg-[#2A2A2C] border border-[#3D3D40] rounded-xl px-4 py-2 disabled:opacity-50"
+            className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2 disabled:opacity-50"
           >
             <option value="">Selecione uma justificativa</option>
             {JUSTIFICATIVAS.map((j) => (
@@ -287,7 +290,7 @@ export default function EditarPresencaModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 rounded-xl bg-[#2A2A2C]"
+            className="px-4 py-2 rounded-xl bg-surface-2"
           >
             Cancelar
           </button>

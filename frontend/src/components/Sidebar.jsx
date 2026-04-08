@@ -1,4 +1,4 @@
-import {
+﻿import {
   LayoutDashboard,
   Users,
   Clock,
@@ -123,7 +123,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <aside
         className={`
           fixed top-0 left-0 h-full
-          bg-[#1A1A1C]
+          bg-surface
           z-50
           transform transition-all duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
@@ -138,7 +138,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <div className="w-2 h-2 rounded-full bg-[#FA4C00]" />
             {!isCollapsed && (
               <div className="flex flex-col leading-tight">
-                <span className="font-semibold text-white tracking-wide">
+                <span className="font-semibold text-page tracking-wide">
                   COPEOPLE
                 </span>
                 {nomeEstacao && (
@@ -154,14 +154,14 @@ export default function Sidebar({ isOpen, onClose }) {
             {/* Toggle Button (Desktop only) */}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden lg:block p-2 rounded-lg text-[#BFBFC3] hover:bg-[#242426] transition"
+              className="hidden lg:block p-2 rounded-lg text-muted hover:bg-surface-3 transition"
               title={isCollapsed ? "Expandir" : "Recolher"}
             >
               {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </button>
 
             {/* Close button (Mobile only) */}
-            <button onClick={onClose} className="lg:hidden text-[#BFBFC3]">
+            <button onClick={onClose} className="lg:hidden text-muted">
               <X size={18} />
             </button>
           </div>
@@ -179,8 +179,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/spi")
-                    ? "bg-[#2A2A2C] text-white"
-                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                    ? "bg-surface-2 text-page"
+                    : "text-muted hover:bg-surface-3"
                 }
                 ${isCollapsed ? "lg:justify-center" : ""}
               `}
@@ -275,8 +275,8 @@ export default function Sidebar({ isOpen, onClose }) {
                   px-4 py-3 rounded-xl text-sm font-medium transition
                   ${
                     organizacaoOpen
-                      ? "bg-[#2A2A2C] text-white"
-                      : "text-[#BFBFC3] hover:bg-[#242426]"
+                      ? "bg-surface-2 text-page"
+                      : "text-muted hover:bg-surface-3"
                   }
                   ${isCollapsed ? "lg:justify-center" : ""}
                 `}
@@ -331,8 +331,8 @@ export default function Sidebar({ isOpen, onClose }) {
                   px-4 py-3 rounded-xl transition
                   ${
                     active
-                      ? "bg-[#2A2A2C] text-white"
-                      : "text-[#BFBFC3] hover:bg-[#242426]"
+                      ? "bg-surface-2 text-page"
+                      : "text-muted hover:bg-surface-3"
                   }
                   ${isCollapsed ? "lg:justify-center" : ""}
                 `}
@@ -358,8 +358,8 @@ export default function Sidebar({ isOpen, onClose }) {
                   px-4 py-3 rounded-xl text-sm font-medium transition
                   ${
                     location.pathname.startsWith("/medidas-disciplinares")
-                      ? "bg-[#2A2A2C] text-white"
-                      : "text-[#BFBFC3] hover:bg-[#242426]"
+                      ? "bg-surface-2 text-page"
+                      : "text-muted hover:bg-surface-3"
                   }
                   ${isCollapsed ? "lg:justify-center" : ""}
                 `}
@@ -406,8 +406,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/treinamentos")
-                    ? "bg-[#2A2A2C] text-white"
-                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                    ? "bg-surface-2 text-page"
+                    : "text-muted hover:bg-surface-3"
                 }
                 ${isCollapsed ? "lg:justify-center" : ""}
               `}
@@ -447,8 +447,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/dw")
-                    ? "bg-[#2A2A2C] text-white"
-                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                    ? "bg-surface-2 text-page"
+                    : "text-muted hover:bg-surface-3"
                 }
                 ${isCollapsed ? "lg:justify-center" : ""}
               `}
@@ -493,8 +493,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 px-4 py-3 rounded-xl text-sm font-medium transition
                 ${
                   location.pathname.startsWith("/ponto")
-                    ? "bg-[#2A2A2C] text-white"
-                    : "text-[#BFBFC3] hover:bg-[#242426]"
+                    ? "bg-surface-2 text-page"
+                    : "text-muted hover:bg-surface-3"
                 }
                 ${isCollapsed ? "lg:justify-center" : ""}
               `}
@@ -531,8 +531,8 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
          {/* Footer com créditos */}
         {!isCollapsed && (
-          <div className="px-6 py-4 border-t border-white/5 shrink-0">
-            <p className="text-xs text-[#BFBFC3]">
+          <div className="px-6 py-4 border-t border-default shrink-0">
+            <p className="text-xs text-muted">
               Desenvolvido por:{" "}
               <span className="text-[#FA4C00] font-medium">
                 Lucas e Thiago - SOC-PE2
@@ -559,8 +559,8 @@ function SidebarSubItem({ label, active, onClick, disabled }) {
           disabled
             ? "text-[#6F6F73] cursor-not-allowed"
             : active
-            ? "bg-[#242426] text-white"
-            : "text-[#BFBFC3] hover:bg-[#242426]"
+            ? "bg-surface-2 text-page"
+            : "text-muted hover:bg-surface-3"
         }
       `}
     >

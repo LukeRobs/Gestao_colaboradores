@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useContext, useMemo } from "react";
+﻿import { useEffect, useState, useCallback, useContext, useMemo } from "react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api.jsx";
@@ -196,7 +196,7 @@ export default function ControlePresenca() {
 
   /* ================== UI ================== */
   return (
-    <div className="flex min-h-screen bg-[#0D0D0D] text-white">
+    <div className="flex min-h-screen bg-page text-page">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 lg:ml-64 min-w-0">
@@ -206,7 +206,7 @@ export default function ControlePresenca() {
           {/* HEADER */}
           <div>
             <h1 className="text-2xl font-semibold">Controle de Presença</h1>
-            <p className="text-sm text-[#BFBFC3]">
+            <p className="text-sm text-muted">
               Visão mensal de presença e exceções
             </p>
           </div>
@@ -237,15 +237,15 @@ export default function ControlePresenca() {
           />
 
           {/* GRID */}
-          <div className="bg-[#1A1A1C] rounded-2xl w-full min-w-0">
+          <div className="bg-surface rounded-2xl w-full min-w-0">
             {loading ? (
-              <div className="p-6 text-[#BFBFC3]">
+              <div className="p-6 text-muted">
                 Carregando controle de presença…
               </div>
             ) : error ? (
               <div className="p-6 text-red-400">{error}</div>
             ) : colaboradores.length === 0 ? (
-              <div className="p-6 text-center text-[#BFBFC3]">
+              <div className="p-6 text-center text-muted">
                 Nenhum colaborador encontrado para os filtros selecionados.
               </div>
             ) : (

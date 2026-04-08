@@ -1,11 +1,11 @@
-export default function SetorDistribuicaoSection({
+﻿export default function SetorDistribuicaoSection({
   title = "Presença por Setor",
   items = [], // [{ label, value }]
   emptyMessage = null,
 }) {
   if (!items || items.length === 0) {
     return emptyMessage ? (
-      <div className="text-sm text-[#BFBFC3]">
+      <div className="text-sm text-muted">
         {emptyMessage}
       </div>
     ) : null;
@@ -17,14 +17,14 @@ export default function SetorDistribuicaoSection({
   return (
     <section className="space-y-6">
       {title && (
-        <h2 className="text-xs sm:text-sm font-semibold text-[#BFBFC3] uppercase tracking-wide">
+        <h2 className="text-xs sm:text-sm font-semibold text-muted uppercase tracking-wide">
           {title}
         </h2>
       )}
 
       <div className="
-        bg-[#1A1A1C]
-        border border-[#2A2A2C]
+        bg-surface
+        border border-default
         rounded-2xl
         p-6
         space-y-5
@@ -50,33 +50,33 @@ export default function SetorDistribuicaoSection({
                       text-xs
                       w-6 h-6
                       rounded-full
-                      bg-[#2A2A2C]
+                      bg-surface-2
                       flex items-center justify-center
-                      text-[#BFBFC3]
+                      text-muted
                       shrink-0
                     ">
                       {index + 1}
                     </span>
 
                     {/* Nome setor */}
-                    <span className="text-sm text-[#E5E5E5] truncate">
+                    <span className="text-sm text-page truncate">
                       {item.label}
                     </span>
                   </div>
 
                   {/* Valor + Percentual */}
                   <div className="text-sm flex items-center gap-3">
-                    <span className="text-white font-semibold">
+                    <span className="text-page font-semibold">
                       {item.value}
                     </span>
-                    <span className="text-[#BFBFC3]">
+                    <span className="text-muted">
                       {percentageTotal}%
                     </span>
                   </div>
                 </div>
 
                 {/* Barra */}
-                <div className="w-full h-3 bg-[#2A2A2C] rounded-full overflow-hidden">
+                <div className="w-full h-3 bg-surface-2 rounded-full overflow-hidden">
                   <div
                     className="
                       h-full

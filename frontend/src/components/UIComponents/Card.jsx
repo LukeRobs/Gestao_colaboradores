@@ -1,4 +1,4 @@
-import { User } from "lucide-react";
+﻿import { User } from "lucide-react";
 
 export const Card = {
   Simple: ({ title, description }) => (
