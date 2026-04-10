@@ -47,7 +47,12 @@ const listarDwRealPorTurno = async ({ data, idTurno, idEstacao }) => {
     idTurno
   };
 
-  if (idEstacao) where.idEstacao = Number(idEstacao);
+  if (idEstacao) {
+    where.OR = [
+      { idEstacao: Number(idEstacao) },
+      { idEstacao: null }
+    ];
+  }
 
   return prisma.dwReal.findMany({
     where,

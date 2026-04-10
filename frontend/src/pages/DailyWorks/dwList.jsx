@@ -23,7 +23,7 @@ export default function DwListPage() {
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [data, setData] = useState("");
+  const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
   const [turno, setTurno] = useState("TODOS");
   const [empresa, setEmpresa] = useState("TODAS");
 
@@ -63,7 +63,7 @@ export default function DwListPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+  }, [data, turno, empresa]);
 
   return (
     <div className="flex min-h-screen bg-page text-page">

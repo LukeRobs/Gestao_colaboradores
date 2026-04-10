@@ -7,6 +7,7 @@ import MainLayout from "../../components/MainLayout";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
+import { useEstacao } from "../../context/EstacaoContext";
 
 /* ==============================
    EMPRESAS FIXAS
@@ -22,7 +23,9 @@ export default function DwNovoPage() {
   const location = useLocation();
   const editData = location.state;
 
-  const idEstacao = Number(localStorage.getItem("estacao_selecionada")) || null;
+  const { estacaoId: estacaoCtx } = useEstacao();
+  // Fallback para localStorage caso o contexto ainda não tenha carregado
+  const idEstacao = estacaoCtx ?? (Number(localStorage.getItem("estacao_selecionada")) || null);
   const isEstacaoSheets = idEstacao === 1 || !idEstacao;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,9 +52,9 @@ export default function DwNovoPage() {
 
         const [resReal, resPlanejado] = await Promise.all([
           api.get("/dw/real", { params: { data: editData.data, idTurno: editData.turno } }),
-          !isEstacaoSheets
-            ? api.get("/dw/planejado/manual", { params: { data: editData.data, idTurno: editData.turno, idEstacao } })
-            : Promise.resolve(null),
+          isEstacaoSheets
+            ? api.get("/dw/planejado/calculadora", { params: { data: editData.data, idTurno: editData.turno } })
+            : api.get("/dw/planejado/manual", { params: { data: editData.data, idTurno: editData.turno, idEstacao } }),
         ]);
 
         const registros = resReal.data.data || [];
@@ -94,6 +97,11 @@ export default function DwNovoPage() {
   const handleSave = async () => {
     if (!form.data || !form.idTurno) {
       alert("Data e Turno são obrigatórios");
+      return;
+    }
+
+    if (!idEstacao) {
+      alert("Selecione uma estação antes de salvar");
       return;
     }
 
@@ -215,18 +223,17 @@ export default function DwNovoPage() {
             />
           </Section>
 
-          {/* ================= PLANEJADO MANUAL (estações != 1) ================= */}
-          {!isEstacaoSheets && (
-            <Section title="Quantidade Planejada">
-              <Input
-                type="number"
-                min="0"
-                label="Quantidade Planejada *"
-                value={form.planejado}
-                onChange={(e) => setForm((p) => ({ ...p, planejado: e.target.value }))}
-              />
-            </Section>
-          )}
+          {/* ================= PLANEJADO ================= */}
+          <Section title="Quantidade Planejada">
+            <Input
+              type="number"
+              min="0"
+              label={`Quantidade Planejada *${isEstacaoSheets ? " (Sheets - somente leitura)" : ""}`}
+              value={form.planejado}
+              readOnly={isEstacaoSheets}
+              onChange={(e) => !isEstacaoSheets && setForm((p) => ({ ...p, planejado: e.target.value }))}
+            />
+          </Section>
 
           {/* ================= QUANTIDADES ================= */}
           <Section title="Quantidade Real por Empresa">

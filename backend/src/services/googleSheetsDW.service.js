@@ -52,17 +52,6 @@ const formatarDataCurta = (dataISO) => {
   return `${dia}/${mes}`;
 };
 
-function colunaLetraParaIndex(letras) {
-  let resultado = 0;
-
-  for (let i = 0; i < letras.length; i++) {
-    resultado *= 26;
-    resultado += letras.charCodeAt(i) - 64;
-  }
-
-  return resultado - 1; // 0-based
-}
-
 const normalizar = (v) =>
   String(v ?? "")
     .replace(/\u00A0/g, " ")
@@ -139,43 +128,37 @@ async function buscarDwPlanejado(turno, dataISO) {
        Datas fixas na linha 3 (index 2)
     ========================================== */
 
-/* ==========================================
-   🔎 Encontrar coluna da data (a partir de QZ)
-========================================== */
+    const LINHA_DATA_INDEX = 2; // linha 3 real
 
-const LINHA_DATA_INDEX = 2; // linha 3 real
-const COLUNA_INICIAL = colunaLetraParaIndex("OZ");
+    if (!rows[LINHA_DATA_INDEX]) {
+      throw new Error("Linha de datas não encontrada");
+    }
 
-if (!rows[LINHA_DATA_INDEX]) {
-  throw new Error("Linha de datas não encontrada");
-}
+    const alvo = normalizar(dataBusca);
+    const [dd, mm] = alvo.split("/");
+    const alvoSemZero = `${parseInt(dd)}/${parseInt(mm)}`;
 
-const alvo = normalizar(dataBusca);
-const [dd, mm] = alvo.split("/");
-const alvoSemZero = `${parseInt(dd)}/${parseInt(mm)}`;
+    let colunaDataIndex = -1;
 
-let colunaDataIndex = -1;
+    for (let j = 0; j < rows[LINHA_DATA_INDEX].length; j++) {
+      const cel = normalizar(rows[LINHA_DATA_INDEX][j]);
 
-// procura SOMENTE a partir da QZ
-for (let j = COLUNA_INICIAL; j < rows[LINHA_DATA_INDEX].length; j++) {
-  const cel = normalizar(rows[LINHA_DATA_INDEX][j]);
+      if (
+        cel === alvo ||
+        cel === alvoSemZero ||
+        cel.startsWith(alvo) ||
+        cel.startsWith(alvoSemZero)
+      ) {
+        colunaDataIndex = j;
+        break;
+      }
+    }
 
-  if (
-    cel === alvo ||
-    cel === alvoSemZero ||
-    cel.startsWith(alvo) ||
-    cel.startsWith(alvoSemZero)
-  ) {
-    colunaDataIndex = j;
-    break; // pega a primeira ocorrência após QZ
-  }
-}
+    if (colunaDataIndex === -1) {
+      throw new Error(`Data ${dataBusca} não encontrada na planilha`);
+    }
 
-if (colunaDataIndex === -1) {
-  throw new Error(`Data ${dataBusca} não encontrada após coluna QZ`);
-}
-
-console.log("📍 Coluna encontrada após QZ:", colunaDataIndex);
+    console.log("📍 Coluna encontrada:", colunaDataIndex);
 
     /* ==========================================
        🔁 Normalizar turno
@@ -215,24 +198,6 @@ console.log("📍 Coluna encontrada após QZ:", colunaDataIndex);
     }
 
     const dwPlanejado = parseInt(valorRaw) || 0;
-
-    /* ==========================================
-       DEBUG APENAS 01/03
-    ========================================== */
-
-    if (dataBusca === "01/03") {
-      console.log("====================================");
-      console.log("DW DEBUG - 01/03");
-      console.log("Data buscada:", dataBusca);
-      console.log("Turno:", turnoBusca);
-      console.log("Linha turno index:", linhaTurnoIndex);
-      console.log("Coluna data index:", colunaDataIndex);
-      console.log("Valor bruto encontrado:", valorRaw);
-      console.log("DW Planejado final:", dwPlanejado);
-      console.log("Linha completa do turno:");
-      console.log(rows[linhaTurnoIndex]);
-      console.log("====================================");
-    }
 
     return {
       success: true,

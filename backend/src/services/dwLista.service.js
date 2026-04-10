@@ -1,5 +1,5 @@
 const { prisma } = require('../config/database');
-const { buscarDwPlanejado } = require("./googleSheetsDW.service");
+const { buscarDwPlanejadoCalculadoraBatch } = require("./googleSheetsCalculadora.service");
 const { buscarDwPlanejadoBanco } = require("./dwPlanejado.service");
 
 const ESTACAO_SHEETS = 1;
@@ -16,17 +16,38 @@ const EMPRESAS_FIXAS = {
 const IDS_EMPRESAS_FIXAS = Object.keys(EMPRESAS_FIXAS).map(Number);
 
 const buscarDwLista = async ({ data, idTurno, idEmpresa, idEstacao }) => {
-  const where = {
-    idEmpresa: { in: IDS_EMPRESAS_FIXAS },
-  };
+  const andConditions = [];
 
-  if (data) where.data = new Date(data);
-  if (idTurno) where.idTurno = Number(idTurno);
-  if (idEstacao) where.idEstacao = Number(idEstacao);
-
+  // Empresas fixas (ou filtro específico)
   if (idEmpresa && IDS_EMPRESAS_FIXAS.includes(Number(idEmpresa))) {
-    where.idEmpresa = Number(idEmpresa);
+    andConditions.push({ idEmpresa: Number(idEmpresa) });
+  } else {
+    andConditions.push({ idEmpresa: { in: IDS_EMPRESAS_FIXAS } });
   }
+
+  if (data) {
+    andConditions.push({ data: new Date(data) });
+  } else {
+    // Sem data: limita aos últimos 30 dias para evitar sobrecarga
+    const hoje = new Date();
+    const trintaDiasAtras = new Date(hoje);
+    trintaDiasAtras.setDate(hoje.getDate() - 30);
+    andConditions.push({ data: { gte: trintaDiasAtras } });
+  }
+
+  if (idTurno) andConditions.push({ idTurno: Number(idTurno) });
+
+  if (idEstacao) {
+    // Inclui registros da estação selecionada OU registros sem estação (legado)
+    andConditions.push({
+      OR: [
+        { idEstacao: Number(idEstacao) },
+        { idEstacao: null }
+      ]
+    });
+  }
+
+  const where = { AND: andConditions };
 
   const dwReais = await prisma.dwReal.findMany({
     where,
@@ -37,6 +58,27 @@ const buscarDwLista = async ({ data, idTurno, idEmpresa, idEstacao }) => {
   const turnoMap = { 1: "T1", 2: "T2", 3: "T3" };
   const estacaoNum = idEstacao ? Number(idEstacao) : null;
 
+  // Preparar batch de requests para Calculadora (estação 1)
+  const batchRequests = [];
+  const needsCalculadora = estacaoNum === ESTACAO_SHEETS || !estacaoNum;
+
+  if (needsCalculadora) {
+    const uniqueKeys = new Set();
+    for (const r of dwReais) {
+      const dataISO = r.data.toISOString().slice(0, 10);
+      const key = `${dataISO}_${r.idTurno}`;
+      if (!uniqueKeys.has(key)) {
+        uniqueKeys.add(key);
+        batchRequests.push({ dataISO, idTurno: r.idTurno });
+      }
+    }
+  }
+
+  // Buscar todos os planejados de uma vez
+  const planejadosMap = needsCalculadora && batchRequests.length > 0
+    ? await buscarDwPlanejadoCalculadoraBatch(batchRequests)
+    : new Map();
+
   for (const r of dwReais) {
     const dataISO = r.data.toISOString().slice(0, 10);
     const chave = `${dataISO}_${r.idTurno}`;
@@ -44,10 +86,8 @@ const buscarDwLista = async ({ data, idTurno, idEmpresa, idEstacao }) => {
     if (!agrupado[chave]) {
       let planejado = 0;
 
-      if (estacaoNum === ESTACAO_SHEETS || !estacaoNum) {
-        // Estação 1 ou sem estação: busca no Sheets
-        const planejadoRes = await buscarDwPlanejado(turnoMap[r.idTurno], dataISO);
-        planejado = planejadoRes.data.dwPlanejado;
+      if (needsCalculadora) {
+        planejado = planejadosMap.get(chave) || 0;
       } else {
         // Demais estações: busca no banco
         const registro = await buscarDwPlanejadoBanco({

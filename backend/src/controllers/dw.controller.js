@@ -1,4 +1,5 @@
 const { buscarDwPlanejado } = require('../services/googleSheetsDW.service');
+const { buscarDwPlanejadoCalculadora } = require('../services/googleSheetsCalculadora.service');
 const { salvarDwPlanejado, buscarDwPlanejadoBanco } = require('../services/dwPlanejado.service');
 
 const buscarDwPlanejadoAutomatico = async (req, res) => {
@@ -94,8 +95,29 @@ const getDwPlanejadoManual = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/dw/planejado/calculadora?data=&idTurno=
+ * Buscar planejado da estação 1 na aba Calculadora do Sheets
+ */
+const getDwPlanejadoCalculadora = async (req, res) => {
+  try {
+    const { data, idTurno } = req.query;
+
+    if (!data || !idTurno) {
+      return res.status(400).json({ success: false, message: 'data e idTurno são obrigatórios' });
+    }
+
+    const quantidade = await buscarDwPlanejadoCalculadora(data, Number(idTurno));
+    res.json({ success: true, data: { quantidade } });
+  } catch (error) {
+    console.error('❌ Erro ao buscar DW Planejado Calculadora:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   buscarDwPlanejadoAutomatico,
   postDwPlanejadoManual,
-  getDwPlanejadoManual
+  getDwPlanejadoManual,
+  getDwPlanejadoCalculadora
 };
