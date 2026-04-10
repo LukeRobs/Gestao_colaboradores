@@ -1,7 +1,18 @@
 const CHANGELOG = {
-  version: "1.10.0",
-  titulo: "Controle de Escopo e Permissões por Estação",
+  version: "1.11.0",
+  titulo: "Segurança e Isolamento de Dados por Estação",
   categorias: [
+    {
+      nome: "Segurança",
+      itens: [
+        "Token JWT agora inclui idEstacao no payload — identificação de estação disponível diretamente no token",
+        "Listagem de usuários filtrada por estação — perfis não-Admin visualizam apenas usuários da própria estação",
+        "Frequências: GET por ID, update e delete agora verificam se o colaborador pertence à estação do usuário antes de operar",
+        "Atestados: rotas de update, finalizar e cancelar agora exigem autenticação e verificam isolamento por estação",
+        "Rotas de atestados que estavam sem proteção receberam authenticate e injectDbContext",
+        "injectDbContext adicionado em todas as rotas de frequência para garantir contexto de estação consistente",
+      ],
+    },
     {
       nome: "Novo",
       itens: [
