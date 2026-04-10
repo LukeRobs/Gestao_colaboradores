@@ -233,6 +233,11 @@ export default function Sidebar({ isOpen, onClose }) {
                       onClick={() => go("/dashboard/atestados")}
                     />
                     <SidebarSubItem
+                      label="Absenteísmo"
+                      active={isActive("/dashboard/absenteismo")}
+                      onClick={() => go("/dashboard/absenteismo")}
+                    />
+                    <SidebarSubItem
                       label="Faltas"
                       active={isActive("/dashboard/faltas")}
                       onClick={() => go("/dashboard/faltas")}

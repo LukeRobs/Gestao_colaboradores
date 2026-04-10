@@ -18,7 +18,8 @@ import DashboardAtestados from "./pages/dashboards/dashboardAtestados";
 import GestaoOperacional from "./pages/dashboards/gestaoOperacional";
 import ProdutividadeColaborador from "./pages/dashboards/produtividadeColaborador";
 import DashboardDesligamento from "./pages/dashboards/dashboardDesligamento";
-import DashboardFaltas from "./pages/dashboards/DashboardFaltas";
+import DashboardFaltas from "./pages/dashboards/DashboardFaltas"
+import DashboardAbsenteismo from "./pages/dashboards/DashboardAbsenteismo";
 
 /* ================= COLABORADORES ================= */
 import ColaboradoresPage from "./pages/colaboradores";
@@ -173,10 +174,18 @@ export default function App() {
         element={
           <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]}>
             <DashboardFaltas />
-          </ProtectedRoute>  
+          </ProtectedRoute>
         }
       />
-      
+      <Route
+        path="/dashboard/absenteismo"
+        element={
+          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]}>
+            <DashboardAbsenteismo />
+          </ProtectedRoute>
+        }
+      />
+
       {/* ================= COLABORADORES ================= */}
       <Route
         path="/colaboradores"
