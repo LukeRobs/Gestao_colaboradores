@@ -30,6 +30,19 @@ export default function Sidebar({ isOpen, onClose }) {
   const isLideranca = permissions?.isLideranca;
   const isGlobal = isAdmin || isAltaGestao;
 
+  // Debug: verificar permissões
+  useEffect(() => {
+    console.log('🔍 Sidebar Debug:', {
+      user: user?.name,
+      role: user?.role,
+      isAdmin,
+      isAltaGestao,
+      isLideranca,
+      isGlobal,
+      permissions
+    });
+  }, [user, isAdmin, isAltaGestao, isLideranca, isGlobal, permissions]);
+
   const [nomeEstacao, setNomeEstacao] = useState(null);
 
   useEffect(() => {
@@ -179,7 +192,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
             <div
               className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                dashboardsOpen && !isCollapsed ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                dashboardsOpen && !isCollapsed ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
               }`}
             >
               <div className="ml-8 mt-1 space-y-1">
@@ -241,7 +254,10 @@ export default function Sidebar({ isOpen, onClose }) {
                     <SidebarSubItem
                       label="Desligamentos"
                       active={isActive("/dashboard/desligamento")}
-                      onClick={() => go("/dashboard/desligamento")}
+                      onClick={() => {
+                        console.log('🎯 Clicou em Desligamentos');
+                        go("/dashboard/desligamento");
+                      }}
                     />
                   </>
                 )}
@@ -266,11 +282,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 <ChevronDown size={16} className={chevronCls(organizacaoOpen)} />
               </button>
 
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  organizacaoOpen && !isCollapsed ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
+              {organizacaoOpen && !isCollapsed && (
                 <div className="ml-8 mt-1 space-y-1">
                   <SidebarSubItem label="Empresas" onClick={() => go("/empresas")} />
                   <SidebarSubItem label="Regionais" onClick={() => go("/regionais")} />
@@ -280,7 +292,7 @@ export default function Sidebar({ isOpen, onClose }) {
                   <SidebarSubItem label="Turnos" onClick={() => go("/turnos")} />
                   <SidebarSubItem label="Escalas" onClick={() => go("/escalas")} />
                 </div>
-              </div>
+              )}
             </div>
           )}
 

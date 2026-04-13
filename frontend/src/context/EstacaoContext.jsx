@@ -23,6 +23,11 @@ export function EstacaoProvider({ children }) {
     return null;
   });
 
+  // Retorna a estação efetiva: prioriza user.idEstacao, depois estacaoId selecionada
+  const getEstacaoEfetiva = () => {
+    return user?.idEstacao ?? estacaoId ?? (Number(localStorage.getItem(STORAGE_KEY)) || null);
+  };
+
   // Quando muda o usuário, reseta
   useEffect(() => {
     if (!isGlobal) {
@@ -52,7 +57,7 @@ export function EstacaoProvider({ children }) {
   };
 
   return (
-    <EstacaoContext.Provider value={{ estacaoId, isGlobal, selecionarEstacao }}>
+    <EstacaoContext.Provider value={{ estacaoId, isGlobal, selecionarEstacao, getEstacaoEfetiva }}>
       {children}
     </EstacaoContext.Provider>
   );

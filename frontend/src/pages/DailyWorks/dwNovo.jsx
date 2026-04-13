@@ -23,10 +23,11 @@ export default function DwNovoPage() {
   const location = useLocation();
   const editData = location.state;
 
-  const { estacaoId: estacaoCtx } = useEstacao();
-  // Fallback para localStorage caso o contexto ainda não tenha carregado
-  const idEstacao = estacaoCtx ?? (Number(localStorage.getItem("estacao_selecionada")) || null);
-  const isEstacaoSheets = idEstacao === 1 || !idEstacao;
+  const { getEstacaoEfetiva } = useEstacao();
+  
+  // Obtém a estação efetiva (user.idEstacao ou estação selecionada)
+  const idEstacao = getEstacaoEfetiva();
+  const isEstacaoSheets = idEstacao === 1;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -101,7 +102,7 @@ export default function DwNovoPage() {
     }
 
     if (!idEstacao) {
-      alert("Selecione uma estação antes de salvar");
+      alert("Você precisa estar vinculado a uma estação ou selecionar uma estação (ADMIN) para salvar o Daily Work");
       return;
     }
 
@@ -111,6 +112,8 @@ export default function DwNovoPage() {
       return;
     }
 
+    // Estação 1: planejado vem do Sheets (pode estar vazio se não configurado)
+    // Outras estações: planejado é obrigatório
     if (!isEstacaoSheets && form.planejado === "") {
       alert("Informe a quantidade planejada");
       return;
