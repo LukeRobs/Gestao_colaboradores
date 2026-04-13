@@ -266,11 +266,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 <ChevronDown size={16} className={chevronCls(organizacaoOpen)} />
               </button>
 
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  organizacaoOpen && !isCollapsed ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
+              {organizacaoOpen && !isCollapsed && (
                 <div className="ml-8 mt-1 space-y-1">
                   <SidebarSubItem label="Empresas" onClick={() => go("/empresas")} />
                   <SidebarSubItem label="Regionais" onClick={() => go("/regionais")} />
@@ -280,7 +276,7 @@ export default function Sidebar({ isOpen, onClose }) {
                   <SidebarSubItem label="Turnos" onClick={() => go("/turnos")} />
                   <SidebarSubItem label="Escalas" onClick={() => go("/escalas")} />
                 </div>
-              </div>
+              )}
             </div>
           )}
 

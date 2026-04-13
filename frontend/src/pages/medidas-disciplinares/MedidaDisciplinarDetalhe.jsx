@@ -150,7 +150,11 @@ export default function MedidaDisciplinarDetalhe() {
 
   return (
     <div className="flex min-h-screen bg-page text-page">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} navigate={navigate} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigate={navigate}
+      />
 
       <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
