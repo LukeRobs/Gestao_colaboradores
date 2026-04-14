@@ -74,7 +74,7 @@ import ReportRoute from "./routes/report";
 
 export default function App() {
   const { show, dismiss } = useVersionCheck();
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, user } = useContext(AuthContext);
   const { isDark } = useContext(ThemeContext);
 
   const toastStyle = isDark
@@ -461,7 +461,12 @@ export default function App() {
       {/* ================= FALLBACK ================= */}
       <Route
         path="*"
-        element={<Navigate to="/dashboard/operacional" replace />}
+        element={
+          <Navigate
+            to={user?.role === "OPERACAO" ? "/ponto" : "/dashboard/operacional"}
+            replace
+          />
+        }
       />
     </Routes>
     </>

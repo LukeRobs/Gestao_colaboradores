@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import MainLayout from "../components/MainLayout";
 import api from "../services/api";
 import { AuthContext } from "../context/AuthContext";
 
@@ -157,16 +158,6 @@ export default function PontoPage() {
             >
               {loading ? "Registrando..." : "Registrar Ponto"}
             </button>
-
-            {/* LINK PRODUTIVIDADE — apenas para OPERACAO */}
-            {isKiosk && (
-              <button
-                onClick={() => navigate("/dashboard/produtividade-colaborador")}
-                className="w-full rounded-xl font-semibold border border-default text-muted hover:bg-surface-2 transition h-12 text-base"
-              >
-                Ver Produtividade por Colaborador
-              </button>
-            )}
 
             {/* FEEDBACK */}
             {msg && (
