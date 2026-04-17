@@ -1,5 +1,3 @@
-// routes/medidaDisciplinar.routes.js
-
 const express = require("express");
 const router = express.Router();
 const controller = require("../controllers/medidaDisciplinar.controller");
@@ -19,6 +17,12 @@ router.get("/:id/presign-download", controller.presignDownload);
 ===================================================== */
 
 router.post("/:id/finalizar", controller.finalizarMedida);
+
+/* =====================================================
+   ENVIAR EVIDÊNCIA POR E-MAIL
+===================================================== */
+
+router.post("/:id/enviar-email", controller.enviarEmailEvidencia);
 
 /* =====================================================
    CRUD

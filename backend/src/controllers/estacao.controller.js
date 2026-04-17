@@ -13,6 +13,15 @@ const listarEstacoes = async (req, res) => {
       orderBy: { nomeEstacao: "asc" },
     });
 
+    // Injeta emailRh via raw pois o Prisma client pode estar desatualizado
+    const rawEmails = await prisma.$queryRaw`
+      SELECT id_estacao, email_rh FROM estacao
+    `;
+    const emailMap = Object.fromEntries(rawEmails.map((r) => [r.id_estacao, r.email_rh ?? []]));
+    for (const e of estacoes) {
+      e.emailRh = emailMap[e.idEstacao] ?? [];
+    }
+
     return res.json({ success: true, data: estacoes });
   } catch (error) {
     console.error("❌ ERRO LISTAR ESTAÇÕES:", error);
@@ -39,6 +48,12 @@ const buscarEstacaoPorId = async (req, res) => {
       return res.status(404).json({ success: false, message: "Estação não encontrada" });
     }
 
+    // Busca emailRh via raw pois o Prisma client pode estar desatualizado
+    const raw = await prisma.$queryRaw`
+      SELECT email_rh FROM estacao WHERE id_estacao = ${Number(idEstacao)}
+    `;
+    estacao.emailRh = raw[0]?.email_rh ?? [];
+
     return res.json({ success: true, data: estacao });
   } catch (error) {
     console.error("❌ ERRO BUSCAR ESTAÇÃO:", error);
@@ -51,7 +66,7 @@ const buscarEstacaoPorId = async (req, res) => {
 ===================================================== */
 const criarEstacao = async (req, res) => {
   try {
-    const { nomeEstacao, idRegional, localizacao, capacidade, sheetsMetaProducaoId, sheetsPresencaId } = req.body;
+    const { nomeEstacao, idRegional, localizacao, capacidade, sheetsMetaProducaoId, sheetsPresencaId, emailRh } = req.body;
 
     if (!nomeEstacao) {
       return res.status(400).json({
@@ -79,6 +94,7 @@ const criarEstacao = async (req, res) => {
         capacidade,
         sheetsMetaProducaoId: sheetsMetaProducaoId || null,
         sheetsPresencaId: sheetsPresencaId || null,
+        emailRh: Array.isArray(emailRh) ? emailRh : (emailRh ? [emailRh] : []),
       },
     });
 
@@ -98,30 +114,40 @@ const criarEstacao = async (req, res) => {
 const atualizarEstacao = async (req, res) => {
   try {
     const { idEstacao } = req.params;
-    const { nomeEstacao, idRegional, localizacao, capacidade, ativo, sheetsMetaProducaoId, sheetsPresencaId } = req.body;
+    const { nomeEstacao, idRegional, localizacao, capacidade, ativo, sheetsMetaProducaoId, sheetsPresencaId, emailRh } = req.body;
 
-    const estacao = await prisma.estacao.update({
-      where: {
-        idEstacao: Number(idEstacao),
-      },
-      data: {
-        ...(nomeEstacao && { nomeEstacao }),
-        ...(idRegional !== undefined && {
-          idRegional: Number(idRegional),
-        }),
-        ...(localizacao !== undefined && { localizacao }),
-        ...(capacidade !== undefined && {
-          capacidade: capacidade !== null ? Number(capacidade) : null,
-        }),
-        ...(ativo !== undefined && { ativo: Boolean(ativo) }),
-        ...(sheetsMetaProducaoId !== undefined && {
-          sheetsMetaProducaoId: sheetsMetaProducaoId || null,
-        }),
-        ...(sheetsPresencaId !== undefined && {
-          sheetsPresencaId: sheetsPresencaId || null,
-        }),
-      },
-    });
+    // Atualiza emailRh via raw SQL (Prisma client pode estar desatualizado para campo array)
+    if (emailRh !== undefined) {
+      const emails = Array.isArray(emailRh) ? emailRh : (emailRh ? [emailRh] : []);
+      await prisma.$executeRaw`
+        UPDATE estacao SET email_rh = ${emails}::text[] WHERE id_estacao = ${Number(idEstacao)}
+      `;
+    }
+
+    // Atualiza demais campos via Prisma (apenas se enviados)
+    const outrosCampos = { nomeEstacao, idRegional, localizacao, capacidade, ativo, sheetsMetaProducaoId, sheetsPresencaId };
+    const temOutrosCampos = Object.values(outrosCampos).some((v) => v !== undefined);
+
+    if (temOutrosCampos) {
+      await prisma.estacao.update({
+        where: { idEstacao: Number(idEstacao) },
+        data: {
+          ...(nomeEstacao && { nomeEstacao }),
+          ...(idRegional !== undefined && { idRegional: Number(idRegional) }),
+          ...(localizacao !== undefined && { localizacao }),
+          ...(capacidade !== undefined && { capacidade: capacidade !== null ? Number(capacidade) : null }),
+          ...(ativo !== undefined && { ativo: Boolean(ativo) }),
+          ...(sheetsMetaProducaoId !== undefined && { sheetsMetaProducaoId: sheetsMetaProducaoId || null }),
+          ...(sheetsPresencaId !== undefined && { sheetsPresencaId: sheetsPresencaId || null }),
+        },
+      });
+    }
+
+    const estacao = await prisma.estacao.findUnique({ where: { idEstacao: Number(idEstacao) } });
+
+    // Injeta emailRh via raw pois o Prisma client pode não conhecer o campo
+    const raw = await prisma.$queryRaw`SELECT email_rh FROM estacao WHERE id_estacao = ${Number(idEstacao)}`;
+    estacao.emailRh = raw[0]?.email_rh ?? [];
 
     return res.json({ success: true, data: estacao });
   } catch (error) {

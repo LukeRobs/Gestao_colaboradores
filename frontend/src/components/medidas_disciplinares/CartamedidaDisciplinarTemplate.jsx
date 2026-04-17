@@ -1,12 +1,9 @@
-﻿/* =====================================================
-   CARTA MEDIDA DISCIPLINAR — TEMPLATE (HTML PRINT A4)
-===================================================== */
+﻿import logoShopeeXpress from "../../assets/shopee-xpress-logo.png";
 
-function fmtDateBR(dateLike) {
-  if (!dateLike) return "-";
-  const d = new Date(dateLike);
-  return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
-}
+/* =====================================================
+   CARTA MEDIDA DISCIPLINAR — TEMPLATE SPX (HTML PRINT A4)
+   Modelo atualizado conforme padrão ShopeeXpress
+===================================================== */
 
 function fmtDateLong(dateLike) {
   if (!dateLike) return "-";
@@ -19,263 +16,206 @@ function fmtDateLong(dateLike) {
   });
 }
 
-function normalizeCpf(cpf) {
-  const v = String(cpf || "").replace(/\D/g, "");
-  if (v.length !== 11) return cpf || "-";
-  return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+function getEstadoFromEstacao(medida) {
+  // Tenta extrair o estado da localização da estação ou usa fallback
+  const localizacao = medida?.colaborador?.estacao?.localizacao || "";
+  // Formato esperado: "Cidade - UF" ou só retorna vazio
+  const match = localizacao.match(/[-–]\s*([A-Z]{2})$/);
+  if (match) return match[1];
+  return medida?.colaborador?.estacao?.nomeEstacao || "";
 }
 
-function getTipoAcao(tipoMedida) {
-  const t = (tipoMedida || "").toLowerCase();
-  if (t.includes("suspensão") || t.includes("suspensao")) return "suspenso(a)";
-  if (t.includes("demissão") || t.includes("demissao")) return "desligado(a)";
-  return "advertido(a)";
+function getCidadeFromEstacao(medida) {
+  const localizacao = medida?.colaborador?.estacao?.localizacao || "";
+  // Formato esperado: "Cidade - UF"
+  const match = localizacao.match(/^(.+?)\s*[-–]/);
+  if (match) return match[1].trim();
+  return localizacao || "—";
 }
 
-export default function CartaMedidaDisciplinarTemplate({
-  medida,
-  empresa = "SPX Express",
-  unidade = "Operações",
-}) {
+export default function CartaMedidaDisciplinarTemplate({ medida }) {
   if (!medida) return null;
 
-  const dataAplicacaoLong = fmtDateLong(medida.dataAplicacao);
-  const dataOcorrencia = fmtDateBR(medida.dataOcorrencia);
-
   const colaborador = medida.colaborador || {};
-  const nomeColaborador = colaborador.nomeCompleto || "-";
-  const cpfColaborador = normalizeCpf(colaborador.cpf);
-  const matricula = colaborador.matricula || "-";
-  const cargo = colaborador.cargo || "-";
+  const nomeColaborador = (colaborador.nomeCompleto || "-").toUpperCase();
+  const staffId = colaborador.matricula || "-";
+  const cidade = getCidadeFromEstacao(medida);
+  const estado = getEstadoFromEstacao(medida);
+  const dataLong = fmtDateLong(medida.dataAplicacao);
 
-  const tipoMedida = medida.tipoMedida || "Advertência";
-  const tipoTitulo = tipoMedida.toUpperCase();
-  const tipoAcao = getTipoAcao(tipoMedida);
+  const tipoMedida = (medida.tipoMedida || "ADVERTENCIA").toUpperCase();
+  const tituloCarta =
+    tipoMedida.includes("SUSPENSAO") || tipoMedida.includes("SUSPENSÃO")
+      ? "CARTA DE SUSPENSÃO"
+      : tipoMedida.includes("DEMISSAO") || tipoMedida.includes("DEMISSÃO")
+      ? "CARTA DE DEMISSÃO POR JUSTA CAUSA"
+      : "CARTA DE ADVERTÊNCIA";
+
+  const acaoVerbo =
+    tipoMedida.includes("SUSPENSAO") || tipoMedida.includes("SUSPENSÃO")
+      ? "suspenso(a)"
+      : tipoMedida.includes("DEMISSAO") || tipoMedida.includes("DEMISSÃO")
+      ? "desligado(a) por justa causa"
+      : "advertido(a)";
 
   return (
-    <div className="page">
-      <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        .page {
-          width: 210mm;
-          min-height: 297mm;
-          margin: auto;
-          padding: 18mm 22mm 16mm;
-          font-family: Arial, Helvetica, sans-serif;
-          font-size: 12px;
-          color: #111;
-          background: #fff;
-          line-height: 1.55;
-        }
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 2px solid #FA4C00;
-          padding-bottom: 8px;
-          margin-bottom: 14px;
-        }
-        .company { font-size: 17px; font-weight: 700; color: #FA4C00; }
-        .doc-info { text-align: right; }
-        .doc-title { font-size: 13px; font-weight: 700; color: #FA4C00; }
-        .doc-meta { font-size: 10px; color: #666; margin-top: 2px; }
-        .date-line { text-align: right; margin-bottom: 12px; }
-        .employee-block { margin-bottom: 12px; }
-        .employee-block p { margin-bottom: 3px; }
-        .main-title {
-          text-align: center;
-          font-size: 13px;
-          font-weight: 700;
-          text-transform: uppercase;
-          text-decoration: underline;
-          margin: 12px 0 10px;
-        }
-        .body-text { margin-bottom: 8px; text-align: justify; }
-        .details-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px 20px;
-          margin: 8px 0;
-          font-size: 11px;
-        }
-        .detail-label { color: #555; }
-        .detail-value { font-weight: 700; }
-        .motivo-block {
-          border-left: 3px solid #FA4C00;
-          padding: 7px 10px;
-          margin: 8px 0;
-          background: #FFFAF8;
-          font-style: italic;
-          text-align: justify;
-        }
-        .alert-text { margin: 10px 0; font-weight: 700; text-align: justify; }
-        .divider { border: none; border-top: 1px solid #ddd; margin: 14px 0; }
-        .sig-section { margin-top: 14px; }
-        .sig-section p { margin-bottom: 4px; font-size: 11px; color: #444; }
-        .sig-line {
-          border-bottom: 1px solid #111;
-          margin: 22px 0 3px;
-        }
-        .sig-label { font-size: 11px; color: #444; }
-        .sig-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-top: 10px;
-        }
-        .ciente-line {
-          display: flex;
-          align-items: baseline;
-          gap: 6px;
-          margin-top: 14px;
-          font-size: 12px;
-        }
-        .ciente-blank {
-          display: inline-block;
-          border-bottom: 1px solid #111;
-          width: 50px;
-        }
-        .footer {
-          margin-top: 16px;
-          font-size: 9px;
-          color: #999;
-          text-align: center;
-          border-top: 1px solid #e5e7eb;
-          padding-top: 5px;
-        }
-        @media print {
-          body { background: #fff; }
-          .page { margin: 0; box-shadow: none; }
-        }
-      `}</style>
+    <html lang="pt-BR">
+      <head>
+        <meta charSet="utf-8" />
+        <title>{`${tituloCarta} — ${nomeColaborador}`}</title>
+        <style>{`
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            background: #fff;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            color: #000;
+          }
+          .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: auto;
+            padding: 20mm 25mm 20mm;
+            background: #fff;
+            line-height: 1.6;
+          }
+          .logo {
+            margin-bottom: 24px;
+            line-height: 1;
+          }
+          .logo img {
+            height: 72px;
+            width: auto;
+          }
+          .date-line {
+            font-weight: 700;
+            margin-bottom: 24px;
+            font-size: 12pt;
+          }
+          .employee-block {
+            margin-bottom: 24px;
+          }
+          .employee-block p {
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-size: 12pt;
+          }
+          .main-title {
+            text-align: center;
+            font-size: 12pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 28px 0 24px;
+          }
+          .body-text {
+            margin-bottom: 14px;
+            text-align: justify;
+            font-size: 12pt;
+          }
+          .sig-section {
+            margin-top: 40px;
+          }
+          .ciente-line {
+            margin-bottom: 40px;
+            font-size: 12pt;
+          }
+          .sig-line {
+            border-bottom: 1px solid #000;
+            width: 260px;
+            margin-bottom: 4px;
+            margin-top: 40px;
+          }
+          .sig-name {
+            font-weight: 700;
+            font-size: 12pt;
+          }
+          .witnesses {
+            margin-top: 48px;
+          }
+          .witness-block {
+            margin-bottom: 32px;
+          }
+          .witness-label {
+            font-weight: 700;
+            font-size: 12pt;
+            margin-bottom: 32px;
+            display: block;
+          }
+          .witness-line {
+            border-bottom: 1px solid #000;
+            width: 260px;
+            margin-top: 8px;
+          }
+          @media print {
+            body { background: #fff; }
+            .page { margin: 0; padding: 15mm 20mm; }
+          }
+        `}</style>
+      </head>
+      <body>
+        <div className="page">
 
-      {/* HEADER */}
-      <div className="header">
-        <div className="company">{empresa}</div>
-        <div className="doc-info">
-          <div className="doc-title">CARTA DE {tipoTitulo}</div>
-          <div className="doc-meta">Nº {medida.idMedida} · Emitida em: {fmtDateBR(new Date())}</div>
-        </div>
-      </div>
-
-      {/* DATA E LOCAL */}
-      <div className="date-line">
-        {unidade}, {dataAplicacaoLong}
-      </div>
-
-      {/* DADOS DO COLABORADOR */}
-      <div className="employee-block">
-        <p><strong>NOME COMPLETO:</strong> {nomeColaborador}</p>
-        <p><strong>STAFF ID:</strong> {matricula} &nbsp;|&nbsp; <strong>CPF:</strong> {cpfColaborador}</p>
-        <p><strong>Cargo:</strong> {cargo}</p>
-      </div>
-
-      {/* TÍTULO */}
-      <div className="main-title">CARTA DE {tipoTitulo}</div>
-
-      {/* INTRO */}
-      <p className="body-text">
-        Pela presente fica V. Sr(a). <strong>{tipoAcao}</strong>, em razão das irregularidades abaixo discriminadas:
-      </p>
-
-      {/* DETALHES DA MEDIDA */}
-      <div className="details-row">
-        {medida.violacao && (
-          <span>
-            <span className="detail-label">Violação: </span>
-            <span className="detail-value">{medida.violacao}</span>
-          </span>
-        )}
-        {medida.nivelViolacao && (
-          <span>
-            <span className="detail-label">Nível: </span>
-            <span className="detail-value">{medida.nivelViolacao}</span>
-          </span>
-        )}
-        <span>
-          <span className="detail-label">Data da ocorrência: </span>
-          <span className="detail-value">{dataOcorrencia}</span>
-        </span>
-        {medida.opsId && (
-          <span>
-            <span className="detail-label">OPS ID: </span>
-            <span className="detail-value">{medida.opsId}</span>
-          </span>
-        )}
-        {medida.diasSuspensao && (
-          <span>
-            <span className="detail-label">Dias de suspensão: </span>
-            <span className="detail-value">{medida.diasSuspensao}</span>
-          </span>
-        )}
-      </div>
-
-      {/* MOTIVO */}
-      <div className="motivo-block">
-        {medida.motivo || "Nenhum motivo informado."}
-      </div>
-
-      {/* CLT */}
-      <p className="alert-text">
-        Lembramos que na reincidência deste comportamento, serão tomadas medidas
-        punitivas mais severas, conforme artigo 482 da Consolidação das Leis do
-        Trabalho - CLT.
-      </p>
-
-      <hr className="divider" />
-
-      {/* CIÊNCIA DO COLABORADOR */}
-      <div className="sig-section">
-        <div className="ciente-line">
-          <span>Ciente:</span>
-          <span className="ciente-blank"></span>
-          <span>/</span>
-          <span className="ciente-blank"></span>
-          <span>/</span>
-          <span className="ciente-blank" style={{ width: 60 }}></span>
-        </div>
-        <div style={{ marginTop: 4 }}>
-          <div className="sig-line"></div>
-          <div className="sig-label">{nomeColaborador}</div>
-        </div>
-      </div>
-
-      {/* TESTEMUNHAS */}
-      <div className="sig-section" style={{ marginTop: 12 }}>
-        <p>
-          <strong>Testemunhas</strong>{" "}
-          <span style={{ fontStyle: "italic" }}>
-            (caso o colaborador se recuse a assinar)
-          </span>
-        </p>
-        <div className="sig-grid">
-          <div>
-            <div className="sig-line"></div>
-            <div className="sig-label">Nome e assinatura</div>
+          {/* LOGO */}
+          <div style={{ marginBottom: "24px" }}>
+            <img src={logoShopeeXpress} alt="ShopeeXpress" style={{ height: "72px", width: "auto" }} />
           </div>
-          <div>
-            <div className="sig-line"></div>
-            <div className="sig-label">Nome e assinatura</div>
+
+          {/* DATA E LOCAL */}
+          <p className="date-line">
+            {cidade}{estado ? `, ${estado}` : ""}{cidade || estado ? ", " : ""}{dataLong}
+          </p>
+
+          {/* DADOS DO COLABORADOR */}
+          <div className="employee-block">
+            <p>NOME COMPLETO: {nomeColaborador}</p>
+            <p>STAFF ID: {staffId}</p>
+            {estado && <p>Estado: {estado}</p>}
           </div>
-        </div>
-      </div>
 
-      {/* VALIDAÇÕES */}
-      <div className="sig-grid" style={{ marginTop: 14 }}>
-        <div>
-          <div className="sig-line"></div>
-          <div className="sig-label">Gestor Imediato / Supervisor</div>
-        </div>
-        <div>
-          <div className="sig-line"></div>
-          <div className="sig-label">RH / Gestão de Pessoas</div>
-        </div>
-      </div>
+          {/* TÍTULO */}
+          <div className="main-title">{tituloCarta}</div>
 
-      {/* FOOTER */}
-      <div className="footer">
-        Documento interno · Controle de Medidas Disciplinares · {empresa}
-      </div>
-    </div>
+          {/* CORPO */}
+          <p className="body-text">
+            Pela presente fica V. Sr. {acaoVerbo}, em razão das irregularidades abaixo discriminadas:
+          </p>
+
+          <p className="body-text">
+            "{medida.motivo || "Nenhum motivo informado."}"
+          </p>
+
+          <p className="body-text">
+            Lembramos que na reincidência deste comportamento, serão tomadas medidas punitivas mais severas, conforme
+            artigo 482 da Consolidação das Leis do Trabalho - CLT.
+          </p>
+
+          {/* CIÊNCIA */}
+          <div className="sig-section">
+            <p className="ciente-line">
+              Ciente: ____/____/_____
+            </p>
+
+            <div className="sig-line"></div>
+            <p className="sig-name">{nomeColaborador}</p>
+          </div>
+
+          {/* TESTEMUNHAS */}
+          <div className="witnesses">
+            <p className="sig-name">Testemunhas</p>
+
+            <div className="witness-block" style={{ marginTop: 8 }}>
+              <span className="witness-label">Nome:</span>
+              <div className="witness-line"></div>
+            </div>
+
+            <div className="witness-block">
+              <span className="witness-label">Nome:</span>
+              <div className="witness-line"></div>
+            </div>
+          </div>
+
+        </div>
+      </body>
+    </html>
   );
 }

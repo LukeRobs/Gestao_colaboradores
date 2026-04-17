@@ -1,22 +1,30 @@
 import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Upload, FileText, Clock, User, AlertCircle, CheckCircle2, XCircle, ArrowLeft, Download, Printer } from "lucide-react";
+import { Upload, FileText, Clock, User, AlertCircle, CheckCircle2, XCircle, ArrowLeft, Download, Printer, Mail, Settings, X } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import { MedidasDisciplinaresAPI } from "../../services/medidasDisciplinares";
 import { AuthContext } from "../../context/AuthContext";
 import { printCartaMedidaDisciplinar } from "../../utils/Printcartamedidadisciplinar";
 import MainLayout from "../../components/MainLayout";
+import api from "../../services/api";
 
 export default function MedidaDisciplinarDetalhe() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, user, permissions } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [medida, setMedida] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [file, setFile] = useState(null);
+
+  // Estado do modal de configuração de RH
+  const [modalRhOpen, setModalRhOpen] = useState(false);
+  const [emailsRh, setEmailsRh] = useState([]); // array de emails
+  const [emailInput, setEmailInput] = useState("");
+  const [salvandoRh, setSalvandoRh] = useState(false);
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
 
   async function load() {
     try {
@@ -87,6 +95,80 @@ export default function MedidaDisciplinarDetalhe() {
     } catch (err) {
       console.error(err);
       alert("❌ Erro ao baixar documento. Tente novamente.");
+    }
+  }
+
+  async function abrirModalRh() {
+    const idEstacao = medida?.colaborador?.idEstacao;
+    if (!idEstacao) return;
+    try {
+      const res = await api.get(`/estacoes/${idEstacao}`);
+      const emails = res.data.data?.emailRh || [];
+      setEmailsRh(Array.isArray(emails) ? emails : (emails ? [emails] : []));
+    } catch {
+      setEmailsRh([]);
+    }
+    setEmailInput("");
+    setModalRhOpen(true);
+  }
+
+  function adicionarEmail() {
+    const email = emailInput.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Informe um e-mail válido.");
+      return;
+    }
+    if (emailsRh.includes(email)) {
+      alert("Este e-mail já está na lista.");
+      return;
+    }
+    setEmailsRh((prev) => [...prev, email]);
+    setEmailInput("");
+  }
+
+  function removerEmail(email) {
+    setEmailsRh((prev) => prev.filter((e) => e !== email));
+  }
+
+  async function handleEnviarEmail() {
+    setEnviandoEmail(true);
+    try {
+      await MedidasDisciplinaresAPI.enviarEmailEvidencia(id);
+      alert("✅ Evidência enviada por e-mail com sucesso!");
+    } catch (err) {
+      const data = err.response?.data;
+      if (data?.semRh) {
+        if (permissions?.isAdmin) {
+          await abrirModalRh();
+        } else {
+          alert("❌ RH local não configurado. Por favor, entrar em contato com um administrador.");
+        }
+      } else {
+        console.error(err);
+        alert("❌ Erro ao enviar e-mail. Tente novamente.");
+      }
+    } finally {
+      setEnviandoEmail(false);
+    }
+  }
+
+  async function salvarEmailRh() {
+    const idEstacao = medida?.colaborador?.idEstacao;
+    if (!idEstacao) return;
+    if (emailsRh.length === 0) {
+      alert("Adicione ao menos um e-mail.");
+      return;
+    }
+    setSalvandoRh(true);
+    try {
+      await api.put(`/estacoes/${idEstacao}`, { emailRh: emailsRh });
+      setModalRhOpen(false);
+      alert("✅ E-mails do RH configurados com sucesso!");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Erro ao salvar configuração.");
+    } finally {
+      setSalvandoRh(false);
     }
   }
 
@@ -180,7 +262,7 @@ export default function MedidaDisciplinarDetalhe() {
             </div>
 
             {/* Botões de Ação */}
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               <button
                 onClick={() => printCartaMedidaDisciplinar(medida)}
                 className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors"
@@ -188,13 +270,30 @@ export default function MedidaDisciplinarDetalhe() {
                 <Printer size={16} />
                 Imprimir Carta
               </button>
-              <button
-                onClick={baixarCarta}
-                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors"
-              >
-                <Download size={16} />
-                Baixar Carta
-              </button>
+              {medida.status === "ASSINADO" && (
+                <button
+                  onClick={handleEnviarEmail}
+                  disabled={enviandoEmail}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-xl transition-colors ${
+                    enviandoEmail
+                      ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
+                      : "bg-surface-2 hover:bg-[#3A3A3C]"
+                  }`}
+                >
+                  <Mail size={16} />
+                  {enviandoEmail ? "Enviando..." : "Enviar evidência por e-mail"}
+                </button>
+              )}
+              {permissions?.isAdmin && (
+                <button
+                  onClick={abrirModalRh}
+                  title="Configurar e-mails do RH local"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors text-muted hover:text-white"
+                >
+                  <Settings size={16} />
+                  RH Local
+                </button>
+              )}
             </div>
           </div>
 
@@ -396,6 +495,88 @@ export default function MedidaDisciplinarDetalhe() {
           </div>
         </main>
       </MainLayout>
+
+      {/* MODAL CONFIGURAÇÃO RH */}
+      {modalRhOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings size={20} className="text-[#FA4C00]" />
+                <h2 className="font-semibold text-lg">Configurar RH Local</h2>
+              </div>
+              <button onClick={() => setModalRhOpen(false)} className="text-muted hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted">
+              Gerencie os e-mails do RH responsável por esta estação. Todos receberão as evidências das medidas disciplinares.
+            </p>
+
+            {/* Lista de emails cadastrados */}
+            {emailsRh.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs text-muted uppercase tracking-wide">E-mails configurados</span>
+                <div className="space-y-1.5">
+                  {emailsRh.map((email) => (
+                    <div key={email} className="flex items-center justify-between gap-2 bg-page border border-default rounded-xl px-3 py-2">
+                      <span className="text-sm text-page truncate">{email}</span>
+                      <button
+                        onClick={() => removerEmail(email)}
+                        className="text-muted hover:text-[#FF453A] transition-colors flex-shrink-0"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Adicionar novo email */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted">Adicionar e-mail</label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && adicionarEmail()}
+                  placeholder="rh@empresa.com"
+                  className="flex-1 bg-page border border-default rounded-xl px-4 py-2.5 text-sm text-page outline-none focus:border-[#FA4C00] transition-colors"
+                />
+                <button
+                  onClick={adicionarEmail}
+                  className="px-4 py-2 rounded-xl bg-[#FA4C00] hover:bg-[#D84300] text-white text-sm font-medium transition-colors"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-1">
+              <button
+                onClick={() => setModalRhOpen(false)}
+                className="px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] text-sm transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEmailRh}
+                disabled={salvandoRh}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  salvandoRh
+                    ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
+                    : "bg-[#FA4C00] hover:bg-[#D84300] text-white"
+                }`}
+              >
+                {salvandoRh ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

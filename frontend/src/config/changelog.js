@@ -1,23 +1,32 @@
 const CHANGELOG = {
-  version: "1.12.0",
-  titulo: "Melhorias no Dashboard e Sugestões de MD",
+  version: "1.13.0",
+  titulo: "Envio de Evidências por E-mail e Novo Modelo de Carta",
   categorias: [
     {
-      nome: "✨ Novidades",
+      nome: "📧 Medidas Disciplinares",
       itens: [
-        "Dashboard Operacional: adicionada opção 'Todos' no seletor de turno, consolidando os dados dos 3 turnos",
-        "Gestão Operacional: ícone de calendário agora abre o seletor de data ao clicar",
-        "Sugestões de MD: turno e líder do colaborador exibidos abaixo do nome na tabela",
-      ]
+        "Novo botão 'Enviar evidência por e-mail' para medidas assinadas",
+        "Envio automático do PDF assinado como anexo para o RH responsável",
+        "Validação de RH configurado antes do envio com mensagem orientativa",
+      ],
     },
     {
-      nome: "🔧 Correções",
+      nome: "📄 Modelo de Carta Atualizado",
       itens: [
-        "Corrigido redirecionamento em loop para usuários com perfil Operação",
-        "Corrigido import ausente do MainLayout na tela de Ponto",
-        "Removido botão 'Ver Produtividade por Colaborador' da tela de registro de ponto",
-      ]
-    }
+        "Novo layout oficial da carta de advertência ShopeeXpress",
+        "Motivos automáticos mais descritivos para medidas geradas pelo sistema",
+        "Identificação de primeira ocorrência ou reincidência no texto da carta",
+      ],
+    },
+    {
+      nome: "🔧 Melhorias Técnicas",
+      itens: [
+        "Suporte a array de e-mails para múltiplos destinatários de RH",
+        "Script de atualização retroativa de motivos automáticos",
+        "Otimização de queries com raw SQL para campos de array",
+        "Inclusão de dados da estação (localização) nas medidas disciplinares",
+      ],
+    },
   ],
 };
 
