@@ -310,12 +310,12 @@ const carregarDashboard = async (req, res) => {
           orderBy: { dataReferencia: "asc" },
         }),
 
-        // Histórico de mudanças de cargo — para checar elegibilidade na data do registro
+        // Histórico de mudanças de cargo — busca TODAS as movimentações (incluindo futuras ao período)
+        // pois uma mudança futura indica qual era o cargo anterior durante o período
         prisma.historicoMovimentacao.findMany({
           where: {
             cargoAnterior: { not: null },
             cargoNovo: { not: null },
-            dataEfetivacao: { lte: fim },
           },
           select: { opsId: true, cargoAnterior: true, cargoNovo: true, dataEfetivacao: true },
           orderBy: { dataEfetivacao: "asc" },
