@@ -14,6 +14,7 @@ const {
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const { GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getR2Client } = require("../services/r2");
+const { sendMedidaDisciplinarEmail } = require("../reports/email");
 
 const BUCKET = process.env.R2_BUCKET_NAME;
 
@@ -456,7 +457,10 @@ const getMedidaById = async (req, res) => {
 
       include: {
         colaborador: {
-          include: { empresa: true }
+          include: {
+            empresa: true,
+            estacao: { select: { nomeEstacao: true, localizacao: true } },
+          }
         },
         matriz: true
       },
@@ -478,6 +482,101 @@ const getMedidaById = async (req, res) => {
 
 };
 
+/* =====================================================
+   ENVIAR EVIDÊNCIA POR E-MAIL
+===================================================== */
+
+const enviarEmailEvidencia = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    // 1. Buscar medida com colaborador e estação
+    const medida = await prisma.medidaDisciplinar.findUnique({
+      where: { idMedida: Number(id) },
+      include: {
+        colaborador: {
+          select: {
+            nomeCompleto: true,
+            matricula: true,
+            idEstacao: true,
+          },
+        },
+      },
+    });
+
+    if (!medida) {
+      return notFoundResponse(res, "Medida disciplinar não encontrada");
+    }
+
+    if (medida.status !== "ASSINADO") {
+      return errorResponse(res, "Apenas medidas assinadas podem ter a evidência enviada por e-mail", 400);
+    }
+
+    if (!medida.documentoAssinadoUrl) {
+      return errorResponse(res, "Documento assinado não encontrado", 400);
+    }
+
+    // 2. Verificar RH configurado na estação via raw SQL (Prisma client pode estar desatualizado)
+    const idEstacao = medida.colaborador?.idEstacao;
+
+    if (!idEstacao) {
+      return errorResponse(res, "Colaborador sem estação vinculada", 400);
+    }
+
+    const rawEstacao = await prisma.$queryRaw`
+      SELECT email_rh, nome_estacao FROM estacao WHERE id_estacao = ${idEstacao}
+    `;
+    const emailRhArray = rawEstacao[0]?.email_rh ?? [];
+
+    if (!emailRhArray || emailRhArray.length === 0) {
+      return res.status(422).json({
+        success: false,
+        semRh: true,
+        message: "RH local não configurado. Por favor, entrar em contato com um administrador.",
+      });
+    }
+
+    // 3. Baixar PDF do R2
+    const r2 = getR2Client();
+    const command = new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: medida.documentoAssinadoUrl,
+    });
+
+    const s3Response = await r2.send(command);
+
+    // Converter stream para buffer
+    const chunks = [];
+    for await (const chunk of s3Response.Body) {
+      chunks.push(chunk);
+    }
+    const pdfBuffer = Buffer.concat(chunks);
+
+    // 4. Enviar e-mail (falha silenciosa não bloqueia resposta)
+    await sendMedidaDisciplinarEmail({
+      emailRh: emailRhArray, // array — Nodemailer aceita array no campo `to`
+      nomeColaborador: medida.colaborador.nomeCompleto,
+      matricula: medida.colaborador.matricula,
+      tipoMedida: medida.tipoMedida,
+      violacao: medida.violacao,
+      dataAplicacao: medida.dataAplicacao,
+      idMedida: medida.idMedida,
+      pdfBuffer,
+    });
+
+    return successResponse(res, { emailRh: emailRhArray }, "Evidência enviada por e-mail com sucesso");
+
+  } catch (err) {
+
+    console.error("❌ ENVIAR EMAIL MD:", err);
+    return errorResponse(res, "Erro ao enviar evidência por e-mail", 500);
+
+  }
+
+};
+
 module.exports = {
   presignUpload,
   presignDownload,
@@ -485,4 +584,5 @@ module.exports = {
   finalizarMedida,
   getAllMedidas,
   getMedidaById,
+  enviarEmailEvidencia,
 };

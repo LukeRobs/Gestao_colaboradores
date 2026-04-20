@@ -229,6 +229,22 @@ export default function ImportarColaboradores() {
       }
     }
 
+    // Formatação da coluna CPF como texto para preservar zeros à esquerda
+    const cpfColLetter = wsMain.getColumn("cpf").letter
+    for (let row = 2; row <= 1000; row++) {
+      const cell = wsMain.getCell(`${cpfColLetter}${row}`)
+      cell.numFmt = "@" // Formato de texto no Excel
+      cell.dataValidation = {
+        type: "textLength",
+        operator: "equal",
+        showErrorMessage: true,
+        allowBlank: false,
+        formulae: [11],
+        errorTitle: "CPF inválido",
+        error: "O CPF deve ter exatamente 11 dígitos numéricos",
+      }
+    }
+
     // ── Aba de referências ─────────────────────────────────────────
     const wsRef = wb.addWorksheet("Configuracoes")
     wsRef.columns = [
@@ -460,6 +476,7 @@ export default function ImportarColaboradores() {
             <div className="text-xs text-muted space-y-1 pt-1 border-t border-default">
               <p>📅 Datas: <span className="font-mono">DD/MM/YYYY</span> ou <span className="font-mono">YYYY-MM-DD</span></p>
               <p>⏰ Horário: <span className="font-mono">HH:MM</span> — padrão <span className="font-mono">05:25</span> se omitido</p>
+              <p>🆔 CPF: <span className="font-mono">11 dígitos numéricos</span> — ex: <span className="font-mono">01234567890</span> (mantém o zero inicial)</p>
               <p>✅ Todos os colaboradores importados entram com status <span className="font-mono">ATIVO</span> automaticamente</p>
             </div>
 

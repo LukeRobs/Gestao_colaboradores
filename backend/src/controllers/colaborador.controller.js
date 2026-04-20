@@ -1209,6 +1209,14 @@ const importColaboradores = async (req, res) => {
             }
           }
 
+          // Validação de CPF - deve ter exatamente 11 dígitos
+          const cpfLimpo = cpf.replace(/\D/g, "");
+          if (cpfLimpo.length !== 11) {
+            skipped++;
+            skippedDetails.push({ linha: i + 1, ops_id: opsId, motivo: "CPF inválido - deve conter exatamente 11 dígitos" });
+            continue;
+          }
+
           if (!nomeCompleto || !matricula || !cpf || !idLider || !idSetor || !idCargo || !idEmpresa || !idTurno || !idEscala) {
             const faltando = [
               !nomeCompleto && "nome_completo",
