@@ -261,6 +261,7 @@ const aprovarSugestao = async (req, res) => {
       where: {
         opsId: sugestao.opsId,
         violacao: sugestao.violacao,
+        dataOcorrencia: dataOcorrencia,
         status: {
           in: [
             StatusMedidaDisciplinar.PENDENTE_ASSINATURA,
@@ -273,45 +274,75 @@ const aprovarSugestao = async (req, res) => {
     if (medidaExistente) {
       return errorResponse(
         res,
-        `Já existe uma medida disciplinar ativa para esta violação (${medidaExistente.origem === "MANUAL" ? "criada manualmente" : "gerada pelo sistema"} em ${new Date(medidaExistente.dataOcorrencia).toLocaleDateString("pt-BR")})`,
+        `Já existe uma medida disciplinar ativa para esta ocorrência (${new Date(medidaExistente.dataOcorrencia).toLocaleDateString("pt-BR")}, ${medidaExistente.origem === "MANUAL" ? "criada manualmente" : "gerada pelo sistema"})`,
         400
       )
     }
 
     /* ===========================
-       CONTAR HISTÓRICO
+       DETERMINAR MEDIDA PELO NÚMERO DE OCORRÊNCIAS
+       Mesma progressão do detector:
+         0 anteriores → 1ª ocorrência → PRIMEIRA_OCORRENCIA
+         1 anterior   → 2ª ocorrência → REINCIDENCIA (menor diasSuspensao)
+         2+ anteriores → 3ª+ ocorrência → REINCIDENCIA (maior diasSuspensao)
+         4+ dias consecutivos → análise manual (preserva consequencia da sugestão)
     =========================== */
 
-    const historicoResult = await prisma.$queryRaw`
-      SELECT COUNT(*)::int as count
-      FROM medida_disciplinar
-      WHERE ops_id = ${sugestao.opsId}
-        AND violacao = ${sugestao.violacao}
-        AND status::text <> 'CANCELADA'
-    `;
-    const historicoCount = historicoResult[0]?.count ?? 0;
+    const diasConsecutivos = sugestao.diasConsecutivos ?? 1;
 
-    const frequenciaViolacao =
-      historicoCount === 0
-        ? "PRIMEIRA_OCORRENCIA"
-        : "REINCIDENCIA"
+    // 4+ dias: sugestão foi criada com DESLIGAMENTO_ANALISE_JURIDICA como flag.
+    // Preservar a consequencia da sugestão sem re-escalar automaticamente.
+    const ehAnaliseRH = diasConsecutivos >= 4;
 
-    /* ===========================
-       BUSCAR MATRIZ DISCIPLINAR
-    =========================== */
+    let tipoMedida, diasSuspensao, nivelViolacao, idMatriz;
 
-    const matriz = await prisma.matrizMedidaDisciplinar.findFirst({
+    if (ehAnaliseRH) {
+      tipoMedida    = sugestao.consequencia;
+      diasSuspensao = sugestao.diasSuspensao ?? null;
+      nivelViolacao = "ALTA";
+      idMatriz      = null;
+    } else {
+      // Contar ocorrências anteriores para determinar o degrau
+      const historicoResult = await prisma.$queryRaw`
+        SELECT COUNT(*)::int as count
+        FROM medida_disciplinar
+        WHERE ops_id    = ${sugestao.opsId}
+          AND violacao  = ${sugestao.violacao}
+          AND status::text <> 'CANCELADA'
+      `;
+      const anteriores    = historicoResult[0]?.count ?? 0;
+      const numOcorrencia = anteriores + 1;
 
-      where: {
-        violacao: sugestao.violacao,
-        frequencia: frequenciaViolacao,
-      },
+      let matriz = null;
 
-    })
+      if (numOcorrencia === 1) {
+        matriz = await prisma.matrizMedidaDisciplinar.findFirst({
+          where: { violacao: sugestao.violacao, frequencia: "PRIMEIRA_OCORRENCIA" },
+        });
+      } else {
+        const reincidencias = await prisma.matrizMedidaDisciplinar.findMany({
+          where: { violacao: sugestao.violacao, frequencia: "REINCIDENCIA" },
+          orderBy: { diasSuspensao: "asc" },
+        });
+        if (reincidencias.length > 0) {
+          matriz = numOcorrencia === 2
+            ? reincidencias[0]
+            : reincidencias[reincidencias.length - 1];
+        }
+      }
 
-    const tipoMedida = matriz?.consequencia || sugestao.consequencia
-    const diasSuspensao = matriz?.diasSuspensao || sugestao.diasSuspensao
-    const nivelViolacao = matriz?.nivelViolacao || "BAIXA"
+      // Fallback
+      if (!matriz) {
+        matriz = await prisma.matrizMedidaDisciplinar.findFirst({
+          where: { violacao: sugestao.violacao },
+        });
+      }
+
+      tipoMedida    = matriz?.consequencia  ?? sugestao.consequencia;
+      diasSuspensao = matriz?.diasSuspensao ?? sugestao.diasSuspensao;
+      nivelViolacao = matriz?.nivelViolacao  ?? "BAIXA";
+      idMatriz      = matriz?.idMatriz       ?? null;
+    }
 
     /* ===========================
        CRIAR MEDIDA DISCIPLINAR
@@ -333,7 +364,15 @@ const aprovarSugestao = async (req, res) => {
 
           diasSuspensao,
 
-          motivo: "Gerado automaticamente pelo sistema",
+          motivo: (() => {
+            if (ehAnaliseRH) {
+              return `Requer análise manual do RH — ${diasConsecutivos} dias consecutivos de falta (aprovado pelo usuário após revisão)`;
+            }
+            if (diasConsecutivos > 1) {
+              return `Gerado automaticamente pelo sistema — ${diasConsecutivos} dias consecutivos de falta`;
+            }
+            return "Gerado automaticamente pelo sistema";
+          })(),
 
           dataOcorrencia,
 
@@ -345,7 +384,7 @@ const aprovarSugestao = async (req, res) => {
 
           registradoPor: req.user?.opsId || "SISTEMA",
 
-          idMatriz: matriz?.idMatriz,
+          idMatriz,
 
         },
 

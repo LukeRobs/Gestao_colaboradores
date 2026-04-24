@@ -170,15 +170,21 @@ export default function SugestoesMedidaDisciplinar() {
     try {
       if (acao.tipo === "aprovar") {
         await SugestoesAPI.aprovar(acao.id, {});
+        toast.success("Medida disciplinar gerada com sucesso.");
       } else {
         await SugestoesAPI.rejeitar(acao.id, { motivo: motivoRejeicao });
+        toast.success("Sugestão rejeitada.");
       }
       setAcao(null);
       setMotivoRejeicao("");
       await load();
     } catch (err) {
       console.error(err);
-      alert("Erro ao processar ação");
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Erro ao processar ação.";
+      toast.error(msg);
     } finally {
       setSalvando(false);
     }
@@ -374,10 +380,30 @@ export default function SugestoesMedidaDisciplinar() {
                       <td className="px-4 py-3 text-muted">
                         {s.dataReferencia ? new Date(s.dataReferencia).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "—"}
                       </td>
-                      <td className="px-4 py-3 text-muted">Falta Injustificada</td>
                       <td className="px-4 py-3 text-muted">
-                        {CONSEQUENCIA_LABEL[s.consequencia] ?? s.consequencia}
-                        {s.diasSuspensao ? ` (${s.diasSuspensao}d)` : ""}
+                        <div className="flex flex-col gap-1">
+                          <span>Falta Injustificada</span>
+                          {s.diasConsecutivos >= 4 ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-red-500/15 text-red-400 w-fit">
+                              🚨 {s.diasConsecutivos}d — Análise RH
+                            </span>
+                          ) : s.diasConsecutivos > 1 ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-400 w-fit">
+                              {s.diasConsecutivos}d consecutivos
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted">
+                        {s.diasConsecutivos >= 4
+                          ? <span className="text-red-400 font-medium">Análise manual</span>
+                          : (
+                            <>
+                              {CONSEQUENCIA_LABEL[s.consequencia] ?? s.consequencia}
+                              {s.diasSuspensao ? ` (${s.diasSuspensao}d)` : ""}
+                            </>
+                          )
+                        }
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                       <td className="px-4 py-3">
@@ -418,11 +444,44 @@ export default function SugestoesMedidaDisciplinar() {
             <h2 className="text-lg font-semibold">
               {acao.tipo === "aprovar" ? "Confirmar Aprovação" : "Confirmar Rejeição"}
             </h2>
-            <p className="text-sm text-muted">
-              {acao.tipo === "aprovar"
-                ? "Ao aprovar, uma Medida Disciplinar será gerada automaticamente para este colaborador."
-                : "Informe o motivo da rejeição desta sugestão."}
-            </p>
+            {acao.tipo === "aprovar" && (() => {
+              const s = sugestoes.find((x) => x.idSugestao === acao.id);
+              if (s?.diasConsecutivos >= 4) {
+                return (
+                  <div className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm bg-red-500/10 text-red-400">
+                    <span className="mt-0.5 text-base">🚨</span>
+                    <span>
+                      Esta ocorrência tem <strong>{s.diasConsecutivos} dias consecutivos</strong> e foi
+                      bloqueada para automação. Confirme que o RH analisou o caso antes de aprovar.
+                      A medida será criada com status de <strong>análise jurídica</strong>.
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <p className="text-sm text-muted">
+                  {acao.tipo === "aprovar"
+                    ? "Ao aprovar, uma Medida Disciplinar será gerada automaticamente para este colaborador."
+                    : "Informe o motivo da rejeição desta sugestão."}
+                </p>
+              );
+            })()}
+            {acao.tipo === "rejeitar" && (
+              <p className="text-sm text-muted">Informe o motivo da rejeição desta sugestão.</p>
+            )}
+            {acao.tipo === "aprovar" && (() => {
+              const s = sugestoes.find((x) => x.idSugestao === acao.id);
+              if (!s || s.diasConsecutivos < 2 || s.diasConsecutivos >= 4) return null;
+              return (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg text-sm bg-amber-500/10 text-amber-400">
+                  <span className="mt-0.5">⚠</span>
+                  <span>
+                    Esta sugestão cobre <strong>{s.diasConsecutivos} dias consecutivos</strong> de falta.
+                    Um único registro disciplinar será gerado para toda a sequência.
+                  </span>
+                </div>
+              );
+            })()}
             {acao.tipo === "rejeitar" && (
               <textarea
                 value={motivoRejeicao}

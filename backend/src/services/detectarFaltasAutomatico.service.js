@@ -1,18 +1,21 @@
 /**
  * Service: Detectar Faltas Automáticas
  *
- * Varre colaboradores operacionais ativos e, para cada dia com frequência
- * de código "F" já registrada, dispara o detector de medida disciplinar.
+ * Varre colaboradores operacionais ativos e, para cada sequência de dias com
+ * frequência de código "F" já registrada, dispara UMA sugestão de medida
+ * disciplinar por sequência consecutiva.
  *
  * Regras:
  * - Só processa dias passados e o dia atual
  * - Ignora DSR, atestados, ausências administrativas, férias, afastamentos
  * - NÃO cria frequências novas — só processa "F" já existentes
  * - Idempotente: não duplica sugestões já existentes
+ * - Faltas em dias consecutivos de calendário geram UMA única sugestão
+ * - Sequências > 3 dias → agravamento automático (REINCIDENCIA na matriz)
  */
 
 const { prisma } = require("../config/database");
-const detectarViolacaoDisciplinar = require("./detectorMedidaDisciplinar");
+const { detectarViolacaoSequencia } = require("./detectorMedidaDisciplinar");
 const { isDiaDSRSync } = require("../utils/dsr");
 
 const CARGOS_OPERACIONAIS = [
@@ -24,9 +27,6 @@ const CARGOS_OPERACIONAIS = [
   "Fiscal de pátio",
 ];
 
-// Códigos que NÃO são falta (não geram sugestão) — mantido para referência
-// O loop agora só processa "F" explicitamente, então este set não é mais usado no backfill
-
 function startOfDay(d) {
   const r = new Date(d);
   r.setHours(0, 0, 0, 0);
@@ -37,20 +37,63 @@ function ymd(d) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
+/**
+ * Agrupa um array de faltas `{ data: "YYYY-MM-DD", idFrequencia }` em
+ * sequências de dias calendário consecutivos.
+ *
+ * Exemplo:
+ *   ["04-01", "04-02", "04-05", "04-06", "04-07"]
+ *   → [[04-01, 04-02], [04-05, 04-06, 04-07]]
+ *
+ * "Consecutivo" = gap de exatamente 1 dia de calendário.
+ * Uma presença (P) ou qualquer outro status que NÃO seja "F" no dia N
+ * já interrompe a sequência naturalmente, pois aquele dia nunca entra
+ * na lista de faltas.
+ */
+function agruparConsecutivas(faltas) {
+  if (!faltas.length) return [];
+
+  // Ordenar por data ASC (já deve estar, mas garantir)
+  const sorted = [...faltas].sort((a, b) => a.data.localeCompare(b.data));
+
+  const sequencias = [[sorted[0]]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const grupo = sequencias[sequencias.length - 1];
+    const ultimaData = grupo[grupo.length - 1].data;
+    const dataAtual  = sorted[i].data;
+
+    const prev = new Date(`${ultimaData}T00:00:00`);
+    const curr = new Date(`${dataAtual}T00:00:00`);
+    const diffDays = Math.round((curr - prev) / 86400000);
+
+    if (diffDays === 1) {
+      grupo.push(sorted[i]);
+    } else {
+      sequencias.push([sorted[i]]);
+    }
+  }
+
+  return sequencias;
+}
 
 /**
- * Processa um intervalo de datas e cria faltas/sugestões para colaboradores
- * que deveriam ter trabalhado mas não têm registro.
+ * Processa um intervalo de datas e cria sugestões para colaboradores que
+ * possuem frequência "F" — agrupando faltas consecutivas numa única sugestão.
  *
  * @param {string} dataInicio - YYYY-MM-DD
  * @param {string} dataFim    - YYYY-MM-DD (inclusive)
+ * @param {number|null} estacaoId
  * @returns {object} resumo da execução
  */
 async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
   const inicio = startOfDay(new Date(dataInicio));
-  const fim = startOfDay(new Date(dataFim));
+  const fim    = startOfDay(new Date(dataFim));
 
-  console.log(`\n🔍 [DETECTOR FALTAS] Processando ${dataInicio} → ${dataFim}${estacaoId ? ` | estação ${estacaoId}` : " | todas as estações"}`);
+  console.log(
+    `\n🔍 [DETECTOR FALTAS] Processando ${dataInicio} → ${dataFim}` +
+    (estacaoId ? ` | estação ${estacaoId}` : " | todas as estações")
+  );
 
   /* =====================================================
      BUSCAR TIPO "F"
@@ -78,7 +121,7 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
         where: {
           status: "ATIVO",
           dataInicio: { lte: fim },
-          dataFim: { gte: inicio },
+          dataFim:    { gte: inicio },
         },
         include: { tipoAusencia: true },
       },
@@ -86,7 +129,7 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
         where: {
           status: "ATIVO",
           dataInicio: { lte: fim },
-          dataFim: { gte: inicio },
+          dataFim:    { gte: inicio },
         },
       },
     },
@@ -101,51 +144,27 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
 
   const frequenciasExistentes = await prisma.frequencia.findMany({
     where: {
-      opsId: { in: opsIds },
+      opsId:         { in: opsIds },
       dataReferencia: { gte: inicio, lte: fim },
     },
     include: { tipoAusencia: true },
   });
 
-  // Mapa: "opsId_YYYY-MM-DD" → frequência
+  // Mapa: "opsId_YYYY-MM-DD" → frequência (prioriza manual)
   const freqMap = {};
   for (const f of frequenciasExistentes) {
     const key = `${f.opsId}_${ymd(f.dataReferencia)}`;
-    // Prioriza manual
     if (!freqMap[key] || (f.manual && !freqMap[key].manual)) {
       freqMap[key] = f;
     }
   }
 
   /* =====================================================
-     BUSCAR DATA DO PRIMEIRO ONBOARDING POR COLABORADOR
-     — não utilizado neste fluxo, mantido para compatibilidade futura
-  ===================================================== */
-  const onboardings = await prisma.frequencia.findMany({
-    where: {
-      opsId: { in: opsIds },
-      tipoAusencia: { codigo: "ON" },
-    },
-    select: { opsId: true, dataReferencia: true },
-  });
-
-  // onbMap: opsId → Date do primeiro ON (ou null se não tiver)
-  const onbMap = {};
-  for (const o of onboardings) {
-    const d = startOfDay(o.dataReferencia);
-    if (!onbMap[o.opsId] || d < onbMap[o.opsId]) {
-      onbMap[o.opsId] = d;
-    }
-  }
-
-  /* =====================================================
      INVALIDAR SUGESTÕES PENDENTES CUJO "F" FOI ALTERADO
-     — Se a frequência vinculada não é mais "F", a sugestão
-       é rejeitada automaticamente antes de criar novas.
   ===================================================== */
   const sugestoesPendentes = await prisma.sugestaoMedidaDisciplinar.findMany({
     where: {
-      status: "PENDENTE",
+      status:      "PENDENTE",
       idFrequencia: { not: null },
     },
     include: {
@@ -159,7 +178,7 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
     if (codigoAtual !== "F") {
       await prisma.sugestaoMedidaDisciplinar.update({
         where: { idSugestao: sugestao.idSugestao },
-        data: { status: "REJEITADA" },
+        data:  { status: "REJEITADA" },
       });
       totalInvalidadas++;
       console.log(`🗑️ Sugestão ${sugestao.idSugestao} invalidada (F → ${codigoAtual ?? "sem tipo"})`);
@@ -167,29 +186,37 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
   }
 
   if (totalInvalidadas > 0) {
-    console.log(`⚠️ [DETECTOR FALTAS] ${totalInvalidadas} sugestão(ões) invalidada(s) por alteração do tipo de ausência`);
+    console.log(`⚠️ [DETECTOR FALTAS] ${totalInvalidadas} sugestão(ões) invalidada(s)`);
   }
 
   /* =====================================================
-     ITERAR DIAS
+     GERAR LISTA DE DIAS NO INTERVALO
   ===================================================== */
-  let totalSugestoesCriadas = 0;
-  let totalIgnorados = 0;
-
   const hoje = startOfDay(new Date());
 
-  // Gerar lista de dias no intervalo
   const dias = [];
   for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
-    dias.push(new Date(d));
+    dias.push(ymd(new Date(d)));
   }
 
+  /* =====================================================
+     PROCESSAR CADA COLABORADOR
+     1. Coletar todos os dias com falta "F" no período
+     2. Agrupar em sequências consecutivas de calendário
+     3. Criar UMA sugestão por sequência
+  ===================================================== */
+  let totalSugestoesCriadas = 0;
+  let totalIgnorados        = 0;
+
   for (const colaborador of colaboradores) {
-    for (const dia of dias) {
+    const faltasDoColaborador = []; // { data, idFrequencia }
+
+    for (const dataISO of dias) {
+      const dia = new Date(`${dataISO}T00:00:00`);
+
       // Nunca processar datas futuras
       if (dia > hoje) continue;
 
-      const dataISO = ymd(dia);
       const key = `${colaborador.opsId}_${dataISO}`;
 
       /* ── DSR ── */
@@ -224,11 +251,42 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
         continue;
       }
 
+      // ✅ Dia válido com falta — adicionar à lista do colaborador
+      faltasDoColaborador.push({
+        data:         dataISO,
+        idFrequencia: freqExistente.idFrequencia,
+      });
+    }
+
+    if (!faltasDoColaborador.length) continue;
+
+    /* ── Agrupar faltas consecutivas ── */
+    const sequencias = agruparConsecutivas(faltasDoColaborador);
+
+    for (const sequencia of sequencias) {
+      const diasStr = sequencia.length > 1
+        ? ` [${sequencia.length} dias: ${sequencia.map((s) => s.data).join(", ")}]`
+        : ` [${sequencia[0].data}]`;
+
       try {
-        await detectarViolacaoDisciplinar(freqExistente.idFrequencia);
-        totalSugestoesCriadas++;
+        const criou = await detectarViolacaoSequencia(
+          sequencia,
+          colaborador.opsId,
+          tipoFalta.idTipoAusencia
+        );
+        if (criou) {
+          totalSugestoesCriadas++;
+          if (sequencia.length > 1) {
+            console.log(
+              `📋 Sugestão agrupada para ${colaborador.opsId}${diasStr}`
+            );
+          }
+        }
       } catch (e) {
-        console.error(`⚠️ Detector falhou para ${colaborador.opsId} em ${dataISO}:`, e.message);
+        console.error(
+          `⚠️ Detector falhou para ${colaborador.opsId}${diasStr}:`,
+          e.message
+        );
       }
     }
   }
@@ -237,9 +295,9 @@ async function detectarFaltasAutomatico(dataInicio, dataFim, estacaoId = null) {
     sucesso: true,
     periodo: { inicio: dataInicio, fim: dataFim },
     colaboradoresProcessados: colaboradores.length,
-    sugestoesDisparadas: totalSugestoesCriadas,
-    sugestoesInvalidadas: totalInvalidadas,
-    diasIgnorados: totalIgnorados,
+    sugestoesDisparadas:      totalSugestoesCriadas,
+    sugestoesInvalidadas:     totalInvalidadas,
+    diasIgnorados:            totalIgnorados,
   };
 
   console.log(`✅ [DETECTOR FALTAS] Concluído:`, resumo);

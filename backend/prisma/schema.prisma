@@ -422,6 +422,9 @@ model SugestaoMedidaDisciplinar {
 
   diasSuspensao Int? @map("dias_suspensao")
 
+  // Número de dias consecutivos que originaram esta sugestão (1 = falta isolada)
+  diasConsecutivos Int @default(1) @map("dias_consecutivos")
+
   status StatusSugestao @default(PENDENTE)
 
   aprovadoPor String? @map("aprovado_por")
