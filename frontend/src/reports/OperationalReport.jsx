@@ -326,6 +326,7 @@ export default function OperationalReport({ report }) {
                   <th className="py-2">Motivo</th>
                   <th className="py-2">Setor</th>
                   <th className="py-2">Empresa</th>
+                  <th className="py-2">Dias de Folga</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,6 +336,7 @@ export default function OperationalReport({ report }) {
                     <td className="text-center text-[#FF9F0A]">{a.motivo}</td>
                     <td className="text-center">{a.setor}</td>
                     <td className="text-center">{a.empresa}</td>
+                    <td className="text-center">{a.diasFolga || "-"}</td>
                   </tr>
                 ))}
               </tbody>

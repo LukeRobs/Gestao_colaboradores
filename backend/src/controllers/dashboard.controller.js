@@ -303,7 +303,7 @@ const carregarDashboard = async (req, res) => {
             },
           },
           include: {
-            colaborador: { include: { turno: true, setor: true, cargo: true, empresa: true, lider: true } },
+            colaborador: { include: { turno: true, setor: true, cargo: true, empresa: true, lider: true, escala: true } },
             tipoAusencia: true,
             setor: true,
           },
@@ -506,6 +506,10 @@ const carregarDashboard = async (req, res) => {
         turnoSetorAgg[turno].ausentes++;  
 
         // Lista de ausências do dia (Falta / Atestado)
+        const DIAS_PT_AUSENCIA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+        const diasFolga = (c.escala?.diasDsr || []).length > 0
+          ? c.escala.diasDsr.map((d) => DIAS_PT_AUSENCIA[d] ?? d).join("/")
+          : "-";
         ausenciasHoje.push({
           colaboradorId: c.opsId,
           nome: c.nomeCompleto,
@@ -518,6 +522,7 @@ const carregarDashboard = async (req, res) => {
           origem: sSnap.origem,
           tempoCasa: tempoCasa.faixa,
           diasCasa: tempoCasa.dias,
+          diasFolga,
         });
       }
     });

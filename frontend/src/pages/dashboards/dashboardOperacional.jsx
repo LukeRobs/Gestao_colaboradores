@@ -549,7 +549,8 @@ export default function DashboardOperacional() {
               { key: "motivo", label: "Motivo" },
               { key: "setor", label: "Setor" },
               { key: "empresa", label: "Empresa" },
-              { key: "tempoCasa", label: "Tempo de Casa" }
+              { key: "tempoCasa", label: "Tempo de Casa" },
+              { key: "diasFolga", label: "Dias de Folga" }
             ]}
             getRowKey={(row) => row.colaboradorId}
             emptyMessage="Nenhum ausente no turno"
