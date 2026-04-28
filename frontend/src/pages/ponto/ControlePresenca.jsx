@@ -38,6 +38,7 @@ export default function ControlePresenca() {
   const [error, setError] = useState(null);
   const [lideres, setLideres] = useState([]);
   const [exportando, setExportando] = useState(false);
+  const [turnos, setTurnos] = useState([]);
 
   /* ================== MODAL ================== */
   const [modalOpen, setModalOpen] = useState(false);
@@ -228,6 +229,19 @@ export default function ControlePresenca() {
     loadLideres();
   }, []);
 
+  useEffect(() => {
+    async function loadTurnos() {
+      try {
+        const res = await api.get("/turnos");
+        setTurnos(res.data?.data || []);
+      } catch (err) {
+        console.error("Erro ao carregar turnos", err);
+        setTurnos([]);
+      }
+    }
+    loadTurnos();
+  }, []);
+
   /* ================== UI ================== */
   return (
     <div className="flex min-h-screen bg-page text-page">
@@ -249,6 +263,7 @@ export default function ControlePresenca() {
           <PresencaToolbar
             mes={mes}
             turno={turno}
+            turnos={turnos}
             escala={escala}
             busca={busca}
             lider={lider}

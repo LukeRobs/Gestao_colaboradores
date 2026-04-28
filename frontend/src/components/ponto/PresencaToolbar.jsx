@@ -3,6 +3,7 @@
 export default function PresencaToolbar({
   mes,
   turno,
+  turnos = [],
   escala,
   busca,
   lider,
@@ -25,8 +26,6 @@ export default function PresencaToolbar({
   isAdmin = false,
   loading = false,
 }) {
-  const turnos = ["TODOS", "T1", "T2", "T3"];
-
   return (
     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
       {/* FILTROS */}
@@ -107,9 +106,10 @@ export default function PresencaToolbar({
             hover:bg-surface-2
           "
         >
+          <option value="TODOS">TODOS</option>
           {turnos.map((t) => (
-            <option key={t} value={t}>
-              {t}
+            <option key={t.idTurno} value={t.nomeTurno}>
+              {t.nomeTurno}
             </option>
           ))}
         </select>
