@@ -118,7 +118,7 @@ export default function EmployeeTable({ employees = [], onView }) {
 
                   <td className="px-5 py-4 text-muted">
                     {emp.dataAdmissao
-                      ? new Date(emp.dataAdmissao).toLocaleDateString()
+                      ? emp.dataAdmissao.slice(0, 10).split("-").reverse().join("/")
                       : "-"}
                   </td>
 
@@ -180,7 +180,7 @@ export default function EmployeeTable({ employees = [], onView }) {
                 <p>
                   Admissão:{" "}
                   {emp.dataAdmissao
-                    ? new Date(emp.dataAdmissao).toLocaleDateString()
+                    ? emp.dataAdmissao.slice(0, 10).split("-").reverse().join("/")
                     : "-"}
                 </p>
               </div>
