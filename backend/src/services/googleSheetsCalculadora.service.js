@@ -56,7 +56,7 @@ async function buscarDwPlanejadoCalculadora(dataISO, idTurno) {
   const sheets = getClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET}!A:E`,
+    range: `${SHEET}!A:F`,
     valueRenderOption: "FORMATTED_VALUE",
   });
 
@@ -91,7 +91,7 @@ async function buscarDwPlanejadoCalculadoraBatch(requests) {
   const sheets = getClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET}!A:E`,
+    range: `${SHEET}!A:F`,
     valueRenderOption: "FORMATTED_VALUE",
   });
 
