@@ -1,6 +1,5 @@
 const { PrismaClient, Prisma } = require("@prisma/client");
 const prisma = new PrismaClient();
-const { gerarDSRBackfillColaborador, gerarDSRFuturoColaborador } = require("./dsrBackfill.service");
 
 const DSR_ID = 4;
 const JUSTIFICATIVA_AUTO = "DSR_FOLGA_DOMINICAL_AUTOMATICA";
@@ -9,6 +8,12 @@ const MINIMO_POR_TURNO = {
   T1: 111,
   T2: 113,
   T3: 152,
+};
+
+// Distribuição percentual por domingo conforme qtd de domingos no mês
+const PERCENTAGENS_POR_DOMINGOS = {
+  5: [0.15, 0.15, 0.15, 0.275, 0.275],
+  4: [0.15, 0.15, 0.35,  0.35],
 };
 
 /* =====================================================
@@ -162,7 +167,9 @@ function construirIndicesPreferencia({ domingos, slotBase, ultimaFolga, capacida
   ]).filter((idx) => idx < totalDomingos);
 
   if (!ultimaFolga?.dataDomingo) {
-    return indicesBase;
+    // Sem folga anterior: tenta slot base primeiro, depois todos os outros como fallback
+    const todosIndices = Array.from({ length: totalDomingos }, (_, i) => i);
+    return uniqueNumbers([...indicesBase, ...todosIndices]);
   }
 
   const avaliados = domingos.map((domingo, idx) => {
@@ -264,8 +271,13 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
   }
 
   /* =====================================================
-     2) ELEGÍVEIS (ESCALAS B, C, G)
+     2) ELEGÍVEIS (ESCALAS B, C, G | CARGOS ELEGÍVEIS)
   ===================================================== */
+  const CARGOS_ELEGIVEIS = [
+    "Auxiliar de Logística I",
+    "Auxiliar de Logística I – PCD",
+  ];
+
   const elegiveis = await prisma.colaborador.findMany({
     where: {
       status: "ATIVO",
@@ -276,6 +288,9 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
       },
       turno: {
         nomeTurno: { in: ["T1", "T2", "T3"] },
+      },
+      cargo: {
+        nomeCargo: { in: CARGOS_ELEGIVEIS },
       },
     },
     select: {
@@ -290,6 +305,11 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
       escala: {
         select: {
           nomeEscala: true,
+        },
+      },
+      cargo: {
+        select: {
+          nomeCargo: true,
         },
       },
     },
@@ -379,6 +399,45 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
     }
   }
 
+  // Distribuição automática por percentagem baseada no total de elegíveis
+  const totalElegiveis = elegiveis.length;
+  const pcts = PERCENTAGENS_POR_DOMINGOS[domingos.length] || PERCENTAGENS_POR_DOMINGOS[4];
+  const totalAtivosPresentes = ["T1", "T2", "T3"].reduce((s, t) => s + (totalAtivosTurno[t] || 0), 0);
+
+  if (totalElegiveis > 0 && totalAtivosPresentes > 0) {
+    // Calcula capacidade alvo por domingo com correção de arredondamento no último
+    const targetsPorDomingo = domingos.map((_, idx) =>
+      Math.round(totalElegiveis * (pcts[idx] ?? pcts[pcts.length - 1]))
+    );
+    const somaTargets = targetsPorDomingo.reduce((s, v) => s + v, 0);
+    targetsPorDomingo[targetsPorDomingo.length - 1] += totalElegiveis - somaTargets;
+
+    for (let dIdx = 0; dIdx < domingos.length; dIdx++) {
+      const dataKey = isoDate(domingos[dIdx]);
+      const targetTotal = targetsPorDomingo[dIdx];
+
+      const turnosValidos = ["T1", "T2", "T3"].filter(t => capacidade[t]?.[dataKey] !== undefined);
+      if (!turnosValidos.length) continue;
+
+      const totalAtivosTurnos = turnosValidos.reduce((s, t) => s + (totalAtivosTurno[t] || 0), 0);
+      if (totalAtivosTurnos === 0) continue;
+
+      let remaining = targetTotal;
+      for (let i = 0; i < turnosValidos.length; i++) {
+        const t = turnosValidos[i];
+        let share;
+        if (i === turnosValidos.length - 1) {
+          share = Math.max(0, remaining);
+        } else {
+          share = Math.round(targetTotal * (totalAtivosTurno[t] || 0) / totalAtivosTurnos);
+          remaining -= share;
+        }
+        capacidade[t][dataKey].capacidadeMaximaFolgas = share;
+        capacidade[t][dataKey].saldoDisponivel = share;
+      }
+    }
+  }
+
   for (const f of frequenciasDomingos) {
     const chave = `${f.opsId}__${isoDate(f.dataReferencia)}`;
     freqMap.set(chave, f);
@@ -388,12 +447,10 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
 
     if (!turno || !capacidade[turno]?.[dataKey]) continue;
 
+    // DSR semanal (idTipoAusencia === DSR_ID) pode ser sobrescrito — não conta como indisponibilidade
     const ehAusenciaPrevia =
       !!f.idTipoAusencia &&
-      !(
-        f.idTipoAusencia === DSR_ID &&
-        f.justificativa === JUSTIFICATIVA_AUTO
-      );
+      f.idTipoAusencia !== DSR_ID;
 
     if (ehAusenciaPrevia) {
       capacidade[turno][dataKey].indisponibilidadesPrevias += 1;
@@ -503,12 +560,11 @@ function montarPlanejamento({
           continue;
         }
 
+        // Bloqueia apenas ausências que NÃO são DSR (atestados, férias, afastamentos etc.)
+        // DSR semanal (id === DSR_ID) pode ser sobrescrito pelo dominical
         if (
           freqExistente?.idTipoAusencia &&
-          !(
-            freqExistente.idTipoAusencia === DSR_ID &&
-            freqExistente.justificativa === JUSTIFICATIVA_AUTO
-          )
+          freqExistente.idTipoAusencia !== DSR_ID
         ) {
           motivoNaoAlocado = `Já existe ausência não elegível para substituição em ${dataKey}.`;
           continue;
@@ -544,24 +600,87 @@ function montarPlanejamento({
 
       if (!alocado) {
         naoAlocados.push({
-          opsId: colab.opsId,
-          nomeCompleto: colab.nomeCompleto,
+          colab,
           turno,
-          escala: colab.escala?.nomeEscala || null,
-          slotBase: slotBase + 1,
-          ultimaFolgaAnterior: ultimaFolga?.dataDomingo
-            ? isoDate(ultimaFolga.dataDomingo)
-            : null,
+          slotBase,
+          ultimaFolga: ultimaFolga || null,
           motivo: motivoNaoAlocado || "Não foi possível alocar em domingo válido.",
         });
       }
     }
   }
 
+  // ─── SEGUNDA PASSAGEM: força alocação dos não-alocados ───────────────────
+  // Ignora saldo e ausências não-DSR; respeita apenas manual=true
+  const aindaNaoAlocados = [];
+
+  for (const item of naoAlocados) {
+    const { colab, turno, slotBase, ultimaFolga } = item;
+
+    // Ordena domingos pela menor ocupação (melhor domingo primeiro)
+    const domingosPorOcupacao = domingos
+      .map((d, idx) => ({ idx, ocupacao: capacidade[turno][isoDate(d)]?.folgasPlanejadas || 0 }))
+      .sort((a, b) => a.ocupacao - b.ocupacao);
+
+    let alocado = false;
+
+    for (const { idx: idxDomingo } of domingosPorOcupacao) {
+      const domingo = domingos[idxDomingo];
+      if (!domingo) continue;
+
+      const dataKey = isoDate(domingo);
+      const freqKey = `${colab.opsId}__${dataKey}`;
+      const freqExistente = freqMap.get(freqKey);
+
+      // Único bloqueio respeitado na força: frequência manual
+      if (freqExistente?.manual) continue;
+
+      planejamentos.push({
+        opsId: colab.opsId,
+        nomeCompleto: colab.nomeCompleto,
+        turno,
+        escala: colab.escala?.nomeEscala || null,
+        ano,
+        mes,
+        dataDomingo: domingo,
+        domingo: dataKey,
+        domingoIndex: idxDomingo,
+        slotBase,
+        slotEscolhido: idxDomingo + 1,
+        criadoPorId: userId,
+        ultimaFolgaAnterior: ultimaFolga?.dataDomingo
+          ? isoDate(ultimaFolga.dataDomingo)
+          : null,
+        diasDesdeUltimaFolga: ultimaFolga?.dataDomingo
+          ? diffDias(domingo, ultimaFolga.dataDomingo)
+          : null,
+        forcado: true,
+      });
+
+      capacidade[turno][dataKey].folgasPlanejadas += 1;
+      alocado = true;
+      break;
+    }
+
+    if (!alocado) {
+      aindaNaoAlocados.push({
+        opsId: colab.opsId,
+        nomeCompleto: colab.nomeCompleto,
+        turno,
+        escala: colab.escala?.nomeEscala || null,
+        slotBase: slotBase + 1,
+        ultimaFolgaAnterior: ultimaFolga?.dataDomingo
+          ? isoDate(ultimaFolga.dataDomingo)
+          : null,
+        motivo: "Todos os domingos possuem frequência manual — impossível alocar.",
+      });
+    }
+  }
+
   return {
     planejamentos,
     ignorados,
-    naoAlocados,
+    naoAlocados: aindaNaoAlocados,
   };
 }
 
@@ -613,30 +732,12 @@ async function gerarFolgaDominical({ ano, mes, userId, estacaoId = null }) {
   });
 
   if (naoAlocados.length > 0) {
-    throw new Error(
-      [
-        "Não foi possível gerar o planejamento completo respeitando o mínimo por turno.",
-        `Não alocados: ${naoAlocados.length}.`,
-        "Revise a capacidade por turno ou trate as exceções antes de gerar.",
-      ].join(" ")
-    );
+    console.warn(`⚠️ ${naoAlocados.length} colaborador(es) não alocado(s) — indisponibilidades nos domingos disponíveis.`);
   }
 
   console.log("TOTAL PLANEJAMENTOS:", planejamentos.length);
 
   await processarPlanejamentosEmLotes(planejamentos, userId);
-
-  // Garante que todos os DSRs semanais dos elegíveis estejam no banco (backfill histórico + futuro)
-  for (const colab of elegiveis) {
-    const nomeEscala = colab.escala?.nomeEscala;
-    if (!nomeEscala) continue;
-    try {
-      await gerarDSRBackfillColaborador({ opsId: colab.opsId, nomeEscala, dataInicio: colab.dataAdmissao });
-      await gerarDSRFuturoColaborador({ opsId: colab.opsId, nomeEscala, dias: 120 });
-    } catch (e) {
-      console.warn(`⚠️ DSR backfill falhou para ${colab.opsId}:`, e.message);
-    }
-  }
 
   const resumoCapacidade = {};
   for (const turno of ["T1", "T2", "T3"]) {
