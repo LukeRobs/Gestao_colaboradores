@@ -247,7 +247,7 @@ export default function MedidaDisciplinarDetalhe() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate("/medidas-disciplinares")}
-                className="text-muted hover:text-white transition-colors"
+                className="text-muted hover:text-page transition-colors cursor-pointer"
               >
                 <ArrowLeft size={24} />
               </button>
@@ -265,7 +265,7 @@ export default function MedidaDisciplinarDetalhe() {
             <div className="flex gap-3 flex-wrap">
               <button
                 onClick={() => printCartaMedidaDisciplinar(medida)}
-                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors"
+                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors cursor-pointer"
               >
                 <Printer size={16} />
                 Imprimir Carta
@@ -277,7 +277,7 @@ export default function MedidaDisciplinarDetalhe() {
                   className={`flex items-center gap-2 px-6 py-2 rounded-xl transition-colors ${
                     enviandoEmail
                       ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
-                      : "bg-surface-2 hover:bg-[#3A3A3C]"
+                      : "bg-surface-2 hover:bg-[#3A3A3C] cursor-pointer"
                   }`}
                 >
                   <Mail size={16} />
@@ -288,7 +288,7 @@ export default function MedidaDisciplinarDetalhe() {
                 <button
                   onClick={abrirModalRh}
                   title="Configurar e-mails do RH local"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors text-muted hover:text-white"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] transition-colors text-muted hover:text-page cursor-pointer"
                 >
                   <Settings size={16} />
                   RH Local
@@ -456,7 +456,7 @@ export default function MedidaDisciplinarDetalhe() {
                     className={`mt-4 flex items-center gap-2 px-6 py-2 rounded-xl font-medium transition
                       ${uploading || !file
                         ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
-                        : "bg-[#FA4C00] hover:bg-[#D84300] text-white"
+                        : "bg-[#FA4C00] hover:bg-[#D84300] text-white cursor-pointer"
                       }`}
                   >
                     <CheckCircle2 size={16} />
@@ -483,7 +483,7 @@ export default function MedidaDisciplinarDetalhe() {
                     </div>
                     <button
                       onClick={baixarDocumentoAssinado}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#34C759]/20 hover:bg-[#34C759]/30 text-[#34C759] transition-colors whitespace-nowrap"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#34C759]/20 hover:bg-[#34C759]/30 text-[#34C759] transition-colors whitespace-nowrap cursor-pointer"
                     >
                       <Download size={16} />
                       Baixar
@@ -505,7 +505,7 @@ export default function MedidaDisciplinarDetalhe() {
                 <Settings size={20} className="text-[#FA4C00]" />
                 <h2 className="font-semibold text-lg">Configurar RH Local</h2>
               </div>
-              <button onClick={() => setModalRhOpen(false)} className="text-muted hover:text-white transition-colors">
+              <button onClick={() => setModalRhOpen(false)} className="text-muted hover:text-page transition-colors cursor-pointer">
                 <X size={20} />
               </button>
             </div>
@@ -524,7 +524,7 @@ export default function MedidaDisciplinarDetalhe() {
                       <span className="text-sm text-page truncate">{email}</span>
                       <button
                         onClick={() => removerEmail(email)}
-                        className="text-muted hover:text-[#FF453A] transition-colors flex-shrink-0"
+                        className="text-muted hover:text-[#FF453A] transition-colors flex-shrink-0 cursor-pointer"
                       >
                         <X size={14} />
                       </button>
@@ -548,7 +548,7 @@ export default function MedidaDisciplinarDetalhe() {
                 />
                 <button
                   onClick={adicionarEmail}
-                  className="px-4 py-2 rounded-xl bg-[#FA4C00] hover:bg-[#D84300] text-white text-sm font-medium transition-colors"
+                  className="px-4 py-2 rounded-xl bg-[#FA4C00] hover:bg-[#D84300] text-white text-sm font-medium transition-colors cursor-pointer"
                 >
                   Adicionar
                 </button>
@@ -558,7 +558,7 @@ export default function MedidaDisciplinarDetalhe() {
             <div className="flex gap-3 justify-end pt-1">
               <button
                 onClick={() => setModalRhOpen(false)}
-                className="px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] text-sm transition-colors"
+                className="px-4 py-2 rounded-xl bg-surface-2 hover:bg-[#3A3A3C] text-sm transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -568,7 +568,7 @@ export default function MedidaDisciplinarDetalhe() {
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   salvandoRh
                     ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
-                    : "bg-[#FA4C00] hover:bg-[#D84300] text-white"
+                    : "bg-[#FA4C00] hover:bg-[#D84300] text-white cursor-pointer"
                 }`}
               >
                 {salvandoRh ? "Salvando..." : "Salvar"}

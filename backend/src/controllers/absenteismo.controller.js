@@ -25,26 +25,59 @@ function getFaixaTempoCasa(adm, ref) {
   if (dias <= 7)  return "0 a 7";
   if (dias <= 15) return "8 a 15";
   if (dias <= 30) return "16 a 30";
-  if (dias <= 89) return "31 a 89";
+  if (dias <= 60) return "31 a 60";
+  if (dias <= 90) return "61 a 90";
   return "90+";
 }
 
 /* Cargos operacionais contemplados no absenteísmo */
 const CARGOS_ABSENTEISMO = ["Auxiliar de Logística I", "Auxiliar de Logística II", "Auxiliar de Logística I - PCD"];
 
-/**
- * extras: { setorNome, turnoNome }  — drill-down dinâmico
- */
-function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras = {}) {
+/* Códigos que compõem o HC Apto (denominador da taxa de absenteísmo) */
+const HC_APTO_CODES = ["P", "F", "FJ", "AM", "AA", "FO", "BH", "S1"];
+
+function buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = []) {
   const { setorNome, turnoNome } = extras;
   return {
     dataReferencia: { gte: inicioDate, lte: fimDate },
-    idTipoAusencia: { in: [3, 32] },
+    OR: [
+      { tipoAusencia: { is: { codigo: { in: HC_APTO_CODES } } } },
+      { idTipoAusencia: null, horaEntrada: { not: null } },
+    ],
     colaborador: {
       is: {
         status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
         cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
-        ...(empresaId  && { idEmpresa: Number(empresaId) }),
+        ...(empresaIds.length
+          ? { idEmpresa: { in: empresaIds.map(Number) } }
+          : empresaId
+          ? { idEmpresa: Number(empresaId) }
+          : {}),
+        ...(estacaoId && { idEstacao: estacaoId }),
+        ...(setorNome && { setor: { is: { nomeSetor: setorNome } } }),
+        ...(turnoNome && { turno: { is: { nomeTurno: turnoNome } } }),
+      },
+    },
+  };
+}
+
+/**
+ * extras: { setorNome, turnoNome }  — drill-down dinâmico
+ */
+function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = []) {
+  const { setorNome, turnoNome } = extras;
+  return {
+    dataReferencia: { gte: inicioDate, lte: fimDate },
+    tipoAusencia: { is: { codigo: { in: ["F", "FJ"] } } },
+    colaborador: {
+      is: {
+        status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
+        cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
+        ...(empresaIds.length
+          ? { idEmpresa: { in: empresaIds.map(Number) } }
+          : empresaId
+          ? { idEmpresa: Number(empresaId) }
+          : {}),
         ...(estacaoId  && { idEstacao: estacaoId }),
         ...(setorNome  && { setor: { is: { nomeSetor: setorNome } } }),
         ...(turnoNome  && { turno: { is: { nomeTurno: turnoNome } } }),
@@ -53,14 +86,18 @@ function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras 
   };
 }
 
-function buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras = {}) {
+function buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = []) {
   const { setorNome, turnoNome } = extras;
   return {
     dataInicio: { gte: inicioDate, lte: fimDate },
     status: { not: "CANCELADO" },
     colaborador: {
       cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
-      ...(empresaId  && { idEmpresa: Number(empresaId) }),
+      ...(empresaIds.length
+        ? { idEmpresa: { in: empresaIds.map(Number) } }
+        : empresaId
+        ? { idEmpresa: Number(empresaId) }
+        : {}),
       ...(estacaoId  && { idEstacao: estacaoId }),
       ...(setorNome  && { setor: { is: { nomeSetor: setorNome } } }),
       ...(turnoNome  && { turno: { is: { nomeTurno: turnoNome } } }),
@@ -74,6 +111,7 @@ function buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras = 
 const getResumoAbsenteismo = async (req, res) => {
   try {
     const { inicio, fim, empresaId, setorNome, turnoNome } = req.query;
+    const empresaIds = req.query.empresaIds ? [].concat(req.query.empresaIds) : [];
     const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
       ? req.dbContext.estacaoId : null;
     const extras = { setorNome, turnoNome };
@@ -86,11 +124,11 @@ const getResumoAbsenteismo = async (req, res) => {
     /* ── Busca paralela ── */
     const [faltasPeriodo, atestadosPeriodo] = await Promise.all([
       prisma.frequencia.findMany({
-        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { opsId: true, dataReferencia: true },
       }),
       prisma.atestadoMedico.findMany({
-        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { opsId: true, diasAfastamento: true },
       }),
     ]);
@@ -119,12 +157,24 @@ const getResumoAbsenteismo = async (req, res) => {
       ? Number(((colaboradoresRecorrentes / colaboradoresImpactados) * 100).toFixed(2))
       : 0;
 
-    /* % HC — base: Aux. Logística I/II ativos na estação */
+    /* HC Apto — denominador real: registros com código apto no período */
+    const hcApto = await prisma.frequencia.count({
+      where: buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
+    });
+    const taxaAbsenteismo = hcApto > 0
+      ? Number(((totalPeriodo / hcApto) * 100).toFixed(2))
+      : 0;
+
+    /* % HC — mantido para compatibilidade: impactados / ativos */
     const hcTotal = await prisma.colaborador.count({
       where: {
         status: "ATIVO",
         cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
-        ...(empresaId && { idEmpresa: Number(empresaId) }),
+        ...(empresaIds.length
+          ? { idEmpresa: { in: empresaIds.map(Number) } }
+          : empresaId
+          ? { idEmpresa: Number(empresaId) }
+          : {}),
         ...(estacaoId && { idEstacao: estacaoId }),
       },
     });
@@ -148,12 +198,12 @@ const getResumoAbsenteismo = async (req, res) => {
       faltasSemana, atestadosSemana,
       faltasMes, atestadosMes,
     ] = await Promise.all([
-      prisma.frequencia.count({ where: buildWhereFrequencia(referencia, referencia, empresaId, estacaoId, extras) }),
-      prisma.atestadoMedico.count({ where: buildWhereAtestado(referencia, referencia, empresaId, estacaoId, extras) }),
-      prisma.frequencia.count({ where: buildWhereFrequencia(inicioSemana, hoje, empresaId, estacaoId, extras) }),
-      prisma.atestadoMedico.count({ where: buildWhereAtestado(inicioSemana, hoje, empresaId, estacaoId, extras) }),
-      prisma.frequencia.count({ where: buildWhereFrequencia(inicioMes, hoje, empresaId, estacaoId, extras) }),
-      prisma.atestadoMedico.count({ where: buildWhereAtestado(inicioMes, hoje, empresaId, estacaoId, extras) }),
+      prisma.frequencia.count({ where: buildWhereFrequencia(referencia, referencia, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.atestadoMedico.count({ where: buildWhereAtestado(referencia, referencia, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.frequencia.count({ where: buildWhereFrequencia(inicioSemana, hoje, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.atestadoMedico.count({ where: buildWhereAtestado(inicioSemana, hoje, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.frequencia.count({ where: buildWhereFrequencia(inicioMes, hoje, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.atestadoMedico.count({ where: buildWhereAtestado(inicioMes, hoje, empresaId, estacaoId, extras, empresaIds) }),
     ]);
 
     return successResponse(res, {
@@ -166,6 +216,8 @@ const getResumoAbsenteismo = async (req, res) => {
         colaboradoresImpactados,
         colaboradoresRecorrentes,
         percentualHC,
+        taxaAbsenteismo,
+        hcApto,
         hoje:   faltasHoje + atestadosHoje,
         semana: faltasSemana + atestadosSemana,
         mes:    faltasMes + atestadosMes,
@@ -183,6 +235,7 @@ const getResumoAbsenteismo = async (req, res) => {
 const getDistribuicoesAbsenteismo = async (req, res) => {
   try {
     const { inicio, fim, empresaId, setorNome, turnoNome } = req.query;
+    const empresaIds = req.query.empresaIds ? [].concat(req.query.empresaIds) : [];
     const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
       ? req.dbContext.estacaoId : null;
     const extras = { setorNome, turnoNome };
@@ -194,9 +247,9 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
 
     const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-    const [faltas, atestados] = await Promise.all([
+    const [faltas, atestados, hcAptoRecords] = await Promise.all([
       prisma.frequencia.findMany({
-        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         include: {
           colaborador: {
             include: { empresa: true, setor: true, turno: true, lider: true, escala: true },
@@ -204,12 +257,16 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
         },
       }),
       prisma.atestadoMedico.findMany({
-        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         include: {
           colaborador: {
             include: { empresa: true, setor: true, turno: true, lider: true, escala: true },
           },
         },
+      }),
+      prisma.frequencia.findMany({
+        where: buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
+        include: { colaborador: { include: { turno: true, empresa: true } } },
       }),
     ]);
 
@@ -245,19 +302,44 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
       inc(acc.escala,    c.escala?.nomeEscala    || "N/I", "atestados");
     }
 
-    /* toArray: retorna { name, faltas, atestados, value } ordenado por total */
+    /* acumuladores de HC Apto por empresa, turno e dia da semana */
+    const hcEmpresa   = {};
+    const hcTurno     = {};
+    const hcDiaSemana = {};
+    for (const r of hcAptoRecords) {
+      const empresa = r.colaborador?.empresa?.razaoSocial || "N/I";
+      const turno   = r.colaborador?.turno?.nomeTurno     || "N/I";
+      const dia     = DIAS_SEMANA[new Date(r.dataReferencia).getDay()];
+      hcEmpresa[empresa]  = (hcEmpresa[empresa]  || 0) + 1;
+      hcTurno[turno]      = (hcTurno[turno]      || 0) + 1;
+      hcDiaSemana[dia]    = (hcDiaSemana[dia]    || 0) + 1;
+    }
+
+    /* toArray simples */
     const toArray = (obj) =>
       Object.entries(obj)
         .map(([name, v]) => ({ name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados }))
         .sort((a, b) => b.value - a.value);
 
+    /* toArray com HC Apto — adiciona headcount e taxa real */
+    const toArrayWithHc = (obj, hcMap) =>
+      Object.entries(obj)
+        .map(([name, v]) => {
+          const headcount = hcMap[name] || 0;
+          const taxa = headcount > 0
+            ? Number((((v.faltas + v.atestados) / headcount) * 100).toFixed(2))
+            : null;
+          return { name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados, headcount, taxa };
+        })
+        .sort((a, b) => b.value - a.value);
+
     return successResponse(res, {
-      porEmpresa:   toArray(acc.empresa),
+      porEmpresa:   toArrayWithHc(acc.empresa, hcEmpresa),
       porSetor:     toArray(acc.setor),
-      porTurno:     toArray(acc.turno),
+      porTurno:     toArrayWithHc(acc.turno,    hcTurno),
       porGenero:    toArray(acc.genero),
       porLider:     toArray(acc.lider).slice(0, 10),
-      porDiaSemana: toArray(acc.diaSemana),
+      porDiaSemana: toArrayWithHc(acc.diaSemana, hcDiaSemana),
       porEscala:    toArray(acc.escala),
     });
   } catch (err) {
@@ -272,6 +354,7 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
 const getTendenciaAbsenteismo = async (req, res) => {
   try {
     const { inicio, fim, empresaId, setorNome, turnoNome } = req.query;
+    const empresaIds = req.query.empresaIds ? [].concat(req.query.empresaIds) : [];
     const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
       ? req.dbContext.estacaoId : null;
     const extras = { setorNome, turnoNome };
@@ -283,11 +366,11 @@ const getTendenciaAbsenteismo = async (req, res) => {
 
     const [faltas, atestados] = await Promise.all([
       prisma.frequencia.findMany({
-        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { opsId: true, dataReferencia: true },
       }),
       prisma.atestadoMedico.findMany({
-        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { dataInicio: true },
       }),
     ]);
@@ -335,6 +418,7 @@ const getTendenciaAbsenteismo = async (req, res) => {
 const getColaboradoresAbsenteismo = async (req, res) => {
   try {
     const { inicio, fim, empresaId, setorNome, turnoNome } = req.query;
+    const empresaIds = req.query.empresaIds ? [].concat(req.query.empresaIds) : [];
     const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
       ? req.dbContext.estacaoId : null;
     const extras = { setorNome, turnoNome };
@@ -346,7 +430,7 @@ const getColaboradoresAbsenteismo = async (req, res) => {
 
     const [faltas, atestados] = await Promise.all([
       prisma.frequencia.findMany({
-        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         include: {
           colaborador: {
             include: { empresa: true, setor: true, turno: true, escala: true },
@@ -354,7 +438,7 @@ const getColaboradoresAbsenteismo = async (req, res) => {
         },
       }),
       prisma.atestadoMedico.findMany({
-        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras),
+        where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         include: {
           colaborador: {
             include: { empresa: true, setor: true, turno: true, escala: true },

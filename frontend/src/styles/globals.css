@@ -199,3 +199,7 @@ html:not(.dark) [class*="bg-green-"] .text-white,
 html:not(.dark) [class*="bg-blue-"] .text-white {
   color: #FFFFFF !important;
 }
+
+/* Botões com cor de hover/disabled hardcoded para dark mode */
+html:not(.dark) .hover\:bg-\[\#3A3A3C\]:hover { background-color: var(--color-surface-3) !important; }
+html:not(.dark) .bg-\[\#3A3A3C\] { background-color: var(--color-surface-3) !important; }

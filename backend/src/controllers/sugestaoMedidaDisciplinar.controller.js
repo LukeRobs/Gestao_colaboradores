@@ -37,8 +37,16 @@ const getContadores = async (req, res) => {
       if (dataFim)    baseWhere.dataReferencia.lte = new Date(`${dataFim}T23:59:59`);
     }
 
-    if (turno) colaboradorFilter.idTurno = Number(turno);
-    if (lider) colaboradorFilter.idLider = lider;
+    if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
+      const liderColaborador = await prisma.colaborador.findUnique({
+        where: { opsId: req.user.opsId },
+        select: { idTurno: true },
+      });
+      colaboradorFilter.idTurno = liderColaborador?.idTurno ?? -1;
+    } else {
+      if (turno) colaboradorFilter.idTurno = Number(turno);
+      if (lider) colaboradorFilter.idLider = lider;
+    }
 
     if (Object.keys(colaboradorFilter).length > 0) {
       baseWhere.colaborador = { is: colaboradorFilter };
@@ -110,22 +118,22 @@ const getAllSugestoes = async (req, res) => {
     }
 
     /* ==============================
-       FILTRO TURNO
+       FILTRO TURNO / LIDERANÇA
     ============================== */
 
-    if (turno) {
+    if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
 
-      colaboradorFilter.idTurno = Number(turno);
+      const liderColaborador = await prisma.colaborador.findUnique({
+        where: { opsId: req.user.opsId },
+        select: { idTurno: true },
+      });
+      // Restringe ao turno do usuário logado. -1 garante resultado vazio se sem turno.
+      colaboradorFilter.idTurno = liderColaborador?.idTurno ?? -1;
 
-    }
+    } else {
 
-    /* ==============================
-       FILTRO LIDERANÇA
-    ============================== */
-
-    if (lider) {
-
-      colaboradorFilter.idLider = lider;
+      if (turno) colaboradorFilter.idTurno = Number(turno);
+      if (lider) colaboradorFilter.idLider = lider;
 
     }
 
@@ -244,11 +252,22 @@ const aprovarSugestao = async (req, res) => {
       select: {
         nomeCompleto: true,
         matricula: true,
+        idTurno: true,
       },
     })
 
     if (!colaborador) {
       return errorResponse(res, "Colaborador não encontrado", 400)
+    }
+
+    if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
+      const liderColaborador = await prisma.colaborador.findUnique({
+        where: { opsId: req.user.opsId },
+        select: { idTurno: true },
+      });
+      if (!liderColaborador?.idTurno || liderColaborador.idTurno !== colaborador.idTurno) {
+        return errorResponse(res, "Você só pode aprovar sugestões de colaboradores do seu turno", 403);
+      }
     }
 
     const dataOcorrencia = new Date(sugestao.dataReferencia)
@@ -460,6 +479,22 @@ const rejeitarSugestao = async (req, res) => {
 
     if (sugestao.status !== "PENDENTE") {
       return errorResponse(res, "Sugestão já processada", 400)
+    }
+
+    if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
+      const [liderColaborador, sugestaoColaborador] = await Promise.all([
+        prisma.colaborador.findUnique({
+          where: { opsId: req.user.opsId },
+          select: { idTurno: true },
+        }),
+        prisma.colaborador.findUnique({
+          where: { opsId: sugestao.opsId },
+          select: { idTurno: true },
+        }),
+      ]);
+      if (!liderColaborador?.idTurno || liderColaborador.idTurno !== sugestaoColaborador?.idTurno) {
+        return errorResponse(res, "Você só pode rejeitar sugestões de colaboradores do seu turno", 403);
+      }
     }
 
     await prisma.sugestaoMedidaDisciplinar.update({

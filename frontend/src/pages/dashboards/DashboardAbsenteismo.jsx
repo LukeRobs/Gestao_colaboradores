@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useEstacao } from "../../context/EstacaoContext"
 import {
   ResponsiveContainer,
@@ -39,10 +39,114 @@ function isoFirstDayOfMonth() {
   const d = new Date()
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
 }
+function isoWeekMonday(ref = new Date()) {
+  const d = new Date(ref)
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  return d.toISOString().slice(0, 10)
+}
+function isoWeekSunday(ref = new Date()) {
+  const mon = new Date(isoWeekMonday(ref) + "T12:00:00")
+  mon.setDate(mon.getDate() + 6)
+  return mon.toISOString().slice(0, 10)
+}
+function isoWeekNumber(dateStr) {
+  const d   = new Date(dateStr + "T12:00:00")
+  const thu = new Date(d)
+  thu.setDate(d.getDate() - (d.getDay() + 6) % 7 + 3)
+  const jan4 = new Date(thu.getFullYear(), 0, 4)
+  return 1 + Math.round((thu - jan4) / 604800000)
+}
+function isoWeekYear(dateStr) {
+  const d   = new Date(dateStr + "T12:00:00")
+  const thu = new Date(d)
+  thu.setDate(d.getDate() - (d.getDay() + 6) % 7 + 3)
+  return thu.getFullYear()
+}
+function dateToWeekValue(dateStr) {
+  return `${isoWeekYear(dateStr)}-W${String(isoWeekNumber(dateStr)).padStart(2, "0")}`
+}
+function weekValueToRange(weekVal) {
+  const [yearStr, wStr] = weekVal.split("-W")
+  const year    = parseInt(yearStr)
+  const week    = parseInt(wStr)
+  const jan4    = new Date(year, 0, 4)
+  const jan4Dow = (jan4.getDay() + 6) % 7
+  const mon     = new Date(jan4)
+  mon.setDate(jan4.getDate() - jan4Dow + (week - 1) * 7)
+  const sun = new Date(mon)
+  sun.setDate(mon.getDate() + 6)
+  return { inicio: mon.toISOString().slice(0, 10), fim: sun.toISOString().slice(0, 10) }
+}
 
-/* ─── CUSTOM TOOLTIP ─────────────────────────────────────────────── */
+function getRecentWeeks(n = 16) {
+  const today = new Date()
+  return Array.from({ length: n }, (_, i) => {
+    const ref = new Date(today)
+    ref.setDate(today.getDate() - i * 7)
+    const monStr = isoWeekMonday(ref)
+    const mon    = new Date(monStr + "T12:00:00")
+    const sun    = new Date(mon)
+    sun.setDate(mon.getDate() + 6)
+    const sunStr = sun.toISOString().slice(0, 10)
+    const fmt    = (d) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+    return {
+      value: dateToWeekValue(monStr),
+      label: `Sem ${isoWeekNumber(monStr)} — ${fmt(mon)} a ${fmt(sun)}`,
+      inicio: monStr,
+      fim:    sunStr,
+    }
+  })
+}
+
+/* ─── TOOLTIP FLUTUANTE GENÉRICO ─────────────────────────────────── */
+function InfoTooltip({ children, ausencias, headcount, taxa }) {
+  const [show, setShow] = React.useState(false)
+  return (
+    <div
+      style={{ position: "relative", display: "inline-flex" }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && taxa != null && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 8px)", right: 0,
+          background: "var(--color-surface)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 12, padding: "12px 16px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
+          zIndex: 200, whiteSpace: "nowrap", minWidth: 200,
+        }}>
+          <p style={{ margin: "0 0 8px", fontSize: 10, color: "var(--color-subtle)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Cálculo da Taxa
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 24 }}>
+              <span style={{ fontSize: 12, color: "var(--color-muted)" }}>Ausências</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: COLOR_FALTA }}>{ausencias}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 24 }}>
+              <span style={{ fontSize: 12, color: "var(--color-muted)" }}>HC Apto</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text)" }}>{headcount}</span>
+            </div>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "4px 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 24 }}>
+              <span style={{ fontSize: 12, color: "var(--color-muted)" }}>{ausencias} ÷ {headcount}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: BRAND }}>{taxa}%</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── CUSTOM TOOLTIP (gráficos Recharts) ─────────────────────────── */
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
+  const d = payload[0]?.payload
+  const hasTaxa = d?.taxa != null && d?.headcount != null
   return (
     <div style={{
       background: "var(--color-surface)",
@@ -60,6 +164,27 @@ function CustomTooltip({ active, payload, label }) {
           {p.name ? `${p.name}: ` : ""}{p.value}
         </p>
       ))}
+      {hasTaxa && (
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 10, color: "var(--color-subtle)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            Taxa de Absenteísmo
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
+              <span style={{ fontSize: 11, color: "var(--color-muted)" }}>Ausências</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: COLOR_FALTA }}>{d.value}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 20 }}>
+              <span style={{ fontSize: 11, color: "var(--color-muted)" }}>HC Apto</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text)" }}>{d.headcount}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 20, marginTop: 2 }}>
+              <span style={{ fontSize: 11, color: "var(--color-muted)" }}>{d.value} ÷ {d.headcount}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: BRAND }}>{d.taxa}%</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -286,36 +411,71 @@ function DateInput({ label, value, onChange }) {
   )
 }
 
-/* ─── SELECT EMPRESA ─────────────────────────────────────────────── */
-function SelectEmpresa({ value, onChange, options }) {
+/* ─── SELECT EMPRESA (multi) ─────────────────────────────────────── */
+function SelectEmpresa({ values, onChange, options }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  function toggle(id) {
+    const sid = String(id)
+    onChange(values.includes(sid) ? values.filter((v) => v !== sid) : [...values, sid])
+  }
+
+  const label = values.length === 0
+    ? "Todas as empresas"
+    : values.length === 1
+    ? options.find((e) => String(e.idEmpresa) === values[0])?.razaoSocial || "1 empresa"
+    : `${values.length} empresas`
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
       <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>
         Empresa
       </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          background: "var(--color-surface)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: value ? "var(--color-text)" : "var(--color-subtle)",
-          fontSize: 13,
-          borderRadius: 12,
-          padding: "9px 14px",
-          outline: "none",
-          cursor: "pointer",
-          colorScheme: "dark",
-          minWidth: 160,
-        }}
-        onFocus={(e) => (e.target.style.borderColor = "rgba(250,76,0,0.5)")}
-        onBlur={(e) => (e.target.style.borderColor = "var(--color-border)")}
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ background: "var(--color-surface)", border: `1px solid ${open || values.length > 0 ? "rgba(250,76,0,0.5)" : "rgba(255,255,255,0.08)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 200, userSelect: "none", transition: "border-color 0.2s" }}
       >
-        <option value="">Todas as empresas</option>
-        {options.map((e) => (
-          <option key={e.idEmpresa} value={e.idEmpresa}>{e.razaoSocial}</option>
-        ))}
-      </select>
+        <span style={{ color: values.length > 0 ? "var(--color-text)" : "var(--color-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 170 }}>
+          {label}
+        </span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-subtle)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+      </div>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 260, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%", msOverflowStyle: "none", scrollbarWidth: "none" }}>
+          <div
+            onClick={() => onChange([])}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: values.length === 0 ? BRAND : "var(--color-muted)", fontWeight: values.length === 0 ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            Todas as empresas
+          </div>
+          {options.map((e) => {
+            const checked = values.includes(String(e.idEmpresa))
+            return (
+              <div
+                key={e.idEmpresa}
+                onClick={() => toggle(e.idEmpresa)}
+                style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: checked ? BRAND : "var(--color-muted)", fontWeight: checked ? 600 : 400, display: "flex", alignItems: "center", gap: 8 }}
+                onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
+                onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
+              >
+                <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${checked ? BRAND : "rgba(255,255,255,0.25)"}`, background: checked ? BRAND : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+                  {checked && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                </div>
+                {e.razaoSocial}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -440,17 +600,132 @@ const SegLabelH = ({ x, y, width, height, value }) => {
   )
 }
 
-function BarBlock({ data, onBarClick, activeBar }) {
+const TURNO_COLORS = ["#FA4C00", "#3B82F6", "#22C55E", "#A855F7", "#F59E0B"]
+
+function TurnoSummaryBlock({ data }) {
   if (!data?.length) return <Empty />
-  const h      = Math.max(200, data.length * 52)
-  const click  = !!onBarClick
-  const opFn   = (name) => activeBar && name !== activeBar ? 0.3 : 1
+  const total = data.reduce((a, d) => a + (d.value || 0), 0)
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {data.map((d, i) => {
+        const hasTaxa = d.taxa != null
+        const pct     = hasTaxa ? d.taxa : (total > 0 ? (d.value / total) * 100 : 0)
+        const color   = TURNO_COLORS[i % TURNO_COLORS.length]
+        const barMax  = hasTaxa ? Math.max(...data.map(x => x.taxa ?? 0)) : 100
+        const barW    = barMax > 0 ? (pct / barMax) * 100 : 0
+        return (
+          <div key={d.name}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 4, height: 22, borderRadius: 3, background: color, flexShrink: 0 }} />
+                <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text)" }}>{d.name}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {d.faltas > 0 && (
+                  <span style={{ fontSize: 11, color: "var(--color-muted)" }}>
+                    <span style={{ color: COLOR_FALTA, fontWeight: 600 }}>F</span> {d.faltas}
+                  </span>
+                )}
+                {d.atestados > 0 && (
+                  <span style={{ fontSize: 11, color: "var(--color-muted)" }}>
+                    <span style={{ color: COLOR_ATESTADO, fontWeight: 600 }}>A</span> {d.atestados}
+                  </span>
+                )}
+                <InfoTooltip ausencias={d.value} headcount={d.headcount} taxa={d.taxa}>
+                  <span style={{
+                    fontSize: 15, fontWeight: 800, color, minWidth: 46, textAlign: "right",
+                    cursor: hasTaxa ? "help" : "default",
+                    borderBottom: hasTaxa ? `1px dashed ${color}66` : "none",
+                  }}>
+                    {pct.toFixed(hasTaxa ? 2 : 1)}%
+                  </span>
+                </InfoTooltip>
+              </div>
+            </div>
+            <div style={{ height: 5, borderRadius: 99, background: "rgba(255,255,255,0.06)" }}>
+              <div style={{
+                height: "100%", borderRadius: 99, background: color,
+                width: `${barW}%`, transition: "width 0.5s ease",
+              }} />
+            </div>
+          </div>
+        )
+      })}
+      {data[0]?.taxa != null && (
+        <p style={{ margin: 0, fontSize: 10, color: "var(--color-subtle)", textAlign: "right" }}>
+          Taxa = Ausências ÷ HC Apto
+        </p>
+      )}
+    </div>
+  )
+}
+
+const TEMPO_FAIXAS  = ["0 a 7", "8 a 15", "16 a 30", "31 a 60", "61 a 90", "90+"]
+const TEMPO_COLORS  = ["#22C55E", "#84CC16", "#EAB308", "#F97316", "#EF4444", "#FA4C00"]
+
+function TempoCasaEmpresaBlock({ data }) {
+  if (!data?.length) return <Empty />
+  const h = Math.max(200, data.length * 52)
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={h}>
+        <BarChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+          <CartesianGrid stroke="var(--color-border)" vertical={false} />
+          <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 11 }} axisLine={false} tickLine={false} tickMargin={6}
+            tickFormatter={(v) => v?.length > 13 ? v.slice(0, 11) + "…" : v} />
+          <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+          {TEMPO_FAIXAS.map((faixa, i) => (
+            <Bar key={faixa} dataKey={faixa} name={faixa} stackId="a" fill={TEMPO_COLORS[i]} maxBarSize={44}
+              radius={i === TEMPO_FAIXAS.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}>
+              <LabelList dataKey={faixa} content={SegLabel} />
+            </Bar>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginTop: 8 }}>
+        {TEMPO_FAIXAS.map((faixa, i) => (
+          <div key={faixa} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: TEMPO_COLORS[i] }} />
+            <span style={{ fontSize: 11, color: "var(--color-muted)" }}>{faixa} dias</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BarBlock({ data, onBarClick, activeBar, showPct }) {
+  if (!data?.length) return <Empty />
+  const h          = Math.max(200, data.length * 52)
+  const click      = !!onBarClick
+  const opFn       = (name) => activeBar && name !== activeBar ? 0.3 : 1
+  const hasTaxa    = showPct && data.some(d => d.taxa != null)
+  const grandTotal = (showPct && !hasTaxa)
+    ? data.reduce((acc, d) => acc + (d.faltas || 0) + (d.atestados || 0), 0)
+    : 0
+
+  const PctTopLabel = ({ x, y, width, index }) => {
+    if (!showPct) return null
+    const d    = data[index]
+    const pct  = hasTaxa
+      ? (d?.taxa ?? 0)
+      : grandTotal > 0
+        ? ((((d?.faltas || 0) + (d?.atestados || 0)) / grandTotal) * 100)
+        : 0
+    if (!pct) return null
+    return (
+      <text x={x + width / 2} y={y - 4} textAnchor="middle" fill="var(--color-muted)" fontSize={10} fontWeight={600}>
+        {pct.toFixed(hasTaxa ? 2 : 1)}%
+      </text>
+    )
+  }
 
   return (
     <div style={{ position: "relative" }}>
       {click && <p style={{ position: "absolute", top: 0, right: 0, margin: 0, fontSize: 10, color: "var(--color-subtle)" }}>Clique para filtrar</p>}
       <ResponsiveContainer width="100%" height={h}>
-        <BarChart data={data} margin={{ top: click ? 16 : 4, right: 8, bottom: 0, left: -8 }}>
+        <BarChart data={data} margin={{ top: (click || showPct) ? 24 : 4, right: 8, bottom: 0, left: -8 }}>
           <CartesianGrid stroke="var(--color-border)" vertical={false} />
           <XAxis dataKey="name" tick={{ fill: "var(--color-muted)", fontSize: 11 }} axisLine={false} tickLine={false} tickMargin={6}
             tickFormatter={(v) => v?.length > 13 ? v.slice(0, 11) + "…" : v} />
@@ -471,6 +746,7 @@ function BarBlock({ data, onBarClick, activeBar }) {
             onClick={click ? (d) => onBarClick(d.name) : undefined}>
             {data.map((d, i) => <Cell key={i} fill={COLOR_ATESTADO} opacity={opFn(d.name)} />)}
             <LabelList dataKey="atestados" content={SegLabel} />
+            {showPct && <LabelList content={PctTopLabel} />}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -892,7 +1168,7 @@ export default function DashboardAbsenteismo() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [inicio, setInicio] = useState(isoFirstDayOfMonth())
   const [fim, setFim] = useState(isoToday())
-  const [empresaId, setEmpresaId] = useState("")
+  const [empresaIds, setEmpresaIds] = useState([])
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -927,20 +1203,22 @@ export default function DashboardAbsenteismo() {
     setDrillTurno(prev => prev === nome ? null : nome)
   }
 
-  /* ── drill: clique em empresa (usa dropdown existente) ── */
+  /* ── drill: clique em empresa (toggle no array) ── */
   function handleEmpresaClick(nome) {
     const found = empresas.find(e => e.razaoSocial === nome)
-    setEmpresaId(prev => (found && prev !== String(found.idEmpresa)) ? String(found.idEmpresa) : "")
+    if (!found) return
+    const sid = String(found.idEmpresa)
+    setEmpresaIds(prev => prev.includes(sid) ? prev.filter(v => v !== sid) : [...prev, sid])
   }
 
   /* ── limpar tudo ── */
   function clearAllDrills() {
     if (savedRange) { setInicio(savedRange.inicio); setFim(savedRange.fim) }
     setDrillDate(null); setDrillSetor(null); setDrillTurno(null)
-    setEmpresaId(""); setSavedRange(null)
+    setEmpresaIds([]); setSavedRange(null)
   }
 
-  const hasDrill = drillDate || drillSetor || drillTurno || empresaId
+  const hasDrill = drillDate || drillSetor || drillTurno || empresaIds.length > 0
 
   useEffect(() => {
     api.get("/empresas").then((res) => {
@@ -956,7 +1234,7 @@ export default function DashboardAbsenteismo() {
       const params = {
         inicio,
         fim,
-        empresaId:  empresaId  || undefined,
+        empresaIds: empresaIds.length ? empresaIds : undefined,
         setorNome:  drillSetor || undefined,
         turnoNome:  drillTurno || undefined,
       }
@@ -980,10 +1258,15 @@ export default function DashboardAbsenteismo() {
         mapaTempo[k].faltas    += c.totalFaltas    || 0
         mapaTempo[k].atestados += c.totalAtestados || 0
       })
+      const TEMPO_ORDER = ["0 a 7", "8 a 15", "16 a 30", "31 a 60", "61 a 90", "90+", "N/I"]
       setPorTempoCasa(
-        Object.entries(mapaTempo).map(([name, v]) => ({
-          name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados,
-        }))
+        Object.entries(mapaTempo)
+          .map(([name, v]) => ({ name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados }))
+          .sort((a, b) => {
+            const ia = TEMPO_ORDER.indexOf(a.name)
+            const ib = TEMPO_ORDER.indexOf(b.name)
+            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+          })
       )
     } catch (err) {
       console.error("❌ DASHBOARD ABSENTEISMO:", err)
@@ -993,7 +1276,7 @@ export default function DashboardAbsenteismo() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [inicio, fim, empresaId, drillSetor, drillTurno, estacaoId])
+  useEffect(() => { fetchAll() }, [inicio, fim, empresaIds, drillSetor, drillTurno, estacaoId])
 
   const porEmpresa   = dist?.porEmpresa   || []
   const porSetor     = dist?.porSetor     || []
@@ -1002,6 +1285,58 @@ export default function DashboardAbsenteismo() {
   const porLider     = (dist?.porLider    || []).slice(0, 10)
   const porDiaSemana = dist?.porDiaSemana || []
   const porEscala    = dist?.porEscala    || []
+
+  const porSemana = useMemo(() => {
+    if (!tendencia?.length) return []
+    const weeks = {}
+    tendencia.forEach((d) => {
+      const wn  = isoWeekNumber(d.data)
+      const key = `Sem ${wn}`
+      if (!weeks[key]) weeks[key] = { name: key, faltas: 0, atestados: 0, value: 0 }
+      weeks[key].faltas    += d.faltas    || 0
+      weeks[key].atestados += d.atestados || 0
+      weeks[key].value     += (d.faltas || 0) + (d.atestados || 0)
+    })
+    return Object.values(weeks)
+  }, [tendencia])
+
+  const DIAS_PT    = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+  const DOW_ORDER  = [1, 2, 3, 4, 5, 6, 0]
+  const porTempoCasaEmpresa = useMemo(() => {
+    if (!colaboradores?.length) return []
+    const acc = {}
+    colaboradores.forEach((c) => {
+      const empresa = c.empresa || "N/I"
+      const faixa   = c.tempoCasa || "N/I"
+      if (!acc[empresa]) {
+        acc[empresa] = { name: empresa }
+        TEMPO_FAIXAS.forEach((f) => { acc[empresa][f] = 0 })
+      }
+      if (TEMPO_FAIXAS.includes(faixa)) {
+        acc[empresa][faixa] += c.totalAusencias || 0
+      }
+    })
+    return Object.values(acc).sort((a, b) => {
+      const totA = TEMPO_FAIXAS.reduce((s, f) => s + (a[f] || 0), 0)
+      const totB = TEMPO_FAIXAS.reduce((s, f) => s + (b[f] || 0), 0)
+      return totB - totA
+    })
+  }, [colaboradores])
+
+  /* porDiaSemana vem do backend com headcount e taxa reais — ordenar Seg→Dom */
+  const porDiaSemanaOrdenado = useMemo(() => {
+    if (!porDiaSemana?.length) return []
+    const ORDER = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+    return [...porDiaSemana].sort((a, b) => ORDER.indexOf(a.name) - ORDER.indexOf(b.name))
+  }, [porDiaSemana])
+
+  /* ── valor do week-picker: só mostra se início=segunda e fim=domingo da mesma semana ── */
+  const weekInputValue = (() => {
+    const d = new Date(inicio + "T12:00:00")
+    if (d.getDay() !== 1) return ""
+    if (fim !== isoWeekSunday(d)) return ""
+    return dateToWeekValue(inicio)
+  })()
 
   const pulseStyle = `
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
@@ -1036,7 +1371,40 @@ export default function DashboardAbsenteismo() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
               <DateInput label="Início" value={inicio} onChange={setInicio} />
               <DateInput label="Fim"    value={fim}    onChange={setFim} />
-              <SelectEmpresa value={empresaId} onChange={setEmpresaId} options={empresas} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>
+                  Semana
+                </label>
+                <select
+                  value={weekInputValue}
+                  onChange={(e) => {
+                    if (!e.target.value) return
+                    const { inicio: i, fim: f } = weekValueToRange(e.target.value)
+                    setInicio(i); setFim(f)
+                  }}
+                  style={{
+                    background: "var(--color-surface)",
+                    border: weekInputValue ? `1px solid ${BRAND}88` : "1px solid rgba(255,255,255,0.08)",
+                    color: weekInputValue ? "var(--color-text)" : "var(--color-muted)",
+                    fontSize: 13,
+                    borderRadius: 12,
+                    padding: "9px 14px",
+                    outline: "none",
+                    cursor: "pointer",
+                    colorScheme: "dark",
+                    height: 42,
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = `${BRAND}88`)}
+                  onBlur={(e) => (e.target.style.borderColor = weekInputValue ? `${BRAND}88` : "rgba(255,255,255,0.08)")}
+                >
+                  <option value="">— Escolha a semana —</option>
+                  {getRecentWeeks(16).map((w) => (
+                    <option key={w.value} value={w.value}>{w.label}</option>
+                  ))}
+                </select>
+              </div>
+              <SelectEmpresa values={empresaIds} onChange={setEmpresaIds} options={empresas} />
               <button
                 onClick={fetchAll}
                 disabled={loading}
@@ -1084,12 +1452,13 @@ export default function DashboardAbsenteismo() {
               {drillTurno && (
                 <DrillPill label={`Turno: ${drillTurno}`} onRemove={() => setDrillTurno(null)} />
               )}
-              {empresaId && (
+              {empresaIds.map((eid) => (
                 <DrillPill
-                  label={`Empresa: ${empresas.find(e => String(e.idEmpresa) === empresaId)?.razaoSocial || empresaId}`}
-                  onRemove={() => setEmpresaId("")}
+                  key={eid}
+                  label={`Empresa: ${empresas.find(e => String(e.idEmpresa) === eid)?.razaoSocial || eid}`}
+                  onRemove={() => setEmpresaIds(prev => prev.filter(v => v !== eid))}
                 />
-              )}
+              ))}
 
               <button
                 onClick={clearAllDrills}
@@ -1154,6 +1523,9 @@ export default function DashboardAbsenteismo() {
                 />
               )}
             </Card>
+            <Card title="% de Ausências por Semana" subtitle="Participação de cada semana no total do período">
+              {loading ? <Skeleton style={{ height: 210 }} /> : <BarBlock data={porSemana} showPct />}
+            </Card>
           </section>
 
           {/* ── 03 — DISTRIBUIÇÃO ───────────────────────────── */}
@@ -1165,7 +1537,8 @@ export default function DashboardAbsenteismo() {
                   <BarBlock
                     data={porEmpresa}
                     onBarClick={handleEmpresaClick}
-                    activeBar={empresaId ? empresas.find(e => String(e.idEmpresa) === empresaId)?.razaoSocial : null}
+                    activeBar={null}
+                    showPct
                   />
                 )}
               </Card>
@@ -1200,7 +1573,7 @@ export default function DashboardAbsenteismo() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" style={{ minWidth: 0 }}>
               <Card title="Por Turno" subtitle="Clique para filtrar por turno">
                 {loading ? <Skeleton style={{ height: 210 }} /> : (
-                  <BarBlock data={porTurno} onBarClick={handleTurnoClick} activeBar={drillTurno} />
+                  <BarBlock data={porTurno} onBarClick={handleTurnoClick} activeBar={drillTurno} showPct />
                 )}
               </Card>
               <Card title="Por Gênero" subtitle="Perfil de gênero dos ausentes">
@@ -1222,14 +1595,20 @@ export default function DashboardAbsenteismo() {
                 {loading ? <Skeleton style={{ height: 210 }} /> : <BarBlock data={porTempoCasa} />}
               </Card>
             </div>
+            <Card title="Tempo de Casa por Empresa" subtitle="Ausências por faixa de tempo de casa — distribuição por empresa">
+              {loading ? <Skeleton style={{ height: 240 }} /> : <TempoCasaEmpresaBlock data={porTempoCasaEmpresa} />}
+            </Card>
           </section>
 
           {/* ── 06 — CONTEXTO ───────────────────────────────── */}
           <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <SectionLabel num="06" title="Ausências por Contexto" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ minWidth: 0 }}>
-              <Card title="Por Dia da Semana" subtitle="Quais dias concentram mais ausências">
-                {loading ? <Skeleton style={{ height: 210 }} /> : <BarBlock data={porDiaSemana} />}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style={{ minWidth: 0 }}>
+              <Card title="Absenteísmo por Turno" subtitle="% de ausências por turno no período">
+                {loading ? <Skeleton style={{ height: 210 }} /> : <TurnoSummaryBlock data={porTurno} />}
+              </Card>
+              <Card title="Ausências por Dia da Semana" subtitle="Taxa de absenteísmo por dia — Ausências ÷ HC Apto">
+                {loading ? <Skeleton style={{ height: 210 }} /> : <BarBlock data={porDiaSemanaOrdenado} showPct />}
               </Card>
               <Card title="Por Escala" subtitle="Distribuição de ausências por escala de trabalho">
                 {loading ? <Skeleton style={{ height: 210 }} /> : <PieBlock data={porEscala} />}

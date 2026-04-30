@@ -147,49 +147,67 @@ function DateInput({ label, value, onChange }) {
   )
 }
 
-/* ─── SELECT EMPRESA ─────────────────────────────────────────────── */
-function SelectEmpresa({ value, onChange, options }) {
+/* ─── SELECT EMPRESA (multi) ─────────────────────────────────────── */
+function SelectEmpresa({ values, onChange, options }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
-  const selected = options.find((e) => String(e.idEmpresa) === String(value))
+
   useEffect(() => {
     function handleClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  function toggle(id) {
+    const sid = String(id)
+    onChange(values.includes(sid) ? values.filter((v) => v !== sid) : [...values, sid])
+  }
+
+  const label = values.length === 0
+    ? "Todas as empresas"
+    : values.length === 1
+    ? options.find((e) => String(e.idEmpresa) === values[0])?.razaoSocial || "1 empresa"
+    : `${values.length} empresas`
+
   return (
     <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 5, position: "relative" }}>
       <label style={{ fontSize: 10, color: "var(--color-text)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.12em" }}>Empresa</label>
       <div
         onClick={() => setOpen(!open)}
-        style={{ background: "var(--color-surface)", border: `1px solid ${open ? "rgba(250,76,0,0.5)" : "var(--color-border)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 180, userSelect: "none", transition: "border-color 0.2s" }}
+        style={{ background: "var(--color-surface)", border: `1px solid ${open || values.length > 0 ? "rgba(250,76,0,0.5)" : "var(--color-border)"}`, color: "var(--color-text)", fontSize: 13, borderRadius: 12, padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, minWidth: 200, userSelect: "none", transition: "border-color 0.2s" }}
       >
-        <span style={{ color: selected ? "#fff" : "var(--color-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
-          {selected ? selected.razaoSocial : "Todas as empresas"}
+        <span style={{ color: values.length > 0 ? "#fff" : "var(--color-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 170 }}>
+          {label}
         </span>
         <IconChevronDown c="var(--color-subtle)" />
       </div>
       {open && (
-        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 240, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
+        <div className="hide-scrollbar" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 9999, background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, maxHeight: 260, overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.7)", minWidth: "100%" }}>
           <div
-            onClick={() => { onChange(""); setOpen(false) }}
-            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !value ? BRAND : "var(--color-muted)", fontWeight: !value ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+            onClick={() => onChange([])}
+            style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: values.length === 0 ? BRAND : "var(--color-muted)", fontWeight: values.length === 0 ? 600 : 400, borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 8 }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-border)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             Todas as empresas
           </div>
-          {options.map((e) => (
-            <div
-              key={e.idEmpresa}
-              onClick={() => { onChange(String(e.idEmpresa)); setOpen(false) }}
-              style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: String(value) === String(e.idEmpresa) ? BRAND : "var(--color-muted)", fontWeight: String(value) === String(e.idEmpresa) ? 600 : 400 }}
-              onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
-              onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
-            >
-              {e.razaoSocial}
-            </div>
-          ))}
+          {options.map((e) => {
+            const checked = values.includes(String(e.idEmpresa))
+            return (
+              <div
+                key={e.idEmpresa}
+                onClick={() => toggle(e.idEmpresa)}
+                style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: checked ? BRAND : "var(--color-muted)", fontWeight: checked ? 600 : 400, display: "flex", alignItems: "center", gap: 8 }}
+                onMouseEnter={(e2) => (e2.currentTarget.style.background = "rgba(250,76,0,0.08)")}
+                onMouseLeave={(e2) => (e2.currentTarget.style.background = "transparent")}
+              >
+                <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${checked ? BRAND : "rgba(255,255,255,0.25)"}`, background: checked ? BRAND : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+                  {checked && <svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                </div>
+                {e.razaoSocial}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -521,7 +539,7 @@ export default function DashboardAtestados() {
   const [cid, setCid] = useState("")
   const [cids, setCids] = useState([])
   const [sintoma, setSintoma] = useState("")
-  const [empresaId, setEmpresaId] = useState("")
+  const [empresaIds, setEmpresaIds] = useState([])
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -545,7 +563,7 @@ export default function DashboardAtestados() {
     try {
       setLoading(true)
       setError("")
-      const params = { inicio, fim, cid: cid || undefined, empresaId: empresaId || undefined }
+      const params = { inicio, fim, cid: cid || undefined, empresaIds: empresaIds.length ? empresaIds : undefined }
       // se sintoma selecionado, envia os CIDs do grupo (ignora filtro de CID individual)
       if (sintoma && SINTOMA_CIDS[sintoma]) {
         delete params.cid
@@ -573,7 +591,7 @@ export default function DashboardAtestados() {
     }
   }
 
-  useEffect(() => { fetchAll() }, [inicio, fim, cid, sintoma, empresaId, estacaoId])
+  useEffect(() => { fetchAll() }, [inicio, fim, cid, sintoma, empresaIds, estacaoId])
 
   const porEmpresa   = useMemo(() => dist?.porEmpresa   || [], [dist])
   const porSetor     = useMemo(() => dist?.porSetor     || [], [dist])
@@ -636,7 +654,7 @@ export default function DashboardAtestados() {
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 12 }}>
               <DateInput label="Início" value={inicio} onChange={setInicio} />
               <DateInput label="Fim" value={fim} onChange={setFim} />
-              <SelectEmpresa value={empresaId} onChange={setEmpresaId} options={empresas} />
+              <SelectEmpresa values={empresaIds} onChange={setEmpresaIds} options={empresas} />
               <SelectSintoma
                 value={sintoma}
                 onChange={(v) => { setSintoma(v); if (v) setCid("") }}

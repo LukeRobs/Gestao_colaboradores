@@ -15,6 +15,7 @@ import MainLayout from "../../components/MainLayout";
 import api      from "../../services/api";
 import { AuthContext } from "../../context/AuthContext";
 import { ThemeContext } from "../../context/ThemeContext";
+import { useEstacao } from "../../context/EstacaoContext";
 
 /* --- TOKENS -------------------------------------------------------- */
 const BRAND   = "#FA4C00"
@@ -342,6 +343,9 @@ export default function FolgaDominicalPage() {
   const isLideranca = user?.role === "LIDERANCA";
   const atual       = getMesAtual();
 
+  const { estacaoId: estacaoSelecionada, isGlobal } = useEstacao();
+  const semEstacaoSelecionada = isAdmin && isGlobal && !estacaoSelecionada;
+
   const [sidebarOpen, setSidebarOpen]         = useState(false);
   const [ano,  setAno]                         = useState(atual.ano);
   const [mes,  setMes]                         = useState(atual.mes);
@@ -369,7 +373,7 @@ export default function FolgaDominicalPage() {
       setResumo(res.data?.data || null);
     } catch (e) {
       setResumo(null);
-      setErro(e?.response?.data?.error || "Nenhum planejamento encontrado para este período.");
+      setErro(e?.response?.data?.error || "Erro ao carregar planejamento.");
     } finally { setLoading(false); }
   }, [ano, mes]);
 
@@ -383,6 +387,7 @@ export default function FolgaDominicalPage() {
   /* -- actions ---------------------------------- */
   async function gerar() {
     if (!isAdmin && !isAltaGestao) return;
+    if (semEstacaoSelecionada) { setErro("Selecione uma estação no menu superior antes de gerar as folgas."); return; }
     if (previewInvalido) { setErro("Existem colaboradores não alocados na simulação. Ajuste antes de gerar."); return; }
     if (!window.confirm("Deseja gerar o planejamento deste mês?")) return;
     setLoading(true); setErro("");
@@ -404,6 +409,7 @@ export default function FolgaDominicalPage() {
   }
 
   async function preview() {
+    if (semEstacaoSelecionada) { setPreviewErro("Selecione uma estação no menu superior antes de simular."); return; }
     setPreviewLoading(true); setPreviewErro(""); setErro("");
     try {
       const res = await api.post("/folga-dominical/preview", { ano, mes });
@@ -532,15 +538,17 @@ export default function FolgaDominicalPage() {
               {(isAdmin || isAltaGestao || isLideranca) && (
                 <button
                   onClick={preview}
-                  disabled={previewLoading || loading}
+                  disabled={previewLoading || loading || semEstacaoSelecionada}
+                  title={semEstacaoSelecionada ? "Selecione uma estação no menu superior primeiro" : undefined}
                   style={{
                     height: 40, padding: "0 20px", borderRadius: 12,
                     background: BLUE, color: "#fff", fontSize: 13, fontWeight: 700,
-                    border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 7,
-                    opacity: (previewLoading || loading) ? 0.5 : 1, transition: "background 0.2s",
+                    border: "none", cursor: (semEstacaoSelecionada) ? "not-allowed" : "pointer",
+                    display: "flex", alignItems: "center", gap: 7,
+                    opacity: (previewLoading || loading || semEstacaoSelecionada) ? 0.5 : 1, transition: "background 0.2s",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#1d4ed8")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = BLUE)}
+                  onMouseEnter={(e) => !semEstacaoSelecionada && (e.currentTarget.style.background = "#1d4ed8")}
+                  onMouseLeave={(e) => !semEstacaoSelecionada && (e.currentTarget.style.background = BLUE)}
                 >
                   <Play size={14} style={{ animation: previewLoading ? "spin 0.8s linear infinite" : "none" }} />
                   {previewLoading ? "Simulando..." : "Simular"}
@@ -552,18 +560,18 @@ export default function FolgaDominicalPage() {
                 <>
                   <button
                     onClick={gerar}
-                    disabled={loading || previewLoading || previewInvalido || previewNaoExecutado}
-                    title={previewNaoExecutado ? "Execute a simulação antes de gerar" : previewInvalido ? "Existem colaboradores não alocados" : "Gerar planejamento"}
+                    disabled={loading || previewLoading || previewInvalido || previewNaoExecutado || semEstacaoSelecionada}
+                    title={semEstacaoSelecionada ? "Selecione uma estação no menu superior primeiro" : previewNaoExecutado ? "Execute a simulação antes de gerar" : previewInvalido ? "Existem colaboradores não alocados" : "Gerar planejamento"}
                     style={{
                       height: 40, padding: "0 20px", borderRadius: 12,
-                      background: (previewInvalido || previewNaoExecutado) ? "var(--color-surface-3)" : BRAND,
+                      background: (previewInvalido || previewNaoExecutado || semEstacaoSelecionada) ? "var(--color-surface-3)" : BRAND,
                       color: "#fff", fontSize: 13, fontWeight: 700,
-                      border: "none", cursor: (previewInvalido || previewNaoExecutado) ? "not-allowed" : "pointer",
+                      border: "none", cursor: (previewInvalido || previewNaoExecutado || semEstacaoSelecionada) ? "not-allowed" : "pointer",
                       display: "flex", alignItems: "center", gap: 7,
                       opacity: (loading || previewLoading) ? 0.5 : 1, transition: "background 0.2s",
                     }}
-                    onMouseEnter={(e) => !(previewInvalido || previewNaoExecutado) && (e.currentTarget.style.background = "#e04400")}
-                    onMouseLeave={(e) => !(previewInvalido || previewNaoExecutado) && (e.currentTarget.style.background = BRAND)}
+                    onMouseEnter={(e) => !(previewInvalido || previewNaoExecutado || semEstacaoSelecionada) && (e.currentTarget.style.background = "#e04400")}
+                    onMouseLeave={(e) => !(previewInvalido || previewNaoExecutado || semEstacaoSelecionada) && (e.currentTarget.style.background = BRAND)}
                   >
                     <CalendarDays size={14} />
                     Gerar
@@ -571,16 +579,18 @@ export default function FolgaDominicalPage() {
 
                   <button
                     onClick={reprocessar}
-                    disabled={loading || previewLoading}
+                    disabled={loading || previewLoading || semEstacaoSelecionada}
+                    title={semEstacaoSelecionada ? "Selecione uma estação no menu superior primeiro" : undefined}
                     style={{
                       height: 40, padding: "0 18px", borderRadius: 12,
                       background: `${RED}18`, border: `1px solid ${RED}40`,
                       color: RED, fontSize: 13, fontWeight: 700,
-                      cursor: "pointer", display: "flex", alignItems: "center", gap: 7,
-                      opacity: (loading || previewLoading) ? 0.5 : 1, transition: "all 0.2s",
+                      cursor: semEstacaoSelecionada ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", gap: 7,
+                      opacity: (loading || previewLoading || semEstacaoSelecionada) ? 0.5 : 1, transition: "all 0.2s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = `${RED}30`)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = `${RED}18`)}
+                    onMouseEnter={(e) => !semEstacaoSelecionada && (e.currentTarget.style.background = `${RED}30`)}
+                    onMouseLeave={(e) => !semEstacaoSelecionada && (e.currentTarget.style.background = `${RED}18`)}
                   >
                     <Trash2 size={14} />
                     Reprocessar
@@ -589,6 +599,13 @@ export default function FolgaDominicalPage() {
               )}
             </div>
           </div>
+
+          {/* -- AVISO: SEM ESTAÇÃO SELECIONADA (ADMIN global) -- */}
+          {semEstacaoSelecionada && (
+            <AlertBanner type="warning">
+              Nenhuma estação selecionada. Selecione uma estação no menu superior para simular ou gerar folgas dominicais.
+            </AlertBanner>
+          )}
 
           {/* -- ERRO GLOBAL ------------------------------------ */}
           {!loading && erro && (

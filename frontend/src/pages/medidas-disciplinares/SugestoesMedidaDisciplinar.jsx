@@ -101,8 +101,7 @@ export default function SugestoesMedidaDisciplinar() {
   const [filtroDataInicio, setFiltroDataInicio] = useState("");
   const [filtroDataFim, setFiltroDataFim] = useState("");
   const [filtroTurno, setFiltroTurno] = useState("");
-  // liderança vê só os seus; admin/gestão pode filtrar livremente
-  const [filtroLider, setFiltroLider] = useState(isLideranca ? (user?.opsId ?? "") : "");
+  const [filtroLider, setFiltroLider] = useState("");
 
   // carrega turnos e líderes uma vez
   useEffect(() => {
@@ -156,8 +155,7 @@ export default function SugestoesMedidaDisciplinar() {
     setFiltroStatus("");
     setFiltroTurno("");
     setFiltroNome("");
-    // liderança não pode limpar o filtro de líder (sempre vê só os seus)
-    if (!isLideranca) setFiltroLider("");
+    setFiltroLider("");
   }
 
   function handleCounterClick(status) {
@@ -273,6 +271,8 @@ export default function SugestoesMedidaDisciplinar() {
               <option value="REJEITADA">Rejeitada</option>
             </select>
 
+            {/* select de turno só aparece para admin/gestão — liderança é fixada ao seu turno pelo backend */}
+            {!isLideranca && (
             <select
               value={filtroTurno}
               onChange={(e) => setFiltroTurno(e.target.value)}
@@ -283,6 +283,7 @@ export default function SugestoesMedidaDisciplinar() {
                 <option key={t.idTurno} value={t.idTurno}>{t.nomeTurno}</option>
               ))}
             </select>
+            )}
 
             {/* select de líder só aparece para admin/gestão */}
             {!isLideranca && (

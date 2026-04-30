@@ -548,13 +548,7 @@ const enviarEmailEvidencia = async (req, res) => {
     let pdfBuffer;
     try {
       const s3Response = await r2.send(command);
-
-      // Converter stream para buffer
-      const chunks = [];
-      for await (const chunk of s3Response.Body) {
-        chunks.push(chunk);
-      }
-      pdfBuffer = Buffer.concat(chunks);
+      pdfBuffer = Buffer.from(await s3Response.Body.transformToByteArray());
       console.log(`✅ PDF baixado do R2: ${medida.documentoAssinadoUrl} (${pdfBuffer.length} bytes)`);
     } catch (r2Error) {
       console.error("❌ Erro ao baixar PDF do R2:", r2Error);

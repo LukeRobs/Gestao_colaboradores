@@ -100,6 +100,18 @@ async function gerar(req, res) {
       });
     }
 
+    if (
+      message.includes("elegível") ||
+      message.includes("domingo encontrado") ||
+      message.includes("obrigatórios")
+    ) {
+      return res.status(422).json({
+        success: false,
+        type: "DADOS_INSUFICIENTES",
+        error: message,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       error: "Erro interno ao gerar folga dominical.",
@@ -137,17 +149,10 @@ async function listar(req, res) {
       estacaoId,
     });
 
-    if (!resultado) {
-      return res.status(404).json({
-        success: false,
-        error: "Nenhum planejamento encontrado para este mês.",
-      });
-    }
-
     return res.status(200).json({
       success: true,
-      message: "Planejamento carregado com sucesso.",
-      data: resultado,
+      message: resultado ? "Planejamento carregado com sucesso." : "Nenhum planejamento encontrado para este período.",
+      data: resultado ?? null,
     });
 
   } catch (error) {
@@ -284,6 +289,18 @@ async function preview(req, res) {
       return res.status(409).json({
         success: false,
         type: "CAPACIDADE_INSUFICIENTE",
+        error: message,
+      });
+    }
+
+    if (
+      message.includes("elegível") ||
+      message.includes("domingo encontrado") ||
+      message.includes("obrigatórios")
+    ) {
+      return res.status(422).json({
+        success: false,
+        type: "DADOS_INSUFICIENTES",
         error: message,
       });
     }

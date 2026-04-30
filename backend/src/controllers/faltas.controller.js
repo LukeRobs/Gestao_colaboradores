@@ -371,10 +371,11 @@ function getFaixaTempoCasa(adm, ref) {
 
   const dias = Math.floor((refDate - admDate) / 86400000);
 
-  if (dias <= 7) return "0–7";
+  if (dias <= 7)  return "0–7";
   if (dias <= 15) return "8–15";
   if (dias <= 30) return "16–30";
-  if (dias <= 89) return "31–89";
+  if (dias <= 60) return "31–60";
+  if (dias <= 90) return "61–90";
   return "90+";
 }
 

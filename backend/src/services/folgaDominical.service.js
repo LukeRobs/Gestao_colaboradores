@@ -361,6 +361,7 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
       dataReferencia: { in: domingos },
       colaborador: {
         status: "ATIVO",
+        ...(estacaoId && { idEstacao: estacaoId }),
         turno: {
           nomeTurno: { in: ["T1", "T2", "T3"] },
         },
