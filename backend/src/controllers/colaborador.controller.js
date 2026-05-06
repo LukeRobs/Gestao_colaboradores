@@ -206,6 +206,10 @@ const getColaboradorById = async (req, res) => {
       },
     });
 
+    // garante que dataInicioStatus/dataFimStatus estão disponíveis para o fallback
+    // (aplicarStatusDinamico pode sobrescrever status mas mantém os outros campos)
+    const statusOriginal = colaborador?.status;
+
     colaborador = aplicarStatusDinamico(colaborador);
     if (!colaborador) {
       return notFoundResponse(res, "Colaborador não encontrado");
@@ -368,28 +372,40 @@ const getColaboradorById = async (req, res) => {
           itens: treinamentosDTO,
         },
         ferias: {
-          itens: listaAusenciasStatus
-            .filter((a) => a.tipoAusencia.codigo === 'FE')
-            .map((a) => ({
-              idAusencia: a.idAusencia,
-              dataInicio: a.dataInicio,
-              dataFim: a.dataFim,
-              diasCorridos: a.diasCorridos,
-              motivo: a.motivo,
-              status: a.status,
-            })),
+          itens: (() => {
+            const registros = listaAusenciasStatus
+              .filter((a) => a.tipoAusencia.codigo === 'FE')
+              .map((a) => ({ idAusencia: a.idAusencia, dataInicio: a.dataInicio, dataFim: a.dataFim, diasCorridos: a.diasCorridos, motivo: a.motivo, status: a.status }));
+            // fallback: colaborador em FERIAS sem registro de ausência (usa statusOriginal pois aplicarStatusDinamico pode já ter virado ATIVO)
+            if (statusOriginal === 'FERIAS' && colaborador.dataInicioStatus && colaborador.dataFimStatus) {
+              const jaTemRegistro = registros.some(
+                (r) => new Date(r.dataInicio).toDateString() === new Date(colaborador.dataInicioStatus).toDateString()
+              );
+              if (!jaTemRegistro) {
+                const dias = Math.round((new Date(colaborador.dataFimStatus) - new Date(colaborador.dataInicioStatus)) / 86400000) + 1;
+                registros.unshift({ idAusencia: 'status-atual', dataInicio: colaborador.dataInicioStatus, dataFim: colaborador.dataFimStatus, diasCorridos: dias, motivo: null, status: 'ATIVO' });
+              }
+            }
+            return registros;
+          })(),
         },
         afastamentos: {
-          itens: listaAusenciasStatus
-            .filter((a) => a.tipoAusencia.codigo === 'AFA')
-            .map((a) => ({
-              idAusencia: a.idAusencia,
-              dataInicio: a.dataInicio,
-              dataFim: a.dataFim,
-              diasCorridos: a.diasCorridos,
-              motivo: a.motivo,
-              status: a.status,
-            })),
+          itens: (() => {
+            const registros = listaAusenciasStatus
+              .filter((a) => a.tipoAusencia.codigo === 'AFA')
+              .map((a) => ({ idAusencia: a.idAusencia, dataInicio: a.dataInicio, dataFim: a.dataFim, diasCorridos: a.diasCorridos, motivo: a.motivo, status: a.status }));
+            // fallback: colaborador em AFASTADO sem registro de ausência (usa statusOriginal pois aplicarStatusDinamico pode já ter virado ATIVO)
+            if (statusOriginal === 'AFASTADO' && colaborador.dataInicioStatus && colaborador.dataFimStatus) {
+              const jaTemRegistro = registros.some(
+                (r) => new Date(r.dataInicio).toDateString() === new Date(colaborador.dataInicioStatus).toDateString()
+              );
+              if (!jaTemRegistro) {
+                const dias = Math.round((new Date(colaborador.dataFimStatus) - new Date(colaborador.dataInicioStatus)) / 86400000) + 1;
+                registros.unshift({ idAusencia: 'status-atual', dataInicio: colaborador.dataInicioStatus, dataFim: colaborador.dataFimStatus, diasCorridos: dias, motivo: null, status: 'ATIVO' });
+              }
+            }
+            return registros;
+          })(),
         },
       },
     });

@@ -7,8 +7,6 @@ import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
 
-const HORARIOS = ["05:25", "13:20", "21:00"];
-
 const TIPOS_DESLIGAMENTO = [
   { value: "DV", label: "DV: Desligamento Voluntário" },
   { value: "DF", label: "DF: Desligamento Forçado" },
@@ -35,6 +33,7 @@ export default function EditarColaborador() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [escalas, setEscalas] = useState([]);
+  const [turnos, setTurnos] = useState([]);
   const [lideres, setLideres] = useState([]);
 
   const [form, setForm] = useState({
@@ -47,6 +46,7 @@ export default function EditarColaborador() {
     contatoEmergenciaNome: "",
     contatoEmergenciaTelefone: "",
     idEscala: "",
+    idTurno: "",
     idLider: "",
     dataAdmissao: "",
     horarioInicioJornada: "",
@@ -62,9 +62,10 @@ export default function EditarColaborador() {
   useEffect(() => {
     async function load() {
       try {
-        const [resColab, resEscalas, resLideres] = await Promise.all([
+        const [resColab, resEscalas, resTurnos, resLideres] = await Promise.all([
           api.get(`/colaboradores/${opsId}`),
           api.get("/escalas"),
+          api.get("/turnos"),
           api.get("/colaboradores/lideres"),
         ]);
 
@@ -77,6 +78,7 @@ export default function EditarColaborador() {
         }
 
         setEscalas(resEscalas.data.data || resEscalas.data || []);
+        setTurnos(resTurnos.data.data || []);
         setLideres(listaLideres);
 
         setForm({
@@ -89,6 +91,7 @@ export default function EditarColaborador() {
           contatoEmergenciaNome: c.contatoEmergenciaNome || "",
           contatoEmergenciaTelefone: c.contatoEmergenciaTelefone || "",
           idEscala: c.escala?.idEscala ?? "",
+          idTurno: c.turno?.idTurno ?? "",
           idLider: c.lider?.opsId || c.idLider || "",
           dataAdmissao: c.dataAdmissao
             ? c.dataAdmissao.substring(0, 10)
@@ -117,6 +120,15 @@ export default function EditarColaborador() {
 
   function handleChange(e) {
     const { name, value } = e.target;
+
+    if (name === "idTurno") {
+      const t = turnos.find((t) => String(t.idTurno) === String(value));
+      const horario = t?.horarioInicio
+        ? new Date(t.horarioInicio).toISOString().slice(11, 16)
+        : "";
+      setForm((prev) => ({ ...prev, idTurno: value, horarioInicioJornada: horario }));
+      return;
+    }
 
     if (name === "status") {
       if (value === "INATIVO") {
@@ -193,6 +205,7 @@ export default function EditarColaborador() {
         contatoEmergenciaNome: form.contatoEmergenciaNome || null,
         contatoEmergenciaTelefone: form.contatoEmergenciaTelefone || null,
         idEscala: form.idEscala ? Number(form.idEscala) : null,
+        idTurno: form.idTurno ? Number(form.idTurno) : null,
         idLider: form.idLider || null,
         dataAdmissao: form.dataAdmissao || null,
         horarioInicioJornada: form.horarioInicioJornada || null,
@@ -295,6 +308,17 @@ export default function EditarColaborador() {
 
           <Section title="Vínculo Organizacional">
             <Select
+              label="Turno"
+              name="idTurno"
+              value={form.idTurno}
+              onChange={handleChange}
+              options={turnos.map((t) => ({
+                value: t.idTurno,
+                label: t.nomeTurno,
+              }))}
+            />
+
+            <Select
               label="Escala *"
               name="idEscala"
               value={form.idEscala}
@@ -326,16 +350,12 @@ export default function EditarColaborador() {
               onChange={handleChange}
             />
 
-            <Select
+            <Input
               name="horarioInicioJornada"
               label="Início da Jornada"
-              value={form.horarioInicioJornada}
-              onChange={handleChange}
-              options={
-                form.horarioInicioJornada && !HORARIOS.includes(form.horarioInicioJornada)
-                  ? [form.horarioInicioJornada, ...HORARIOS]
-                  : HORARIOS
-              }
+              value={form.horarioInicioJornada || "—"}
+              readOnly
+              disabled
             />
 
             <Select

@@ -555,102 +555,26 @@ export default function PerfilColaborador() {
           </ProfileSection>
 
           {/* ── FÉRIAS ── */}
-          <ProfileSection title="Férias" icon={<Calendar size={15} />}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                <span className="text-sm font-semibold text-blue-400">{ferias.itens.length}</span>
-                <span className="text-xs text-muted ml-1.5">período(s)</span>
-              </div>
-            </div>
-            {ferias.itens.length === 0 ? (
-              <EmptyState text="Nenhum período de férias registrado." />
-            ) : (
-              <div className="space-y-3">
-                {ferias.itens.map((f) => (
-                  <div key={f.idAusencia} className="flex items-start gap-4 border border-blue-500/20 bg-blue-500/5 rounded-xl p-4">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                      <Calendar size={14} className="text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400">
-                          Férias
-                        </span>
-                        {f.diasCorridos && (
-                          <span className="text-xs font-medium text-muted bg-surface-2 px-2 py-0.5 rounded-lg">
-                            {f.diasCorridos} dia(s)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
-                          <p className="text-xs text-muted mb-0.5">Início</p>
-                          <p className="text-sm font-semibold">{fmt(f.dataInicio)}</p>
-                        </div>
-                        <ChevronRight size={14} className="text-muted shrink-0" />
-                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
-                          <p className="text-xs text-muted mb-0.5">Retorno</p>
-                          <p className="text-sm font-semibold">{fmt(f.dataFim)}</p>
-                        </div>
-                      </div>
-                      {f.motivo && (
-                        <p className="text-xs text-muted mt-2 leading-relaxed">{f.motivo}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ProfileSection>
+          <AusenciasSection
+            title="Férias"
+            icon={<Calendar size={15} />}
+            itens={ferias.itens}
+            cor="blue"
+            labelTipo="Férias"
+            labelRetorno="Retorno"
+            emptyText="Nenhum período de férias registrado."
+          />
 
           {/* ── AFASTAMENTOS ── */}
-          <ProfileSection title="Afastamentos" icon={<Clock size={15} />}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <span className="text-sm font-semibold text-amber-400">{afastamentos.itens.length}</span>
-                <span className="text-xs text-muted ml-1.5">período(s)</span>
-              </div>
-            </div>
-            {afastamentos.itens.length === 0 ? (
-              <EmptyState text="Nenhum período de afastamento registrado." />
-            ) : (
-              <div className="space-y-3">
-                {afastamentos.itens.map((a) => (
-                  <div key={a.idAusencia} className="flex items-start gap-4 border border-amber-500/20 bg-amber-500/5 rounded-xl p-4">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                      <Clock size={14} className="text-amber-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400">
-                          Afastamento
-                        </span>
-                        {a.diasCorridos && (
-                          <span className="text-xs font-medium text-muted bg-surface-2 px-2 py-0.5 rounded-lg">
-                            {a.diasCorridos} dia(s)
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
-                          <p className="text-xs text-muted mb-0.5">Início</p>
-                          <p className="text-sm font-semibold">{fmt(a.dataInicio)}</p>
-                        </div>
-                        <ChevronRight size={14} className="text-muted shrink-0" />
-                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
-                          <p className="text-xs text-muted mb-0.5">Retorno previsto</p>
-                          <p className="text-sm font-semibold">{fmt(a.dataFim)}</p>
-                        </div>
-                      </div>
-                      {a.motivo && (
-                        <p className="text-xs text-muted mt-2 leading-relaxed">{a.motivo}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ProfileSection>
+          <AusenciasSection
+            title="Afastamentos"
+            icon={<Clock size={15} />}
+            itens={afastamentos.itens}
+            cor="amber"
+            labelTipo="Afastamento"
+            labelRetorno="Retorno previsto"
+            emptyText="Nenhum período de afastamento registrado."
+          />
 
         </main>
       </MainLayout>
@@ -714,6 +638,132 @@ function SectionLabel({ children }) {
 function EmptyState({ text }) {
   return (
     <p className="text-sm text-muted py-2">{text}</p>
+  );
+}
+
+const COR = {
+  blue:  { dot: "bg-blue-400",  ring: "ring-blue-500/30",  icon: "bg-blue-500/20",   text: "text-blue-400",  badge: "bg-blue-500/10 border-blue-500/25 text-blue-400",  bar: "bg-blue-500",  summary: "bg-blue-500/5 border-blue-500/15",  card: "hover:border-blue-500/25" },
+  amber: { dot: "bg-amber-400", ring: "ring-amber-500/30", icon: "bg-amber-500/20",  text: "text-amber-400", badge: "bg-amber-500/10 border-amber-500/25 text-amber-400", bar: "bg-amber-500", summary: "bg-amber-500/5 border-amber-500/15", card: "hover:border-amber-500/25" },
+};
+
+function AusenciasSection({ title, icon, itens, cor, labelTipo, labelRetorno, emptyText }) {
+  const c = COR[cor];
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const totalDias = itens.reduce((acc, i) => acc + (i.diasCorridos || 0), 0);
+
+  return (
+    <ProfileSection title={title} icon={icon}>
+      {/* ── Sumário ── */}
+      {itens.length > 0 && (
+        <div className={`flex items-center gap-6 mb-5 px-5 py-4 rounded-xl border ${c.summary}`}>
+          <div className="text-center min-w-[48px]">
+            <p className={`text-2xl font-bold ${c.text}`}>{itens.length}</p>
+            <p className="text-xs text-muted leading-tight">período{itens.length !== 1 ? "s" : ""}</p>
+          </div>
+          <div className="w-px h-10 bg-default" />
+          <div className="text-center min-w-[48px]">
+            <p className="text-2xl font-bold text-page">{totalDias}</p>
+            <p className="text-xs text-muted leading-tight">dias no total</p>
+          </div>
+          {itens.some(i => {
+            const ini = new Date(i.dataInicio); ini.setHours(0,0,0,0);
+            const fim = new Date(i.dataFim);    fim.setHours(0,0,0,0);
+            return hoje >= ini && hoje <= fim;
+          }) && (
+            <>
+              <div className="w-px h-10 bg-default" />
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full animate-pulse ${c.dot}`} />
+                <span className={`text-xs font-semibold ${c.text}`}>Em curso</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {itens.length === 0 ? (
+        <EmptyState text={emptyText} />
+      ) : (
+        <div className="space-y-3">
+          {itens.map((item, idx) => {
+            const inicio = new Date(item.dataInicio); inicio.setHours(0,0,0,0);
+            const fim    = new Date(item.dataFim);    fim.setHours(0,0,0,0);
+            const emCurso   = hoje >= inicio && hoje <= fim;
+            const duracaoTotal = item.diasCorridos || Math.round((fim - inicio) / 86400000) + 1;
+            const diasPassados = emCurso ? Math.min(Math.round((hoje - inicio) / 86400000) + 1, duracaoTotal) : 0;
+            const diasRestantes = emCurso ? duracaoTotal - diasPassados : 0;
+            const progresso = emCurso ? Math.round((diasPassados / duracaoTotal) * 100) : 100;
+
+            return (
+              <div key={item.idAusencia} className="relative flex gap-3">
+                {/* timeline connector */}
+                {idx < itens.length - 1 && (
+                  <div className="absolute left-[15px] top-9 bottom-0 w-px bg-default" />
+                )}
+
+                {/* dot */}
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${c.icon} ${emCurso ? `ring-2 ${c.ring}` : ""}`}>
+                  {icon}
+                </div>
+
+                {/* card */}
+                <div className={`flex-1 bg-page border border-default rounded-xl p-4 transition-colors ${c.card}`}>
+                  {/* top row: status + duração */}
+                  <div className="flex items-center justify-between mb-3">
+                    {emCurso ? (
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${c.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${c.dot}`} />
+                        Em curso
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-surface-2 border border-default text-muted">
+                        Encerrado
+                      </span>
+                    )}
+                    <span className={`text-sm font-bold tabular-nums ${c.text}`}>
+                      {duracaoTotal} dias
+                    </span>
+                  </div>
+
+                  {/* datas */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="bg-surface-2 rounded-lg px-3 py-2">
+                      <p className="text-xs text-muted mb-0.5">Início</p>
+                      <p className="text-sm font-semibold">{fmt(item.dataInicio)}</p>
+                    </div>
+                    <div className="bg-surface-2 rounded-lg px-3 py-2">
+                      <p className="text-xs text-muted mb-0.5">{labelRetorno}</p>
+                      <p className="text-sm font-semibold">{fmt(item.dataFim)}</p>
+                    </div>
+                  </div>
+
+                  {/* barra de progresso (apenas se em curso) */}
+                  {emCurso && (
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted">
+                        <span>{diasPassados} dia{diasPassados !== 1 ? "s" : ""} decorrido{diasPassados !== 1 ? "s" : ""}</span>
+                        <span>{diasRestantes} restante{diasRestantes !== 1 ? "s" : ""}</span>
+                      </div>
+                      <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${c.bar}`} style={{ width: `${progresso}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {item.motivo && (
+                    <p className="text-xs text-muted mt-3 pt-3 border-t border-default leading-relaxed">
+                      {item.motivo}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </ProfileSection>
   );
 }
 

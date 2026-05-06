@@ -79,6 +79,16 @@ export default function NovoColaborador() {
   /* ================= HANDLERS ================= */
   function handleChange(e) {
     const { name, value } = e.target;
+
+    if (name === "idTurno") {
+      const t = turnos.find((t) => String(t.idTurno) === String(value));
+      const horario = t?.horarioInicio
+        ? new Date(t.horarioInicio).toISOString().slice(11, 16)
+        : "";
+      setForm((prev) => ({ ...prev, idTurno: value, horarioInicioJornada: horario }));
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -263,11 +273,12 @@ export default function NovoColaborador() {
               onChange={handleChange}
             />
 
-            <Select
+            <Input
               label="Início da Jornada"
               name="horarioInicioJornada"
-              onChange={handleChange}
-              options={["05:25", "13:20", "21:00"]}
+              value={form.horarioInicioJornada || "—"}
+              readOnly
+              disabled
             />
 
             <Select
