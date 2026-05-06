@@ -116,9 +116,11 @@ export default function PerfilColaborador() {
   }
 
   const vinculo = vinculoOrganizacional;
-  const atestad = indicadores?.atestados  || { total: 0, ativos: 0, finalizados: 0, itens: [] };
-  const faltas   = indicadores?.faltas     || { total: 0, itens: [] };
-  const treinos  = indicadores?.treinamentos || { total: 0, itens: [] };
+  const atestad      = indicadores?.atestados     || { total: 0, ativos: 0, finalizados: 0, itens: [] };
+  const faltas       = indicadores?.faltas        || { total: 0, itens: [] };
+  const treinos      = indicadores?.treinamentos  || { total: 0, itens: [] };
+  const ferias       = indicadores?.ferias        || { itens: [] };
+  const afastamentos = indicadores?.afastamentos  || { itens: [] };
   const statusCfg = STATUS_CONFIG[colaborador.status] || STATUS_CONFIG.INATIVO;
 
   return (
@@ -546,6 +548,104 @@ export default function PerfilColaborador() {
                       <p className="text-xs text-muted mt-0.5">{new Date(t.data).toLocaleDateString("pt-BR")}</p>
                     </div>
                     <ChevronRight size={14} className="text-muted shrink-0" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </ProfileSection>
+
+          {/* ── FÉRIAS ── */}
+          <ProfileSection title="Férias" icon={<Calendar size={15} />}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <span className="text-sm font-semibold text-blue-400">{ferias.itens.length}</span>
+                <span className="text-xs text-muted ml-1.5">período(s)</span>
+              </div>
+            </div>
+            {ferias.itens.length === 0 ? (
+              <EmptyState text="Nenhum período de férias registrado." />
+            ) : (
+              <div className="space-y-3">
+                {ferias.itens.map((f) => (
+                  <div key={f.idAusencia} className="flex items-start gap-4 border border-blue-500/20 bg-blue-500/5 rounded-xl p-4">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                      <Calendar size={14} className="text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/25 text-blue-400">
+                          Férias
+                        </span>
+                        {f.diasCorridos && (
+                          <span className="text-xs font-medium text-muted bg-surface-2 px-2 py-0.5 rounded-lg">
+                            {f.diasCorridos} dia(s)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
+                          <p className="text-xs text-muted mb-0.5">Início</p>
+                          <p className="text-sm font-semibold">{fmt(f.dataInicio)}</p>
+                        </div>
+                        <ChevronRight size={14} className="text-muted shrink-0" />
+                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
+                          <p className="text-xs text-muted mb-0.5">Retorno</p>
+                          <p className="text-sm font-semibold">{fmt(f.dataFim)}</p>
+                        </div>
+                      </div>
+                      {f.motivo && (
+                        <p className="text-xs text-muted mt-2 leading-relaxed">{f.motivo}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ProfileSection>
+
+          {/* ── AFASTAMENTOS ── */}
+          <ProfileSection title="Afastamentos" icon={<Clock size={15} />}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <span className="text-sm font-semibold text-amber-400">{afastamentos.itens.length}</span>
+                <span className="text-xs text-muted ml-1.5">período(s)</span>
+              </div>
+            </div>
+            {afastamentos.itens.length === 0 ? (
+              <EmptyState text="Nenhum período de afastamento registrado." />
+            ) : (
+              <div className="space-y-3">
+                {afastamentos.itens.map((a) => (
+                  <div key={a.idAusencia} className="flex items-start gap-4 border border-amber-500/20 bg-amber-500/5 rounded-xl p-4">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                      <Clock size={14} className="text-amber-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400">
+                          Afastamento
+                        </span>
+                        {a.diasCorridos && (
+                          <span className="text-xs font-medium text-muted bg-surface-2 px-2 py-0.5 rounded-lg">
+                            {a.diasCorridos} dia(s)
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
+                          <p className="text-xs text-muted mb-0.5">Início</p>
+                          <p className="text-sm font-semibold">{fmt(a.dataInicio)}</p>
+                        </div>
+                        <ChevronRight size={14} className="text-muted shrink-0" />
+                        <div className="flex-1 bg-surface-2 rounded-lg px-3 py-2">
+                          <p className="text-xs text-muted mb-0.5">Retorno previsto</p>
+                          <p className="text-sm font-semibold">{fmt(a.dataFim)}</p>
+                        </div>
+                      </div>
+                      {a.motivo && (
+                        <p className="text-xs text-muted mt-2 leading-relaxed">{a.motivo}</p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

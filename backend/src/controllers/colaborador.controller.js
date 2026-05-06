@@ -219,7 +219,7 @@ const getColaboradorById = async (req, res) => {
     const hoje = agoraBrasil();
     hoje.setHours(0, 0, 0, 0);
 
-    const [totalAtestados, ativos, finalizados, listaAtestados, totalFaltas, listaFaltas, listaMDs] = await Promise.all([
+    const [totalAtestados, ativos, finalizados, listaAtestados, totalFaltas, listaFaltas, listaMDs, listaAusenciasStatus] = await Promise.all([
       prisma.atestadoMedico.count({
         where: { opsId },
       }),
@@ -281,6 +281,15 @@ const getColaboradorById = async (req, res) => {
           tipoMedida: true,
           status: true,
         },
+      }),
+
+      prisma.ausencia.findMany({
+        where: {
+          opsId,
+          tipoAusencia: { codigo: { in: ['FE', 'AFA'] } },
+        },
+        include: { tipoAusencia: { select: { codigo: true, descricao: true } } },
+        orderBy: { dataInicio: 'desc' },
       }),
     ]);
 
@@ -357,6 +366,30 @@ const getColaboradorById = async (req, res) => {
         treinamentos: {
           total: treinamentosDTO.length,
           itens: treinamentosDTO,
+        },
+        ferias: {
+          itens: listaAusenciasStatus
+            .filter((a) => a.tipoAusencia.codigo === 'FE')
+            .map((a) => ({
+              idAusencia: a.idAusencia,
+              dataInicio: a.dataInicio,
+              dataFim: a.dataFim,
+              diasCorridos: a.diasCorridos,
+              motivo: a.motivo,
+              status: a.status,
+            })),
+        },
+        afastamentos: {
+          itens: listaAusenciasStatus
+            .filter((a) => a.tipoAusencia.codigo === 'AFA')
+            .map((a) => ({
+              idAusencia: a.idAusencia,
+              dataInicio: a.dataInicio,
+              dataFim: a.dataFim,
+              diasCorridos: a.diasCorridos,
+              motivo: a.motivo,
+              status: a.status,
+            })),
         },
       },
     });
@@ -847,6 +880,45 @@ const updateColaborador = async (req, res) => {
               registradoPor: req.user?.id ?? null,
             },
           });
+        }
+      }
+
+      /* =========================
+         AUTO-CRIAR AUSÊNCIA DE FÉRIAS/AFASTAMENTO
+         Garante que os dias apareçam no controle de presença
+      ========================= */
+      const virouFerias   = data.status === 'FERIAS'   && atual?.status !== 'FERIAS';
+      const virouAfastado = data.status === 'AFASTADO' && atual?.status !== 'AFASTADO';
+
+      if ((virouFerias || virouAfastado) && atualizado.dataInicioStatus && atualizado.dataFimStatus) {
+        const codigoTipo = virouFerias ? 'FE' : 'AFA';
+        const tipoAus = await tx.tipoAusencia.findFirst({
+          where: { codigo: codigoTipo },
+          select: { idTipoAusencia: true },
+        });
+
+        if (tipoAus) {
+          const jaExiste = await tx.ausencia.findFirst({
+            where: { opsId, idTipoAusencia: tipoAus.idTipoAusencia, dataInicio: atualizado.dataInicioStatus },
+          });
+
+          if (!jaExiste) {
+            const inicio = new Date(atualizado.dataInicioStatus);
+            const fim    = new Date(atualizado.dataFimStatus);
+            const diasCorridos = Math.round((fim - inicio) / (1000 * 60 * 60 * 24)) + 1;
+
+            await tx.ausencia.create({
+              data: {
+                opsId,
+                idTipoAusencia: tipoAus.idTipoAusencia,
+                dataInicio: atualizado.dataInicioStatus,
+                dataFim:    atualizado.dataFimStatus,
+                diasCorridos,
+                status: 'ATIVO',
+                registradoPor: req.user?.id ?? null,
+              },
+            });
+          }
         }
       }
 
