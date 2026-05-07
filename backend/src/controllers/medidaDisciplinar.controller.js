@@ -9,6 +9,7 @@ const {
   createdResponse,
   errorResponse,
   notFoundResponse,
+  paginatedResponse,
 } = require("../utils/response");
 
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
@@ -348,7 +349,10 @@ const getAllMedidas = async (req, res) => {
 
   try {
 
-    const { cpf, opsId, data, nome, turno, lider } = req.query;
+    const { cpf, opsId, data, nome, turno, lider, page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
 
     const where = {};
 
@@ -394,7 +398,7 @@ const getAllMedidas = async (req, res) => {
         where: { cpf: cpfLimpo },
       });
 
-      if (!colab) return successResponse(res, []);
+      if (!colab) return paginatedResponse(res, [], { page: pageNum, limit: limitNum, total: 0 });
 
       where.opsId = colab.opsId;
 
@@ -405,31 +409,35 @@ const getAllMedidas = async (req, res) => {
 
     }
 
-    const medidas = await prisma.medidaDisciplinar.findMany({
+    const [medidas, total] = await Promise.all([
+      prisma.medidaDisciplinar.findMany({
 
-      where,
+        where,
+        orderBy: { dataAplicacao: "desc" },
+        skip,
+        take: limitNum,
 
-      orderBy: { dataAplicacao: "desc" },
+        include: {
 
-      include: {
-
-        colaborador: {
-          select: {
-            opsId: true,
-            nomeCompleto: true,
-            matricula: true,
-            turno: { select: { nomeTurno: true } },
-            lider: { select: { nomeCompleto: true } },
+          colaborador: {
+            select: {
+              opsId: true,
+              nomeCompleto: true,
+              matricula: true,
+              turno: { select: { nomeTurno: true } },
+              lider: { select: { nomeCompleto: true } },
+            },
           },
+
+          matriz: true,
+
         },
 
-        matriz: true,
+      }),
+      prisma.medidaDisciplinar.count({ where }),
+    ]);
 
-      },
-
-    });
-
-    return successResponse(res, medidas);
+    return paginatedResponse(res, medidas, { page: pageNum, limit: limitNum, total });
 
   } catch (err) {
 

@@ -10,6 +10,7 @@ const {
   createdResponse,
   errorResponse,
   notFoundResponse,
+  paginatedResponse,
 } = require("../utils/response");
 
 const crypto = require("crypto");
@@ -331,7 +332,10 @@ const createAtestado = async (req, res) => {
 ===================================================== */
 const getAllAtestados = async (req, res) => {
   try {
-    const { opsId, cpf, data, nome } = req.query;
+    const { opsId, cpf, data, nome, page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
 
     let where = {};
 
@@ -340,77 +344,60 @@ const getAllAtestados = async (req, res) => {
       where.colaborador = { idEstacao: req.dbContext.estacaoId };
     }
 
-    /* ===============================
-       FILTRO POR COLABORADOR
-    =============================== */
-
     if (opsId) {
       where.opsId = opsId;
     }
 
     if (cpf) {
       const cpfLimpo = cpf.replace(/\D/g, "");
-
       if (cpfLimpo.length !== 11) {
-        return errorResponse(res, 400, "CPF inválido");
+        return errorResponse(res, "CPF inválido", 400);
       }
-
       const colab = await prisma.colaborador.findFirst({
         where: { cpf: cpfLimpo },
       });
-
       if (!colab) {
-        return successResponse(res, []);
+        return paginatedResponse(res, [], { page: pageNum, limit: limitNum, total: 0 });
       }
-
       where.opsId = colab.opsId;
     }
 
-    /* ===============================
-       FILTRO POR DATA (ATIVO + FINALIZADO)
-    =============================== */
-
     if (data) {
       const dataFiltro = dateOnlyBrasil(data);
-
       where.AND = [
         { dataInicio: { lte: dataFiltro } },
         { dataFim: { gte: dataFiltro } },
       ];
     }
 
-    const atestados = await prisma.atestadoMedico.findMany({
-      where,
-      orderBy: { dataInicio: "desc" },
-      include: {
-        colaborador: {
-          select: {
-            opsId: true,
-            nomeCompleto: true,
-            matricula: true,
-          },
-        },
-      },
-    });
-
-    /* ===============================
-       FILTRO POR NOME (pós include)
-       (Prisma não filtra relation assim direto)
-    =============================== */
-
-    let resultado = atestados;
-
     if (nome) {
-      const nomeLower = nome.toLowerCase();
-
-      resultado = atestados.filter((a) =>
-        a.colaborador?.nomeCompleto
-          ?.toLowerCase()
-          .includes(nomeLower)
-      );
+      const colaboradorWhere = where.colaborador ?? {};
+      where.colaborador = {
+        ...colaboradorWhere,
+        nomeCompleto: { contains: nome, mode: "insensitive" },
+      };
     }
 
-    return successResponse(res, resultado);
+    const [atestados, total] = await Promise.all([
+      prisma.atestadoMedico.findMany({
+        where,
+        orderBy: { dataInicio: "desc" },
+        skip,
+        take: limitNum,
+        include: {
+          colaborador: {
+            select: {
+              opsId: true,
+              nomeCompleto: true,
+              matricula: true,
+            },
+          },
+        },
+      }),
+      prisma.atestadoMedico.count({ where }),
+    ]);
+
+    return paginatedResponse(res, atestados, { page: pageNum, limit: limitNum, total });
   } catch (err) {
     console.error("❌ GET ATESTADOS:", err);
     return errorResponse(res, "Erro ao buscar atestados", 500);

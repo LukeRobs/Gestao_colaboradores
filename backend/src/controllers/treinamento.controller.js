@@ -116,40 +116,45 @@ exports.createTreinamento = async (req, res) => {
 exports.listTreinamentos = async (req, res) => {
   try {
 
-    const estacaoFilter = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+    const { page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
+    const where = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
       ? { liderResponsavel: { idEstacao: req.dbContext.estacaoId } }
       : {};
 
-    const treinamentos = await prisma.treinamento.findMany({
-
-      where: estacaoFilter,
-      orderBy: { dataTreinamento: "desc" },
-
-      include: {
-
-        liderResponsavel: {
-          select: { nomeCompleto: true },
-        },
-
-        participantes: {
-          include: {
-            colaborador: {
-              select: { nomeCompleto: true, cpf: true },
+    const [treinamentos, total] = await Promise.all([
+      prisma.treinamento.findMany({
+        where,
+        orderBy: { dataTreinamento: "desc" },
+        skip,
+        take: limitNum,
+        include: {
+          liderResponsavel: { select: { nomeCompleto: true } },
+          participantes: {
+            include: {
+              colaborador: { select: { nomeCompleto: true, cpf: true } },
             },
           },
+          setores: { include: { setor: true } },
         },
-
-        setores: {
-          include: { setor: true },
-        },
-
-      },
-
-    });
+      }),
+      prisma.treinamento.count({ where }),
+    ]);
 
     return res.json({
       success: true,
       data: treinamentos,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum) || 1,
+        hasNextPage: pageNum < (Math.ceil(total / limitNum) || 1),
+        hasPreviousPage: pageNum > 1,
+      },
     });
 
   } catch (err) {

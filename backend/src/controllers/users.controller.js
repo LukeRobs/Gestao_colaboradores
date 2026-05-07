@@ -9,6 +9,7 @@ const {
   successResponse,
   errorResponse,
   createdResponse,
+  paginatedResponse,
 } = require('../utils/response');
 
 /**
@@ -16,6 +17,11 @@ const {
  * ADMIN + LIDERANCA (consulta)
  */
 const list = async (req, res) => {
+  const { page = 1, limit = 50 } = req.query;
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.min(100, Math.max(1, Number(limit)));
+  const skip = (pageNum - 1) * limitNum;
+
   const where = {};
 
   // ADMIN global vê todos; demais só veem usuários da sua estação
@@ -23,24 +29,27 @@ const list = async (req, res) => {
     where.idEstacao = req.dbContext.estacaoId;
   }
 
-  const users = await prisma.user.findMany({
-    where,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      isActive: true,
-      idEstacao: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: {
-      name: 'asc',
-    },
-  });
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limitNum,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        idEstacao: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.user.count({ where }),
+  ]);
 
-  return successResponse(res, users);
+  return paginatedResponse(res, users, { page: pageNum, limit: limitNum, total });
 };
 
 /**

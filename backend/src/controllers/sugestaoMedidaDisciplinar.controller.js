@@ -9,6 +9,7 @@ const {
   createdResponse,
   errorResponse,
   notFoundResponse,
+  paginatedResponse,
 } = require("../utils/response")
 const { detectarFaltasAutomatico } = require("../services/detectarFaltasAutomatico.service")
 const { gerarOnboardingColaborador } = require("../services/dsrBackfill.service")
@@ -78,7 +79,10 @@ const getAllSugestoes = async (req, res) => {
 
   try {
 
-    const { status, opsId, dataInicio, dataFim, turno, lider } = req.query;
+    const { status, opsId, dataInicio, dataFim, turno, lider, page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
 
     const where = {};
     const colaboradorFilter = {};
@@ -153,39 +157,31 @@ const getAllSugestoes = async (req, res) => {
        BUSCAR SUGESTÕES
     ============================== */
 
-    const sugestoes = await prisma.sugestaoMedidaDisciplinar.findMany({
-
-      where,
-
-      orderBy: {
-        dataReferencia: "desc",
-      },
-
-      include: {
-
-        colaborador: {
-          select: {
-            opsId: true,
-            nomeCompleto: true,
-            matricula: true,
-            idTurno: true,
-            idLider: true,
-            turno: {
-              select: { nomeTurno: true },
-            },
-            lider: {
-              select: { nomeCompleto: true },
+    const [sugestoes, total] = await Promise.all([
+      prisma.sugestaoMedidaDisciplinar.findMany({
+        where,
+        orderBy: { dataReferencia: "desc" },
+        skip,
+        take: limitNum,
+        include: {
+          colaborador: {
+            select: {
+              opsId: true,
+              nomeCompleto: true,
+              matricula: true,
+              idTurno: true,
+              idLider: true,
+              turno: { select: { nomeTurno: true } },
+              lider: { select: { nomeCompleto: true } },
             },
           },
+          frequencia: true,
         },
+      }),
+      prisma.sugestaoMedidaDisciplinar.count({ where }),
+    ]);
 
-        frequencia: true,
-
-      },
-
-    });
-
-    // Buscar emails dos usuários que aprovaram/rejeitaram
+    // Buscar emails dos usuários que aprovaram/rejeitaram (apenas da página atual)
     const opsIds = [...new Set(sugestoes.map(s => s.aprovadoPor).filter(Boolean))];
 
     let emailMap = {};
@@ -204,7 +200,7 @@ const getAllSugestoes = async (req, res) => {
         : (emailMap[s.aprovadoPor] ?? s.aprovadoPor ?? null),
     }));
 
-    return successResponse(res, result);
+    return paginatedResponse(res, result, { page: pageNum, limit: limitNum, total });
 
   } catch (err) {
 

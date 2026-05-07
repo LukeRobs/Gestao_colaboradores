@@ -55,6 +55,7 @@ const paginatedResponse = (
   pagination,
   message = "Dados recuperados com sucesso"
 ) => {
+  const totalPages = Math.ceil(pagination.total / pagination.limit) || 1;
   return res.status(200).json({
     success: true,
     message,
@@ -63,7 +64,9 @@ const paginatedResponse = (
       page: pagination.page,
       limit: pagination.limit,
       total: pagination.total,
-      totalPages: Math.ceil(pagination.total / pagination.limit),
+      totalPages,
+      hasNextPage: pagination.page < totalPages,
+      hasPreviousPage: pagination.page > 1,
     },
   });
 };

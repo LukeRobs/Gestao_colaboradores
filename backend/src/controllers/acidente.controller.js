@@ -8,6 +8,7 @@ const {
   createdResponse,
   errorResponse,
   notFoundResponse,
+  paginatedResponse,
 } = require("../utils/response");
 const crypto = require("crypto");
 const { PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
@@ -266,7 +267,11 @@ const createAcidente = async (req, res) => {
 /* ================= GET ALL ================= */
 const getAllAcidentes = async (req, res) => {
   try {
-    const { opsId, cpf } = req.query;
+    const { opsId, cpf, page = 1, limit = 50 } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(100, Math.max(1, Number(limit)));
+    const skip = (pageNum - 1) * limitNum;
+
     let where = {};
 
     // Filtro de estação via colaborador
@@ -286,31 +291,33 @@ const getAllAcidentes = async (req, res) => {
       const colab = await prisma.colaborador.findFirst({
         where: { cpf: cpfLimpo },
       });
-      if (!colab) return successResponse(res, []);
+      if (!colab) return paginatedResponse(res, [], { page: pageNum, limit: limitNum, total: 0 });
       where.opsIdColaborador = colab.opsId;
     }
 
-    const acidentes = await prisma.acidenteTrabalho.findMany({
-      where,
-      orderBy: { dataOcorrencia: "desc" },
-      include: {
-        colaborador: true,
-        evidencias: true,
-      },
-    });
+    const [acidentes, total] = await Promise.all([
+      prisma.acidenteTrabalho.findMany({
+        where,
+        orderBy: { dataOcorrencia: "desc" },
+        skip,
+        take: limitNum,
+        include: {
+          colaborador: true,
+          evidencias: true,
+        },
+      }),
+      prisma.acidenteTrabalho.count({ where }),
+    ]);
 
-    // 🔥 ENRIQUECER TODOS COM URLs PRESIGNADAS
+    // Enriquecer apenas a página atual com URLs presignadas
     const acidentesEnriquecidos = await Promise.all(
       acidentes.map(async (acidente) => {
         const evidenciasComUrl = await enriquecerEvidencias(acidente.evidencias);
-        return {
-          ...acidente,
-          evidencias: evidenciasComUrl,
-        };
+        return { ...acidente, evidencias: evidenciasComUrl };
       })
     );
 
-    return successResponse(res, acidentesEnriquecidos);
+    return paginatedResponse(res, acidentesEnriquecidos, { page: pageNum, limit: limitNum, total });
   } catch (err) {
     console.error("❌ GET ACIDENTES:", err);
     return errorResponse(res, "Erro ao buscar acidentes", 500);
