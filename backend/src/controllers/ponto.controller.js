@@ -540,8 +540,19 @@ const getControlePresenca = async (req, res) => {
       return successResponse(res, { dias: [], colaboradores: [] });
     }
 
+    // Inclui colaboradores ATIVO + FERIAS/AFASTADO cujo período já encerrou
+    // (equivalente ao aplicarStatusDinamico — status virtual ATIVO mas banco ainda desatualizado)
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
     const whereColaborador = {
-      status: "ATIVO",
+      OR: [
+        { status: "ATIVO" },
+        {
+          status: { in: ["FERIAS", "AFASTADO"] },
+          dataFimStatus: { lt: hoje },
+        },
+      ],
       dataDesligamento: null,
       // Isolamento por estação: ADMIN vê todas, demais só a sua
       ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId

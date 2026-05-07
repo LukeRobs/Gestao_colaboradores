@@ -493,8 +493,6 @@ const carregarDashboard = async (req, res) => {
       }
 
       const setor = getSetor(registroSnapshot, c);
-      turnoSetorAgg[turno].setores[setor] =
-        (turnoSetorAgg[turno].setores[setor] || 0) + 1;
       const tempoCasa = calcularTempoDeCasa(c.dataAdmissao);
       // Status do snapshot (4 estados)
       statusPorTurno[turno][sSnap.label] =
@@ -502,6 +500,9 @@ const carregarDashboard = async (req, res) => {
 
       if (sSnap.label === "Presente") {
         turnoSetorAgg[turno].presentes++;
+        // Conta setor apenas para presentes
+        turnoSetorAgg[turno].setores[setor] =
+          (turnoSetorAgg[turno].setores[setor] || 0) + 1;
       } else if (sSnap.impactaAbsenteismo) {
         turnoSetorAgg[turno].ausentes++;  
 
