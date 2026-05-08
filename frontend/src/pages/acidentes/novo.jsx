@@ -1,7 +1,7 @@
 ﻿// src/pages/acidentes/novo.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Upload, FileText, X as XIcon } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 
 import Sidebar from "../../components/Sidebar";
@@ -9,17 +9,9 @@ import Header from "../../components/Header";
 import api from "../../services/api";
 import { AcidentesAPI } from "../../services/acidentes";
 
-const ACCEPTED_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/jpg",
-  "image/heic",
-  "image/heif",
-  "application/pdf",
-];
+const ACCEPTED_TYPES = ["application/pdf"];
 
-function isImageType(type) {
+function isAcceptedType(type) {
   return ACCEPTED_TYPES.includes(type);
 }
 
@@ -105,9 +97,9 @@ export default function NovoAcidente() {
 
     const next = [...fotos, ...files].slice(0, 5);
 
-    const invalid = next.find((f) => !isImageType(f.type));
+    const invalid = next.find((f) => !isAcceptedType(f.type));
     if (invalid) {
-      alert(`Arquivo inválido: ${invalid.name}`);
+      alert(`Arquivo inválido: "${invalid.name}". Apenas arquivos PDF são aceitos.`);
       return;
     }
 
@@ -246,7 +238,7 @@ export default function NovoAcidente() {
               <div>
                 <h1 className="text-2xl font-semibold">Novo Acidente</h1>
                 <p className="text-sm text-muted">
-                  Registro de ocorrência + evidências (1–5 fotos)
+                  Registro de ocorrência + evidências em PDF (1–5 arquivos)
                 </p>
               </div>
             </div>
@@ -435,56 +427,77 @@ export default function NovoAcidente() {
           </Section>
 
           {/* Seção 4: Evidências */}
-          <Section title="Evidências (Fotos)">
-            <div className="md:col-span-2">
-              <label className="text-xs text-muted">
-                Fotos (1 a 5) * — JPG/PNG/WEBP/HEIC
-              </label>
+          <Section title="Evidências">
+            <div className="md:col-span-2 space-y-3">
 
-              <label
-                className="
-                  mt-1 flex items-center gap-3 px-4 py-3
-                  bg-surface-2 border border-default
-                  rounded-xl cursor-pointer hover:bg-surface-3
-                "
-              >
-                <Upload size={16} className="text-muted" />
-                <span className="text-sm text-white">
-                  {fotosCount ? `${fotosCount} foto(s) selecionada(s)` : "Selecionar fotos"}
-                </span>
-
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={(e) => handleFotosChange(e.target.files)}
-                />
-              </label>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {fotos.map((f, idx) => (
-                  <div
-                    key={`${f.name}-${idx}`}
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-page border border-default rounded-lg"
-                  >
-                    <ImageIcon size={16} className="text-muted" />
-                    <span className="text-xs text-white">{f.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setFotos((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-xs text-muted hover:text-white"
-                      title="Remover"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+              {/* aviso PDF obrigatório */}
+              <div className="flex items-start gap-3 bg-[#FA4C00]/8 border border-[#FA4C00]/25 rounded-xl px-4 py-3">
+                <FileText size={16} className="text-[#FA4C00] shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-white">Apenas arquivos PDF são aceitos</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    Anexe de 1 a 5 arquivos PDF como evidência da ocorrência (laudos, CAT, relatórios, etc.).
+                  </p>
+                </div>
               </div>
 
-              <p className="text-xs text-muted mt-2">
-                Dica: selecione no máximo 5 fotos. Se passar, o sistema mantém apenas as 5 primeiras.
-              </p>
+              <div>
+                <label className="text-xs text-muted">
+                  Arquivos PDF * <span className="text-muted">(1 a 5 arquivos)</span>
+                </label>
+
+                <label className="mt-1 flex items-center gap-3 px-4 py-3 bg-surface-2 border border-default rounded-xl cursor-pointer hover:bg-surface-2/80 hover:border-[#FA4C00]/40 transition-all group">
+                  <div className="p-1.5 bg-[#FA4C00]/10 rounded-lg group-hover:bg-[#FA4C00]/20 transition-colors">
+                    <Upload size={15} className="text-[#FA4C00]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-white">
+                      {fotosCount
+                        ? `${fotosCount} arquivo${fotosCount > 1 ? "s" : ""} PDF selecionado${fotosCount > 1 ? "s" : ""}`
+                        : "Selecionar arquivos PDF"}
+                    </span>
+                    {!fotosCount && (
+                      <p className="text-xs text-muted mt-0.5">Clique para selecionar · somente .pdf</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted shrink-0">{fotosCount}/5</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => handleFotosChange(e.target.files)}
+                  />
+                </label>
+              </div>
+
+              {fotos.length > 0 && (
+                <div className="space-y-1.5">
+                  {fotos.map((f, idx) => (
+                    <div
+                      key={`${f.name}-${idx}`}
+                      className="flex items-center gap-3 px-3 py-2.5 bg-page border border-default rounded-xl"
+                    >
+                      <div className="p-1 bg-[#FA4C00]/10 rounded-lg shrink-0">
+                        <FileText size={14} className="text-[#FA4C00]" />
+                      </div>
+                      <span className="text-xs text-white flex-1 truncate">{f.name}</span>
+                      <span className="text-xs text-muted shrink-0">
+                        {(f.size / 1024).toFixed(0)} KB
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFotos((prev) => prev.filter((_, i) => i !== idx))}
+                        className="p-1 rounded-md text-muted hover:text-[#FF453A] hover:bg-[#FF453A]/10 transition-colors cursor-pointer shrink-0"
+                        title="Remover"
+                        aria-label="Remover arquivo"
+                      >
+                        <XIcon size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </Section>
         </main>

@@ -150,8 +150,8 @@ exports.listTreinamentos = async (req, res) => {
     if (lider)   where.liderResponsavelOpsId = lider;
     if (dataInicio || dataFim) {
       where.dataTreinamento = {};
-      if (dataInicio) where.dataTreinamento.gte = new Date(`${dataInicio}T00:00:00`);
-      if (dataFim)    where.dataTreinamento.lte = new Date(`${dataFim}T23:59:59`);
+      if (dataInicio) where.dataTreinamento.gte = new Date(`${dataInicio}T00:00:00.000Z`);
+      if (dataFim)    where.dataTreinamento.lte = new Date(`${dataFim}T23:59:59.999Z`);
     }
 
     const [treinamentos, total] = await Promise.all([

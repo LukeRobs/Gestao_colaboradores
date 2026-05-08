@@ -264,10 +264,26 @@ const createAcidente = async (req, res) => {
   }
 };
 
+/* ================= STATS ================= */
+const statsAcidentes = async (req, res) => {
+  try {
+    const baseWhere = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+      ? { colaborador: { idEstacao: req.dbContext.estacaoId } }
+      : {};
+
+    const total = await prisma.acidenteTrabalho.count({ where: baseWhere });
+
+    return successResponse(res, { total });
+  } catch (err) {
+    console.error("❌ statsAcidentes:", err);
+    return errorResponse(res, "Erro ao buscar estatísticas", 500);
+  }
+};
+
 /* ================= GET ALL ================= */
 const getAllAcidentes = async (req, res) => {
   try {
-    const { opsId, cpf, page = 1, limit = 50 } = req.query;
+    const { opsId, cpf, nome, data, page = 1, limit = 50 } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.min(100, Math.max(1, Number(limit)));
     const skip = (pageNum - 1) * limitNum;
@@ -293,6 +309,20 @@ const getAllAcidentes = async (req, res) => {
       });
       if (!colab) return paginatedResponse(res, [], { page: pageNum, limit: limitNum, total: 0 });
       where.opsIdColaborador = colab.opsId;
+    }
+
+    if (nome) {
+      where.colaborador = {
+        ...(where.colaborador ?? {}),
+        nomeCompleto: { contains: nome, mode: "insensitive" },
+      };
+    }
+
+    if (data) {
+      const [y, m, d] = data.split("-").map(Number);
+      const inicio = new Date(y, m - 1, d, 0, 0, 0);
+      const fim    = new Date(y, m - 1, d, 23, 59, 59);
+      where.dataOcorrencia = { gte: inicio, lte: fim };
     }
 
     const [acidentes, total] = await Promise.all([
@@ -463,4 +493,5 @@ module.exports = {
   getAcidenteById,
   getAcidentesByColaborador,
   cancelarAcidente,
+  statsAcidentes,
 };

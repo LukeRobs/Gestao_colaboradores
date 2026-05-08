@@ -6,6 +6,9 @@ const { authenticate } = require("../middlewares/auth.middleware");
 const { injectDbContext } = require("../middlewares/dbContext.middleware");
 const { asyncHandler } = require("../middlewares/error.middleware");
 
+// ================= STATS =================
+router.get("/stats", authenticate, injectDbContext, asyncHandler(controller.statsAtestados));
+
 // ================= PRESIGNED URL =================
 router.post("/presign-upload", asyncHandler(controller.presignUpload));
 router.get("/:id/presign-download", authenticate, asyncHandler(controller.presignDownload));

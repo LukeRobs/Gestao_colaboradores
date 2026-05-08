@@ -574,13 +574,37 @@ const cancelarAtestado = async (req, res) => {
   }
 };
 
+/* =====================================================
+   STATS
+===================================================== */
+const statsAtestados = async (req, res) => {
+  try {
+    const estacaoWhere = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+      ? { colaborador: { idEstacao: req.dbContext.estacaoId } }
+      : {};
+
+    const [total, ativos, finalizados, cancelados] = await Promise.all([
+      prisma.atestadoMedico.count({ where: estacaoWhere }),
+      prisma.atestadoMedico.count({ where: { ...estacaoWhere, status: "ATIVO" } }),
+      prisma.atestadoMedico.count({ where: { ...estacaoWhere, status: "FINALIZADO" } }),
+      prisma.atestadoMedico.count({ where: { ...estacaoWhere, status: "CANCELADO" } }),
+    ]);
+
+    return successResponse(res, { total, ativos, finalizados, cancelados });
+  } catch (err) {
+    console.error("❌ statsAtestados:", err);
+    return errorResponse(res, "Erro ao buscar estatísticas", 500);
+  }
+};
+
 module.exports = {
   presignUpload,
   presignDownload,
   createAtestado,
-  getAllAtestados,  
+  getAllAtestados,
   getAtestadoById,
   updateAtestado,
   finalizarAtestado,
   cancelarAtestado,
+  statsAtestados,
 };

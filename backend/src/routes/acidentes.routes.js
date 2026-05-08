@@ -5,6 +5,8 @@ const controller = require("../controllers/acidente.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 const { asyncHandler } = require("../middlewares/error.middleware");
 
+router.get("/stats", authenticate, asyncHandler(controller.statsAcidentes));
+
 router.post(
   "/presign-upload",
   authenticate,

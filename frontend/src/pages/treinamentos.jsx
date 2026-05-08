@@ -487,7 +487,7 @@ export default function TreinamentosPage() {
                   {treinamentos.map((t) => (
                     <tr key={t.idTreinamento} className="border-t border-default hover:bg-surface-2/50 transition-colors">
                       <td className="px-4 py-3 text-muted text-xs whitespace-nowrap">
-                        {new Date(t.dataTreinamento).toLocaleDateString("pt-BR")}
+                        {t.dataTreinamento?.slice(0, 10).split("-").reverse().join("/")}
                       </td>
                       <td className="px-4 py-3 font-medium max-w-[220px]">
                         <span className="line-clamp-1" title={t.tema}>{t.tema}</span>

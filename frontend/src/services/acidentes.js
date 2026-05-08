@@ -1,34 +1,38 @@
-// src/services/acidentes.js
 import api from "./api";
 
 export const AcidentesAPI = {
-  async listar(params = {}) {
-    const res = await api.get("/acidentes", { params });
-    return res.data.data || [];
+  listar: async ({ page = 1, limit = 20, nome, data } = {}) => {
+    const params = new URLSearchParams({ page, limit });
+    if (nome) params.set("nome", nome);
+    if (data) params.set("data", data);
+    const res = await api.get(`/acidentes?${params}`);
+    return res.data; // { data, pagination }
   },
 
-  async criar(payload) {
+  stats: async () => {
+    const res = await api.get("/acidentes/stats");
+    return res.data.data; // { total, ativos, cancelados }
+  },
+
+  criar: async (payload) => {
     const res = await api.post("/acidentes", payload);
     return res.data.data;
   },
 
-  async presignUpload({ cpf, files }) {
-    const cpfLimpo = cpf.replace(/\D/g, "");
-
+  presignUpload: async ({ cpf, files }) => {
     const res = await api.post("/acidentes/presign-upload", {
-      cpf: cpfLimpo,
+      cpf: cpf.replace(/\D/g, ""),
       files,
     });
-
     return res.data.data; // [{ uploadUrl, key }]
   },
 
-  async me() {
+  me: async () => {
     const res = await api.get("/auth/me");
     return res.data.data;
   },
 
-  async cancelar(id, motivo) {
+  cancelar: async (id, motivo) => {
     const res = await api.post(`/acidentes/${id}/cancelar`, { motivo });
     return res.data.data;
   },
