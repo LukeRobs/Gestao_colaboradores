@@ -24,6 +24,14 @@ router.post(
   treinamentoController.createTreinamento
 );
 
+/* STATS TREINAMENTOS */
+router.get(
+  "/stats",
+  authenticate,
+  authorize("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
+  treinamentoController.statsTreinamentos
+);
+
 /* LISTAR TREINAMENTOS */
 router.get(
   "/",

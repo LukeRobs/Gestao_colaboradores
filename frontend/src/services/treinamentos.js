@@ -1,9 +1,20 @@
 import api from "./api";
 
 export const TreinamentosAPI = {
-  listar: async () => {
-    const res = await api.get("/treinamentos");
-    return res.data.data;
+  listar: async ({ page = 1, limit = 50, tema, processo, lider, dataInicio, dataFim } = {}) => {
+    const params = new URLSearchParams({ page, limit });
+    if (tema)       params.set("tema",       tema);
+    if (processo)   params.set("processo",   processo);
+    if (lider)      params.set("lider",      lider);
+    if (dataInicio) params.set("dataInicio", dataInicio);
+    if (dataFim)    params.set("dataFim",    dataFim);
+    const res = await api.get(`/treinamentos?${params}`);
+    return res.data; // { data, pagination }
+  },
+
+  stats: async () => {
+    const res = await api.get("/treinamentos/stats");
+    return res.data.data; // { total, finalizados, pendentes, cancelados }
   },
 
   criar: async (payload) => {

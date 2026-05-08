@@ -113,10 +113,30 @@ exports.createTreinamento = async (req, res) => {
 /* =====================================================
    LISTAR TREINAMENTOS
 ===================================================== */
+exports.statsTreinamentos = async (req, res) => {
+  try {
+    const estacaoWhere = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+      ? { liderResponsavel: { idEstacao: req.dbContext.estacaoId } }
+      : {};
+
+    const [total, finalizados, pendentes, cancelados] = await Promise.all([
+      prisma.treinamento.count({ where: estacaoWhere }),
+      prisma.treinamento.count({ where: { ...estacaoWhere, status: "FINALIZADO" } }),
+      prisma.treinamento.count({ where: { ...estacaoWhere, status: "ABERTO" } }),
+      prisma.treinamento.count({ where: { ...estacaoWhere, status: "CANCELADO" } }),
+    ]);
+
+    return res.json({ success: true, data: { total, finalizados, pendentes, cancelados } });
+  } catch (err) {
+    console.error("❌ statsTreinamentos:", err);
+    return res.status(500).json({ success: false, message: "Erro ao buscar estatísticas" });
+  }
+};
+
 exports.listTreinamentos = async (req, res) => {
   try {
 
-    const { page = 1, limit = 50 } = req.query;
+    const { page = 1, limit = 50, tema, processo, lider, dataInicio, dataFim } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.min(100, Math.max(1, Number(limit)));
     const skip = (pageNum - 1) * limitNum;
@@ -124,6 +144,15 @@ exports.listTreinamentos = async (req, res) => {
     const where = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
       ? { liderResponsavel: { idEstacao: req.dbContext.estacaoId } }
       : {};
+
+    if (tema)    where.tema     = { contains: tema,    mode: "insensitive" };
+    if (processo) where.processo = { contains: processo, mode: "insensitive" };
+    if (lider)   where.liderResponsavelOpsId = lider;
+    if (dataInicio || dataFim) {
+      where.dataTreinamento = {};
+      if (dataInicio) where.dataTreinamento.gte = new Date(`${dataInicio}T00:00:00`);
+      if (dataFim)    where.dataTreinamento.lte = new Date(`${dataFim}T23:59:59`);
+    }
 
     const [treinamentos, total] = await Promise.all([
       prisma.treinamento.findMany({
