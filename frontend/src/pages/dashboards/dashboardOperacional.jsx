@@ -53,7 +53,8 @@ export default function DashboardOperacional() {
 
   const navigate = useNavigate();
   const { logout } = useContext(AuthContext);
-  const { estacaoId } = useEstacao();
+  const { estacaoId, getEstacaoEfetiva } = useEstacao();
+  const estacaoEfetiva = getEstacaoEfetiva();
 
   /* =====================================================
      LOAD DASHBOARD
@@ -104,7 +105,7 @@ export default function DashboardOperacional() {
 
       const [res, esteirasRes] = await Promise.all([
         api.get("/dashboard", { params }),
-        Number(estacaoId) === 1 && dateParam
+        Number(estacaoEfetiva) === 1 && dateParam
           ? api.get("/esteiras/planejado", { params: { date: dateParam } }).catch(() => null)
           : Promise.resolve(null),
       ]);
@@ -128,7 +129,7 @@ export default function DashboardOperacional() {
   useEffect(() => {
     isFirstRender.current = true;
     loadDashboard(appliedRange);
-  }, [estacaoId]);
+  }, [estacaoEfetiva]);
 
   /* LOAD QUANDO RANGE APLICADO MUDA — ignora o mount inicial */
   useEffect(() => {
@@ -546,7 +547,7 @@ export default function DashboardOperacional() {
             data={tendenciaData}
           />
 
-          {Number(estacaoId) === 1 && (
+          {Number(estacaoEfetiva) === 1 && (
             <EsteirasSection
               date={appliedRange.from?.toISOString().slice(0, 10)}
             />
