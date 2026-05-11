@@ -38,6 +38,18 @@ exports.createTreinamento = async (req, res) => {
       });
     }
 
+    const instrutorExiste = await prisma.colaborador.findUnique({
+      where: { opsId: instrutorOpsId },
+      select: { opsId: true },
+    });
+
+    if (!instrutorExiste) {
+      return res.status(400).json({
+        success: false,
+        message: `Colaborador responsável não encontrado (OpsId: ${instrutorOpsId}). Verifique se o líder está cadastrado no sistema.`,
+      });
+    }
+
     const treinamento = await prisma.treinamento.create({
 
       data: {

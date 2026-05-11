@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Search, Users, Calendar, BookOpen, MapPin, CheckCircle2, Circle } from "lucide-react";
+import { ArrowLeft, Save, Search, Users, Calendar, BookOpen, MapPin, CheckCircle2, Circle, User } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import { TreinamentosAPI } from "../../services/treinamentos";
@@ -22,9 +22,13 @@ export default function NovoTreinamento() {
     processo: "",
     tema: "",
     soc: "",
+    liderResponsavelOpsId: "",
     setores: [],
     participantes: [],
   });
+
+  const [searchLider, setSearchLider] = useState("");
+  const [liderOpen, setLiderOpen] = useState(false);
 
   const [setores, setSetores] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
@@ -76,8 +80,8 @@ export default function NovoTreinamento() {
   };
 
   const submit = async () => {
-    if (!form.dataTreinamento || !form.tema || !form.processo) {
-      alert("Preencha os campos obrigatórios (Data, Tema e Processo)");
+    if (!form.dataTreinamento || !form.tema || !form.processo || !form.liderResponsavelOpsId) {
+      alert("Preencha os campos obrigatórios (Data, Tema, Processo e Líder Responsável)");
       return;
     }
     if (form.participantes.length === 0) { alert("Selecione ao menos um participante"); return; }
@@ -86,7 +90,8 @@ export default function NovoTreinamento() {
       const treinamento = await TreinamentosAPI.criar(form);
       navigate(`/treinamentos/${treinamento.idTreinamento}`);
     } catch (err) {
-      alert("Erro ao criar treinamento");
+      const msg = err.response?.data?.message || "Erro ao criar treinamento";
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -103,7 +108,12 @@ export default function NovoTreinamento() {
     return matchBusca && matchSetor && matchTurno;
   });
 
-  const isFormValid = form.dataTreinamento && form.tema && form.processo && form.participantes.length > 0;
+  const liderSelecionado = colaboradores.find(c => c.opsId === form.liderResponsavelOpsId);
+  const colaboradoresFiltradosLider = colaboradores
+    .filter(c => c.nomeCompleto?.toLowerCase().includes(searchLider.toLowerCase()))
+    .slice(0, 30);
+
+  const isFormValid = form.dataTreinamento && form.tema && form.processo && form.liderResponsavelOpsId && form.participantes.length > 0;
 
   return (
     <div className="flex min-h-screen bg-page text-page">
@@ -208,6 +218,53 @@ export default function NovoTreinamento() {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* LÍDER RESPONSÁVEL */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs lg:text-sm font-medium text-muted">
+                    <User size={14} />
+                    Líder Responsável *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder={liderSelecionado ? liderSelecionado.nomeCompleto : "Buscar líder pelo nome…"}
+                      value={liderOpen ? searchLider : (liderSelecionado?.nomeCompleto || "")}
+                      onFocus={() => { setLiderOpen(true); setSearchLider(""); }}
+                      onChange={(e) => setSearchLider(e.target.value)}
+                      onBlur={() => setTimeout(() => setLiderOpen(false), 150)}
+                      className="w-full px-4 py-3 lg:py-3.5 bg-surface-2 border border-default rounded-xl lg:rounded-2xl text-page text-sm lg:text-base focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 focus:border-[#FA4C00]/50 transition-all placeholder:text-subtle"
+                    />
+                    {liderSelecionado && !liderOpen && (
+                      <button
+                        type="button"
+                        onClick={() => { setForm(f => ({ ...f, liderResponsavelOpsId: "" })); setSearchLider(""); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle hover:text-page transition-colors text-lg leading-none"
+                      >
+                        ×
+                      </button>
+                    )}
+                    {liderOpen && colaboradoresFiltradosLider.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-surface border border-default rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                        {colaboradoresFiltradosLider.map(c => (
+                          <button
+                            key={c.opsId}
+                            type="button"
+                            onMouseDown={() => {
+                              setForm(f => ({ ...f, liderResponsavelOpsId: c.opsId }));
+                              setSearchLider("");
+                              setLiderOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-surface-2 transition-colors flex items-center gap-2"
+                          >
+                            <span className="flex-1 truncate">{c.nomeCompleto}</span>
+                            <span className="text-xs text-subtle shrink-0">{c.opsId}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
