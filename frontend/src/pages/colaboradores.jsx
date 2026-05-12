@@ -1,8 +1,9 @@
 ﻿import { useEffect, useState, useCallback, useContext } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import MainLayout from "../components/MainLayout";
+import toast from "react-hot-toast";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -10,7 +11,6 @@ import EmployeeTable from "../components/EmployeeTable";
 import Pagination from "../components/Pagination";
 import LoadingScreen from "../components/LoadingScreen";
 import { ColaboradoresAPI } from "../services/colaboradores";
-import { TurnosAPI } from "../services/turnos";
 
 export default function ColaboradoresPage() {
   const [employees, setEmployees] = useState([]);
@@ -21,11 +21,14 @@ export default function ColaboradoresPage() {
   const [liderSelecionado, setLiderSelecionado] = useState("TODOS");
   const [statusSelecionado, setStatusSelecionado] = useState("TODOS");
   const [cargoSelecionado, setCargoSelecionado] = useState("TODOS");
+  const [setorSelecionado, setSetorSelecionado] = useState("TODOS");
 
   const [lideres, setLideres] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [escalas, setEscalas] = useState([]);
   const [turnos, setTurnos] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [exportando, setExportando] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -37,53 +40,22 @@ export default function ColaboradoresPage() {
   const navigate = useNavigate();
   const { permissions } = useContext(AuthContext);
 
+  /* ================= CARREGAR FILTROS DA ESTAÇÃO ================= */
+  useEffect(() => {
+    ColaboradoresAPI.listarFiltros()
+      .then(({ escalas, turnos, setores, cargos }) => {
+        setEscalas(escalas);
+        setTurnos(turnos);
+        setSetores(setores);
+        setCargos(cargos);
+      })
+      .catch(() => {});
+  }, []);
+
   /* ================= CARREGAR LÍDERES ================= */
   useEffect(() => {
-    const carregarLideres = async () => {
-      try {
-        const lideresData = await ColaboradoresAPI.listarLideres();
-        setLideres(lideresData);
-      } catch (error) {
-        console.error("Erro ao carregar líderes:", error);
-      }
-    };
-
-    carregarLideres();
-  }, []);
-
-  /* ================= CARREGAR CARGOS ================= */
-  useEffect(() => {
-    const carregarCargos = async () => {
-      try {
-        const cargosData = await ColaboradoresAPI.listarCargos();
-        setCargos(cargosData);
-      } catch (error) {
-        console.error("Erro ao carregar cargos:", error);
-      }
-    };
-
-    carregarCargos();
-  }, []);
-
-  /* ================= CARREGAR ESCALAS ================= */
-  useEffect(() => {
-    const carregarEscalas = async () => {
-      try {
-        const escalasData = await ColaboradoresAPI.listarEscalas();
-        console.log("ESCALAS:", escalasData); // debug
-        setEscalas(escalasData);
-      } catch (error) {
-        console.error("Erro ao carregar escalas:", error);
-      }
-    };
-
-    carregarEscalas();
-  }, []);
-
-  /* ================= CARREGAR TURNOS ================= */
-  useEffect(() => {
-    TurnosAPI.listar()
-      .then((data) => setTurnos(data.filter((t) => t.ativo)))
+    ColaboradoresAPI.listarLideres()
+      .then(setLideres)
       .catch(() => {});
   }, []);
 
@@ -100,10 +72,8 @@ export default function ColaboradoresPage() {
         escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
         idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
         status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
-        idCargo:
-          cargoSelecionado !== "TODOS"
-            ? Number(cargoSelecionado)
-            : undefined,
+        idCargo: cargoSelecionado !== "TODOS" ? Number(cargoSelecionado) : undefined,
+        idSetor: setorSelecionado !== "TODOS" ? Number(setorSelecionado) : undefined,
       };
 
       const res = await ColaboradoresAPI.listar(params);
@@ -128,6 +98,7 @@ export default function ColaboradoresPage() {
     liderSelecionado,
     statusSelecionado,
     cargoSelecionado,
+    setorSelecionado,
   ]);
 
   useEffect(() => {
@@ -175,6 +146,37 @@ export default function ColaboradoresPage() {
     setPage(1);
   };
 
+  const handleSetorChange = (val) => {
+    setSetorSelecionado(val);
+    setPage(1);
+  };
+
+  const handleExportarCsv = async () => {
+    try {
+      setExportando(true);
+      const params = {
+        search: query || undefined,
+        turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
+        escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
+        idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
+        status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
+        idCargo: cargoSelecionado !== "TODOS" ? Number(cargoSelecionado) : undefined,
+        idSetor: setorSelecionado !== "TODOS" ? Number(setorSelecionado) : undefined,
+      };
+      const res = await ColaboradoresAPI.exportarCsv(params);
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `colaboradores_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erro ao exportar CSV.");
+    } finally {
+      setExportando(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-page text-page">
       <Sidebar
@@ -196,12 +198,12 @@ export default function ColaboradoresPage() {
           </div>
 
           {/* FILTROS */}
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 w-full xl:w-auto">
-              
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+
               {/* BUSCA */}
-              <div className="flex items-center gap-2 bg-surface border border-default px-4 py-2 rounded-xl">
-                <Search size={16} className="text-muted" />
+              <div className="flex items-center gap-2 bg-surface border border-default px-4 py-2 rounded-xl col-span-2 sm:col-span-3 lg:col-span-2 xl:col-span-2">
+                <Search size={16} className="text-muted shrink-0" />
                 <input
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
@@ -218,52 +220,43 @@ export default function ColaboradoresPage() {
               >
                 <option value="TODOS">Turnos</option>
                 {turnos.map((t) => (
-                  <option key={t.idTurno} value={t.nomeTurno}>
-                    {t.nomeTurno}
-                  </option>
+                  <option key={t.idTurno} value={t.nomeTurno}>{t.nomeTurno}</option>
                 ))}
               </select>
 
-             {/* ESCALA */}
+              {/* ESCALA */}
               <select
                 value={escalaSelecionada}
                 onChange={(e) => handleEscalaChange(e.target.value)}
                 className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 <option value="TODOS">Escalas</option>
-
-                {escalas.map((escala) => (
-                  <option key={escala.idEscala} value={escala.nomeEscala}>
-                    {escala.nomeEscala}
-                  </option>
+                {escalas.map((e) => (
+                  <option key={e.idEscala} value={e.nomeEscala}>{e.nomeEscala}</option>
                 ))}
               </select>
 
-              {/* CARGO (DINÂMICO 🔥) */}
+              {/* SETOR */}
+              <select
+                value={setorSelecionado}
+                onChange={(e) => handleSetorChange(e.target.value)}
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
+              >
+                <option value="TODOS">Setores</option>
+                {setores.map((s) => (
+                  <option key={s.idSetor} value={s.idSetor}>{s.nomeSetor}</option>
+                ))}
+              </select>
+
+              {/* CARGO */}
               <select
                 value={cargoSelecionado}
                 onChange={(e) => handleCargoChange(e.target.value)}
                 className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
               >
                 <option value="TODOS">Cargos</option>
-                {cargos.map((cargo) => (
-                  <option key={cargo.idCargo} value={cargo.idCargo}>
-                    {cargo.nomeCargo}
-                  </option>
-                ))}
-              </select>
-
-              {/* LÍDER */}
-              <select
-                value={liderSelecionado}
-                onChange={(e) => handleLiderChange(e.target.value)}
-                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
-              >
-                <option value="TODOS">Líderes</option>
-                {lideres.map((lider) => (
-                  <option key={lider.opsId} value={lider.opsId}>
-                    {lider.nomeCompleto}
-                  </option>
+                {cargos.map((c) => (
+                  <option key={c.idCargo} value={c.idCargo}>{c.nomeCargo}</option>
                 ))}
               </select>
 
@@ -281,16 +274,43 @@ export default function ColaboradoresPage() {
               </select>
             </div>
 
-            {/* BOTÃO */}
-            {(permissions.isAdmin || permissions.isAltaGestao) && (
-              <button
-                onClick={() => navigate("/colaboradores/novo")}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#FA4C00] text-white rounded-xl font-medium text-sm"
+            {/* LINHA 2: líder + ações */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* LÍDER */}
+              <select
+                value={liderSelecionado}
+                onChange={(e) => handleLiderChange(e.target.value)}
+                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page flex-1 min-w-[180px] max-w-xs"
               >
-                <Plus size={16} />
-                Novo Colaborador
-              </button>
-            )}
+                <option value="TODOS">Líderes</option>
+                {lideres.map((l) => (
+                  <option key={l.opsId} value={l.opsId}>{l.nomeCompleto}</option>
+                ))}
+              </select>
+
+              <div className="flex items-center gap-2 ml-auto">
+                {/* EXPORTAR CSV */}
+                <button
+                  onClick={handleExportarCsv}
+                  disabled={exportando}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-default hover:bg-surface-2 hover:border-[#FA4C00]/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-muted rounded-xl transition"
+                >
+                  <Download size={15} />
+                  {exportando ? "Gerando CSV…" : "Exportar CSV"}
+                </button>
+
+                {/* NOVO COLABORADOR */}
+                {(permissions.isAdmin || permissions.isAltaGestao) && (
+                  <button
+                    onClick={() => navigate("/colaboradores/novo")}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#FA4C00] text-white rounded-xl font-medium text-sm"
+                  >
+                    <Plus size={16} />
+                    Novo Colaborador
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* LISTA */}

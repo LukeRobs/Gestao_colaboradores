@@ -1539,6 +1539,156 @@ const backfillDSRTodos = async (req, res) => {
   }
 };
 
+/* ================= FILTROS DA ESTAÇÃO ================= */
+const listarFiltrosEstacao = async (req, res) => {
+  try {
+    const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+      ? req.dbContext.estacaoId
+      : null;
+
+    const whereColab = estacaoId ? { idEstacao: estacaoId } : {};
+
+    const [escalas, turnos, setores, cargos] = await Promise.all([
+      prisma.escala.findMany({
+        where: estacaoId
+          ? { colaboradores: { some: whereColab } }
+          : undefined,
+        select: { idEscala: true, nomeEscala: true },
+        orderBy: { nomeEscala: "asc" },
+      }),
+      prisma.turno.findMany({
+        where: estacaoId
+          ? { colaboradores: { some: whereColab } }
+          : undefined,
+        select: { idTurno: true, nomeTurno: true },
+        orderBy: { nomeTurno: "asc" },
+      }),
+      prisma.setor.findMany({
+        where: estacaoId
+          ? { colaboradores: { some: whereColab } }
+          : undefined,
+        select: { idSetor: true, nomeSetor: true },
+        orderBy: { nomeSetor: "asc" },
+      }),
+      prisma.cargo.findMany({
+        where: estacaoId
+          ? { colaboradores: { some: whereColab } }
+          : undefined,
+        select: { idCargo: true, nomeCargo: true },
+        orderBy: { nomeCargo: "asc" },
+      }),
+    ]);
+
+    return successResponse(res, { escalas, turnos, setores, cargos });
+  } catch (err) {
+    console.error("❌ ERRO FILTROS ESTACAO:", err);
+    return errorResponse(res, "Erro ao carregar filtros", 500);
+  }
+};
+
+/* ================= LISTAR SETORES ================= */
+const listarSetores = async (req, res) => {
+  try {
+    const where = {};
+    if (!req.dbContext?.isGlobal && req.dbContext?.estacaoId) {
+      where.idEstacao = req.dbContext.estacaoId;
+    }
+
+    const setores = await prisma.setor.findMany({
+      where: Object.keys(where).length
+        ? { colaboradores: { some: where } }
+        : undefined,
+      select: { idSetor: true, nomeSetor: true },
+      orderBy: { nomeSetor: "asc" },
+    });
+
+    return successResponse(res, setores);
+  } catch (err) {
+    console.error("❌ ERRO LISTAR SETORES:", err);
+    return errorResponse(res, "Erro ao listar setores", 500);
+  }
+};
+
+/* ================= EXPORTAR CSV ================= */
+function buildWhere(query, dbContext) {
+  const {
+    search, status, idSetor, idCargo, idEmpresa, idLider, escala, turno,
+  } = query;
+
+  const where = {};
+
+  if (!dbContext?.isGlobal && dbContext?.estacaoId) {
+    where.idEstacao = dbContext.estacaoId;
+  }
+  if (search) {
+    where.OR = [
+      { nomeCompleto: { contains: search, mode: "insensitive" } },
+      { matricula:    { contains: search, mode: "insensitive" } },
+      { opsId:        { contains: search, mode: "insensitive" } },
+      { cpf:          { contains: search, mode: "insensitive" } },
+    ];
+  }
+  if (status)   where.status   = status;
+  if (idSetor)  where.idSetor  = Number(idSetor);
+  if (idCargo)  where.idCargo  = Number(idCargo);
+  if (idEmpresa) where.idEmpresa = Number(idEmpresa);
+  if (idLider)  where.idLider  = idLider;
+  if (escala)   where.escala   = { nomeEscala: escala };
+  if (turno)    where.turno    = { nomeTurno: turno };
+
+  return where;
+}
+
+const exportarCsvColaboradores = async (req, res) => {
+  try {
+    const where = buildWhere(req.query, req.dbContext);
+
+    const data = await prisma.colaborador.findMany({
+      where,
+      orderBy: { nomeCompleto: "asc" },
+      include: {
+        empresa: true,
+        cargo: true,
+        setor: true,
+        turno: true,
+        escala: { select: { nomeEscala: true } },
+        lider: { select: { nomeCompleto: true } },
+      },
+    });
+
+    const rows = data.map(aplicarStatusDinamico).map((c) => [
+      c.nomeCompleto || "",
+      c.empresa?.razaoSocial || "",
+      c.setor?.nomeSetor || "",
+      c.turno?.nomeTurno || "",
+      c.escala?.nomeEscala || "",
+      c.cargo?.nomeCargo || "",
+      c.status || "",
+      c.dataAdmissao ? new Date(c.dataAdmissao).toLocaleDateString("pt-BR") : "",
+      c.lider?.nomeCompleto || "",
+    ]);
+
+    const header = ["Nome", "Empresa", "Setor", "Turno", "Escala", "Cargo", "Status", "Admissão", "Liderança"];
+    const csvLines = [header, ...rows].map((r) =>
+      r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+    );
+
+    // BOM UTF-8 para Excel reconhecer acentos
+    const bom = "﻿";
+    const csv = bom + csvLines.join("\r\n");
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const filename = `colaboradores_${hoje}.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.send(csv);
+  } catch (err) {
+    console.error("❌ ERRO EXPORT CSV:", err);
+    return errorResponse(res, "Erro ao exportar CSV", 500);
+  }
+};
+
 module.exports = {
   getAllColaboradores,
   getColaboradorByCpf,
@@ -1554,5 +1704,8 @@ module.exports = {
   getStatusImport,
   listarLideres,
   listarEscalas,
+  listarSetores,
+  listarFiltrosEstacao,
+  exportarCsvColaboradores,
   backfillDSRTodos,
 };

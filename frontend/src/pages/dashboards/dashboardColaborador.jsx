@@ -48,7 +48,8 @@ export default function DashboardColaboradoresExecutivo() {
       const res = await api.get("/dashboard/colaboradores", {
         params: {
           turno: turno === "ALL" ? undefined : turno,
-          ...dateRange,
+          ...(dateRange?.inicio ? { dataInicio: dateRange.inicio } : {}),
+          ...(dateRange?.fim    ? { dataFim:    dateRange.fim    } : {}),
         },
       })
       setDados(res.data.data)

@@ -51,4 +51,22 @@ export const ColaboradoresAPI = {
     const res = await api.get("/colaboradores/escalas");
     return res.data?.data || [];
   },
+
+  listarSetores: async () => {
+    const res = await api.get("/colaboradores/setores");
+    return res.data?.data || [];
+  },
+
+  listarFiltros: async () => {
+    const res = await api.get("/colaboradores/filtros");
+    return res.data?.data || { escalas: [], turnos: [], setores: [], cargos: [] };
+  },
+
+  exportarCsv: async (params = {}) => {
+    const res = await api.get("/colaboradores/export/csv", {
+      params,
+      responseType: "blob",
+    });
+    return res;
+  },
 };

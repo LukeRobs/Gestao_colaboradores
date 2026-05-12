@@ -642,40 +642,42 @@ kpis.tempoMedioEmpresa = qtdTempoEmpresa
     const topFaltas = buildTop(faltasByOps, 10);
     const topAtestados = buildTop(atestByOps, 10);
     /* ===============================
-      TURNOVER DO PERÍODO (CORRIGIDO)
+      TURNOVER DO PERÍODO
       Fórmula: Desligamentos / HC médio do período
     ================================ */
 
-    // 🔴 1) Total de desligamentos no período (respeita filtros)
-    const desligamentosPeriodo = await prisma.colaborador.count({
-      where: {
-        ...whereColabBase,
-        ...(turnoNormFiltro
-          ? { turno: { nomeTurno: { contains: turnoNormFiltro, mode: "insensitive" } } }
-          : {}),
-        empresa: {
-          razaoSocial: { in: ["ADECCO", "ADILIS", "LUANDRE"], mode: "insensitive" },
-        },
-        dataDesligamento: {
-          gte: inicio,
-          lte: fim,
-        },
-      },
-    });
+    const isCargoAuxLogistica = (cargo) =>
+      String(cargo || "").toUpperCase().includes("AUXILIAR DE LOGÍSTICA");
 
-    // 🟢 2) Headcount no INÍCIO do período
-    const headcountInicio = colaboradoresElegiveis.filter((c) => {
-      if (c.status !== "ATIVO") return false;
+    // 🔴 1) Total de desligamentos no período — mesma população do gráfico mensal
+    const desligamentosPeriodo = colaboradoresAll.filter((c) => {
+      if (!c.dataDesligamento) return false;
+      const deslig = new Date(c.dataDesligamento);
+      if (deslig < inicio || deslig > fim) return false;
+      if (!isBPO(c)) return false;
+      if (!isCargoAuxLogistica(c.cargo?.nomeCargo)) return false;
+      if (turnoNormFiltro) {
+        const t = normalizeTurno(c.turno?.nomeTurno);
+        if (t !== turnoNormFiltro) return false;
+      }
+      return true;
+    }).length;
+
+    // 🟢 2) Headcount no INÍCIO do período — inclui quem foi desligado durante o período
+    const headcountInicio = colaboradoresAll.filter((c) => {
+      if (!isBPO(c)) return false;
+      if (!isCargoAuxLogistica(c.cargo?.nomeCargo)) return false;
+      if (turnoNormFiltro) {
+        const t = normalizeTurno(c.turno?.nomeTurno);
+        if (t !== turnoNormFiltro) return false;
+      }
       if (!c.dataAdmissao) return false;
-
       const admissao = new Date(c.dataAdmissao);
       if (admissao > inicio) return false;
-
       if (c.dataDesligamento) {
         const deslig = new Date(c.dataDesligamento);
-        if (deslig <= inicio) return false;
+        if (deslig < inicio) return false;
       }
-
       return true;
     }).length;
 

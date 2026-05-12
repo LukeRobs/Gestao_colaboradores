@@ -46,6 +46,30 @@ router.get(
   asyncHandler(controller.listarEscalas)
 );
 
+/* ================= SETORES ================= */
+router.get(
+  "/setores",
+  authenticate,
+  authorize("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
+  asyncHandler(controller.listarSetores)
+);
+
+/* ================= FILTROS DA ESTAÇÃO (escalas/turnos/setores/cargos) ================= */
+router.get(
+  "/filtros",
+  authenticate,
+  authorize("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
+  asyncHandler(controller.listarFiltrosEstacao)
+);
+
+/* ================= EXPORT CSV ================= */
+router.get(
+  "/export/csv",
+  authenticate,
+  authorize("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
+  asyncHandler(controller.exportarCsvColaboradores)
+);
+
 /* ================= CPF (⚠️ TEM QUE VIR ANTES DE :opsId) ================= */
 router.get(
   "/cpf/:cpf",
