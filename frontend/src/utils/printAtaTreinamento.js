@@ -39,6 +39,7 @@ export function printAtaTreinamento(treinamento) {
     nome: p.colaborador?.nomeCompleto || p.opsId || "-",
     cpf: normalizeCpf(p.cpf),
     setor: p.colaborador?.setor?.nomeSetor || "-",
+    turno: p.colaborador?.turno?.nomeTurno || "-",
   }));
 
   const setores = (treinamento.setores || [])
@@ -164,6 +165,7 @@ export function printAtaTreinamento(treinamento) {
         <th>Nome</th>
         <th>CPF</th>
         <th>Setor</th>
+        <th>Turno</th>
         <th>Assinatura</th>
       </tr>
     </thead>
@@ -175,6 +177,7 @@ export function printAtaTreinamento(treinamento) {
           <td>${p.nome}</td>
           <td>${p.cpf}</td>
           <td>${p.setor}</td>
+          <td>${p.turno}</td>
           <td><div class="sig"></div></td>
         </tr>
       `

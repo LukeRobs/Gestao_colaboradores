@@ -41,9 +41,8 @@ export default function AtaTreinamentoTemplate({
   const participantes = (treinamento.participantes || []).map((p) => ({
     nome: p?.colaborador?.nomeCompleto || p?.opsId || "-",
     cpf: normalizeCpf(p?.cpf),
-    setor:
-      p?.colaborador?.setor?.nomeSetor ||
-      "-", // se no include vier colaborador.setor no futuro
+    setor: p?.colaborador?.setor?.nomeSetor || "-",
+    turno: p?.colaborador?.turno?.nomeTurno || "-",
     assinatura: "",
   }));
 
@@ -385,9 +384,10 @@ tbody td {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: "38%" }}>Nome</th>
-                    <th style={{ width: "18%" }}>CPF</th>
-                    <th style={{ width: "22%" }}>Setor</th>
+                    <th style={{ width: "34%" }}>Nome</th>
+                    <th style={{ width: "16%" }}>CPF</th>
+                    <th style={{ width: "18%" }}>Setor</th>
+                    <th style={{ width: "10%" }}>Turno</th>
                     <th style={{ width: "22%" }}>Assinatura</th>
                   </tr>
                 </thead>
@@ -397,6 +397,7 @@ tbody td {
                       <td>{p.nome}</td>
                       <td>{p.cpf}</td>
                       <td>{p.setor}</td>
+                      <td>{p.turno}</td>
                       <td>
                         <div className="sig" />
                       </td>

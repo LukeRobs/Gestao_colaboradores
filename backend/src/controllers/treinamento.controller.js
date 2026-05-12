@@ -101,7 +101,12 @@ exports.createTreinamento = async (req, res) => {
         participantes: {
           include: {
             colaborador: {
-              select: { nomeCompleto: true, cpf: true },
+              select: {
+                nomeCompleto: true,
+                cpf: true,
+                setor: { select: { nomeSetor: true } },
+                turno: { select: { nomeTurno: true } },
+              },
             },
           },
         },
@@ -182,7 +187,14 @@ exports.listTreinamentos = async (req, res) => {
           liderResponsavel: { select: { nomeCompleto: true } },
           participantes: {
             include: {
-              colaborador: { select: { nomeCompleto: true, cpf: true } },
+              colaborador: {
+                select: {
+                  nomeCompleto: true,
+                  cpf: true,
+                  setor: { select: { nomeSetor: true } },
+                  turno: { select: { nomeTurno: true } },
+                },
+              },
             },
           },
           setores: { include: { setor: true } },
@@ -458,7 +470,14 @@ exports.atualizarParticipantes = async (req, res) => {
         setores: { include: { setor: true } },
         participantes: {
           include: {
-            colaborador: { select: { nomeCompleto: true, cpf: true } },
+            colaborador: {
+              select: {
+                nomeCompleto: true,
+                cpf: true,
+                setor: { select: { nomeSetor: true } },
+                turno: { select: { nomeTurno: true } },
+              },
+            },
           },
         },
       },

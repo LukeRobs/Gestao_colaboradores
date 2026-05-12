@@ -286,13 +286,22 @@ export default function DetalhesTreinamento() {
               </div>
 
               <div className="border border-default rounded-xl overflow-hidden">
+                {/* cabeçalho */}
+                <div className="px-4 py-2 grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs font-medium text-muted border-b border-default bg-surface-2">
+                  <span>Nome</span>
+                  <span className="w-28 text-center">Setor</span>
+                  <span className="w-16 text-center">Turno</span>
+                  <span className="w-32 text-right">CPF</span>
+                </div>
                 {treinamento.participantes.map((p) => (
                   <div
                     key={p.idTreinamentoParticipante}
-                    className="px-4 py-2 flex justify-between text-sm border-b border-default last:border-b-0"
+                    className="px-4 py-2 grid grid-cols-[1fr_auto_auto_auto] gap-4 text-sm border-b border-default last:border-b-0"
                   >
                     <span>{p.colaborador?.nomeCompleto || p.opsId}</span>
-                    <span className="text-muted">{p.cpf || "-"}</span>
+                    <span className="w-28 text-center text-muted">{p.colaborador?.setor?.nomeSetor || "-"}</span>
+                    <span className="w-16 text-center text-muted">{p.colaborador?.turno?.nomeTurno || "-"}</span>
+                    <span className="w-32 text-right text-muted">{p.cpf || "-"}</span>
                   </div>
                 ))}
               </div>
