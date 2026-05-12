@@ -43,7 +43,7 @@ async function getDiasDsr(nomeEscala, tx = prisma) {
  */
 async function isDiaDSR(data, nomeEscala, tx = prisma) {
   const dias = await getDiasDsr(nomeEscala, tx);
-  const dow = new Date(data).getDay();
+  const dow = new Date(data).getUTCDay(); // UTC: consistente com Date.UTC() usado na construção das datas
   return dias.includes(dow);
 }
 
@@ -53,7 +53,7 @@ async function isDiaDSR(data, nomeEscala, tx = prisma) {
  * Prefira isDiaDSR sempre que possível.
  */
 function isDiaDSRSync(data, diasDsr = []) {
-  const dow = new Date(data).getDay();
+  const dow = new Date(data).getUTCDay(); // UTC: consistente com Date.UTC() usado na construção das datas
   return diasDsr.includes(dow);
 }
 

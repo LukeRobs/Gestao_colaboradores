@@ -22,12 +22,15 @@ export default function ControlePresenca() {
   );
   const [turno, setTurno] = useState("TODOS");
   const [escala, setEscala] = useState("TODOS");
+  const [escalas, setEscalas] = useState([]);
   const [busca, setBusca] = useState("");
   const [lider, setLider] = useState("TODOS");
-  const [pendenciaSaida, setPendenciaSaida] = useState(false);
-  const [pendentesHoje, setPendentesHoje] = useState(false);
-  const [filtroFalta, setFiltroFalta] = useState(false);
-  const [filtroOn, setFiltroOn] = useState(false);
+  const [statusFiltro, setStatusFiltro] = useState("TODOS");
+
+  const pendenciaSaida  = statusFiltro === "PENDENCIA_SAIDA";
+  const pendentesHoje   = statusFiltro === "PENDENTES_HOJE";
+  const filtroFalta     = statusFiltro === "FALTA";
+  const filtroOn        = statusFiltro === "ONBOARDING";
 
   /* ================== DADOS ================== */
   const [dias, setDias] = useState([]);
@@ -242,6 +245,19 @@ export default function ControlePresenca() {
     loadTurnos();
   }, []);
 
+  useEffect(() => {
+    async function loadEscalas() {
+      try {
+        const res = await api.get("/escalas");
+        setEscalas(res.data?.data || res.data || []);
+      } catch (err) {
+        console.error("Erro ao carregar escalas", err);
+        setEscalas([]);
+      }
+    }
+    loadEscalas();
+  }, []);
+
   /* ================== UI ================== */
   return (
     <div className="flex min-h-screen bg-page text-page">
@@ -265,17 +281,12 @@ export default function ControlePresenca() {
             turno={turno}
             turnos={turnos}
             escala={escala}
+            escalas={escalas}
             busca={busca}
             lider={lider}
             lideres={lideres}
-            pendenciaSaida={pendenciaSaida}
-            pendentesHoje={pendentesHoje}
-            filtroFalta={filtroFalta}
-            filtroOn={filtroOn}
-            onPendenciaSaidaChange={setPendenciaSaida}
-            onPendentesHojeChange={setPendentesHoje}
-            onFiltroFaltaChange={setFiltroFalta}
-            onFiltroOnChange={setFiltroOn}
+            status={statusFiltro}
+            onStatusChange={setStatusFiltro}
             onMesChange={setMes}
             onTurnoChange={setTurno}
             onEscalaChange={setEscala}
