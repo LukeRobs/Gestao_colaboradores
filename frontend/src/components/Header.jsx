@@ -116,6 +116,23 @@ export default function Header({ onMenuClick }) {
       >
         {/* ── esquerda ────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* hamburguer — visível apenas no mobile */}
+          {onMenuClick && (
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden"
+              style={{
+                width: 36, height: 36, borderRadius: 8, border: "none",
+                background: "transparent", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: T.breadcrumb, transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = T.btnHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <Menu size={20} />
+            </button>
+          )}
           <span
             className="hidden sm:block"
             style={{ fontSize: 13, color: T.breadcrumb }}

@@ -207,7 +207,7 @@ export default function DetalhesTreinamento() {
         <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="p-8 space-y-8 max-w-6xl">
+        <main className="px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full max-w-7xl mx-auto">
           {/* HEADER */}
           <div className="flex items-center gap-4">
             <button onClick={() => navigate("/treinamentos")} className="text-muted hover:text-white">
