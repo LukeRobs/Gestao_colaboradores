@@ -13,13 +13,15 @@ const listarEstacoes = async (req, res) => {
       orderBy: { nomeEstacao: "asc" },
     });
 
-    // Injeta emailRh via raw pois o Prisma client pode estar desatualizado
-    const rawEmails = await prisma.$queryRaw`
-      SELECT id_estacao, email_rh FROM estacao
+    // Injeta emailRh e seatalkGroupId via raw pois o Prisma client pode estar desatualizado
+    const rawExtras = await prisma.$queryRaw`
+      SELECT id_estacao, email_rh, seatalk_group_id FROM estacao
     `;
-    const emailMap = Object.fromEntries(rawEmails.map((r) => [r.id_estacao, r.email_rh ?? []]));
+    const extrasMap = Object.fromEntries(rawExtras.map((r) => [r.id_estacao, r]));
     for (const e of estacoes) {
-      e.emailRh = emailMap[e.idEstacao] ?? [];
+      const row = extrasMap[e.idEstacao] ?? {};
+      e.emailRh = row.email_rh ?? [];
+      e.seatalkGroupId = row.seatalk_group_id ?? null;
     }
 
     return res.json({ success: true, data: estacoes });
@@ -48,11 +50,12 @@ const buscarEstacaoPorId = async (req, res) => {
       return res.status(404).json({ success: false, message: "Estação não encontrada" });
     }
 
-    // Busca emailRh via raw pois o Prisma client pode estar desatualizado
+    // Busca emailRh e seatalkGroupId via raw pois o Prisma client pode estar desatualizado
     const raw = await prisma.$queryRaw`
-      SELECT email_rh FROM estacao WHERE id_estacao = ${Number(idEstacao)}
+      SELECT email_rh, seatalk_group_id FROM estacao WHERE id_estacao = ${Number(idEstacao)}
     `;
     estacao.emailRh = raw[0]?.email_rh ?? [];
+    estacao.seatalkGroupId = raw[0]?.seatalk_group_id ?? null;
 
     return res.json({ success: true, data: estacao });
   } catch (error) {
@@ -66,7 +69,7 @@ const buscarEstacaoPorId = async (req, res) => {
 ===================================================== */
 const criarEstacao = async (req, res) => {
   try {
-    const { nomeEstacao, idRegional, localizacao, capacidade, sheetsMetaProducaoId, sheetsPresencaId, emailRh } = req.body;
+    const { nomeEstacao, idRegional, localizacao, capacidade, sheetsMetaProducaoId, sheetsPresencaId, emailRh, seatalkGroupId } = req.body;
 
     if (!nomeEstacao) {
       return res.status(400).json({
@@ -98,7 +101,13 @@ const criarEstacao = async (req, res) => {
       },
     });
 
-    return res.json({ success: true, data: estacao });
+    if (seatalkGroupId !== undefined) {
+      await prisma.$executeRaw`
+        UPDATE estacao SET seatalk_group_id = ${seatalkGroupId || null} WHERE id_estacao = ${estacao.idEstacao}
+      `;
+    }
+
+    return res.json({ success: true, data: { ...estacao, seatalkGroupId: seatalkGroupId || null } });
   } catch (error) {
     console.error("❌ ERRO CRIAR ESTAÇÃO:", error);
     return res.status(500).json({
@@ -114,13 +123,20 @@ const criarEstacao = async (req, res) => {
 const atualizarEstacao = async (req, res) => {
   try {
     const { idEstacao } = req.params;
-    const { nomeEstacao, idRegional, localizacao, capacidade, ativo, sheetsMetaProducaoId, sheetsPresencaId, emailRh } = req.body;
+    const { nomeEstacao, idRegional, localizacao, capacidade, ativo, sheetsMetaProducaoId, sheetsPresencaId, emailRh, seatalkGroupId } = req.body;
 
     // Atualiza emailRh via raw SQL (Prisma client pode estar desatualizado para campo array)
     if (emailRh !== undefined) {
       const emails = Array.isArray(emailRh) ? emailRh : (emailRh ? [emailRh] : []);
       await prisma.$executeRaw`
         UPDATE estacao SET email_rh = ${emails}::text[] WHERE id_estacao = ${Number(idEstacao)}
+      `;
+    }
+
+    // Atualiza seatalkGroupId via raw SQL
+    if (seatalkGroupId !== undefined) {
+      await prisma.$executeRaw`
+        UPDATE estacao SET seatalk_group_id = ${seatalkGroupId || null} WHERE id_estacao = ${Number(idEstacao)}
       `;
     }
 
@@ -145,9 +161,10 @@ const atualizarEstacao = async (req, res) => {
 
     const estacao = await prisma.estacao.findUnique({ where: { idEstacao: Number(idEstacao) } });
 
-    // Injeta emailRh via raw pois o Prisma client pode não conhecer o campo
-    const raw = await prisma.$queryRaw`SELECT email_rh FROM estacao WHERE id_estacao = ${Number(idEstacao)}`;
+    // Injeta campos extras via raw pois o Prisma client pode não conhecer esses campos
+    const raw = await prisma.$queryRaw`SELECT email_rh, seatalk_group_id FROM estacao WHERE id_estacao = ${Number(idEstacao)}`;
     estacao.emailRh = raw[0]?.email_rh ?? [];
+    estacao.seatalkGroupId = raw[0]?.seatalk_group_id ?? null;
 
     return res.json({ success: true, data: estacao });
   } catch (error) {

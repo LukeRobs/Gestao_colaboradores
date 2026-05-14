@@ -1,6 +1,48 @@
 # Changelog
 
-## [Atual] — 2026-05-08
+## [Atual] — 2026-05-14
+
+### Dashboard de Desligamentos
+
+- **Gráficos de barras horizontais** — distribuição de desligamentos por motivo e por empresa agora exibida em gráficos de barra horizontal com labels de valor direto na barra, sem precisar do eixo.
+- **Seção de detalhamento** — tabela paginada (50 por página) com busca por nome e ordenação por coluna, listando cada desligamento do período filtrado.
+
+### Treinamentos
+
+- **Setor e turno dos participantes** — a tela de detalhes do treinamento e a ATA gerada agora exibem o setor e o turno de cada participante.
+- **Estação e turno na criação** — ao criar um novo treinamento, o formulário exibe o turno e estação vinculados ao responsável.
+
+### Colaboradores
+
+- **Filtro por setor** — a listagem de colaboradores ganhou filtro por setor, aplicado em conjunto com os demais filtros ativos.
+- **Exportação CSV com filtros** — o botão de exportar respeita todos os filtros ativos (setor, turno, status, busca), exportando exatamente o que está sendo visualizado.
+
+### Controle de Presença
+
+- **Filtro de status unificado** — os quatro checkboxes anteriores (Falta, Onboarding, Entrada sem saída, Pendentes hoje) foram substituídos por um único select de status, simplificando a toolbar.
+- **Filtro de escalas** — adicionado filtro por escala na toolbar de presença.
+
+### Autenticação
+
+- **Domínio @shopeemobile-external.com** — o cadastro de usuários agora aceita o domínio `@shopeemobile-external.com` além do `@shopee.com`.
+
+### Interface
+
+- **Botão hamburguer no mobile** — o header exibe o botão de menu no mobile para abrir a sidebar, corrigindo o acesso à navegação em telas pequenas.
+
+### Seatalk
+
+- **Grupo por estação** — cada estação tem seu próprio grupo Seatalk configurado. O relatório operacional é enviado para o grupo da estação do usuário, sem depender de variável de ambiente global.
+- **Configuração via Estações** — administradores configuram o ID do grupo diretamente em Organização → Estações, junto com os demais IDs da estação.
+- **Popup informativo** — ao tentar enviar sem grupo configurado, usuários comuns veem aviso para contatar o admin; o admin vê botão "Configurar agora" que navega direto para a tela de estações.
+
+### Processamento Geral
+
+- **Seção removida** — dashboard, rota e item de menu de Processamento Geral foram descontinuados.
+
+---
+
+## [2026-05-08]
 
 ### Gestão Operacional
 

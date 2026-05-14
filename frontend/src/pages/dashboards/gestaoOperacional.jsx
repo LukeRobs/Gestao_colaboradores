@@ -1,6 +1,7 @@
-﻿import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef, useContext } from "react";
 import { useEstacao } from "../../context/EstacaoContext";
-import { Calendar, Package, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Calendar, Package, Send, X } from "lucide-react";
 import api from "../../services/api";
 import { useTurnosOperacionais } from "../../hooks/useTurnosOperacionais";
 import Sidebar from "../../components/Sidebar";
@@ -10,6 +11,7 @@ import AlertaSalvamentoPendente from "../../components/gestaoOperacional/AlertaS
 import domtoimage from "dom-to-image-more";
 import toast from "react-hot-toast";
 import MainLayout from "../../components/MainLayout";
+import { AuthContext } from "../../context/AuthContext";
 // import CapacidadeTable from "../../components/gestaoOperacional/CapacidadeTable"; // Comentado - será usado futuramente
 
 export default function GestaoOperacional() {
@@ -21,10 +23,14 @@ export default function GestaoOperacional() {
   const [dashboardData, setDashboardData] = useState(null);
   const [erro, setErro] = useState(null);
   const [enviandoScreenshot, setEnviandoScreenshot] = useState(false);
-const [desabilitarAnimacoes, setDesabilitarAnimacoes] = useState(false);
+  const [desabilitarAnimacoes, setDesabilitarAnimacoes] = useState(false);
   const [ocultarHeader, setOcultarHeader] = useState(false);
+  const [modalSeatalkConfig, setModalSeatalkConfig] = useState(false);
   const mainContentRef = useRef(null);
   const { estacaoId } = useEstacao();
+  const { permissions } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const isAdmin = permissions?.isAdmin;
 
   useEffect(() => {
     if (turnosOperacionais.length > 0 && !turnosOperacionais.find((t) => t.nomeTurno === turno)) {
@@ -120,6 +126,19 @@ const [desabilitarAnimacoes, setDesabilitarAnimacoes] = useState(false);
       toast.error(`Aguarde ${formatarContador(segundosParaSeatalk)} para enviar.`);
       return;
     }
+
+    // Pre-check: verificar se o grupo Seatalk está configurado antes de iniciar o processo
+    try {
+      const check = await api.get("/reports/seatalk/check");
+      if (!check.data?.configured) {
+        setModalSeatalkConfig(true);
+        return;
+      }
+    } catch {
+      setModalSeatalkConfig(true);
+      return;
+    }
+
     try {
       setEnviandoScreenshot(true);
       
@@ -359,6 +378,62 @@ const [desabilitarAnimacoes, setDesabilitarAnimacoes] = useState(false);
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Modal: Grupo Seatalk não configurado */}
+      {modalSeatalkConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setModalSeatalkConfig(false)} />
+          <div className="relative z-10 w-full max-w-sm bg-surface border border-default rounded-2xl shadow-2xl p-6 flex flex-col gap-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-yellow-400 text-xl">⚠️</span>
+                </div>
+                <h3 className="text-base font-semibold text-page">Grupo Seatalk não configurado</h3>
+              </div>
+              <button onClick={() => setModalSeatalkConfig(false)} className="text-muted hover:text-page transition">
+                <X size={18} />
+              </button>
+            </div>
+
+            {isAdmin ? (
+              <>
+                <p className="text-sm text-muted leading-relaxed">
+                  Nenhum grupo Seatalk está configurado para esta estação. Configure o ID do grupo em <strong className="text-page">Organização &rsaquo; Estações</strong>.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setModalSeatalkConfig(false)}
+                    className="px-4 py-2 rounded-xl bg-surface-2 text-sm text-muted hover:text-page transition"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    onClick={() => { setModalSeatalkConfig(false); navigate("/estacoes"); }}
+                    className="px-4 py-2 rounded-xl bg-[#FA4C00] text-sm text-white font-medium hover:bg-[#FF5A1A] transition"
+                  >
+                    Configurar agora
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted leading-relaxed">
+                  Nenhum grupo Seatalk está configurado para esta estação. Entre em contato com o administrador para realizar a configuração.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setModalSeatalkConfig(false)}
+                    className="px-4 py-2 rounded-xl bg-surface-2 text-sm text-muted hover:text-page transition"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Alerta de Salvamento Pendente */}
       <AlertaSalvamentoPendente />

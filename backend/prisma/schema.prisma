@@ -192,6 +192,7 @@ model Estacao {
   sheetsMetaProducaoId   String?       @map("sheets_meta_producao_id") @db.VarChar(200)
   sheetsPresencaId       String?       @map("sheets_presenca_id") @db.VarChar(200)
   emailRh                String[]      @default([]) @map("email_rh")
+  seatalkGroupId         String?       @map("seatalk_group_id") @db.VarChar(200)
   colaboradores          Colaborador[]
   users                  User[]
   setores                Setor[]

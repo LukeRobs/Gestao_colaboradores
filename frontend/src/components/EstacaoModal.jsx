@@ -8,6 +8,7 @@ export default function EstacaoModal({ estacao, onClose, onSave, isAdmin = false
     idRegional: estacao?.idRegional || "",
     sheetsMetaProducaoId: estacao?.sheetsMetaProducaoId || "",
     sheetsPresencaId: estacao?.sheetsPresencaId || "",
+    seatalkGroupId: estacao?.seatalkGroupId || "",
   }));
 
   const [regionais, setRegionais] = useState([]);
@@ -120,6 +121,14 @@ export default function EstacaoModal({ estacao, onClose, onSave, isAdmin = false
                 value={form.sheetsPresencaId}
                 onChange={handleChange}
                 placeholder="Ex: 1lgrpflaIybMq7Z-8tZ7A6cueepYZ0yNBTSyDYvNaWNk"
+              />
+
+              <Input
+                label="ID do Grupo Seatalk (Relatório Operacional)"
+                name="seatalkGroupId"
+                value={form.seatalkGroupId}
+                onChange={handleChange}
+                placeholder="Ex: oc_xxxxxxxxxxxxxxxxxxxxxxxx"
               />
             </>
           )}
