@@ -167,6 +167,7 @@ export default function EstacoesPage() {
                 idRegional: data.idRegional ? Number(data.idRegional) : undefined,
                 sheetsMetaProducaoId: data.sheetsMetaProducaoId || null,
                 sheetsPresencaId: data.sheetsPresencaId || null,
+                seatalkGroupId: data.seatalkGroupId || null,
               };
               if (selected) {
                 await EstacoesAPI.atualizar(selected.idEstacao, payload);

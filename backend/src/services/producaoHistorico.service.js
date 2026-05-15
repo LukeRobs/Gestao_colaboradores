@@ -1,8 +1,9 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const { 
-  buscarMetasProducao, 
-  buscarQuantidadeRealizada
+const {
+  buscarMetasProducao,
+  buscarQuantidadeRealizada,
+  limparCache
 } = require("./googleSheetsMetaProducao.service");
 
 /**
@@ -26,6 +27,10 @@ async function salvarProducaoHistorico(turno, dataStr = null) {
     console.log(`\n💾 [HISTÓRICO] Iniciando salvamento automático`);
     console.log(`📅 Data: ${dataStr}`);
     console.log(`🕐 Turno: ${turno}`);
+
+    // Limpar cache para garantir dados frescos da planilha no momento do salvamento
+    limparCache();
+    console.log('🗑️ [HISTÓRICO] Cache limpo antes do salvamento');
 
     // Buscar metas da planilha
     const metasResult = await buscarMetasProducao(turno, dataStr);
@@ -198,6 +203,7 @@ async function verificarRegistroExistente(turno, dataStr) {
  */
 async function salvarHoraUnica(turno, dataStr, hora) {
   try {
+    limparCache();
     const metasResult = await buscarMetasProducao(turno, dataStr);
     if (!metasResult.success) throw new Error("Erro ao buscar metas");
 

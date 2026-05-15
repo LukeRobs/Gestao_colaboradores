@@ -129,10 +129,49 @@ function iniciarJobsProducao() {
     }
   }, { timezone: "America/Sao_Paulo" });
 
+  // Jobs de reconciliação — re-salva 30 minutos após o fechamento para capturar
+  // lançamentos tardios que chegaram à planilha depois do save principal
+
+  // Reconciliação T1 às 15:30
+  cron.schedule('30 15 * * *', async () => {
+    console.log('\n🔄 [RECONCILIAÇÃO T1] Re-salvando T1 às 15:30 para capturar lançamentos tardios');
+    const resultado = await salvarProducaoHistorico('T1', getDataHoje());
+    if (resultado.success) {
+      console.log(`✅ [RECONCILIAÇÃO T1] ${resultado.message} - ${resultado.registros} registros`);
+    } else {
+      console.error(`❌ [RECONCILIAÇÃO T1] Falha: ${resultado.message}`);
+    }
+  }, { timezone: "America/Sao_Paulo" });
+
+  // Reconciliação T2 às 23:30
+  cron.schedule('30 23 * * *', async () => {
+    console.log('\n🔄 [RECONCILIAÇÃO T2] Re-salvando T2 às 23:30 para capturar lançamentos tardios');
+    const resultado = await salvarProducaoHistorico('T2', getDataHoje());
+    if (resultado.success) {
+      console.log(`✅ [RECONCILIAÇÃO T2] ${resultado.message} - ${resultado.registros} registros`);
+    } else {
+      console.error(`❌ [RECONCILIAÇÃO T2] Falha: ${resultado.message}`);
+    }
+  }, { timezone: "America/Sao_Paulo" });
+
+  // Reconciliação T3 às 05:30 (data de referência é ontem, igual ao save principal do T3)
+  cron.schedule('30 5 * * *', async () => {
+    console.log('\n🔄 [RECONCILIAÇÃO T3] Re-salvando T3 às 05:30 para capturar lançamentos tardios');
+    const resultado = await salvarProducaoHistorico('T3', getDataOntem());
+    if (resultado.success) {
+      console.log(`✅ [RECONCILIAÇÃO T3] ${resultado.message} - ${resultado.registros} registros`);
+    } else {
+      console.error(`❌ [RECONCILIAÇÃO T3] Falha: ${resultado.message}`);
+    }
+  }, { timezone: "America/Sao_Paulo" });
+
   console.log('✅ [JOBS] Jobs agendados com sucesso:');
   console.log('   📌 T1: Todos os dias às 15:00 (fechamento turno)');
+  console.log('   📌 T1: Todos os dias às 15:30 (reconciliação)');
   console.log('   📌 T2: Todos os dias às 23:00 (fechamento turno)');
+  console.log('   📌 T2: Todos os dias às 23:30 (reconciliação)');
   console.log('   📌 T3: Todos os dias às 05:00 (fechamento turno)');
+  console.log('   📌 T3: Todos os dias às 05:30 (reconciliação)');
   console.log('   📌 Redundância: todo HH:05 salva a hora anterior');
   console.log('   🌎 Timezone: America/Sao_Paulo\n');
 }
