@@ -596,41 +596,41 @@ function buildFaltasPorTempoCasa({ frequencias, colaboradoresMap }) {
 function buildOverview({ frequencias, inicio, fim, colaboradores = [] }) {
   const diasPeriodo = daysInclusive(inicio, fim);
 
-  // HC Operacional Escalado = todos colaboradores ATIVO elegíveis
-  // Excluídos por status de banco: FERIAS / AFASTADO (já saem aqui)
-  // Atestado médico: status ATIVO → permanece contabilizado ✓
-  const totalColaboradores = colaboradores.filter(c => c.status === "ATIVO").length;
+  // Agrupa frequências por opsId para detectar quem está INTEIRAMENTE fora
+  const freqByOpsId = new Map();
+  frequencias.forEach(f => {
+    if (!freqByOpsId.has(f.opsId)) freqByOpsId.set(f.opsId, []);
+    freqByOpsId.get(f.opsId).push(f);
+  });
 
-  if (!frequencias.length) {
-    return {
-      totalColaboradores,
-      presentes: 0,
-      absenteismo: 0,
-      faltas: 0,
-    };
-  }
+  // Excluídos = colaboradores cujos TODOS os registros do período são não-escalados
+  // (DSR, FE, AFA, NC, ON, LM, LP, T…)
+  // Sem registro = trabalhando normalmente → NÃO excluído
+  const excluidos = new Set();
+  freqByOpsId.forEach((records, opsId) => {
+    const hasEscalado = records.some(f => getStatusDoDia(f).contaComoEscalado);
+    if (!hasEscalado) excluidos.add(opsId);
+  });
+
+  // HC Escalado = ATIVO elegível - quem está inteiramente fora no período
+  // FERIAS/AFASTADO por status de banco já excluem automaticamente
+  // Atestado médico (AM) tem contaComoEscalado: true → permanece ✓
+  const ativosElegiveis = colaboradores.filter(c => c.status === "ATIVO");
+  const totalColaboradores = ativosElegiveis.filter(
+    c => !excluidos.has(c.opsId)
+  ).length;
 
   let absDias = 0;
   let faltasDias = 0;
-
   const presentesSet = new Set();
 
   frequencias.forEach(f => {
     const s = getStatusDoDia(f);
-
     if (!s.contaComoEscalado) return;
 
-    if (s.code === "P") {
-      presentesSet.add(f.opsId);
-    }
-
-    if (s.impactaAbsenteismo) {
-      absDias++;
-    }
-
-    if (s.code === "F" || s.code === "FJ") {
-      faltasDias++;
-    }
+    if (s.code === "P") presentesSet.add(f.opsId);
+    if (s.impactaAbsenteismo) absDias++;
+    if (s.code === "F" || s.code === "FJ") faltasDias++;
   });
 
   const diasEsperados = totalColaboradores * diasPeriodo;
