@@ -165,122 +165,136 @@ function getStatusDoDia(f) {
 /* =====================================================
    BUILDERS
 ===================================================== */
-  function buildEscalasResumo({ frequencias, colaboradoresMap, inicio, fim }) {
+  function buildEscalasResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim }) {
   const diasPeriodo = daysInclusive(inicio, fim);
-  const map = {};
 
-  frequencias.forEach((f) => {
+  // Dias excluídos por colaborador (registros de não-escalado)
+  const excludedPerOps = new Map();
+  frequencias.forEach(f => {
     const s = getStatusDoDia(f);
-    if (!s.contaComoEscalado) return;
-
-    const c = colaboradoresMap.get(f.opsId);
-    if (!c) return;
-
-    const escObj = c.escala;
-    const esc = escObj
-      ? `${escObj.nomeEscala} (${escObj.descricao})`
-      : "N/I";
-
-    if (!map[esc]) {
-      map[esc] = { escala: esc, ops: new Set(), absDias: 0 };
-    }
-
-    map[esc].ops.add(f.opsId);
-
-    if (s.impactaAbsenteismo) {
-      map[esc].absDias++;
+    if (!s.contaComoEscalado) {
+      excludedPerOps.set(f.opsId, (excludedPerOps.get(f.opsId) || 0) + 1);
     }
   });
 
-  return Object.values(map).map((e) => {
-    const totalColaboradores = e.ops.size;
-    const diasEsperados = totalColaboradores * diasPeriodo;
+  // Dias de ausência por escala
+  const absDiasPerEsc = {};
+  frequencias.forEach(f => {
+    const s = getStatusDoDia(f);
+    if (!s.contaComoEscalado || !s.impactaAbsenteismo) return;
+    const c = colaboradoresMap.get(f.opsId);
+    if (!c) return;
+    const escObj = c.escala;
+    const esc = escObj ? `${escObj.nomeEscala} (${escObj.descricao})` : "N/I";
+    absDiasPerEsc[esc] = (absDiasPerEsc[esc] || 0) + 1;
+  });
 
+  // HC acumulado por escala — apenas ATIVOs
+  const hcPerEsc = {};
+  const ativosElegiveis = (colaboradores || []).filter(c => c.status === "ATIVO");
+  ativosElegiveis.forEach(c => {
+    const escObj = c.escala;
+    const esc = escObj ? `${escObj.nomeEscala} (${escObj.descricao})` : "N/I";
+    const excluded = excludedPerOps.get(c.opsId) || 0;
+    hcPerEsc[esc] = (hcPerEsc[esc] || 0) + Math.max(0, diasPeriodo - excluded);
+  });
+
+  const allEscalas = new Set([...Object.keys(hcPerEsc), ...Object.keys(absDiasPerEsc)]);
+  return Array.from(allEscalas).map(esc => {
+    const totalColaboradores = hcPerEsc[esc] || 0;
+    const absDias = absDiasPerEsc[esc] || 0;
     return {
-      escala: e.escala,
+      escala: esc,
       totalColaboradores,
-      absenteismo:
-        diasEsperados > 0
-          ? Number(((e.absDias / diasEsperados) * 100).toFixed(2))
-          : 0,
+      absenteismo: totalColaboradores > 0
+        ? Number(((absDias / totalColaboradores) * 100).toFixed(2))
+        : 0,
     };
   });
 }
 
-  function buildSetoresResumo({ frequencias, colaboradoresMap, inicio, fim }) {
+  function buildSetoresResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim }) {
     const diasPeriodo = daysInclusive(inicio, fim);
-    const map = {};
 
-    frequencias.forEach((f) => {
+    const excludedPerOps = new Map();
+    frequencias.forEach(f => {
       const s = getStatusDoDia(f);
-      if (!s.contaComoEscalado) return;
-
-      const c = colaboradoresMap.get(f.opsId);
-      if (!c) return;
-
-      const setor = c.setor?.nomeSetor || "Sem setor";
-
-      if (!map[setor]) {
-        map[setor] = { setor, ops: new Set(), absDias: 0 };
-      }
-
-      map[setor].ops.add(f.opsId);
-
-      if (s.impactaAbsenteismo) {
-        map[setor].absDias++;
+      if (!s.contaComoEscalado) {
+        excludedPerOps.set(f.opsId, (excludedPerOps.get(f.opsId) || 0) + 1);
       }
     });
 
-    return Object.values(map).map((x) => {
-      const totalColaboradores = x.ops.size;
-      const diasEsperados = totalColaboradores * diasPeriodo;
+    const absDiasPerSetor = {};
+    frequencias.forEach(f => {
+      const s = getStatusDoDia(f);
+      if (!s.contaComoEscalado || !s.impactaAbsenteismo) return;
+      const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+      const setor = c.setor?.nomeSetor || "Sem setor";
+      absDiasPerSetor[setor] = (absDiasPerSetor[setor] || 0) + 1;
+    });
 
+    const hcPerSetor = {};
+    const ativosElegiveis = (colaboradores || []).filter(c => c.status === "ATIVO");
+    ativosElegiveis.forEach(c => {
+      const setor = c.setor?.nomeSetor || "Sem setor";
+      const excluded = excludedPerOps.get(c.opsId) || 0;
+      hcPerSetor[setor] = (hcPerSetor[setor] || 0) + Math.max(0, diasPeriodo - excluded);
+    });
+
+    const allSetores = new Set([...Object.keys(hcPerSetor), ...Object.keys(absDiasPerSetor)]);
+    return Array.from(allSetores).map(setor => {
+      const totalColaboradores = hcPerSetor[setor] || 0;
+      const absDias = absDiasPerSetor[setor] || 0;
       return {
-        setor: x.setor,
+        setor,
         totalColaboradores,
-        absenteismo:
-          diasEsperados > 0
-            ? Number(((x.absDias / diasEsperados) * 100).toFixed(2))
-            : 0,
+        absenteismo: totalColaboradores > 0
+          ? Number(((absDias / totalColaboradores) * 100).toFixed(2))
+          : 0,
       };
     });
   }
 
-  function buildLideresResumo({ frequencias, colaboradoresMap, inicio, fim }) {
+  function buildLideresResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim }) {
     const diasPeriodo = daysInclusive(inicio, fim);
-    const map = {};
 
-    frequencias.forEach((f) => {
+    const excludedPerOps = new Map();
+    frequencias.forEach(f => {
       const s = getStatusDoDia(f);
-      if (!s.contaComoEscalado) return;
-
-      const c = colaboradoresMap.get(f.opsId);
-      if (!c) return;
-
-      const lider = c.lider?.nomeCompleto || "Sem líder";
-
-      if (!map[lider]) {
-        map[lider] = { lider, ops: new Set(), absDias: 0 };
-      }
-
-      map[lider].ops.add(f.opsId);
-
-      if (s.impactaAbsenteismo) {
-        map[lider].absDias++;
+      if (!s.contaComoEscalado) {
+        excludedPerOps.set(f.opsId, (excludedPerOps.get(f.opsId) || 0) + 1);
       }
     });
 
-    return Object.values(map).map((x) => {
-      const totalColaboradores = x.ops.size;
-      const diasEsperados = totalColaboradores * diasPeriodo;
+    const absDiasPerLider = {};
+    frequencias.forEach(f => {
+      const s = getStatusDoDia(f);
+      if (!s.contaComoEscalado || !s.impactaAbsenteismo) return;
+      const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+      const lider = c.lider?.nomeCompleto || "Sem líder";
+      absDiasPerLider[lider] = (absDiasPerLider[lider] || 0) + 1;
+    });
 
+    const hcPerLider = {};
+    const ativosElegiveis = (colaboradores || []).filter(c => c.status === "ATIVO");
+    ativosElegiveis.forEach(c => {
+      const lider = c.lider?.nomeCompleto || "Sem líder";
+      const excluded = excludedPerOps.get(c.opsId) || 0;
+      hcPerLider[lider] = (hcPerLider[lider] || 0) + Math.max(0, diasPeriodo - excluded);
+    });
+
+    const allLideres = new Set([...Object.keys(hcPerLider), ...Object.keys(absDiasPerLider)]);
+    return Array.from(allLideres).map(lider => {
+      const totalColaboradores = hcPerLider[lider] || 0;
+      const absDias = absDiasPerLider[lider] || 0;
       return {
-        lider: x.lider,
+        lider,
         totalColaboradores,
-        absenteismo:
-          diasEsperados > 0
-            ? Number(((x.absDias / diasEsperados) * 100).toFixed(2))
-            : 0,
+        absenteismo: totalColaboradores > 0
+          ? Number(((absDias / totalColaboradores) * 100).toFixed(2))
+          : 0,
       };
     });
   }
@@ -330,6 +344,31 @@ function buildGenero(colaboradores) {
     const g = normalize(c.genero) || "N/I";
     map[g] = (map[g] || 0) + 1;
   });
+  return Object.entries(map).map(([name, value]) => ({ name, value }));
+}
+
+/* ---------- GÊNERO ACUMULADO (pessoa-dias) ---------- */
+function buildGeneroAcumulado({ frequencias, colaboradores, inicio, fim }) {
+  const diasPeriodo = daysInclusive(inicio, fim);
+  const ativosElegiveis = colaboradores.filter(c => c.status === "ATIVO");
+
+  // Dias excluídos por colaborador (registros de não-escalado)
+  const excludedPerOps = new Map();
+  frequencias.forEach(f => {
+    const s = getStatusDoDia(f);
+    if (!s.contaComoEscalado) {
+      excludedPerOps.set(f.opsId, (excludedPerOps.get(f.opsId) || 0) + 1);
+    }
+  });
+
+  const map = {};
+  ativosElegiveis.forEach(c => {
+    const g = normalize(c.genero) || "N/I";
+    const excluded = excludedPerOps.get(c.opsId) || 0;
+    const days = Math.max(0, diasPeriodo - excluded);
+    map[g] = (map[g] || 0) + days;
+  });
+
   return Object.entries(map).map(([name, value]) => ({ name, value }));
 }
 
@@ -591,52 +630,44 @@ function buildFaltasPorTempoCasa({ frequencias, colaboradoresMap }) {
 function buildOverview({ frequencias, inicio, fim, colaboradores = [] }) {
   const diasPeriodo = daysInclusive(inicio, fim);
 
-  // Agrupa frequências por opsId para detectar quem está INTEIRAMENTE fora
-  const freqByOpsId = new Map();
-  frequencias.forEach(f => {
-    if (!freqByOpsId.has(f.opsId)) freqByOpsId.set(f.opsId, []);
-    freqByOpsId.get(f.opsId).push(f);
-  });
-
-  // Excluídos = colaboradores cujos TODOS os registros do período são não-escalados
-  // (DSR, FE, AFA, NC, ON, LM, LP, T…)
-  // Sem registro = trabalhando normalmente → NÃO excluído
-  const excluidos = new Set();
-  freqByOpsId.forEach((records, opsId) => {
-    const hasEscalado = records.some(f => getStatusDoDia(f).contaComoEscalado);
-    if (!hasEscalado) excluidos.add(opsId);
-  });
-
-  // HC Escalado = ATIVO elegível - quem está inteiramente fora no período
-  // FERIAS/AFASTADO por status de banco já excluem automaticamente
-  // Atestado médico (AM) tem contaComoEscalado: true → permanece ✓
+  // Apenas ATIVOs elegíveis entram no HC
   const ativosElegiveis = colaboradores.filter(c => c.status === "ATIVO");
-  const totalColaboradores = ativosElegiveis.filter(
-    c => !excluidos.has(c.opsId)
-  ).length;
+  const ativosSet = new Set(ativosElegiveis.map(c => c.opsId));
 
+  // Conta dias excluídos por colaborador ATIVO (DSR, FE, AFA, NC, ON…)
+  // Dias sem registro = trabalhando normalmente → não excluído
+  let excludedDays = 0;
   let absDias = 0;
   let faltasDias = 0;
   const presentesSet = new Set();
 
   frequencias.forEach(f => {
     const s = getStatusDoDia(f);
-    if (!s.contaComoEscalado) return;
 
-    if (s.code === "P") presentesSet.add(f.opsId);
-    if (s.impactaAbsenteismo) absDias++;
-    if (s.code === "F" || s.code === "FJ") faltasDias++;
+    // Dia excluído do HC: registro de não-escalado para ATIVO
+    if (ativosSet.has(f.opsId) && !s.contaComoEscalado) {
+      excludedDays++;
+    }
+
+    if (s.contaComoEscalado) {
+      if (s.code === "P") presentesSet.add(f.opsId);
+      if (s.impactaAbsenteismo) absDias++;
+      if (s.code === "F" || s.code === "FJ") faltasDias++;
+    }
   });
 
-  const diasEsperados = totalColaboradores * diasPeriodo;
+  // HC acumulado = (ATIVOs × dias) − dias excluídos por registros
+  // Representa o volume operacional acumulado do período
+  const hcAcumulado = Math.max(0, ativosElegiveis.length * diasPeriodo - excludedDays);
 
   return {
-    totalColaboradores,
+    totalColaboradores: ativosElegiveis.length, // contagem única (compatibilidade)
+    hcAcumulado,                                 // pessoa-dias acumulados no período
     presentes: presentesSet.size,
     faltas: faltasDias,
     absenteismo:
-      diasEsperados > 0
-        ? Number(((absDias / diasEsperados) * 100).toFixed(2))
+      hcAcumulado > 0
+        ? Number(((absDias / hcAcumulado) * 100).toFixed(2))
         : 0,
   };
 }
@@ -644,18 +675,67 @@ function buildOverview({ frequencias, inicio, fim, colaboradores = [] }) {
 
 /* ---------- TURNOVER GLOBAL ---------- */
 function buildTurnoverGlobal({
-  totalColaboradores,
+  hcAcumulado,
+  diasPeriodo,
   admitidosPeriodo,
   desligadosPeriodo,
 }) {
-  if (!totalColaboradores) return 0;
+  // HC médio diário do período (média do volume operacional)
+  const hcMedio = diasPeriodo > 0 ? hcAcumulado / diasPeriodo : 0;
+  if (!hcMedio) return 0;
 
-  const mediaMovimentacao =
-    (admitidosPeriodo + desligadosPeriodo) / 2;
+  const mediaMovimentacao = (admitidosPeriodo + desligadosPeriodo) / 2;
 
-  return Number(
-    ((mediaMovimentacao / totalColaboradores) * 100).toFixed(2)
-  );
+  return Number(((mediaMovimentacao / hcMedio) * 100).toFixed(2));
+}
+
+
+/* ---------- SÉRIE DIÁRIA (período > 1 dia) ---------- */
+function buildSeriesDiarias({ todosElegiveis, inicio, fim }) {
+  const days = [];
+
+  // Índices por data para busca O(1)
+  const admByDay = {};
+  const desByDay = {};
+  todosElegiveis.forEach(c => {
+    if (c.dataAdmissao) {
+      const k = isoDate(c.dataAdmissao);
+      admByDay[k] = (admByDay[k] || 0) + 1;
+    }
+    if (c.dataDesligamento) {
+      const k = isoDate(c.dataDesligamento);
+      desByDay[k] = (desByDay[k] || 0) + 1;
+    }
+  });
+
+  const current = new Date(inicio);
+  current.setHours(0, 0, 0, 0);
+  const endNorm = new Date(fim);
+  endNorm.setHours(0, 0, 0, 0);
+
+  while (current <= endNorm) {
+    const dayStr = current.toISOString().slice(0, 10);
+
+    // HC do dia: admitido até este dia e ainda não desligado
+    const headcount = todosElegiveis.filter(c => {
+      if (!c.dataAdmissao) return false;
+      if (isoDate(c.dataAdmissao) > dayStr) return false;
+      if (c.dataDesligamento && isoDate(c.dataDesligamento) < dayStr) return false;
+      return true;
+    }).length;
+
+    const label = `${dayStr.slice(8, 10)}/${dayStr.slice(5, 7)}`;
+    days.push({
+      dia: label,
+      headcount,
+      admissoes: admByDay[dayStr] || 0,
+      desligamentos: desByDay[dayStr] || 0,
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return days;
 }
 
 
@@ -739,18 +819,27 @@ function buildEmpresasResumo({
   fim,
 }) {
   const diasPeriodo = daysInclusive(inicio, fim);
-  const map = {};
-  const colaboradoresAtivosPeriodo = {};
 
-  // 🔑 BASE GLOBAL: quem esteve escalado no período
+  // Dias excluídos por colaborador (não-escalado: DSR, FE, AFA…)
+  const excludedPerOps = new Map();
+  frequencias.forEach(f => {
+    const s = getStatusDoDia(f);
+    if (!s.contaComoEscalado) {
+      excludedPerOps.set(f.opsId, (excludedPerOps.get(f.opsId) || 0) + 1);
+    }
+  });
+
+  // BASE GLOBAL: quem esteve escalado no período (para filtrar atestados)
   const escaladosSetGlobal = new Set(
     frequencias
       .filter(f => getStatusDoDia(f).contaComoEscalado)
       .map(f => f.opsId)
   );
 
+  const map = {};
+
   /* ===============================
-     BASE: COLABORADORES POR EMPRESA
+     BASE: COLABORADORES POR EMPRESA + HC ACUMULADO
   =============================== */
   colaboradores.forEach(c => {
     const emp = c.empresa?.razaoSocial || "Sem empresa";
@@ -760,13 +849,11 @@ function buildEmpresasResumo({
         empresa: emp,
         colaboradores: [],
         totalColaboradoresCadastrados: 0,
-        presentes: new Set(),
+        hcAcumulado: 0,
+        presentes: 0,
         absDias: 0,
         faltas: 0,
-
-        // 🔁 AJUSTE AQUI
         atestadosSet: new Set(),
-
         medidasDisciplinares: 0,
         acidentes: 0,
         desligados: 0,
@@ -776,6 +863,12 @@ function buildEmpresasResumo({
 
     map[emp].totalColaboradoresCadastrados++;
     map[emp].colaboradores.push(c);
+
+    // HC acumulado: apenas ATIVOs, descontando dias não-escalados
+    if (c.status === "ATIVO") {
+      const excluded = excludedPerOps.get(c.opsId) || 0;
+      map[emp].hcAcumulado += Math.max(0, diasPeriodo - excluded);
+    }
   });
 
   /* ===============================
@@ -788,43 +881,22 @@ function buildEmpresasResumo({
     const emp = c.empresa?.razaoSocial || "Sem empresa";
     const s = getStatusDoDia(f);
 
-    if (!colaboradoresAtivosPeriodo[emp]) {
-      colaboradoresAtivosPeriodo[emp] = new Set();
-    }
-
-    if (s.contaComoEscalado) {
-      colaboradoresAtivosPeriodo[emp].add(f.opsId);
-    }
-
-    if (s.code === "P") {
-      map[emp].presentes.add(f.opsId);
-    }
-
-    if (s.impactaAbsenteismo) {
-      map[emp].absDias++;
-    }
-    // 👇 SOMA FALTAS (F e FJ)
-    if (s.code === "F" || s.code === "FJ") {
-      map[emp].faltas++;
-    }
+    if (s.code === "P") map[emp].presentes++;
+    if (s.impactaAbsenteismo) map[emp].absDias++;
+    if (s.code === "F" || s.code === "FJ") map[emp].faltas++;
   });
 
   /* ===============================
-     EVENTOS (AJUSTADO)
+     EVENTOS
   =============================== */
-
-  // ✅ ATESTADOS = DISTINCT opsId + somente escalados
   atestados.forEach(a => {
     if (!escaladosSetGlobal.has(a.opsId)) return;
-
     const c = colaboradoresMap.get(a.opsId);
     if (!c) return;
-
     const emp = c.empresa?.razaoSocial || "Sem empresa";
     map[emp].atestadosSet.add(a.opsId);
   });
 
-  // ❌ mantém contagem simples (evento administrativo)
   medidas.forEach(m => {
     const c = colaboradoresMap.get(m.opsId);
     if (c) map[c.empresa?.razaoSocial || "Sem empresa"].medidasDisciplinares++;
@@ -849,37 +921,28 @@ function buildEmpresasResumo({
      CALCULA EMPRESAS
   =============================== */
   const empresas = Object.values(map).map(e => {
-    const totalPeriodo =
-      colaboradoresAtivosPeriodo[e.empresa]?.size || 0;
+    const hcAcumulado = e.hcAcumulado;
+    const hcMedio = diasPeriodo > 0 ? hcAcumulado / diasPeriodo : 0;
 
-    const diasEsperados = totalPeriodo * diasPeriodo;
-
-    const absenteismo =
-      diasEsperados > 0
-        ? Number(((e.absDias / diasEsperados) * 100).toFixed(2))
-        : 0;
+    const absenteismo = hcAcumulado > 0
+      ? Number(((e.absDias / hcAcumulado) * 100).toFixed(2))
+      : 0;
 
     const mediaMovimentacao = (e.admitidos + e.desligados) / 2;
-
-    const turnover =
-      totalPeriodo > 0
-        ? Number(((mediaMovimentacao / totalPeriodo) * 100).toFixed(2))
-        : 0;
+    const turnover = hcMedio > 0
+      ? Number(((mediaMovimentacao / hcMedio) * 100).toFixed(2))
+      : 0;
 
     return {
       empresa: e.empresa,
-      totalColaboradores: totalPeriodo,
-      presentes: e.presentes.size,
+      totalColaboradores: hcAcumulado,
       totalColaboradoresCadastrados: e.totalColaboradoresCadastrados,
-
+      presentes: e.presentes,
       absenteismo,
       faltas: e.faltas || 0,
       medidasDisciplinares: e.medidasDisciplinares,
-
-      // ✅ AJUSTE AQUI
       atestadosSet: e.atestadosSet,
       atestados: e.atestadosSet.size,
-
       acidentes: e.acidentes,
       turnover,
       tempoMedioEmpresaDias: buildTempoMedioEmpresa(e.colaboradores),
@@ -887,7 +950,7 @@ function buildEmpresasResumo({
   });
 
   /* ===============================
-     TOTAL BPO (DISTINCT GLOBAL)
+     TOTAL BPO
   =============================== */
   const bpoEmpresas = ["ADECCO", "ADILIS", "LUANDRE"];
   const bpo = empresas.filter(e =>
@@ -895,76 +958,40 @@ function buildEmpresasResumo({
   );
 
   if (bpo.length) {
-    const totalColaboradores = bpo.reduce(
-      (s, e) => s + e.totalColaboradores,
-      0
-    );
-
-    const totalColaboradoresCadastrados = bpo.reduce(
-      (s, e) => s + (e.totalColaboradoresCadastrados || 0),
-      0
-    );
-
+    const totalHcAcumulado = bpo.reduce((s, e) => s + e.totalColaboradores, 0);
+    const totalColaboradoresCadastrados = bpo.reduce((s, e) => s + (e.totalColaboradoresCadastrados || 0), 0);
     const presentes = bpo.reduce((s, e) => s + e.presentes, 0);
+    const faltasTot = bpo.reduce((s, e) => s + (e.faltas || 0), 0);
+    const medidasTot = bpo.reduce((s, e) => s + e.medidasDisciplinares, 0);
+    const acidentesTot = bpo.reduce((s, e) => s + e.acidentes, 0);
 
-    // ✅ DISTINCT GLOBAL BPO
     const atestadosBpoSet = new Set();
-    bpo.forEach(e => {
-      e.atestadosSet?.forEach(id => atestadosBpoSet.add(id));
-    });
+    bpo.forEach(e => { e.atestadosSet?.forEach(id => atestadosBpoSet.add(id)); });
 
-    const medidasTot = bpo.reduce(
-      (s, e) => s + e.medidasDisciplinares,
-      0
-    );
-
-    const acidentesTot = bpo.reduce(
-      (s, e) => s + e.acidentes,
-      0
-    );
-
+    const hcMedioBPO = diasPeriodo > 0 ? totalHcAcumulado / diasPeriodo : 0;
     const mediaMov = (admitidos.length + desligados.length) / 2;
+    const turnover = hcMedioBPO > 0
+      ? Number(((mediaMov / hcMedioBPO) * 100).toFixed(2))
+      : 0;
 
-    const turnover =
-      totalColaboradores > 0
-        ? Number(((mediaMov / totalColaboradores) * 100).toFixed(2))
-        : 0;
-
-    const faltasTot = bpo.reduce(
-      (s, e) => s + (e.faltas || 0),
-      0
-    );
+    const absBPO = totalHcAcumulado > 0
+      ? Number((bpo.reduce((s, e) => s + e.absenteismo * e.totalColaboradores, 0) / totalHcAcumulado).toFixed(2))
+      : 0;
 
     empresas.push({
       empresa: "TOTAL BPO",
-      totalColaboradores,
+      totalColaboradores: totalHcAcumulado,
       totalColaboradoresCadastrados,
       presentes,
-      absenteismo:
-        totalColaboradores > 0
-          ? Number(
-              (
-                bpo.reduce(
-                  (s, e) => s + e.absenteismo * e.totalColaboradores,
-                  0
-                ) / totalColaboradores
-              ).toFixed(2)
-            )
-          : 0,
+      absenteismo: absBPO,
       medidasDisciplinares: medidasTot,
       faltas: faltasTot,
-
-      // ✅ AJUSTE FINAL
       atestados: atestadosBpoSet.size,
-
       acidentes: acidentesTot,
       turnover,
-      tempoMedioEmpresaDias: Math.round(
-        bpo.reduce(
-          (s, e) => s + e.tempoMedioEmpresaDias * e.totalColaboradores,
-          0
-        ) / totalColaboradores
-      ),
+      tempoMedioEmpresaDias: totalHcAcumulado > 0 ? Math.round(
+        bpo.reduce((s, e) => s + e.tempoMedioEmpresaDias * e.totalColaboradores, 0) / totalHcAcumulado
+      ) : 0,
     });
   }
 
@@ -1729,6 +1756,9 @@ const carregarDashboardAdmin = async (req, res) => {
       ),
     ]);
 
+    const diasPeriodo = daysInclusive(inicioFinal, fimFinal);
+    const isMultiDia = diasPeriodo > 1;
+
     /* ===============================
        RESPONSE FINAL
     =============================== */
@@ -1744,11 +1774,13 @@ const carregarDashboardAdmin = async (req, res) => {
           headcountTotal: totalHeadCount,
           headcountOperacao: totalOperacao,
           headcountReturns: totalReturns,
-          totalColaboradores: overview.totalColaboradores,
+          totalColaboradores: overview.totalColaboradores, // contagem única (compat.)
+          hcAcumulado: overview.hcAcumulado,               // pessoa-dias acumulados
           presentes: overview.presentes,
           absenteismo: overview.absenteismo,
           turnover: buildTurnoverGlobal({
-            totalColaboradores: overview.totalColaboradores,
+            hcAcumulado: overview.hcAcumulado,
+            diasPeriodo,
             admitidosPeriodo: admitidos.length,
             desligadosPeriodo: desligados.length,
           }),
@@ -1768,7 +1800,12 @@ const carregarDashboardAdmin = async (req, res) => {
           totalInativos: totalInativosElegiveis,
         }),
 
-        genero: buildGenero(colaboradoresPeriodo),
+        genero: buildGeneroAcumulado({
+          frequencias,
+          colaboradores: colaboradoresFiltrados,
+          inicio: inicioFinal,
+          fim: fimFinal,
+        }),
 
         empresasResumo: buildEmpresasResumo({
           colaboradores: colaboradoresFiltrados,
@@ -1782,10 +1819,11 @@ const carregarDashboardAdmin = async (req, res) => {
           inicio: inicioFinal,
           fim: fimFinal,
         }),
-        
+
         escalas: buildEscalasResumo({
           frequencias,
           colaboradoresMap,
+          colaboradores: colaboradoresFiltrados,
           inicio: inicioFinal,
           fim: fimFinal
         }),
@@ -1793,6 +1831,7 @@ const carregarDashboardAdmin = async (req, res) => {
         setores: buildSetoresResumo({
           frequencias,
           colaboradoresMap,
+          colaboradores: colaboradoresFiltrados,
           inicio: inicioFinal,
           fim: fimFinal
         }),
@@ -1800,6 +1839,7 @@ const carregarDashboardAdmin = async (req, res) => {
         lideres: buildLideresResumo({
           frequencias,
           colaboradoresMap,
+          colaboradores: colaboradoresFiltrados,
           inicio: inicioFinal,
           fim: fimFinal
         }),
@@ -1827,6 +1867,10 @@ const carregarDashboardAdmin = async (req, res) => {
           headcountMensal,
           admissoesMensal,
           desligamentosMensal,
+          // Série diária: apenas para períodos > 1 dia (modo consolidado)
+          diaria: isMultiDia
+            ? buildSeriesDiarias({ todosElegiveis, inicio: inicioFinal, fim: fimFinal })
+            : null,
         },
       },
     });

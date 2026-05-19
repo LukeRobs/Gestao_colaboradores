@@ -1,4 +1,4 @@
-﻿export default function EmpresasResumoSection({ empresas = [] }) {
+﻿export default function EmpresasResumoSection({ empresas = [], isConsolidado = false }) {
   if (!empresas.length) return null;
 
   const analiseGeral = empresas.filter((e) =>
@@ -14,6 +14,9 @@
   const EmpresaCard = (e) => {
     const turnover = Number(e.turnover ?? 0);
     const absenteismo = Number(e.absenteismo ?? 0);
+    const labelHC = isConsolidado ? "HC Escalado no Período" : "Colaboradores Escalados";
+    const labelPresentes = isConsolidado ? "Presença Acumulada" : "Presentes";
+    const labelFaltas = isConsolidado ? "Faltas Acumuladas" : "Faltas";
 
     return (
       <div
@@ -44,17 +47,17 @@
 
         {/* 🔥 GRID RESPONSIVO INTERNO */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <Metric label="Colaboradores escalados" value={e.totalColaboradores} />
+          <Metric label={labelHC} value={e.totalColaboradores} />
           <Metric label="Colaboradores Cadastrados" value={e.totalColaboradoresCadastrados} />
 
           <Metric
-            label="Presentes"
+            label={labelPresentes}
             value={e.presentes}
             color="#34C759"
           />
 
           <Metric
-            label="Faltas"
+            label={labelFaltas}
             value={e.faltas}
             color="#FF453A"
           />

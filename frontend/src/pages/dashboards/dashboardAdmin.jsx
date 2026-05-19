@@ -43,6 +43,7 @@ import FaltasPorTempoCasaChart from "../../components/dashboard/FaltasPorTempoCa
 
 import { AuthContext } from "../../context/AuthContext";
 import { useEstacao } from "../../context/EstacaoContext";
+import { formatDateBR } from "../../utils/date";
 import api from "../../services/api";
 
 /* =====================================================
@@ -56,6 +57,7 @@ const INITIAL_DATA = {
     headcountOperacao: 0,
     headcountReturns: 0,
     totalColaboradores: 0,
+    hcAcumulado: 0,
     presentes: 0,
     absenteismo: 0,
     turnover: 0,
@@ -132,6 +134,16 @@ export default function DashboardAdmin() {
     load();
   }, [turno, dateRange, logout, navigate, estacaoId]);
 
+  /* ================= PERÍODO / MODO ================= */
+  const diasPeriodo = useMemo(() => {
+    if (!dados.periodo.inicio || !dados.periodo.fim) return 1;
+    const a = new Date(dados.periodo.inicio);
+    const b = new Date(dados.periodo.fim);
+    return Math.floor((b - a) / 86400000) + 1;
+  }, [dados.periodo]);
+
+  const isConsolidado = diasPeriodo > 1;
+
   /* ================= KPI CARDS ================= */
   const kpisEstrutura = useMemo(() => {
     const k = dados.kpis;
@@ -156,11 +168,11 @@ export default function DashboardAdmin() {
       },
       {
         icon: Users,
-        label: "HC Operacional Escalado",
-        value: k.totalColaboradores || 0,
+        label: isConsolidado ? "HC Operacional Escalado no Período" : "HC Operacional Escalado",
+        value: isConsolidado ? (k.hcAcumulado || 0) : (k.totalColaboradores || 0),
       },
     ];
-  }, [dados.kpis]);
+  }, [dados.kpis, isConsolidado]);
 
   const kpisPerformance = useMemo(() => {
     const k = dados.kpis;
@@ -182,17 +194,17 @@ export default function DashboardAdmin() {
       },
       {
         icon: AlertTriangle,
-        label: "Faltas",
+        label: isConsolidado ? "Faltas Acumuladas" : "Faltas",
         value: k.faltas || 0,
         color: "#FF453A",
       },
       {
         icon: FileText,
-        label: "Atestados",
+        label: isConsolidado ? "Atestados Acumulados" : "Atestados",
         value: k.atestados || 0,
       },
     ];
-  }, [dados.kpis]);
+  }, [dados.kpis, isConsolidado]);
 
   const kpisPessoas = useMemo(() => {
     const k = dados.kpis;
@@ -208,12 +220,12 @@ export default function DashboardAdmin() {
     return [
       {
         icon: ShieldAlert,
-        label: "Medidas Disciplinares",
+        label: isConsolidado ? "Medidas Disciplinares Acumuladas" : "Medidas Disciplinares",
         value: k.medidasDisciplinares || 0,
       },
       {
         icon: AlertTriangle,
-        label: "Acidentes",
+        label: isConsolidado ? "Acidentes Acumulados" : "Acidentes",
         value: k.acidentes || 0,
         color: "#FFD60A",
       },
@@ -230,7 +242,25 @@ export default function DashboardAdmin() {
         suffix: " meses",
       },
     ];
-  }, [dados.kpis]);
+  }, [dados.kpis, isConsolidado]);
+
+  /* ================= CHART DATA ================= */
+  const headcountChartData = useMemo(() => {
+    if (isConsolidado && dados.series?.diaria?.length) {
+      return dados.series.diaria.map(d => ({
+        mes: d.dia,
+        headcount: d.headcount,
+        admissoes: d.admissoes,
+        desligamentos: d.desligamentos,
+      }));
+    }
+    return (dados.series?.headcountMensal || []).map((h, index) => ({
+      mes: h.mes,
+      headcount: h.total,
+      admissoes: dados.series?.admissoesMensal?.[index]?.total || 0,
+      desligamentos: dados.series?.desligamentosMensal?.[index]?.total || 0,
+    }));
+  }, [dados.series, isConsolidado]);
 
   /* ================= COLABORADORES CADASTRADOS ================= */
   const colaboradoresCadastradosData = useMemo(() => {
@@ -370,7 +400,10 @@ export default function DashboardAdmin() {
                 ? `${dados.periodo.inicio} → ${dados.periodo.fim}`
                 : "-"
             }
-            badges={[`Turno: ${turno === "ALL" ? "Todos" : turno}`]}
+            badges={[
+              `Turno: ${turno === "ALL" ? "Todos" : turno}`,
+              ...(isConsolidado ? [`Visão Consolidada · ${diasPeriodo} dias`] : []),
+            ]}
           />
 
           {/* ── Backfill DSR ── */}
@@ -424,7 +457,24 @@ export default function DashboardAdmin() {
 
             <DateFilter value={dateRange} onApply={setDateRange} />
           </div>
-          
+
+          {/* ── Banner Visão Consolidada ── */}
+          {isConsolidado && (
+            <div className="flex items-center gap-3 px-5 py-3 rounded-xl border border-[#FA4C00]/40 bg-[#FA4C00]/10">
+              <span className="w-2 h-2 rounded-full bg-[#FA4C00] shrink-0" />
+              <p className="text-sm font-medium text-[#FA4C00]">
+                Visão Consolidada do Período
+              </p>
+              <span className="text-sm text-[#FA4C00]/70">
+                {formatDateBR(dados.periodo.inicio)} → {formatDateBR(dados.periodo.fim)}
+                &nbsp;·&nbsp;{diasPeriodo} dias
+              </span>
+              <span className="ml-auto text-xs text-[#FA4C00]/60 italic">
+                Todos os indicadores representam o acumulado operacional do intervalo selecionado
+              </span>
+            </div>
+          )}
+
           <div className="
             grid
             grid-cols-1
@@ -557,24 +607,23 @@ export default function DashboardAdmin() {
               title="Status dos Colaboradores"
               items={statusItems}
               percentual={dados.statusColaboradores.percentualIndisponivel}
-              footer={`${dados.statusColaboradores.percentualIndisponivel}% do time está indisponível hoje (${dados.statusColaboradores.indisponiveis} colaboradores)`}
+              footer={
+                isConsolidado
+                  ? `${dados.statusColaboradores.percentualIndisponivel}% do time indisponível no período (${dados.statusColaboradores.indisponiveis} colaboradores)`
+                  : `${dados.statusColaboradores.percentualIndisponivel}% do time está indisponível hoje (${dados.statusColaboradores.indisponiveis} colaboradores)`
+              }
             />
           </div>
 
-          <EmpresasResumoSection empresas={dados.empresasResumo} />
+          <EmpresasResumoSection empresas={dados.empresasResumo} isConsolidado={isConsolidado} />
 
           {/* ================= HEADCOUNT & MOVIMENTAÇÕES ================= */}
           <div className="bg-surface rounded-xl p-6">
-            <h2 className="text-white font-semibold text-base mb-4">Headcount & Movimentações</h2>
+            <h2 className="text-white font-semibold text-base mb-4">
+              {isConsolidado ? "Headcount & Movimentações no Período" : "Headcount & Movimentações"}
+            </h2>
             <ResponsiveContainer width="100%" height={350}>
-              <ComposedChart
-                data={(dados.series?.headcountMensal || []).map((h, index) => ({
-                  mes: h.mes,
-                  headcount: h.total,
-                  admissoes: dados.series?.admissoesMensal?.[index]?.total || 0,
-                  desligamentos: dados.series?.desligamentosMensal?.[index]?.total || 0,
-                }))}
-              >
+              <ComposedChart data={headcountChartData}>
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="mes" stroke="#BFBFC3" />
                 <YAxis stroke="#BFBFC3" />
