@@ -62,7 +62,7 @@ function EscalaCard({ escala: e, T, onEdit, onDelete, isAdmin, userEstacaoId }) 
     ? `${e.diasTrabalhados}x${e.diasFolga}`
     : null;
 
-  const podeEditar = isAdmin || (e.idEstacao != null && e.idEstacao === userEstacaoId);
+  const podeEditar = isAdmin || (e.idEstacao != null && userEstacaoId != null && Number(e.idEstacao) === Number(userEstacaoId));
 
   return (
     <div
