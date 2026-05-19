@@ -10,17 +10,29 @@ const { prisma } = require("../config/database");
 const _cache = new Map();
 const CACHE_TTL = 10 * 60 * 1000;
 
-async function getDiasDsr(nomeEscala, tx = prisma) {
+async function getDiasDsr(nomeEscala, tx = prisma, idEstacao = null) {
   if (!nomeEscala) return [];
 
-  const cacheKey = String(nomeEscala).toUpperCase();
+  const nome = String(nomeEscala).toUpperCase();
+  const cacheKey = idEstacao != null ? `${nome}:${idEstacao}` : nome;
   const cached = _cache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.dias;
 
-  const escala = await tx.escala.findFirst({
-    where: { nomeEscala: { equals: nomeEscala, mode: "insensitive" } },
-    select: { diasDsr: true },
-  });
+  // Busca prioritária: nome + estação (evita colisão quando a mesma escala existe em múltiplas estações)
+  let escala = idEstacao != null
+    ? await tx.escala.findFirst({
+        where: { nomeEscala: { equals: nomeEscala, mode: "insensitive" }, idEstacao },
+        select: { diasDsr: true },
+      })
+    : null;
+
+  // Fallback: busca só pelo nome se não encontrou com estação
+  if (!escala) {
+    escala = await tx.escala.findFirst({
+      where: { nomeEscala: { equals: nomeEscala, mode: "insensitive" } },
+      select: { diasDsr: true },
+    });
+  }
 
   // diasDsr preenchido no banco → usa
   if (escala?.diasDsr?.length) {
@@ -30,7 +42,7 @@ async function getDiasDsr(nomeEscala, tx = prisma) {
 
   // Fallback legado apenas enquanto houver escalas sem diasDsr
   const legado = { E: [0, 1], G: [2, 3], C: [4, 5] };
-  const dias = legado[cacheKey] ?? [];
+  const dias = legado[nome] ?? [];
   _cache.set(cacheKey, { dias, ts: Date.now() });
   return dias;
 }

@@ -13,11 +13,11 @@ function startOfDay(date) {
   return d;
 }
 
-async function gerarDSRBackfillColaborador({ opsId, nomeEscala, dataInicio, tx = prisma }) {
+async function gerarDSRBackfillColaborador({ opsId, nomeEscala, dataInicio, tx = prisma, idEstacao = null }) {
   if (!opsId) throw new Error("opsId é obrigatório.");
   if (!nomeEscala) return { criados: 0 };
 
-  const diasDsr = await getDiasDsr(nomeEscala, tx);
+  const diasDsr = await getDiasDsr(nomeEscala, tx, idEstacao);
   if (!diasDsr.length) return { criados: 0 };
 
   const tipoDSR = await tx.tipoAusencia.findFirst({
@@ -67,10 +67,10 @@ async function gerarDSRBackfillColaborador({ opsId, nomeEscala, dataInicio, tx =
   return { criados: resultado.count || 0 };
 }
 
-async function gerarDSRFuturoColaborador({ opsId, nomeEscala, tx = prisma, dias = 90 }) {
+async function gerarDSRFuturoColaborador({ opsId, nomeEscala, tx = prisma, dias = 90, idEstacao = null }) {
   if (!nomeEscala) return;
 
-  const diasDsr = await getDiasDsr(nomeEscala, tx);
+  const diasDsr = await getDiasDsr(nomeEscala, tx, idEstacao);
   if (!diasDsr.length) return;
 
   const tipoDSR = await tx.tipoAusencia.findFirst({

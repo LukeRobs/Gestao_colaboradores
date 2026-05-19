@@ -16,6 +16,7 @@ async function executarGeracaoDSRFuturo() {
       where: { status: { in: ["ATIVO", "FERIAS", "AFASTADO"] } },
       select: {
         opsId: true,
+        idEstacao: true,
         escala: { select: { nomeEscala: true } },
       },
     });
@@ -27,7 +28,7 @@ async function executarGeracaoDSRFuturo() {
       const nomeEscala = c.escala?.nomeEscala;
       if (!nomeEscala) continue;
       try {
-        await gerarDSRFuturoColaborador({ opsId: c.opsId, nomeEscala, dias: 90 });
+        await gerarDSRFuturoColaborador({ opsId: c.opsId, nomeEscala, dias: 90, idEstacao: c.idEstacao ?? null });
         criados++;
       } catch (e) {
         erros++;

@@ -650,10 +650,12 @@ const createColaborador = async (req, res) => {
         opsId: novoOpsId,
         nomeEscala: nomeEscalaCreate,
         dataInicio: dataAdmissaoDate,
+        idEstacao: idEstacaoFinal,
       });
       await gerarDSRFuturoColaborador({
         opsId: novoOpsId,
         nomeEscala: nomeEscalaCreate,
+        idEstacao: idEstacaoFinal,
       });
     }
 
@@ -1012,11 +1014,13 @@ const updateColaborador = async (req, res) => {
        (evita timeout da tx para backfills longos)
     ========================= */
     if (nomeEscalaParaDSR) {
-      await gerarDSRFuturoColaborador({ opsId, nomeEscala: nomeEscalaParaDSR });
+      const idEstacaoColab = colaborador.atualizado?.idEstacao ?? null;
+      await gerarDSRFuturoColaborador({ opsId, nomeEscala: nomeEscalaParaDSR, idEstacao: idEstacaoColab });
       await gerarDSRBackfillColaborador({
         opsId,
         nomeEscala: nomeEscalaParaDSR,
         dataInicio: colaborador.dataAdmissao,
+        idEstacao: idEstacaoColab,
       });
     }
 
@@ -1391,22 +1395,25 @@ const importColaboradores = async (req, res) => {
             /* ESCALA */
             const escala = await prisma.escala.findUnique({
               where: { idEscala: data.idEscala },
-              select: { nomeEscala: true },
+              select: { nomeEscala: true, idEstacao: true },
             });
 
             const nomeEscala = escala?.nomeEscala;
+            const idEstacaoEscala = escala?.idEstacao ?? null;
 
             /* BACKFILL */
             await gerarDSRBackfillColaborador({
               opsId: colab.opsId,
               nomeEscala,
               dataInicio: hoje,
+              idEstacao: idEstacaoEscala,
             });
 
             /* FUTURO */
             await gerarDSRFuturoColaborador({
               opsId: colab.opsId,
               nomeEscala,
+              idEstacao: idEstacaoEscala,
             });
           }
 
@@ -1496,7 +1503,7 @@ const backfillDSRTodos = async (req, res) => {
   try {
     const colaboradores = await prisma.colaborador.findMany({
       where: { status: { in: ["ATIVO", "FERIAS", "AFASTADO"] } },
-      select: { opsId: true, dataAdmissao: true, escala: { select: { nomeEscala: true } } },
+      select: { opsId: true, dataAdmissao: true, idEstacao: true, escala: { select: { nomeEscala: true } } },
     });
 
     // Limita a 90 dias atrás para não sobrecarregar — corrige o período relevante
@@ -1520,6 +1527,7 @@ const backfillDSRTodos = async (req, res) => {
           opsId: c.opsId,
           nomeEscala,
           dataInicio,
+          idEstacao: c.idEstacao ?? null,
         });
 
         totalCriados += criados;
