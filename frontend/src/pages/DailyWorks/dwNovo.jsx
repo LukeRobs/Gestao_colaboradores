@@ -8,6 +8,7 @@ import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
 import { useEstacao } from "../../context/EstacaoContext";
+import { useTurnosOperacionais } from "../../hooks/useTurnosOperacionais";
 
 /* ==============================
    EMPRESAS FIXAS
@@ -29,6 +30,8 @@ export default function DwNovoPage() {
   // Obtém a estação efetiva (user.idEstacao ou estação selecionada)
   const idEstacao = getEstacaoEfetiva();
   const isEstacaoSheets = idEstacao === 1;
+
+  const { turnos: turnosDisponiveis } = useTurnosOperacionais();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -219,11 +222,10 @@ export default function DwNovoPage() {
               onChange={(e) =>
                 setForm((p) => ({ ...p, idTurno: e.target.value }))
               }
-              options={[
-                { value: "1", label: "T1" },
-                { value: "2", label: "T2" },
-                { value: "3", label: "T3" },
-              ]}
+              options={turnosDisponiveis.map((t) => ({
+                value: String(t.idTurno),
+                label: t.nomeTurno,
+              }))}
             />
           </Section>
 

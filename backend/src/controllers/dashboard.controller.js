@@ -23,10 +23,8 @@ const normalize = (v) => String(v || "").trim();
 
 const normalizeTurno = (t) => {
   const v = normalize(t).toUpperCase();
-  if (v.includes("T1")) return "T1";
-  if (v.includes("T2")) return "T2";
-  if (v.includes("T3")) return "T3";
-  return "Sem turno";
+  const match = v.match(/T\d+/);
+  return match ? match[0] : "Sem turno";
 };
 
 /* =====================================================
@@ -87,12 +85,8 @@ function getSetor(registro, colaborador) {
   );
 }
 
-const initTurnoMap = () => ({
-  T1: {},
-  T2: {},
-  T3: {},
-  "Sem turno": {},
-});
+const initTurnoMap = (turnoNomes = ["T1", "T2", "T3"]) =>
+  Object.fromEntries([...turnoNomes, "Sem turno"].map((t) => [t, {}]));
 
 /* =====================================================
    STATUS DO DIA — PADRÃO ADMIN (COM 4 ESTADOS OPERACIONAIS)
@@ -388,19 +382,23 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        4️⃣ AGREGADORES
     =============================== */
+    // Turnos operacionais cadastrados no banco — dinâmico
+    const turnoNomes = turnos.map((t) => t.nomeTurno);
+    const turnoIdMap = Object.fromEntries(turnos.map((t) => [t.nomeTurno, t.idTurno]));
+
     const turnoSetorAgg = {};
-    const generoPorTurno = initTurnoMap();
-    const generoPorTurnoSeen = { T1: new Set(), T2: new Set(), T3: new Set(), "Sem turno": new Set() };
-    const statusPorTurno = initTurnoMap();
-    const empresaPorTurno = initTurnoMap();
+    const generoPorTurno = initTurnoMap(turnoNomes);
+    const generoPorTurnoSeen = Object.fromEntries(
+      [...turnoNomes, "Sem turno"].map((t) => [t, new Set()])
+    );
+    const statusPorTurno = initTurnoMap(turnoNomes);
+    const empresaPorTurno = initTurnoMap(turnoNomes);
     const ausenciasHoje = [];
     const tendenciaPorDia = {}; // { data: { presentes, ausentes, escalados } }
 
-    const distribuicaoVinculoPorTurno = {
-      T1: { SPX: 0, BPO: 0 },
-      T2: { SPX: 0, BPO: 0 },
-      T3: { SPX: 0, BPO: 0 },
-    };
+    const distribuicaoVinculoPorTurno = Object.fromEntries(
+      turnoNomes.map((t) => [t, { SPX: 0, BPO: 0 }])
+    );
     colaboradores.forEach((c) => {
       if (c.status !== "ATIVO") return;
       if (!isCargoElegivel(c.cargo?.nomeCargo)) return;
@@ -578,15 +576,14 @@ const carregarDashboard = async (req, res) => {
 /* ===============================
    7️⃣ DIARISTAS PRESENTES (REAIS)
 =============================== */
-const diaristasPresentes = { T1: 0, T2: 0, T3: 0 };
+const diaristasPresentes = Object.fromEntries(turnoNomes.map((t) => [t, 0]));
 const estacaoIdDash = req.dbContext?.isGlobal ? null : (req.dbContext?.estacaoId ?? null);
 
 await Promise.all(
-  ["T1", "T2", "T3"].map(async (turno) => {
+  turnoNomes.map(async (turno) => {
     try {
-      const turnoId =
-        turno === "T1" ? 1 :
-        turno === "T2" ? 2 : 3;
+      const turnoId = turnoIdMap[turno];
+      if (!turnoId) return;
 
       const whereReal = {
         data: { gte: new Date(isoDate(inicio) + "T00:00:00.000Z"), lte: new Date(isoDate(fim) + "T00:00:00.000Z") },
@@ -613,7 +610,7 @@ await Promise.all(
 /* ===============================
    7️⃣.1 DIARISTAS PLANEJADOS
 =============================== */
-const diaristasPlanejadosPorTurno = { T1: 0, T2: 0, T3: 0 };
+const diaristasPlanejadosPorTurno = Object.fromEntries(turnoNomes.map((t) => [t, 0]));
 
 // Gera lista de datas no período
 const datasNoPeriodo = [];
@@ -626,7 +623,7 @@ const datasNoPeriodo = [];
   }
 }
 
-for (const turno of ["T1", "T2", "T3"]) {
+for (const turno of turnoNomes) {
   try {
     if (!estacaoIdDash || estacaoIdDash === ESTACAO_SHEETS) {
       // Estação 1 ou global: busca no Sheets — soma todas as datas do período
@@ -638,7 +635,8 @@ for (const turno of ["T1", "T2", "T3"]) {
       diaristasPlanejadosPorTurno[turno] = total;
     } else {
       // Demais estações: busca no banco pelo range
-      const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
+      const turnoId = turnoIdMap[turno];
+      if (!turnoId) continue;
       const registros = await prisma.dwPlanejado.findMany({
         where: {
           data: { gte: new Date(isoDate(inicio) + "T00:00:00.000Z"), lte: new Date(isoDate(fim) + "T00:00:00.000Z") },
@@ -670,40 +668,14 @@ const totalDiaristasPresentes = Object.values(
 /* ===============================
    7️⃣.3 ADERÊNCIA DW
 =============================== */
-const aderenciaDwPorTurno = {
-  T1:
-    diaristasPlanejadosPorTurno.T1 > 0
-      ? Number(
-          (
-            (diaristasPresentes.T1 /
-              diaristasPlanejadosPorTurno.T1) *
-            100
-          ).toFixed(2)
-        )
+const aderenciaDwPorTurno = Object.fromEntries(
+  turnoNomes.map((t) => [
+    t,
+    diaristasPlanejadosPorTurno[t] > 0
+      ? Number(((diaristasPresentes[t] / diaristasPlanejadosPorTurno[t]) * 100).toFixed(2))
       : 0,
-
-  T2:
-    diaristasPlanejadosPorTurno.T2 > 0
-      ? Number(
-          (
-            (diaristasPresentes.T2 /
-              diaristasPlanejadosPorTurno.T2) *
-            100
-          ).toFixed(2)
-        )
-      : 0,
-
-  T3:
-    diaristasPlanejadosPorTurno.T3 > 0
-      ? Number(
-          (
-            (diaristasPresentes.T3 /
-              diaristasPlanejadosPorTurno.T3) *
-            100
-          ).toFixed(2)
-        )
-      : 0,
-};
+  ])
+);
 
 const aderenciaDW =
   totalDiaristasPlanejados > 0
@@ -726,20 +698,15 @@ const aderenciaDW =
         dataOperacional: dataOperacionalStr,
         turnoAtual,
 
-        distribuicaoVinculoPorTurno: {
-          T1: [
-            { name: "SPX", value: distribuicaoVinculoPorTurno.T1.SPX },
-            { name: "BPO", value: distribuicaoVinculoPorTurno.T1.BPO },
-          ],
-          T2: [
-            { name: "SPX", value: distribuicaoVinculoPorTurno.T2.SPX },
-            { name: "BPO", value: distribuicaoVinculoPorTurno.T2.BPO },
-          ],
-          T3: [
-            { name: "SPX", value: distribuicaoVinculoPorTurno.T3.SPX },
-            { name: "BPO", value: distribuicaoVinculoPorTurno.T3.BPO },
-          ],
-        },
+        distribuicaoVinculoPorTurno: Object.fromEntries(
+          turnoNomes.map((t) => [
+            t,
+            [
+              { name: "SPX", value: distribuicaoVinculoPorTurno[t]?.SPX || 0 },
+              { name: "BPO", value: distribuicaoVinculoPorTurno[t]?.BPO || 0 },
+            ],
+          ])
+        ),
 
         // adiciona período (padrão Admin)
         periodo: { inicio: isoDate(inicio), fim: isoDate(fim) },
@@ -755,7 +722,7 @@ const aderenciaDW =
           absenteismo: absenteismoPeriodo,
         },
 
-        distribuicaoTurnoSetor: ["T1", "T2", "T3"].map((turno) => {
+        distribuicaoTurnoSetor: turnoNomes.map((turno) => {
           const t = turnoSetorAgg[turno] || { turno, totalEscalados: 0, presentes: 0, ausentes: 0, setores: {} };
           return {
             ...t,

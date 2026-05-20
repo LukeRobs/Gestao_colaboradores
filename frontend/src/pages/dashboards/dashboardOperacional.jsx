@@ -302,11 +302,17 @@ export default function DashboardOperacional() {
     [dados]
   );
 
+  // Turnos disponíveis derivados dos dados — dinâmico, sem hardcode
+  const turnoNomesDisponiveis = useMemo(
+    () => (dados?.distribuicaoTurnoSetor || []).map((t) => t.turno),
+    [dados]
+  );
+
   const statusItems = useMemo(
     () => {
       if (turnoSelecionado === "TODOS") {
         const merged = {};
-        ["T1", "T2", "T3"].forEach((t) => {
+        turnoNomesDisponiveis.forEach((t) => {
           (dados?.statusColaboradoresPorTurno?.[t] || []).forEach((s) => {
             merged[s.status] = (merged[s.status] || 0) + s.quantidade;
           });
@@ -318,7 +324,7 @@ export default function DashboardOperacional() {
         value: s.quantidade,
       }));
     },
-    [dados, turnoSelecionado]
+    [dados, turnoSelecionado, turnoNomesDisponiveis]
   );
 
   const ausentesTurno = useMemo(
@@ -342,7 +348,7 @@ export default function DashboardOperacional() {
     () => {
       if (turnoSelecionado === "TODOS") {
         const merged = {};
-        ["T1", "T2", "T3"].forEach((t) => {
+        turnoNomesDisponiveis.forEach((t) => {
           (dados?.empresaPorTurno?.[t] || []).forEach((e) => {
             if (!merged[e.empresa]) {
               merged[e.empresa] = { empresa: e.empresa, total: 0, faltas: 0, atestados: 0, ausencias: 0 };
@@ -367,7 +373,7 @@ export default function DashboardOperacional() {
         absenteismo: e.absenteismo,
       }));
     },
-    [dados, turnoSelecionado]
+    [dados, turnoSelecionado, turnoNomesDisponiveis]
   );
 
 
@@ -375,7 +381,7 @@ export default function DashboardOperacional() {
     () => {
       if (turnoSelecionado === "TODOS") {
         const merged = {};
-        ["T1", "T2", "T3"].forEach((t) => {
+        turnoNomesDisponiveis.forEach((t) => {
           (dados?.distribuicaoVinculoPorTurno?.[t] || []).forEach((v) => {
             merged[v.vinculo || v.label] = (merged[v.vinculo || v.label] || 0) + (v.total || v.value || 0);
           });
@@ -384,7 +390,7 @@ export default function DashboardOperacional() {
       }
       return dados?.distribuicaoVinculoPorTurno?.[turnoSelecionado] || [];
     },
-    [dados, turnoSelecionado]
+    [dados, turnoSelecionado, turnoNomesDisponiveis]
   );
 
 
@@ -536,7 +542,7 @@ export default function DashboardOperacional() {
                 turnoSelecionado === "TODOS"
                   ? (() => {
                       const merged = {};
-                      ["T1", "T2", "T3"].forEach((t) => {
+                      turnoNomesDisponiveis.forEach((t) => {
                         (dados.generoPorTurno?.[t] || []).forEach((g) => {
                           merged[g.genero || g.label] = (merged[g.genero || g.label] || 0) + (g.total || g.value || 0);
                         });
