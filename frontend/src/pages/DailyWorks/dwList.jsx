@@ -7,6 +7,7 @@ import MainLayout from "../../components/MainLayout";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import api from "../../services/api";
+import { useTurnosOperacionais } from "../../hooks/useTurnosOperacionais";
 
 /* ==============================
    EMPRESAS FIXAS (OFICIAIS DW)
@@ -30,17 +31,15 @@ export default function DwListPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const { turnos: turnosDisponiveis } = useTurnosOperacionais();
+
   function handleEditar(row) {
-
-    const turnoNumero = Number(row.turno.replace("T", ""));
-
     navigate("/dw/novo", {
       state: {
         data: row.data,
-        turno: turnoNumero
+        turno: row.idTurno,
       }
     });
-
   }
   /* ================= LOAD ================= */
   const load = useCallback(async () => {
@@ -107,9 +106,11 @@ export default function DwListPage() {
                 className="bg-surface text-sm px-4 py-2 rounded-xl text-muted outline-none hover:bg-surface-2"
               >
                 <option value="TODOS">Turnos</option>
-                <option value="1">T1</option>
-                <option value="2">T2</option>
-                <option value="3">T3</option>
+                {turnosDisponiveis.map((t) => (
+                  <option key={t.idTurno} value={t.idTurno}>
+                    {t.nomeTurno}
+                  </option>
+                ))}
               </select>
 
               {/* EMPRESA */}

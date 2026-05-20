@@ -103,6 +103,7 @@ const buscarDwLista = async ({ data, idTurno, idEmpresa, idEstacao }) => {
 
       agrupado[chave] = {
         data: dataISO,
+        idTurno: r.idTurno,
         turno: turnoMap[r.idTurno],
         planejado,
         empresas: { SRM: 0, Fenix: 0, Horeca: 0, "Diarias TECH": 0 },

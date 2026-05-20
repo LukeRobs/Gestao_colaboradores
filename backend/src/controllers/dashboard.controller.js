@@ -283,7 +283,11 @@ const carregarDashboard = async (req, res) => {
         }),
 
         prisma.empresa.findMany(),
-        prisma.turno.findMany(),
+        prisma.turno.findMany({
+          where: !req.dbContext?.isGlobal && req.dbContext?.estacaoId
+            ? { OR: [{ idEstacao: req.dbContext.estacaoId }, { idEstacao: null }] }
+            : {},
+        }),
         prisma.escala.findMany({ where: { ativo: true } }),
 
         prisma.frequencia.findMany({
@@ -382,8 +386,8 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        4️⃣ AGREGADORES
     =============================== */
-    // Turnos operacionais cadastrados no banco — dinâmico
-    const turnoNomes = turnos.map((t) => t.nomeTurno);
+    // Turnos operacionais cadastrados no banco — filtrado pela estação atual
+    const turnoNomes = [...new Set(turnos.map((t) => t.nomeTurno))];
     const turnoIdMap = Object.fromEntries(turnos.map((t) => [t.nomeTurno, t.idTurno]));
 
     const turnoSetorAgg = {};
@@ -586,11 +590,14 @@ await Promise.all(
       if (!turnoId) return;
 
       const whereReal = {
-        data: { gte: new Date(isoDate(inicio) + "T00:00:00.000Z"), lte: new Date(isoDate(fim) + "T00:00:00.000Z") },
-        idTurno: turnoId,
-        ...(estacaoIdDash
-          ? { OR: [{ idEstacao: estacaoIdDash }, { idEstacao: null }] }
-          : {}),
+        AND: [
+          { data: { gte: new Date(isoDate(inicio) + "T00:00:00.000Z") } },
+          { data: { lte: new Date(isoDate(fim) + "T00:00:00.000Z") } },
+          { idTurno: turnoId },
+          ...(estacaoIdDash
+            ? [{ OR: [{ idEstacao: estacaoIdDash }, { idEstacao: null }] }]
+            : []),
+        ],
       };
 
       const diaristasReais = await prisma.dwReal.findMany({ where: whereReal });
