@@ -973,20 +973,20 @@ const updateColaborador = async (req, res) => {
         /* =========================
            CRIAR NOVO HISTÓRICO
         ========================= */
-        await tx.colaboradorEscalaHistorico.upsert({
-          where: {
-            opsId_dataInicio: { opsId, dataInicio: hoje },
-          },
-          create: {
-            opsId,
-            idEscala: novaEscalaId,
-            dataInicio: hoje,
-          },
-          update: {
-            idEscala: novaEscalaId,
-            dataFim: null,
-          },
+        const historicoHoje = await tx.colaboradorEscalaHistorico.findFirst({
+          where: { opsId, dataInicio: hoje },
         });
+
+        if (historicoHoje) {
+          await tx.colaboradorEscalaHistorico.update({
+            where: { id: historicoHoje.id },
+            data: { idEscala: novaEscalaId, dataFim: null },
+          });
+        } else {
+          await tx.colaboradorEscalaHistorico.create({
+            data: { opsId, idEscala: novaEscalaId, dataInicio: hoje },
+          });
+        }
 
         /* =========================
            REMOVER DSR FUTURO ANTIGO
