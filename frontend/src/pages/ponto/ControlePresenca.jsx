@@ -335,15 +335,8 @@ export default function ControlePresenca() {
           loadPresenca();
           setModalOpen(false);
         }}
-        onDelete={({ opsId, dataReferencia }) => {
-          setColaboradoresRaw((prev) =>
-            prev.map((c) => {
-              if (c.opsId !== opsId) return c;
-              const dias = { ...c.dias };
-              delete dias[dataReferencia];
-              return { ...c, dias };
-            })
-          );
+        onDelete={() => {
+          loadPresenca();
           setModalOpen(false);
         }}
       />
