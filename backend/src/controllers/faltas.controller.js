@@ -380,9 +380,111 @@ function getFaixaTempoCasa(adm, ref) {
 }
 
 /* ===================================================== */
+/* RAW — todos os registros individuais com dados de MD   */
+/* Endpoint dedicado para o dashboard interativo          */
+/* ===================================================== */
+const getDadosRawFaltas = async (req, res) => {
+  try {
+    const { inicio, fim, empresaId } = req.query;
+    const estacaoId = (!req.dbContext?.isGlobal && req.dbContext?.estacaoId)
+      ? req.dbContext.estacaoId
+      : null;
+
+    if (!inicio || !fim)
+      return errorResponse(res, "Período obrigatório", 400);
+
+    const inicioDate = dateOnlyBrasil(inicio);
+    const fimDate   = dateOnlyBrasil(fim);
+
+    const [registros, totalHC] = await Promise.all([
+      prisma.frequencia.findMany({
+        where: buildWhere(inicioDate, fimDate, empresaId, estacaoId),
+        include: {
+          colaborador: {
+            include: {
+              empresa: true,
+              setor:   true,
+              turno:   true,
+              lider:   true,
+              escala:  true,
+              medidasDisciplinares: {
+                where: {
+                  status: { in: ["PENDENTE_ASSINATURA", "ASSINADO"] },
+                  dataOcorrencia: { gte: inicioDate, lte: fimDate },
+                },
+                select: {
+                  idMedida:       true,
+                  status:         true,
+                  tipoMedida:     true,
+                  dataOcorrencia: true,
+                  dataAplicacao:  true,
+                  dataAtualizacao: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { dataReferencia: "asc" },
+      }),
+      prisma.colaborador.count({
+        where: {
+          status: "ATIVO",
+          ...(empresaId && { idEmpresa: Number(empresaId) }),
+          ...(estacaoId && { idEstacao: estacaoId }),
+        },
+      }),
+    ]);
+
+    const faltas = registros.map((f) => {
+      const c = f.colaborador;
+      const dataFalta = f.dataReferencia.toISOString().slice(0, 10);
+
+      /* Localiza MD cujo dataOcorrencia bate com a falta */
+      const mdsParaFalta = (c?.medidasDisciplinares || []).filter((md) => {
+        if (!md.dataOcorrencia) return false;
+        return md.dataOcorrencia.toISOString().slice(0, 10) === dataFalta;
+      });
+
+      const mdAssinada = mdsParaFalta.find((md) => md.status === "ASSINADO");
+      const mdGerada   = !mdAssinada && mdsParaFalta.find((md) => md.status === "PENDENTE_ASSINATURA");
+      const mdObj      = mdAssinada || mdGerada || null;
+      const mdStatus   = mdAssinada ? "ASSINADA" : mdGerada ? "GERADA" : "SEM_MD";
+
+      return {
+        idFrequencia:  f.idFrequencia,
+        opsId:         f.opsId,
+        dataReferencia: dataFalta,
+        nome:          c?.nomeCompleto      || "",
+        empresa:       c?.empresa?.razaoSocial || "N/I",
+        setor:         c?.setor?.nomeSetor   || "N/I",
+        turno:         c?.turno?.nomeTurno   || "N/I",
+        lider:         c?.lider?.nomeCompleto || "Sem líder",
+        escala:        c?.escala?.nomeEscala  || "N/I",
+        genero:        c?.genero             || "N/I",
+        dataAdmissao:  c?.dataAdmissao        || null,
+        tempoCasa:     getFaixaTempoCasa(c?.dataAdmissao, fimDate),
+        mdStatus,
+        md: mdObj ? {
+          idMedida:        mdObj.idMedida,
+          tipoMedida:      mdObj.tipoMedida,
+          dataAplicacao:   mdObj.dataAplicacao?.toISOString().slice(0, 10)   || null,
+          dataAtualizacao: mdObj.dataAtualizacao?.toISOString().slice(0, 10) || null,
+        } : null,
+      };
+    });
+
+    return successResponse(res, { faltas, totalHC });
+  } catch (err) {
+    console.error("❌ RAW FALTAS:", err);
+    return errorResponse(res, "Erro ao buscar dados", 500);
+  }
+};
+
+/* ===================================================== */
 module.exports = {
   getResumoFaltas,
   getDistribuicoesFaltas,
   getTendenciaFaltas,
   getColaboradoresFaltas,
+  getDadosRawFaltas,
 };

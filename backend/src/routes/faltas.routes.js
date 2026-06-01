@@ -7,6 +7,7 @@ const {
   getDistribuicoesFaltas,
   getTendenciaFaltas,
   getColaboradoresFaltas,
+  getDadosRawFaltas,
 } = require("../controllers/faltas.controller");
 
 /* ===============================
@@ -17,5 +18,6 @@ router.get("/resumo",        withCache("faltas-resumo",        TTL.REPORT),    g
 router.get("/distribuicoes", withCache("faltas-distribuicoes", TTL.REPORT),    getDistribuicoesFaltas);
 router.get("/tendencia",     withCache("faltas-tendencia",     TTL.REPORT),    getTendenciaFaltas);
 router.get("/colaboradores", withCache("faltas-colaboradores", TTL.ANALYTICS), getColaboradoresFaltas)
+router.get("/raw",          getDadosRawFaltas);
 
 module.exports = router;
