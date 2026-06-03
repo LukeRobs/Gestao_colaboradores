@@ -57,20 +57,12 @@ const carregarGestaoOperacional = async (req, res) => {
       console.log(`📊 Meta: ${spreadsheetId} | Produção: ${producaoSpreadsheetId}`);
     }
 
-    let dataReferencia = data ? new Date(`${data}T00:00:00.000Z`) : agora;
-    
-    // LÓGICA ESPECIAL PARA T3 - apenas quando NÃO passa data específica
-    if (turno === 'T3' && !data) {
-      const horaAtual = agora.getHours();
-      // Se for antes das 22h, o T3 de hoje ainda não começou — buscar T3 de ontem
-      if (horaAtual < 22) {
-        dataReferencia = new Date(agora);
-        dataReferencia.setDate(dataReferencia.getDate() - 1);
-        console.log("⏰ T3 sem data: hora atual < 22h, ajustando para dia anterior");
-      }
-    }
-    
-    const dataStr = dataReferencia.toISOString().slice(0, 10);
+    // Convenção T3: "T3 do dia X" = turno que começa às 22h do dia X.
+    // O ajuste de data para o período "ao vivo" é feito no frontend.
+    // O backend usa a data recebida diretamente como referência do turno.
+    const dataStr = data
+      ? data
+      : agora.toISOString().slice(0, 10);
 
     // Para T3, calcular a data do dia seguinte (horas 00-05)
     const dataStrT3Seguinte = (() => {
@@ -135,70 +127,25 @@ const carregarGestaoOperacional = async (req, res) => {
     
     let producaoPorHora = [];
     try {
-      if (turno === 'T3') {
-        console.log("\n🔍 [T3] Buscando dw_real:");
-        console.log(`   Horas 22-23 → data::date = '${dataStr}' AND hora >= 22`);
-        console.log(`   Horas 00-05 → data::date = '${dataStrT3Seguinte}' AND hora < 6`);
+      // Para todos os turnos: tenta producaoHoraHistorico primeiro, fallback para planilha (quantidadePorHora)
+      // T3 armazena todas as 8 horas (22,23,0-5) sob a mesma dataReferencia (data de início do turno)
+      const historicoProducao = await prisma.producaoHoraHistorico.findMany({
+        where: {
+          dataReferencia: new Date(dataStr),
+          turno: turno,
+        },
+        orderBy: { hora: 'asc' }
+      });
 
-        const producaoOntem = await prisma.$queryRaw`
-          SELECT 
-            EXTRACT(HOUR FROM data::timestamp) as hora,
-            SUM(CAST(quantidade AS INTEGER)) as realizado
-          FROM dw_real
-          WHERE data::date = CAST(${dataStr} AS date)
-            AND id_turno = ${turnoId}
-            AND EXTRACT(HOUR FROM data::timestamp) >= 22
-          GROUP BY EXTRACT(HOUR FROM data::timestamp)
-          ORDER BY hora
-        `;
-
-        const producaoHoje = await prisma.$queryRaw`
-          SELECT 
-            EXTRACT(HOUR FROM data::timestamp) as hora,
-            SUM(CAST(quantidade AS INTEGER)) as realizado
-          FROM dw_real
-          WHERE data::date = CAST(${dataStrT3Seguinte} AS date)
-            AND id_turno = ${turnoId}
-            AND EXTRACT(HOUR FROM data::timestamp) < 6
-          GROUP BY EXTRACT(HOUR FROM data::timestamp)
-          ORDER BY hora
-        `;
-
-        producaoPorHora = [...producaoOntem, ...producaoHoje];
-
-        console.log(`   ✅ Horas 22-23 no banco (${dataStr}): ${producaoOntem.length} registros →`,
-          producaoOntem.map(p => `h${Number(p.hora)}=${Number(p.realizado)}`).join(', ') || 'nenhum');
-        console.log(`   ✅ Horas 00-05 no banco (${dataStrT3Seguinte}): ${producaoHoje.length} registros →`,
-          producaoHoje.map(p => `h${Number(p.hora)}=${Number(p.realizado)}`).join(', ') || 'nenhum');
+      if (historicoProducao.length > 0) {
+        producaoPorHora = historicoProducao.map(h => ({
+          hora: h.hora,
+          realizado: Number(h.realizado)
+        }));
+        console.log(`✅ [${turno}] Produção carregada do histórico: ${producaoPorHora.length} registros →`,
+          producaoPorHora.map(p => `h${p.hora}=${p.realizado}`).join(', '));
       } else {
-        // Para T1/T2: tenta histórico primeiro, fallback para dw_real
-        const historicoProducao = await prisma.producaoHoraHistorico.findMany({
-          where: {
-            dataReferencia: new Date(dataStr),
-            turno: turno,
-          },
-          orderBy: { hora: 'asc' }
-        });
-
-        if (historicoProducao.length > 0) {
-          producaoPorHora = historicoProducao.map(h => ({
-            hora: h.hora,
-            realizado: Number(h.realizado)
-          }));
-          console.log("✅ Produção carregada do histórico:", producaoPorHora.length, "registros");
-        } else {
-          producaoPorHora = await prisma.$queryRaw`
-            SELECT 
-              EXTRACT(HOUR FROM data::timestamp) as hora,
-              SUM(CAST(quantidade AS INTEGER)) as realizado
-            FROM dw_real
-            WHERE data::date = CAST(${dataStr} AS date)
-              AND id_turno = ${turnoId}
-            GROUP BY EXTRACT(HOUR FROM data::timestamp)
-            ORDER BY hora
-          `;
-          console.log("✅ Produção carregada do dw_real:", producaoPorHora.length, "registros");
-        }
+        console.log(`⚠️ [${turno}] Sem histórico para ${dataStr} — dados virão da planilha OnTime (quantidadePorHora)`);
       }
     } catch (error) {
       console.error("⚠️ Erro ao buscar produção do banco:", error.message);
@@ -489,7 +436,7 @@ const carregarGestaoOperacional = async (req, res) => {
     return res.json({
       success: true,
       data: {
-        dataReferencia: dataStr,
+        dataReferencia: data ?? dataStr,
         turno,
         ultimaAtualizacao: ultimaAtualizacaoSheets ?? new Date().toISOString(),
         kpis: {

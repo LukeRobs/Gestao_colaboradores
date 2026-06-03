@@ -21,6 +21,7 @@ const STATUS_OPTIONS = [
   { code: "NC", label: "Não contratado"},
   { code: "P", label: "Presente", adminOnly: true },
   { code: "S1", label: "Sinergia enviada" },
+  { code: "SU", label: "Suspensão" },
   { code: "TR", label: "Transferido" },
   { code: "ON", label: "Onboarding" },
 ];
@@ -70,6 +71,8 @@ export default function EditarPresencaModal({
   const [loading, setLoading] = useState(false);
   const isOnboarding = status === "ON";
   const isFaltaInjustificada = status === "F";
+  const isFolga = status === "FO";
+  const isSuspensao = status === "SU";
   /* =============================
      INIT
   ============================= */
@@ -97,6 +100,10 @@ export default function EditarPresencaModal({
       setRenderKey((k) => k + 1);
     } else if (isFaltaInjustificada) {
       setJustificativa("FALTA_INJUSTIFICADA");
+    } else if (isFolga) {
+      setJustificativa("FOLGA");
+    } else if (isSuspensao) {
+      setJustificativa("SUSPENSAO");
     }
   }, [status]);
 
@@ -127,7 +134,7 @@ export default function EditarPresencaModal({
       return;
     }
 
-    if (!justificativa) {
+    if (!justificativa && !isFolga && !isSuspensao) {
       alert("Justificativa é obrigatória");
       return;
     }
@@ -284,24 +291,26 @@ export default function EditarPresencaModal({
         </div>
 
         {/* JUSTIFICATIVA */}
-        <div>
-          <label className="text-xs text-muted">
-            Justificativa <span className="text-red-400">*</span>
-          </label>
-          <select
-            value={justificativa}
-            disabled={isOnboarding || isFaltaInjustificada}
-            onChange={(e) => setJustificativa(e.target.value)}
-            className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2 disabled:opacity-50"
-          >
-            <option value="">Selecione uma justificativa</option>
-            {JUSTIFICATIVAS.map((j) => (
-              <option key={j.code} value={j.code}>
-                {j.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!isFolga && !isSuspensao && (
+          <div>
+            <label className="text-xs text-muted">
+              Justificativa <span className="text-red-400">*</span>
+            </label>
+            <select
+              value={justificativa}
+              disabled={isOnboarding || isFaltaInjustificada}
+              onChange={(e) => setJustificativa(e.target.value)}
+              className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2 disabled:opacity-50"
+            >
+              <option value="">Selecione uma justificativa</option>
+              {JUSTIFICATIVAS.map((j) => (
+                <option key={j.code} value={j.code}>
+                  {j.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* ACTIONS */}
         <div className="flex flex-col sm:flex-row justify-end gap-3">

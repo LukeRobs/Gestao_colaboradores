@@ -959,6 +959,8 @@ const ajusteManualPresenca = async (req, res) => {
       "LICENCA",
       "FALTA_INJUSTIFICADA",
       "ON",
+      "FOLGA",
+      "SUSPENSAO",
     ];
 
     const justificativaNormalizada = String(justificativa)
