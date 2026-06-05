@@ -146,16 +146,16 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${accessToken}`,
             },
-            timeout: 10000,
+            timeout: 45000, // 45s — latência alta Render→Seatalk
           }
         )
-        
+
         if (textResponse.data.code !== 0) {
           console.warn("⚠️ [SEATALK] Erro ao enviar texto:", textResponse.data)
         } else {
           console.log("✅ [SEATALK] Texto enviado com sucesso")
         }
-        
+
         // Aguardar um pouco antes de enviar a imagem
         await new Promise(r => setTimeout(r, 500))
       } catch (textError) {
@@ -185,7 +185,7 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`,
       },
-      timeout: 60000, // 60 segundos para imagens grandes
+      timeout: 180000, // 3 minutos — latência alta Render→Seatalk
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
     })
@@ -230,7 +230,7 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
     }
     
     if (error.code === 'ECONNABORTED') {
-      errorMessage = "Timeout ao enviar imagem. A imagem pode estar muito grande."
+      errorMessage = "Timeout ao enviar para o Seatalk. A conexão com o servidor está lenta — tente novamente."
     }
     
     throw new Error(errorMessage)
