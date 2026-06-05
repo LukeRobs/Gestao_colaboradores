@@ -374,6 +374,8 @@ export default function GestaoOperacional() {
   }
 
   const kpis = dashboardData?.kpis || {};
+  // meta de produtividade: lida da planilha (coluna C do sheet "Meta"), padrão 770
+  const metaProdutividadeTarget = kpis.metaProdutividade > 0 ? kpis.metaProdutividade : 770;
 
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
@@ -560,7 +562,7 @@ export default function GestaoOperacional() {
               <div className="bg-surface text-page p-6 text-center">
                 <div className="text-sm font-semibold text-muted mb-2">META DE PRODUTIVIDADE</div>
                 <div className="text-4xl font-bold text-page">
-                  770
+                  {metaProdutividadeTarget.toLocaleString("pt-BR")}
                 </div>
               </div>
             </div>
@@ -694,7 +696,7 @@ export default function GestaoOperacional() {
                     <div className="h-px bg-default"></div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted">Produtividade</span>
-                      <span className={`text-2xl font-bold ${(kpis.produtividade || 0) >= 770 ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`text-2xl font-bold ${(kpis.produtividade || 0) >= metaProdutividadeTarget ? 'text-green-400' : 'text-red-400'}`}>
                         {kpis.produtividade || "0"}
                       </span>
                     </div>

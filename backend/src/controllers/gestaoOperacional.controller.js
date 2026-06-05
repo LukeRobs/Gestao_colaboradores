@@ -92,7 +92,7 @@ const carregarGestaoOperacional = async (req, res) => {
       throw new Error("Erro ao buscar metas da planilha");
     }
 
-    const { metaDia, metasPorHora } = metasResult.data;
+    const { metaDia, metasPorHora, metaProdutividade } = metasResult.data;
     console.log("✅ Metas carregadas:", { metaDia, horasComMeta: Object.keys(metasPorHora).length });
     console.log("📋 Detalhamento das metas por hora:");
     for (const [hora, meta] of Object.entries(metasPorHora)) {
@@ -359,23 +359,44 @@ const carregarGestaoOperacional = async (req, res) => {
       // Priorizar dados conforme status do turno
       let realizadoHora = 0;
       let origem = "nenhum";
-      
+
       if (turnoFinalizado) {
-        // Turno finalizado: priorizar banco, usar planilha como fallback
         const prod = producaoPorHora.find(p => Number(p.hora) === h);
-        if (prod && Number(prod.realizado) > 0) {
-          realizadoHora = Number(prod.realizado);
-          origem = "banco";
-          console.log(`  ✅ Turno finalizado - Usando quantidade do banco: ${realizadoHora}`);
-        } else if (quantidadePorHora[h] !== undefined && quantidadePorHora[h] > 0) {
-          realizadoHora = Math.round(quantidadePorHora[h]);
-          origem = "planilha";
-          console.log(`  ⚠️ Turno finalizado - Usando quantidade da planilha (fallback): ${realizadoHora}`);
+        const valorBanco    = prod ? Number(prod.realizado) : 0;
+        const valorPlanilha = quantidadePorHora[h] !== undefined
+          ? Math.round(quantidadePorHora[h])
+          : 0;
+
+        if (dataSelecionadaAnterior) {
+          // Data passada → banco é fonte confirmada; planilha como fallback
+          if (valorBanco > 0) {
+            realizadoHora = valorBanco;
+            origem = "banco";
+            console.log(`  ✅ Data passada - Usando banco: ${realizadoHora}`);
+          } else if (valorPlanilha > 0) {
+            realizadoHora = valorPlanilha;
+            origem = "planilha";
+            console.log(`  ⚠️ Data passada - Usando planilha (fallback): ${realizadoHora}`);
+          } else {
+            console.log(`  ❌ Sem dados para esta hora`);
+          }
         } else {
-          console.log(`  ❌ Sem dados para esta hora`);
+          // Turno de hoje que acabou → planilha tem prioridade (operadores
+          // podem ter enviado dados após o salvamento automático do banco)
+          if (valorPlanilha > 0) {
+            realizadoHora = valorPlanilha;
+            origem = "planilha";
+            console.log(`  ✅ Turno hoje finalizado - Usando planilha: ${realizadoHora}`);
+          } else if (valorBanco > 0) {
+            realizadoHora = valorBanco;
+            origem = "banco";
+            console.log(`  ⚠️ Turno hoje finalizado - Usando banco (fallback): ${realizadoHora}`);
+          } else {
+            console.log(`  ❌ Sem dados para esta hora`);
+          }
         }
       } else {
-        // Turno em andamento: priorizar planilha, usar banco como fallback
+        // Turno em andamento: planilha é sempre mais atualizada
         if (quantidadePorHora[h] !== undefined && quantidadePorHora[h] > 0) {
           realizadoHora = Math.round(quantidadePorHora[h]);
           origem = "planilha";
@@ -500,6 +521,9 @@ const carregarGestaoOperacional = async (req, res) => {
           realizado,
           mediaHoraRealizado,
           produtividade,
+          // meta de produtividade lida da coluna C do sheet "Meta"
+          // se a planilha não tiver essa coluna, retorna 0 e o front usa 770 como padrão
+          metaProdutividade: Math.round(metaProdutividade || 0),
           performance: Number(performance),
           totalPresentes,
           diaristasPresentes

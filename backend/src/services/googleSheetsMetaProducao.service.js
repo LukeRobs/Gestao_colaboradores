@@ -184,7 +184,19 @@ async function buscarMetasProducao(turno, dataISO, spreadsheetId = DEFAULT_SPREA
 
     const metasPorHora = {};
     let metaDia = 0;
+    let metaProdutividade = 0;
     let linhasEncontradas = 0;
+
+    // Helper para parsear um número no formato BR (1.234,56 ou 1234)
+    function parseBR(raw) {
+      const s = String(raw || "0").trim();
+      if (s.includes(".") && s.includes(",")) return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
+      if (s.includes(",") && !s.includes(".")) {
+        const partes = s.split(",");
+        return parseFloat(partes[1]?.length === 3 ? s.replace(",", "") : s.replace(",", ".")) || 0;
+      }
+      return parseFloat(s) || 0;
+    }
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -194,20 +206,25 @@ async function buscarMetasProducao(turno, dataISO, spreadsheetId = DEFAULT_SPREA
       const horaRaw = normalizar(row[1]);
       const hora = parseInt(horaRaw);
 
-      const metaOriginal = String(row[3] || "0").trim();
-      let metaStr = metaOriginal;
+      const meta = parseBR(row[3]);
 
-      if (metaOriginal.includes(".") && metaOriginal.includes(",")) {
-        metaStr = metaOriginal.replace(/\./g, "").replace(",", ".");
-      } else if (metaOriginal.includes(",") && !metaOriginal.includes(".")) {
-        const partes = metaOriginal.split(",");
-        metaStr =
-          partes[1]?.length === 3
-            ? metaOriginal.replace(",", "")
-            : metaOriginal.replace(",", ".");
+      // Coluna C (índice 2) — meta de produtividade por operador (items/pessoa)
+      // Tomamos o primeiro valor positivo encontrado para o turno/data
+      const colC = parseBR(row[2]);
+      if (colC > 0 && metaProdutividade === 0) {
+        // Só captura se ainda não foi definido — um valor por turno é suficiente
+        const turnoTeste = row[4] ? normalizar(row[4]) : null;
+        const horaNumC = hora;
+        let turnoTesteFinal = turnoTeste;
+        if (!turnoTesteFinal) {
+          if (horaNumC >= 6 && horaNumC <= 13) turnoTesteFinal = "T1";
+          else if (horaNumC >= 14 && horaNumC <= 21) turnoTesteFinal = "T2";
+          else turnoTesteFinal = "T3";
+        }
+        if (dataRow === dataBusca && turnoTesteFinal === turno) {
+          metaProdutividade = colC;
+        }
       }
-
-      const meta = parseFloat(metaStr) || 0;
 
       let turnoRow = row[4] ? normalizar(row[4]) : null;
       if (!turnoRow) {
@@ -229,7 +246,7 @@ async function buscarMetasProducao(turno, dataISO, spreadsheetId = DEFAULT_SPREA
 
     return {
       success: true,
-      data: { dataConsultada: dataBusca, turnoConsultado: turno, metaDia, metasPorHora },
+      data: { dataConsultada: dataBusca, turnoConsultado: turno, metaDia, metasPorHora, metaProdutividade },
     };
   } catch (error) {
     console.error("❌ Erro ao buscar metas:", error.message);
