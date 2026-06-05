@@ -435,6 +435,9 @@ const carregarDashboard = async (req, res) => {
       const c = registroSnapshot.colaborador;
       if (!c) return;
 
+      // Ignora colaboradores desligados — não devem aparecer como ausentes
+      if (!["ATIVO", "FERIAS", "AFASTADO"].includes(c.status)) return;
+
       // Verifica cargo na data do registro — colaborador pode ter mudado de cargo depois
       if (!isCargoElegivelNoDia(c.opsId, registroSnapshot.dataReferencia, c.cargo?.idCargo)) return;
 
@@ -618,6 +621,14 @@ const carregarDashboard = async (req, res) => {
         );
 
         while (cur <= fimAtes) {
+          // Pula dias de DSR — colaborador está de folga, não é ausência
+          const diaSemana = cur.getUTCDay();
+          const ehDiaDSR = (c.escala?.diasDsr || []).includes(diaSemana);
+          if (ehDiaDSR) {
+            cur.setUTCDate(cur.getUTCDate() + 1);
+            continue;
+          }
+
           const dataStr = isoDate(cur);
           const key = `${c.opsId}_${dataStr}`;
 
