@@ -659,6 +659,30 @@ const carregarDashboard = async (req, res) => {
               diasFolga,
             });
             ausenciasSet.add(key);
+
+            // Colaborador tem atestado mas sem registro AM na frequência:
+            // sincroniza status e KPIs para que status card = tabela de ausentes
+            if (!turnoFiltro || turno === turnoFiltro) {
+              statusPorTurno[turno] = statusPorTurno[turno] || {};
+              statusPorTurno[turno]["Atestado Médico"] =
+                (statusPorTurno[turno]["Atestado Médico"] || 0) + 1;
+
+              if (!turnoSetorAgg[turno]) {
+                turnoSetorAgg[turno] = { turno, totalEscalados: 0, presentes: 0, ausentes: 0, setores: {} };
+              }
+              turnoSetorAgg[turno].totalEscalados++;
+              turnoSetorAgg[turno].ausentes++;
+
+              totalHcAptoDias++;
+              totalAusenciasDias++;
+
+              const dataRefStr = dataStr;
+              if (!tendenciaPorDia[dataRefStr]) {
+                tendenciaPorDia[dataRefStr] = { data: dataRefStr, presentes: 0, ausentes: 0, escalados: 0 };
+              }
+              tendenciaPorDia[dataRefStr].escalados++;
+              tendenciaPorDia[dataRefStr].ausentes++;
+            }
           }
 
           cur.setUTCDate(cur.getUTCDate() + 1);
