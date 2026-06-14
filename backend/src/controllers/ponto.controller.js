@@ -548,11 +548,8 @@ const getControlePresenca = async (req, res) => {
     const whereColaborador = {
       OR: [
         { status: "ATIVO", dataDesligamento: null },
-        {
-          status: { in: ["FERIAS", "AFASTADO"] },
-          dataFimStatus: { lt: hoje },
-          dataDesligamento: null,
-        },
+        // FERIAS/AFASTADO: tanto em andamento quanto com período expirado ainda não atualizado
+        { status: { in: ["FERIAS", "AFASTADO"] }, dataDesligamento: null },
         // Desligados no mês visualizado: permanecem visíveis até o fim do mês do desligamento
         {
           status: "INATIVO",
@@ -1249,17 +1246,11 @@ const exportarPresencaSheets = async (req, res) => {
     console.log(`[${reqId}] Período: ${inicioMes.toISOString()} até ${fimMes.toISOString()}`);
 
     // Exporta cargos operacionais (inclui INATIVO do mês e FERIAS/AFASTADO)
-    const hojeExport = new Date();
-    hojeExport.setHours(0, 0, 0, 0);
-
     const whereColaborador = {
       OR: [
         { status: "ATIVO", dataDesligamento: null },
-        {
-          status: { in: ["FERIAS", "AFASTADO"] },
-          dataFimStatus: { lt: hojeExport },
-          dataDesligamento: null,
-        },
+        // FERIAS/AFASTADO: tanto em andamento quanto com período expirado ainda não atualizado
+        { status: { in: ["FERIAS", "AFASTADO"] }, dataDesligamento: null },
         // Desligados no mês exportado: aparecem até o fim do mês do desligamento
         {
           status: "INATIVO",
