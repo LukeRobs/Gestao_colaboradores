@@ -564,6 +564,9 @@ const carregarDashboard = async (req, res) => {
       const c = f.colaborador;
       if (!c) return;
 
+      // Alinhado à Seção 5: registro sem tipo e sem hora não é lançamento real
+      if (isRegistroVazio(f)) return;
+
       // Verifica cargo na data do registro — colaborador pode ter mudado de cargo depois
       if (!isCargoElegivelNoDia(c.opsId, f.dataReferencia, c.cargo?.idCargo)) return;
 
