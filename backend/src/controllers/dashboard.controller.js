@@ -789,7 +789,9 @@ for (const turno of turnoNomes) {
   }
 }
 
+console.log("📌 turnoNomes:", turnoNomes);
 console.log("📌 diaristasPlanejadosPorTurno:", diaristasPlanejadosPorTurno);
+console.log("📌 diaristasPresentes:", diaristasPresentes);
 
 /* ===============================
    7️⃣.2 KPIs DIARISTAS (TOTAIS)
