@@ -68,7 +68,7 @@ function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras 
   const { setorNome, turnoNome } = extras;
   return {
     dataReferencia: { gte: inicioDate, lte: fimDate },
-    tipoAusencia: { is: { codigo: { in: ["F", "FJ"] } } },
+    tipoAusencia: { is: { codigo: { in: ["F", "FJ", "AM", "AA"] } } },
     colaborador: {
       is: {
         status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
@@ -89,7 +89,8 @@ function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras 
 function buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = []) {
   const { setorNome, turnoNome } = extras;
   return {
-    dataInicio: { gte: inicioDate, lte: fimDate },
+    dataInicio: { lte: fimDate },
+    dataFim: { gte: inicioDate },
     status: { not: "CANCELADO" },
     colaborador: {
       cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
@@ -321,10 +322,12 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
         .map(([name, v]) => ({ name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados }))
         .sort((a, b) => b.value - a.value);
 
-    /* toArray com HC Apto — adiciona headcount e taxa real */
-    const toArrayWithHc = (obj, hcMap) =>
-      Object.entries(obj)
-        .map(([name, v]) => {
+    /* toArray com HC Apto — inclui todos os turnos/empresas com HC, mesmo com 0 ausências */
+    const toArrayWithHc = (obj, hcMap) => {
+      const allKeys = new Set([...Object.keys(obj), ...Object.keys(hcMap)]);
+      return Array.from(allKeys)
+        .map((name) => {
+          const v = obj[name] || { faltas: 0, atestados: 0 };
           const headcount = hcMap[name] || 0;
           const taxa = headcount > 0
             ? Number((((v.faltas + v.atestados) / headcount) * 100).toFixed(2))
@@ -332,6 +335,7 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
           return { name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados, headcount, taxa };
         })
         .sort((a, b) => b.value - a.value);
+    };
 
     return successResponse(res, {
       porEmpresa:   toArrayWithHc(acc.empresa, hcEmpresa),
