@@ -96,7 +96,7 @@ function buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras = 
   const { setorNome, turnoNome } = extras;
   return {
     dataInicio: { lte: fimDate },
-    dataFim: { gte: inicioDate },
+    dataFim:    { gte: inicioDate },
     status: "ATIVO",
     colaborador: {
       OR: [
@@ -307,7 +307,7 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
     for (const a of atestados) {
       const c = a.colaborador;
       if (!c) continue;
-      // Pula se já foi contado via frequencia (evita double-count AM/AA + atestadoMedico)
+      // Pula se já contado via frequencia (evita double-count AM/AA + atestadoMedico)
       if (opsIdsNaFrequencia.has(a.opsId)) continue;
       inc(acc.empresa,   c.empresa?.razaoSocial || "N/I", "atestados");
       inc(acc.setor,     c.setor?.nomeSetor      || "N/I", "atestados");
