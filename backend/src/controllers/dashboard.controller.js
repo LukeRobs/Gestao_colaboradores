@@ -766,6 +766,18 @@ const datasNoPeriodo = [];
   }
 }
 
+// Mapa de turno nome → número (T1→1, T2→2, T3→3) para lookup na Calculadora
+// A Calculadora usa TURNO_COL = {1:3, 2:4, 3:5} que corresponde ao número do turno, não ao idTurno do banco
+const turnoNumeroMap = {};
+for (const t of turnoNomes) {
+  const m = t.match(/(\d+)$/);
+  if (m) turnoNumeroMap[t] = Number(m[1]);
+}
+
+console.log("📌 estacaoIdDash:", estacaoIdDash, "ESTACAO_SHEETS:", ESTACAO_SHEETS, "match:", estacaoIdDash === ESTACAO_SHEETS);
+console.log("📌 turnoIdMap:", turnoIdMap);
+console.log("📌 turnoNumeroMap:", turnoNumeroMap);
+
 for (const turno of turnoNomes) {
   try {
     if (!estacaoIdDash) {
@@ -776,16 +788,18 @@ for (const turno of turnoNomes) {
         total += Number(resultado?.data?.dwPlanejado || 0);
       }
       diaristasPlanejadosPorTurno[turno] = total;
-    } else if (estacaoIdDash === ESTACAO_SHEETS) {
+    } else if (Number(estacaoIdDash) === ESTACAO_SHEETS) {
       // Estação 1: busca na aba Calculadora (mesma fonte do Daily Works)
-      const turnoId = turnoIdMap[turno];
-      if (!turnoId) continue;
-      const requests = datasNoPeriodo.map((dataStr) => ({ dataISO: dataStr, idTurno: turnoId }));
+      // Usa o número do turno (T1→1, T2→2, T3→3) que é o que TURNO_COL espera
+      const turnoNum = turnoNumeroMap[turno];
+      if (!turnoNum) continue;
+      const requests = datasNoPeriodo.map((dataStr) => ({ dataISO: dataStr, idTurno: turnoNum }));
       const resultMap = await buscarDwPlanejadoCalculadoraBatch(requests);
       let total = 0;
       for (const dataStr of datasNoPeriodo) {
-        total += resultMap.get(`${dataStr}_${turnoId}`) || 0;
+        total += resultMap.get(`${dataStr}_${turnoNum}`) || 0;
       }
+      console.log(`📌 Calculadora ${turno} (turnoNum=${turnoNum}):`, total);
       diaristasPlanejadosPorTurno[turno] = total;
     } else {
       // Demais estações: busca no banco
