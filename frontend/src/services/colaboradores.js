@@ -69,4 +69,9 @@ export const ColaboradoresAPI = {
     });
     return res;
   },
+
+  backfillNcPreAdmissao: async () => {
+    const res = await api.post("/colaboradores/backfill-nc-pre-admissao");
+    return res.data;
+  },
 };
