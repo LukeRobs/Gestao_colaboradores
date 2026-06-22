@@ -311,7 +311,7 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
       if (opsIdsNaFrequencia.has(a.opsId)) continue;
       inc(acc.empresa,   c.empresa?.razaoSocial || "N/I", "atestados");
       inc(acc.setor,     c.setor?.nomeSetor      || "N/I", "atestados");
-      inc(acc.turno,     c.turno?.nomeTurno      || "N/I", "atestados");
+      // turno: não conta atestados de afastados sem registro em frequencia — mantém coerência com dashboard operacional
       inc(acc.genero,    c.genero                || "N/I", "atestados");
       inc(acc.lider,     c.lider?.nomeCompleto   || "Sem líder", "atestados");
       inc(acc.diaSemana, DIAS_SEMANA[new Date(a.dataInicio).getDay()]          , "atestados");
