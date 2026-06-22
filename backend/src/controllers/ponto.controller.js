@@ -873,8 +873,12 @@ const getControlePresenca = async (req, res) => {
         /* ===============================
            FALTA / SEM LANÇAMENTO
         =============================== */
+        // Dias antes da admissão não têm lançamento real — exibe NC visualmente (sem gravar no banco)
+        const admissao = c.dataAdmissao ? new Date(c.dataAdmissao) : null;
+        const antesAdmissao = admissao && dataCalendario < new Date(Date.UTC(admissao.getUTCFullYear(), admissao.getUTCMonth(), admissao.getUTCDate()));
+
         diasMap[dataISO] = {
-          status: "-",
+          status: antesAdmissao ? "NC" : "-",
           manual: false,
         };
       }
