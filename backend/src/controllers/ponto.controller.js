@@ -547,13 +547,15 @@ const getControlePresenca = async (req, res) => {
 
     const whereColaborador = {
       OR: [
-        { status: "ATIVO" },
+        { status: "ATIVO", dataDesligamento: null },
+        // FERIAS/AFASTADO: tanto em andamento quanto com período expirado ainda não atualizado
+        { status: { in: ["FERIAS", "AFASTADO"] }, dataDesligamento: null },
+        // Desligados no mês visualizado: permanecem visíveis até o fim do mês do desligamento
         {
-          status: { in: ["FERIAS", "AFASTADO"] },
-          dataFimStatus: { lt: hoje },
+          status: "INATIVO",
+          dataDesligamento: { gte: inicioMes, lte: fimMes },
         },
       ],
-      dataDesligamento: null,
       // Isolamento por estação: ADMIN vê todas, demais só a sua
       ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
         ? { idEstacao: req.dbContext.estacaoId }
@@ -871,8 +873,12 @@ const getControlePresenca = async (req, res) => {
         /* ===============================
            FALTA / SEM LANÇAMENTO
         =============================== */
+        // Dias antes da admissão não têm lançamento real — exibe NC visualmente (sem gravar no banco)
+        const admissao = c.dataAdmissao ? new Date(c.dataAdmissao) : null;
+        const antesAdmissao = admissao && dataCalendario < new Date(Date.UTC(admissao.getUTCFullYear(), admissao.getUTCMonth(), admissao.getUTCDate()));
+
         diasMap[dataISO] = {
-          status: "-",
+          status: antesAdmissao ? "NC" : "-",
           manual: false,
         };
       }
@@ -1245,10 +1251,18 @@ const exportarPresencaSheets = async (req, res) => {
 
     console.log(`[${reqId}] Período: ${inicioMes.toISOString()} até ${fimMes.toISOString()}`);
 
-    // Exporta cargos operacionais
+    // Exporta cargos operacionais (inclui INATIVO do mês e FERIAS/AFASTADO)
     const whereColaborador = {
-      status: "ATIVO",
-      dataDesligamento: null,
+      OR: [
+        { status: "ATIVO", dataDesligamento: null },
+        // FERIAS/AFASTADO: tanto em andamento quanto com período expirado ainda não atualizado
+        { status: { in: ["FERIAS", "AFASTADO"] }, dataDesligamento: null },
+        // Desligados no mês exportado: aparecem até o fim do mês do desligamento
+        {
+          status: "INATIVO",
+          dataDesligamento: { gte: inicioMes, lte: fimMes },
+        },
+      ],
       ...(req.dbContext?.estacaoId ? { idEstacao: req.dbContext.estacaoId } : {}),
       cargo: {
         nomeCargo: {

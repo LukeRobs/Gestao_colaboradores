@@ -62,110 +62,56 @@ function isCargoElegivel(cargo) {
    STATUS DO DIA
 ===================================================== */
 function getStatusDoDia(f) {
-  // Presença
-  if (f?.horaEntrada) {
-    return {
-      code: "P",
-      contaComoEscalado: true,
-      impactaAbsenteismo: false,
-    };
+  // AM/AA/DSR/FO têm prioridade máxima — mesmo que haja horaEntrada
+  if (f?.tipoAusencia) {
+    const codigoPrio = String(f.tipoAusencia.codigo || "").toUpperCase();
+    if (codigoPrio === "AM" || codigoPrio === "AA") {
+      return { code: "AM", contaComoEscalado: true, impactaAbsenteismo: true };
+    }
+    if (codigoPrio === "DSR") {
+      return { code: "DSR", contaComoEscalado: false, impactaAbsenteismo: false };
+    }
+    if (codigoPrio === "FO") {
+      return { code: "FO", contaComoEscalado: true, impactaAbsenteismo: false };
+    }
   }
 
-  if (f?.idTipoAusencia === 5) {
-    return {
-      code: "AM",
-      contaComoEscalado: true,
-      impactaAbsenteismo: true, 
-    };
+  // Presença via batida de ponto
+  if (f?.horaEntrada) {
+    return { code: "P", contaComoEscalado: true, impactaAbsenteismo: false };
   }
 
   if (f?.tipoAusencia) {
     const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
-    const desc = String(f.tipoAusencia.descricao || "").toUpperCase();
+    const desc   = String(f.tipoAusencia.descricao || "").toUpperCase();
 
-    // NC / ON → fora do HC
     if (codigo === "NC" || codigo === "ON") {
-      return {
-        code: codigo,
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-      };
+      return { code: codigo, contaComoEscalado: false, impactaAbsenteismo: false };
     }
-
-    // FO → HC APTO, não é ausência
-    if (codigo === "FO") {
-      return {
-        code: "FO",
-        contaComoEscalado: true,
-        impactaAbsenteismo: false,
-      };
-    }
-
-    // DSR → fora do HC
-    if (codigo === "DSR") {
-      return {
-        code: "DSR",
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-      };
-    }
-
-    // Férias
     if (codigo === "FE" || desc.includes("FÉRIAS")) {
-      return {
-        code: "FE",
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-      };
+      return { code: "FE", contaComoEscalado: false, impactaAbsenteismo: false };
     }
-
-    // Sinergia
     if (codigo === "S1" || desc.includes("SINERGIA")) {
-      return {
-        code: "S1",
-        contaComoEscalado: true,
-        impactaAbsenteismo: false,
-      };
+      return { code: "S1", contaComoEscalado: true, impactaAbsenteismo: false };
     }
-
-    // BH → entra no HC apto, não impacta absenteísmo
-    if (codigo === "BH") {
-      return {
-        code: "BH",
-        contaComoEscalado: true,
-        impactaAbsenteismo: false,
-      };
+    if (codigo === "BH" || codigo === "BHDSR") {
+      return { code: "BH", contaComoEscalado: true, impactaAbsenteismo: false };
     }
-
-    // AFA / AF / LM / LP / T → fora do HC
     if (["AFA", "AF", "LM", "LP", "T"].includes(codigo)) {
-      return {
-        code: codigo,
-        contaComoEscalado: false,
-        impactaAbsenteismo: false,
-      };
+      return { code: codigo, contaComoEscalado: false, impactaAbsenteismo: false };
     }
-
-    // F / FJ / AM e demais → ausência que impacta
-    return {
-      code: codigo,
-      contaComoEscalado: true,
-      impactaAbsenteismo: true,
-    };
+    // F / FJ e demais → ausência que impacta
+    return { code: codigo, contaComoEscalado: true, impactaAbsenteismo: true };
   }
 
   // fallback = falta
-  return {
-    code: "F",
-    contaComoEscalado: true,
-    impactaAbsenteismo: true,
-  };
+  return { code: "F", contaComoEscalado: true, impactaAbsenteismo: true };
 }
 
 /* =====================================================
    BUILDERS
 ===================================================== */
-  function buildEscalasResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim }) {
+  function buildEscalasResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim, atestadosDias = [] }) {
   const diasPeriodo = daysInclusive(inicio, fim);
 
   // Dias excluídos por colaborador (registros de não-escalado)
@@ -177,12 +123,20 @@ function getStatusDoDia(f) {
     }
   });
 
-  // Dias de ausência por escala
+  // Dias de ausência por escala (via frequencia)
   const absDiasPerEsc = {};
   frequencias.forEach(f => {
     const s = getStatusDoDia(f);
     if (!s.contaComoEscalado || !s.impactaAbsenteismo) return;
     const c = colaboradoresMap.get(f.opsId);
+    if (!c) return;
+    const escObj = c.escala;
+    const esc = escObj ? `${escObj.nomeEscala} (${escObj.descricao})` : "N/I";
+    absDiasPerEsc[esc] = (absDiasPerEsc[esc] || 0) + 1;
+  });
+
+  // Atestados não capturados via frequencia
+  atestadosDias.forEach(({ colaborador: c }) => {
     if (!c) return;
     const escObj = c.escala;
     const esc = escObj ? `${escObj.nomeEscala} (${escObj.descricao})` : "N/I";
@@ -213,7 +167,7 @@ function getStatusDoDia(f) {
   });
 }
 
-  function buildSetoresResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim }) {
+  function buildSetoresResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim, atestadosDias = [] }) {
     const diasPeriodo = daysInclusive(inicio, fim);
 
     const excludedPerOps = new Map();
@@ -229,6 +183,12 @@ function getStatusDoDia(f) {
       const s = getStatusDoDia(f);
       if (!s.contaComoEscalado || !s.impactaAbsenteismo) return;
       const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+      const setor = c.setor?.nomeSetor || "Sem setor";
+      absDiasPerSetor[setor] = (absDiasPerSetor[setor] || 0) + 1;
+    });
+
+    atestadosDias.forEach(({ colaborador: c }) => {
       if (!c) return;
       const setor = c.setor?.nomeSetor || "Sem setor";
       absDiasPerSetor[setor] = (absDiasPerSetor[setor] || 0) + 1;
@@ -256,7 +216,7 @@ function getStatusDoDia(f) {
     });
   }
 
-  function buildLideresResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim }) {
+  function buildLideresResumo({ frequencias, colaboradoresMap, colaboradores, inicio, fim, atestadosDias = [] }) {
     const diasPeriodo = daysInclusive(inicio, fim);
 
     const excludedPerOps = new Map();
@@ -272,6 +232,12 @@ function getStatusDoDia(f) {
       const s = getStatusDoDia(f);
       if (!s.contaComoEscalado || !s.impactaAbsenteismo) return;
       const c = colaboradoresMap.get(f.opsId);
+      if (!c) return;
+      const lider = c.lider?.nomeCompleto || "Sem líder";
+      absDiasPerLider[lider] = (absDiasPerLider[lider] || 0) + 1;
+    });
+
+    atestadosDias.forEach(({ colaborador: c }) => {
       if (!c) return;
       const lider = c.lider?.nomeCompleto || "Sem líder";
       absDiasPerLider[lider] = (absDiasPerLider[lider] || 0) + 1;
@@ -627,12 +593,15 @@ function buildFaltasPorTempoCasa({ frequencias, colaboradoresMap }) {
 }
 
 /* ---------- OVERVIEW ---------- */
-function buildOverview({ frequencias, inicio, fim, colaboradores = [] }) {
+function buildOverview({ frequencias, inicio, fim, colaboradores = [], opsIdsDesligados = [], atestadosDias = [] }) {
   const diasPeriodo = daysInclusive(inicio, fim);
 
-  // Apenas ATIVOs elegíveis entram no HC
+  // Apenas ATIVOs elegíveis entram no HC (denominador)
   const ativosElegiveis = colaboradores.filter(c => c.status === "ATIVO");
   const ativosSet = new Set(ativosElegiveis.map(c => c.opsId));
+
+  // Para ausências (numerador): ATIVO + recém-desligados (igual ao operacional)
+  const absDiasSet = new Set([...ativosSet, ...opsIdsDesligados]);
 
   // Conta dias excluídos por colaborador ATIVO (DSR, FE, AFA, NC, ON…)
   // Dias sem registro = trabalhando normalmente → não excluído
@@ -649,11 +618,16 @@ function buildOverview({ frequencias, inicio, fim, colaboradores = [] }) {
       excludedDays++;
     }
 
-    if (s.contaComoEscalado) {
+    if (s.contaComoEscalado && absDiasSet.has(f.opsId)) {
       if (s.code === "P") presentesSet.add(f.opsId);
       if (s.impactaAbsenteismo) absDias++;
       if (s.code === "F" || s.code === "FJ") faltasDias++;
     }
+  });
+
+  // Atestados da tabela atestadoMedico não capturados via frequencia
+  atestadosDias.forEach(({ opsId }) => {
+    if (ativosSet.has(opsId)) absDias++;
   });
 
   // HC acumulado = (ATIVOs × dias) − dias excluídos por registros
@@ -665,6 +639,7 @@ function buildOverview({ frequencias, inicio, fim, colaboradores = [] }) {
     hcAcumulado,                                 // pessoa-dias acumulados no período
     presentes: presentesSet.size,
     faltas: faltasDias,
+    absDias,
     absenteismo:
       hcAcumulado > 0
         ? Number(((absDias / hcAcumulado) * 100).toFixed(2))
@@ -811,6 +786,7 @@ function buildEmpresasResumo({
   colaboradoresMap,
   frequencias,
   atestados,
+  atestadosDias = [],
   medidas,
   acidentes,
   desligados,
@@ -884,6 +860,13 @@ function buildEmpresasResumo({
     if (s.code === "P") map[emp].presentes++;
     if (s.impactaAbsenteismo) map[emp].absDias++;
     if (s.code === "F" || s.code === "FJ") map[emp].faltas++;
+  });
+
+  // Atestados não capturados via frequencia — adiciona ao absDias por empresa
+  atestadosDias.forEach(({ colaborador: c }) => {
+    if (!c) return;
+    const emp = c.empresa?.razaoSocial || "Sem empresa";
+    if (map[emp]) map[emp].absDias++;
   });
 
   /* ===============================
@@ -1605,9 +1588,21 @@ const carregarDashboardAdmin = async (req, res) => {
 /* ===============================
    BASE REAL DO PERÍODO (ESCALADOS)
 =============================== */
+    // Recém-desligados com cargo elegível: contam nas ausências (igual ao operacional)
+    const recentlyDesligados = await prisma.colaborador.findMany({
+      where: {
+        status: "INATIVO",
+        dataDesligamento: { gte: inicioFinal },
+        cargo: { nomeCargo: { contains: "AUXILIAR DE LOGÍSTICA", mode: "insensitive" } },
+        ...estacaoFilter,
+      },
+      select: { opsId: true },
+    });
+    const opsIdsDesligados = recentlyDesligados.map(c => c.opsId);
+
     const frequencias = await prisma.frequencia.findMany({
       where: {
-        opsId: { in: opsIds },
+        opsId: { in: [...opsIds, ...opsIdsDesligados] },
         dataReferencia: { gte: inicioFinal, lte: fimFinal },
       },
       include: { tipoAusencia: true },
@@ -1685,11 +1680,36 @@ const carregarDashboardAdmin = async (req, res) => {
       },
     });
 
+    // Set de ausências já capturadas via frequencia (evita double-count com atestadoMedico)
+    const ausenciasFreqSet = new Set(
+      frequencias
+        .filter(f => getStatusDoDia(f).impactaAbsenteismo)
+        .map(f => `${f.opsId}_${new Date(f.dataReferencia).toISOString().slice(0, 10)}`)
+    );
+
+    // Expande atestados a person-days não cobertos por frequencia
+    const atestadosDias = [];
+    for (const a of atestados) {
+      const c = colaboradoresMap.get(a.opsId);
+      if (!c) continue;
+      const di = new Date(Math.max(new Date(a.dataInicio).getTime(), inicioFinal.getTime()));
+      const df = new Date(Math.min(new Date(a.dataFim).getTime(), fimFinal.getTime()));
+      for (let d = new Date(di); d <= df; d.setUTCDate(d.getUTCDate() + 1)) {
+        if ((c.escala?.diasDsr || []).includes(d.getUTCDay())) continue;
+        const dataISO = d.toISOString().slice(0, 10);
+        if (!ausenciasFreqSet.has(`${a.opsId}_${dataISO}`)) {
+          atestadosDias.push({ opsId: a.opsId, data: dataISO, colaborador: c });
+        }
+      }
+    }
+
     const overview = buildOverview({
       frequencias,
       inicio: inicioFinal,
       fim: fimFinal,
       colaboradores: colaboradoresFiltrados,
+      opsIdsDesligados,
+      atestadosDias,
     });
 
     /* ===============================
@@ -1784,9 +1804,7 @@ const carregarDashboardAdmin = async (req, res) => {
             admitidosPeriodo: admitidos.length,
             desligadosPeriodo: desligados.length,
           }),
-          atestados: atestados.filter(a =>
-            opsIdsEscaladosPeriodo.includes(a.opsId)
-          ).length,
+          atestados: overview.absDias - overview.faltas,
           faltas: overview.faltas,
           medidasDisciplinares: medidas.length,
           acidentes: acidentes.length,
@@ -1812,6 +1830,7 @@ const carregarDashboardAdmin = async (req, res) => {
           colaboradoresMap,
           frequencias,
           atestados,
+          atestadosDias,
           medidas,
           acidentes,
           desligados,
@@ -1825,7 +1844,8 @@ const carregarDashboardAdmin = async (req, res) => {
           colaboradoresMap,
           colaboradores: colaboradoresFiltrados,
           inicio: inicioFinal,
-          fim: fimFinal
+          fim: fimFinal,
+          atestadosDias,
         }),
 
         setores: buildSetoresResumo({
@@ -1833,7 +1853,8 @@ const carregarDashboardAdmin = async (req, res) => {
           colaboradoresMap,
           colaboradores: colaboradoresFiltrados,
           inicio: inicioFinal,
-          fim: fimFinal
+          fim: fimFinal,
+          atestadosDias,
         }),
 
         lideres: buildLideresResumo({
@@ -1841,7 +1862,8 @@ const carregarDashboardAdmin = async (req, res) => {
           colaboradoresMap,
           colaboradores: colaboradoresFiltrados,
           inicio: inicioFinal,
-          fim: fimFinal
+          fim: fimFinal,
+          atestadosDias,
         }),
         hierarquia,
         resumoHierarquia,

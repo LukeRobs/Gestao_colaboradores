@@ -2,6 +2,7 @@ const { prisma } = require("../config/database");
 const { getDateOperacional } = require("../utils/dateOperacional");
 const { buscarDwPlanejado } = require("../services/googleSheetsDW.service");
 const { buscarDwPlanejadoBanco } = require("../services/dwPlanejado.service");
+const { buscarDwPlanejadoCalculadoraBatch } = require("../services/googleSheetsCalculadora.service");
 
 const ESTACAO_SHEETS = 1;
 
@@ -92,8 +93,7 @@ const initTurnoMap = (turnoNomes = ["T1", "T2", "T3"]) =>
    STATUS DO DIA — PADRÃO ADMIN (COM 4 ESTADOS OPERACIONAIS)
 ===================================================== */
 function getStatusDoDiaOperacional(f) {
-  // DSR/FO têm prioridade máxima — mesmo que haja horaEntrada (ajuste indevido),
-  // o dia de folga não deve ser contado como escalado
+  // DSR/FO/AM/AA têm prioridade máxima — mesmo que haja horaEntrada
   if (f?.tipoAusencia) {
     const codigo = String(f.tipoAusencia.codigo || "").toUpperCase();
 
@@ -102,6 +102,10 @@ function getStatusDoDiaOperacional(f) {
     }
     if (codigo === "FO") {
       return { label: "Folga", contaComoEscalado: true, impactaAbsenteismo: false, origem: "tipoAusencia" };
+    }
+    // Atestado médico tem prioridade sobre horaEntrada (batida pode ser erro de registro)
+    if (codigo === "AM" || codigo === "AA") {
+      return { label: "Atestado Médico", contaComoEscalado: true, impactaAbsenteismo: true, origem: "tipoAusencia" };
     }
   }
 
@@ -266,8 +270,11 @@ const carregarDashboard = async (req, res) => {
       await Promise.all([
         prisma.colaborador.findMany({
           where: {
-            status: "ATIVO",
-            dataDesligamento: null,
+            // Inclui ativos + desligados após o início do período (para preservar histórico)
+            OR: [
+              { status: "ATIVO", dataDesligamento: null },
+              { dataDesligamento: { gt: inicio } },
+            ],
             ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
               ? { idEstacao: req.dbContext.estacaoId }
               : {}),
@@ -395,7 +402,14 @@ const carregarDashboard = async (req, res) => {
     =============================== */
     // Turnos operacionais cadastrados no banco — filtrado pela estação atual
     const turnoNomes = [...new Set(turnos.map((t) => t.nomeTurno))];
-    const turnoIdMap = Object.fromEntries(turnos.map((t) => [t.nomeTurno, t.idTurno]));
+    // Prioriza o turno da estação atual; cai para idEstacao=null se não houver específico
+    const _estacaoIdParaMap = req.dbContext?.isGlobal ? null : (req.dbContext?.estacaoId ?? null);
+    const turnoIdMap = {};
+    for (const t of turnos) {
+      if (!turnoIdMap[t.nomeTurno] || t.idEstacao === _estacaoIdParaMap) {
+        turnoIdMap[t.nomeTurno] = t.idTurno;
+      }
+    }
 
     const turnoSetorAgg = {};
     const generoPorTurno = initTurnoMap(turnoNomes);
@@ -434,6 +448,13 @@ const carregarDashboard = async (req, res) => {
       .forEach((registroSnapshot) => {
       const c = registroSnapshot.colaborador;
       if (!c) return;
+
+      // Ignora colaboradores desligados — mas inclui quem foi desligado NA data ou depois
+      // (ex: desligado em 11/06 ainda deve aparecer no registro de 11/06, dia em que estava presente)
+      const dataRefSnap = new Date(registroSnapshot.dataReferencia);
+      const foiDesligadoDepois =
+        c.dataDesligamento && new Date(c.dataDesligamento) >= dataRefSnap;
+      if (!["ATIVO", "FERIAS", "AFASTADO"].includes(c.status) && !foiDesligadoDepois) return;
 
       // Verifica cargo na data do registro — colaborador pode ter mudado de cargo depois
       if (!isCargoElegivelNoDia(c.opsId, registroSnapshot.dataReferencia, c.cargo?.idCargo)) return;
@@ -551,6 +572,14 @@ const carregarDashboard = async (req, res) => {
       const c = f.colaborador;
       if (!c) return;
 
+      // Alinhado à Seção 5: registro sem tipo e sem hora não é lançamento real
+      if (isRegistroVazio(f)) return;
+
+      // Alinhado à Seção 5: inclui INATIVO apenas no dia do desligamento ou antes
+      const dataRefSnap6 = new Date(f.dataReferencia);
+      const foiDesligadoDepois6 = c.dataDesligamento && new Date(c.dataDesligamento) >= dataRefSnap6;
+      if (!["ATIVO", "FERIAS", "AFASTADO"].includes(c.status) && !foiDesligadoDepois6) return;
+
       // Verifica cargo na data do registro — colaborador pode ter mudado de cargo depois
       if (!isCargoElegivelNoDia(c.opsId, f.dataReferencia, c.cargo?.idCargo)) return;
 
@@ -577,11 +606,6 @@ const carregarDashboard = async (req, res) => {
         }
       }
     });
-
-    const absenteismoPeriodo =
-      totalHcAptoDias > 0
-        ? Number(((totalAusenciasDias / totalHcAptoDias) * 100).toFixed(2))
-        : 0;
 
     /* ===============================
        6️⃣.1 ATESTADOS MÉDICOS (origem: atestadosMedicos)
@@ -618,6 +642,20 @@ const carregarDashboard = async (req, res) => {
         );
 
         while (cur <= fimAtes) {
+          // Pula dias após o desligamento — colaborador INATIVO não conta como ausente
+          if (c.dataDesligamento && cur > new Date(c.dataDesligamento)) {
+            cur.setUTCDate(cur.getUTCDate() + 1);
+            continue;
+          }
+
+          // Pula dias de DSR — colaborador está de folga, não é ausência
+          const diaSemana = cur.getUTCDay();
+          const ehDiaDSR = (c.escala?.diasDsr || []).includes(diaSemana);
+          if (ehDiaDSR) {
+            cur.setUTCDate(cur.getUTCDate() + 1);
+            continue;
+          }
+
           const dataStr = isoDate(cur);
           const key = `${c.opsId}_${dataStr}`;
 
@@ -638,12 +676,42 @@ const carregarDashboard = async (req, res) => {
               diasFolga,
             });
             ausenciasSet.add(key);
+
+            // Colaborador tem atestado mas sem registro AM na frequência:
+            // sincroniza status e KPIs para que status card = tabela de ausentes
+            if (!turnoFiltro || turno === turnoFiltro) {
+              statusPorTurno[turno] = statusPorTurno[turno] || {};
+              statusPorTurno[turno]["Atestado Médico"] =
+                (statusPorTurno[turno]["Atestado Médico"] || 0) + 1;
+
+              if (!turnoSetorAgg[turno]) {
+                turnoSetorAgg[turno] = { turno, totalEscalados: 0, presentes: 0, ausentes: 0, setores: {} };
+              }
+              turnoSetorAgg[turno].totalEscalados++;
+              turnoSetorAgg[turno].ausentes++;
+
+              totalHcAptoDias++;
+              totalAusenciasDias++;
+
+              const dataRefStr = dataStr;
+              if (!tendenciaPorDia[dataRefStr]) {
+                tendenciaPorDia[dataRefStr] = { data: dataRefStr, presentes: 0, ausentes: 0, escalados: 0 };
+              }
+              tendenciaPorDia[dataRefStr].escalados++;
+              tendenciaPorDia[dataRefStr].ausentes++;
+            }
           }
 
           cur.setUTCDate(cur.getUTCDate() + 1);
         }
       }
     }
+
+    // Calculado APÓS seção 6.1 para incluir atestados sem registro em frequencia
+    const absenteismoPeriodo =
+      totalHcAptoDias > 0
+        ? Number(((totalAusenciasDias / totalHcAptoDias) * 100).toFixed(2))
+        : 0;
 
 /* ===============================
    7️⃣ DIARISTAS PRESENTES (REAIS)
@@ -662,9 +730,7 @@ await Promise.all(
           { data: { gte: new Date(isoDate(inicio) + "T00:00:00.000Z") } },
           { data: { lte: new Date(isoDate(fim) + "T00:00:00.000Z") } },
           { idTurno: turnoId },
-          ...(estacaoIdDash
-            ? [{ OR: [{ idEstacao: estacaoIdDash }, { idEstacao: null }] }]
-            : []),
+          ...(estacaoIdDash ? [{ idEstacao: estacaoIdDash }] : []),
         ],
       };
 
@@ -700,18 +766,43 @@ const datasNoPeriodo = [];
   }
 }
 
+// Mapa de turno nome → número (T1→1, T2→2, T3→3) para lookup na Calculadora
+// A Calculadora usa TURNO_COL = {1:3, 2:4, 3:5} que corresponde ao número do turno, não ao idTurno do banco
+const turnoNumeroMap = {};
+for (const t of turnoNomes) {
+  const m = t.match(/(\d+)$/);
+  if (m) turnoNumeroMap[t] = Number(m[1]);
+}
+
+console.log("📌 estacaoIdDash:", estacaoIdDash, "ESTACAO_SHEETS:", ESTACAO_SHEETS, "match:", estacaoIdDash === ESTACAO_SHEETS);
+console.log("📌 turnoIdMap:", turnoIdMap);
+console.log("📌 turnoNumeroMap:", turnoNumeroMap);
+
 for (const turno of turnoNomes) {
   try {
-    if (!estacaoIdDash || estacaoIdDash === ESTACAO_SHEETS) {
-      // Estação 1 ou global: busca no Sheets — soma todas as datas do período
+    if (!estacaoIdDash) {
+      // Contexto global sem estação: busca no Sheets daily_plan
       let total = 0;
       for (const dataStr of datasNoPeriodo) {
         const resultado = await buscarDwPlanejado(turno, dataStr);
         total += Number(resultado?.data?.dwPlanejado || 0);
       }
       diaristasPlanejadosPorTurno[turno] = total;
+    } else if (Number(estacaoIdDash) === ESTACAO_SHEETS) {
+      // Estação 1: busca na aba Calculadora (mesma fonte do Daily Works)
+      // Usa o número do turno (T1→1, T2→2, T3→3) que é o que TURNO_COL espera
+      const turnoNum = turnoNumeroMap[turno];
+      if (!turnoNum) continue;
+      const requests = datasNoPeriodo.map((dataStr) => ({ dataISO: dataStr, idTurno: turnoNum }));
+      const resultMap = await buscarDwPlanejadoCalculadoraBatch(requests);
+      let total = 0;
+      for (const dataStr of datasNoPeriodo) {
+        total += resultMap.get(`${dataStr}_${turnoNum}`) || 0;
+      }
+      console.log(`📌 Calculadora ${turno} (turnoNum=${turnoNum}):`, total);
+      diaristasPlanejadosPorTurno[turno] = total;
     } else {
-      // Demais estações: busca no banco pelo range
+      // Demais estações: busca no banco
       const turnoId = turnoIdMap[turno];
       if (!turnoId) continue;
       const registros = await prisma.dwPlanejado.findMany({
@@ -729,7 +820,9 @@ for (const turno of turnoNomes) {
   }
 }
 
+console.log("📌 turnoNomes:", turnoNomes);
 console.log("📌 diaristasPlanejadosPorTurno:", diaristasPlanejadosPorTurno);
+console.log("📌 diaristasPresentes:", diaristasPresentes);
 
 /* ===============================
    7️⃣.2 KPIs DIARISTAS (TOTAIS)

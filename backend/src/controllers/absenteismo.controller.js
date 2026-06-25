@@ -46,7 +46,10 @@ function buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras = {}
     ],
     colaborador: {
       is: {
-        status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
+        OR: [
+          { status: { in: ["ATIVO", "FERIAS", "AFASTADO"] } },
+          { dataDesligamento: { gte: inicioDate } },
+        ],
         cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
         ...(empresaIds.length
           ? { idEmpresa: { in: empresaIds.map(Number) } }
@@ -68,10 +71,13 @@ function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras 
   const { setorNome, turnoNome } = extras;
   return {
     dataReferencia: { gte: inicioDate, lte: fimDate },
-    tipoAusencia: { is: { codigo: { in: ["F", "FJ"] } } },
+    tipoAusencia: { is: { codigo: { in: ["F", "FJ", "AM", "AA"] } } },
     colaborador: {
       is: {
-        status: { in: ["ATIVO", "FERIAS", "AFASTADO"] },
+        OR: [
+          { status: { in: ["ATIVO", "FERIAS", "AFASTADO"] } },
+          { dataDesligamento: { gte: inicioDate } },
+        ],
         cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
         ...(empresaIds.length
           ? { idEmpresa: { in: empresaIds.map(Number) } }
@@ -89,9 +95,14 @@ function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras 
 function buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = []) {
   const { setorNome, turnoNome } = extras;
   return {
-    dataInicio: { gte: inicioDate, lte: fimDate },
+    dataInicio: { lte: fimDate },
+    dataFim:    { gte: inicioDate },
     status: { not: "CANCELADO" },
     colaborador: {
+      OR: [
+        { status: { in: ["ATIVO", "FERIAS", "AFASTADO"] } },
+        { dataDesligamento: { gte: inicioDate } },
+      ],
       cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
       ...(empresaIds.length
         ? { idEmpresa: { in: empresaIds.map(Number) } }
@@ -247,13 +258,28 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
 
     const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-    const [faltas, atestados, hcAptoRecords] = await Promise.all([
+    const [frequenciasAll, atestados, hcAptoRecords] = await Promise.all([
+      // Busca TODOS os registros (igual ao operacional) — filtra código em JS para evitar problemas com is/nullable
       prisma.frequencia.findMany({
-        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
+        where: {
+          dataReferencia: { gte: inicioDate, lte: fimDate },
+          colaborador: {
+            is: {
+              cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
+              ...(empresaIds.length
+                ? { idEmpresa: { in: empresaIds.map(Number) } }
+                : empresaId ? { idEmpresa: Number(empresaId) } : {}),
+              ...(estacaoId && { idEstacao: estacaoId }),
+              ...(extras.setorNome && { setor: { is: { nomeSetor: extras.setorNome } } }),
+              ...(extras.turnoNome && { turno: { is: { nomeTurno: extras.turnoNome } } }),
+            },
+          },
+        },
         include: {
           colaborador: {
             include: { empresa: true, setor: true, turno: true, lider: true, escala: true },
           },
+          tipoAusencia: true,
         },
       }),
       prisma.atestadoMedico.findMany({
@@ -270,6 +296,19 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
       }),
     ]);
 
+    // Filtra em JS: apenas F/FJ/AM/AA, exclui desligados antes do período
+    const CODIGOS_AUSENCIA = new Set(["F", "FJ", "AM", "AA"]);
+    const faltas = frequenciasAll.filter((f) => {
+      const codigo = f.tipoAusencia?.codigo?.toUpperCase();
+      if (!CODIGOS_AUSENCIA.has(codigo)) return false;
+      const c = f.colaborador;
+      if (!c) return false;
+      if (!["ATIVO", "FERIAS", "AFASTADO"].includes(c.status)) {
+        if (!c.dataDesligamento || new Date(c.dataDesligamento) < inicioDate) return false;
+      }
+      return true;
+    });
+
     /* acc: cada chave armazena { faltas, atestados } */
     const acc = { empresa: {}, setor: {}, turno: {}, genero: {}, lider: {}, diaSemana: {}, escala: {} };
 
@@ -277,6 +316,9 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
       if (!obj[key]) obj[key] = { faltas: 0, atestados: 0 };
       obj[key][tipo]++;
     };
+
+    // opsIds já contados via frequencia — evita double-count com atestadoMedico
+    const opsIdsNaFrequencia = new Set(faltas.map(f => f.opsId));
 
     for (const f of faltas) {
       const c = f.colaborador;
@@ -293,9 +335,11 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
     for (const a of atestados) {
       const c = a.colaborador;
       if (!c) continue;
+      // Pula se já contado via frequencia (evita double-count AM/AA + atestadoMedico)
+      if (opsIdsNaFrequencia.has(a.opsId)) continue;
       inc(acc.empresa,   c.empresa?.razaoSocial || "N/I", "atestados");
       inc(acc.setor,     c.setor?.nomeSetor      || "N/I", "atestados");
-      inc(acc.turno,     c.turno?.nomeTurno      || "N/I", "atestados");
+      // turno: não conta atestados de afastados sem registro em frequencia — mantém coerência com dashboard operacional
       inc(acc.genero,    c.genero                || "N/I", "atestados");
       inc(acc.lider,     c.lider?.nomeCompleto   || "Sem líder", "atestados");
       inc(acc.diaSemana, DIAS_SEMANA[new Date(a.dataInicio).getDay()]          , "atestados");
@@ -321,10 +365,12 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
         .map(([name, v]) => ({ name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados }))
         .sort((a, b) => b.value - a.value);
 
-    /* toArray com HC Apto — adiciona headcount e taxa real */
-    const toArrayWithHc = (obj, hcMap) =>
-      Object.entries(obj)
-        .map(([name, v]) => {
+    /* toArray com HC Apto — inclui todos os turnos/empresas com HC, mesmo com 0 ausências */
+    const toArrayWithHc = (obj, hcMap) => {
+      const allKeys = new Set([...Object.keys(obj), ...Object.keys(hcMap)]);
+      return Array.from(allKeys)
+        .map((name) => {
+          const v = obj[name] || { faltas: 0, atestados: 0 };
           const headcount = hcMap[name] || 0;
           const taxa = headcount > 0
             ? Number((((v.faltas + v.atestados) / headcount) * 100).toFixed(2))
@@ -332,6 +378,7 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
           return { name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados, headcount, taxa };
         })
         .sort((a, b) => b.value - a.value);
+    };
 
     return successResponse(res, {
       porEmpresa:   toArrayWithHc(acc.empresa, hcEmpresa),
@@ -371,7 +418,7 @@ const getTendenciaAbsenteismo = async (req, res) => {
       }),
       prisma.atestadoMedico.findMany({
         where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
-        select: { dataInicio: true },
+        select: { dataInicio: true, dataFim: true },
       }),
     ]);
 
@@ -389,11 +436,15 @@ const getTendenciaAbsenteismo = async (req, res) => {
       }
     });
 
-    /* atestados por dia de início */
+    /* atestados — expande por todos os dias cobertos (clamped ao período consultado) */
     atestados.forEach((a) => {
-      const key = a.dataInicio.toISOString().slice(0, 10);
-      if (!mapa[key]) mapa[key] = { faltas: 0, atestados: 0 };
-      mapa[key].atestados += 1;
+      const di = new Date(Math.max(new Date(a.dataInicio).getTime(), inicioDate.getTime()));
+      const df = new Date(Math.min(new Date(a.dataFim).getTime(),    fimDate.getTime()));
+      for (let d = new Date(di); d <= df; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().slice(0, 10);
+        if (!mapa[key]) mapa[key] = { faltas: 0, atestados: 0 };
+        mapa[key].atestados += 1;
+      }
     });
 
     const resultado = Object.entries(mapa)

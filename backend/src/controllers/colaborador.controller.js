@@ -14,7 +14,14 @@ const {
   errorResponse,
   forbiddenResponse,
 } = require("../utils/response");
-const { gerarDSRBackfillColaborador, gerarDSRFuturoColaborador, gerarOnboardingColaborador } = require("../services/dsrBackfill.service");
+const {
+  gerarDSRBackfillColaborador,
+  gerarDSRFuturoColaborador,
+  gerarOnboardingColaborador,
+  gerarFrequenciaDesligamento,
+  gerarFrequenciaAfastamento,
+  gerarNcPreAdmissao,
+} = require("../services/dsrBackfill.service");
 
 
 /* ================= HELPERS DE DATA (BR) ================= */
@@ -635,6 +642,16 @@ const createColaborador = async (req, res) => {
         tx,
       });
 
+      /* =========================
+         NC PRÉ-ADMISSÃO
+         Preenche os dias do mês antes da admissão com NC
+      ========================= */
+      await gerarNcPreAdmissao({
+        opsId: novo.opsId,
+        dataAdmissao: dataAdmissaoDate || hoje,
+        tx,
+      });
+
       nomeEscalaCreate = escalaCriada?.nomeEscala ?? null;
       novoOpsId = novo.opsId;
 
@@ -852,6 +869,8 @@ const updateColaborador = async (req, res) => {
     console.log("📦 DATA FINAL:", data);
 
     let nomeEscalaParaDSR = null;
+    let payloadDesligamento = null; // { dataDesligamento, tipoDesligamento }
+    let payloadAfastamento  = null; // { dataInicio, dataFim }
 
     const colaborador = await prisma.$transaction(async (tx) => {
       const hoje = startOfDayBR();
@@ -906,6 +925,11 @@ const updateColaborador = async (req, res) => {
             },
           });
         }
+
+        payloadDesligamento = {
+          dataDesligamento: dataDesl,
+          tipoDesligamento: tipoDesligamento ?? atual.tipoDesligamento ?? "DP",
+        };
       }
 
       /* =========================
@@ -944,6 +968,13 @@ const updateColaborador = async (req, res) => {
               },
             });
           }
+        }
+
+        if (virouAfastado) {
+          payloadAfastamento = {
+            dataInicio: atualizado.dataInicioStatus,
+            dataFim:    atualizado.dataFimStatus,
+          };
         }
       }
 
@@ -1029,6 +1060,32 @@ const updateColaborador = async (req, res) => {
         dataInicio: colaborador.dataAdmissao,
         idEstacao: idEstacaoColab,
       });
+    }
+
+    if (payloadDesligamento) {
+      try {
+        await gerarFrequenciaDesligamento({
+          opsId,
+          dataDesligamento: payloadDesligamento.dataDesligamento,
+          tipoDesligamento:  payloadDesligamento.tipoDesligamento,
+        });
+        console.log(`✅ Frequência desligamento gerada para ${opsId}`);
+      } catch (e) {
+        console.error(`❌ Erro ao gerar frequência desligamento para ${opsId}:`, e.message);
+      }
+    }
+
+    if (payloadAfastamento) {
+      try {
+        await gerarFrequenciaAfastamento({
+          opsId,
+          dataInicio: payloadAfastamento.dataInicio,
+          dataFim:    payloadAfastamento.dataFim,
+        });
+        console.log(`✅ Frequência afastamento gerada para ${opsId}`);
+      } catch (e) {
+        console.error(`❌ Erro ao gerar frequência afastamento para ${opsId}:`, e.message);
+      }
     }
 
     return successResponse(
@@ -1448,13 +1505,19 @@ const importColaboradores = async (req, res) => {
 
           existing ? atualizados++ : criados++;
 
-          // Onboarding: apenas para colaboradores novos
-          if (!existing) {
-            try {
+          // Onboarding: gera se ainda não existir registro para o dia de admissão
+          try {
+            const dia1 = new Date(`${dataAdmissao.toISOString().slice(0, 10)}T00:00:00.000Z`);
+            const jaTemOnboarding = await prisma.frequencia.findFirst({
+              where: { opsId: colab.opsId, dataReferencia: dia1 },
+              select: { idFrequencia: true },
+            });
+            if (!jaTemOnboarding) {
               await gerarOnboardingColaborador({ opsId: colab.opsId, dataAdmissao });
-            } catch (onboardErr) {
-              console.warn(`⚠ Onboarding falhou para ${colab.opsId}: ${onboardErr.message}`);
+              console.log(`✅ Onboarding gerado para ${colab.opsId} (admissão: ${dataAdmissao.toISOString().slice(0, 10)})`);
             }
+          } catch (onboardErr) {
+            console.error(`❌ Onboarding falhou para ${colab.opsId}: ${onboardErr.message}`);
           }
 
         } catch (err) {
@@ -1573,6 +1636,48 @@ const backfillDSRTodos = async (req, res) => {
     if (erros.length) console.error("❌ Erros backfill DSR:", erros.slice(0, 10));
   } catch (err) {
     console.error("❌ BACKFILL DSR:", err);
+  }
+};
+
+/* ================= BACKFILL NC PRÉ-ADMISSÃO (MÊS ATUAL) ================= */
+const backfillNcPreAdmissao = async (req, res) => {
+  const agora = new Date();
+  const anoAtual = agora.getUTCFullYear();
+  const mesAtual = agora.getUTCMonth(); // 0-based
+
+  const inicioMes = new Date(Date.UTC(anoAtual, mesAtual, 1));
+  const fimMes    = new Date(Date.UTC(anoAtual, mesAtual + 1, 0, 23, 59, 59, 999));
+
+  res.json({ sucesso: true, mensagem: "Backfill NC pré-admissão iniciado em background. Verifique os logs do servidor." });
+
+  try {
+    const colaboradores = await prisma.colaborador.findMany({
+      where: {
+        dataAdmissao: { gte: inicioMes, lte: fimMes },
+      },
+      select: { opsId: true, dataAdmissao: true, nomeCompleto: true },
+    });
+
+    console.log(`[backfillNcPreAdmissao] ${colaboradores.length} colaborador(es) com admissão no mês atual`);
+
+    let processados = 0;
+    const erros = [];
+
+    for (const c of colaboradores) {
+      try {
+        await gerarNcPreAdmissao({ opsId: c.opsId, dataAdmissao: c.dataAdmissao });
+        processados++;
+        console.log(`✅ NC pré-admissão gerado para ${c.opsId} (${c.nomeCompleto}) — admissão: ${new Date(c.dataAdmissao).toISOString().slice(0, 10)}`);
+      } catch (err) {
+        erros.push({ opsId: c.opsId, erro: err.message });
+        console.error(`❌ Falhou para ${c.opsId}:`, err.message);
+      }
+    }
+
+    console.log(`[backfillNcPreAdmissao] Concluído. Processados: ${processados}, Erros: ${erros.length}`);
+    if (erros.length) console.log("Erros:", erros);
+  } catch (err) {
+    console.error("❌ ERRO backfillNcPreAdmissao:", err);
   }
 };
 
@@ -1745,4 +1850,5 @@ module.exports = {
   listarFiltrosEstacao,
   exportarCsvColaboradores,
   backfillDSRTodos,
+  backfillNcPreAdmissao,
 };

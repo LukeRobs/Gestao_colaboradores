@@ -14,6 +14,14 @@ router.post(
   asyncHandler(controller.backfillDSRTodos)
 );
 
+/* ================= BACKFILL NC PRÉ-ADMISSÃO ================= */
+router.post(
+  "/backfill-nc-pre-admissao",
+  authenticate,
+  authorize("ADMIN"),
+  asyncHandler(controller.backfillNcPreAdmissao)
+);
+
 /* ================= IMPORT CSV ================= */
 router.post(
   "/import",

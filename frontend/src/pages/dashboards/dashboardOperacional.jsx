@@ -212,7 +212,9 @@ export default function DashboardOperacional() {
   const diaristasPlanejados = turnoData.diaristasPlanejados || 0;
   const diaristasPresentes = turnoData.diaristasPresentes || 0;
 
-  const aderenciaDW = Number(turnoData.aderenciaDW || 0);
+  const aderenciaDW = diaristasPlanejados > 0
+    ? Number(((diaristasPresentes / diaristasPlanejados) * 100).toFixed(2))
+    : 0;
 
   const shareDiaristas =
     presentes > 0

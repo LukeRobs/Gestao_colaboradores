@@ -29,6 +29,7 @@ export default function ColaboradoresPage() {
   const [turnos, setTurnos] = useState([]);
   const [setores, setSetores] = useState([]);
   const [exportando, setExportando] = useState(false);
+  const [backfillNcLoading, setBackfillNcLoading] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -149,6 +150,19 @@ export default function ColaboradoresPage() {
   const handleSetorChange = (val) => {
     setSetorSelecionado(val);
     setPage(1);
+  };
+
+  const handleBackfillNc = async () => {
+    if (!window.confirm("Preencher NC para todos os colaboradores admitidos neste mês (dias anteriores à admissão)? Esta ação não pode ser desfeita.")) return;
+    try {
+      setBackfillNcLoading(true);
+      await ColaboradoresAPI.backfillNcPreAdmissao();
+      toast.success("Backfill NC iniciado. Verifique os logs para acompanhar.");
+    } catch {
+      toast.error("Erro ao executar backfill NC.");
+    } finally {
+      setBackfillNcLoading(false);
+    }
   };
 
   const handleExportarCsv = async () => {
@@ -298,6 +312,18 @@ export default function ColaboradoresPage() {
                   <Download size={15} />
                   {exportando ? "Gerando CSV…" : "Exportar CSV"}
                 </button>
+
+                {/* BACKFILL NC — apenas ADMIN */}
+                {permissions.isAdmin && (
+                  <button
+                    onClick={handleBackfillNc}
+                    disabled={backfillNcLoading}
+                    title="Preenche NC no banco para dias anteriores à admissão (mês atual)"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-default hover:bg-surface-2 hover:border-yellow-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium text-muted rounded-xl transition"
+                  >
+                    {backfillNcLoading ? "Processando…" : "Preencher NC"}
+                  </button>
+                )}
 
                 {/* NOVO COLABORADOR */}
                 {(permissions.isAdmin || permissions.isAltaGestao) && (
