@@ -470,6 +470,14 @@ const carregarDashboard = async (req, res) => {
     }
     const frequenciasDedup = [..._freqDedupMap.values()];
 
+    // Set de (opsId_data) onde o registro vencedor NÃO é AM/F — impede que a Seção 6.1
+    // insira o atestado da tabela separada quando já existe FO/P/DSR para o mesmo dia.
+    const _overrideAtestadoSet = new Set();
+    for (const [key, f] of _freqDedupMap) {
+      const p = _prioridadeFreq(f);
+      if (p < 4) _overrideAtestadoSet.add(key); // prioridade 0-3: DSR, FO, P, BH/S1/etc.
+    }
+
     /* ===============================
        5️⃣ LOOP PRINCIPAL (ALINHADO AO ADMIN)
     =============================== */
@@ -689,7 +697,7 @@ const carregarDashboard = async (req, res) => {
           const dataStr = isoDate(cur);
           const key = `${c.opsId}_${dataStr}`;
 
-          if (!ausenciasSet.has(key)) {
+          if (!ausenciasSet.has(key) && !_overrideAtestadoSet.has(key)) {
             ausenciasHoje.push({
               colaboradorId: c.opsId,
               nome: c.nomeCompleto,
