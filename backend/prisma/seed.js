@@ -22,6 +22,7 @@ async function main() {
       { codigo: "AF", descricao: "Afastado" },
       { codigo: "AA", descricao: "Atestado de Acompanhamento" },
       { codigo: "T", descricao: "Transferido" },
+      { codigo: "SU", descricao: "Suspensão" },
     ],
   });
 

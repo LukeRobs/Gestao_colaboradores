@@ -66,12 +66,13 @@ function buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras = {}
 
 /**
  * extras: { setorNome, turnoNome }  — drill-down dinâmico
+ * codigos: códigos de tipoAusencia a considerar — "F"/"FJ" = faltas; "AA" = atestado de acompanhamento (sem tabela própria)
  */
-function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = []) {
+function buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras = {}, empresaIds = [], codigos = ["F", "FJ"]) {
   const { setorNome, turnoNome } = extras;
   return {
     dataReferencia: { gte: inicioDate, lte: fimDate },
-    tipoAusencia: { is: { codigo: { in: ["F", "FJ", "AM", "AA"] } } },
+    tipoAusencia: { is: { codigo: { in: codigos } } },
     colaborador: {
       is: {
         OR: [
@@ -133,7 +134,7 @@ const getResumoAbsenteismo = async (req, res) => {
     const fimDate   = dateOnlyBrasil(fim);
 
     /* ── Busca paralela ── */
-    const [faltasPeriodo, atestadosPeriodo] = await Promise.all([
+    const [faltasPeriodo, atestadosPeriodo, aaPeriodo] = await Promise.all([
       prisma.frequencia.findMany({
         where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { opsId: true, dataReferencia: true },
@@ -142,27 +143,35 @@ const getResumoAbsenteismo = async (req, res) => {
         where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { opsId: true, diasAfastamento: true },
       }),
+      // AA (atestado de acompanhamento) não tem tabela própria — vem só da frequência, contado como atestado
+      prisma.frequencia.findMany({
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds, ["AA"]),
+        select: { opsId: true, dataReferencia: true },
+      }),
     ]);
 
-    /* deduplication de faltas por opsId+data */
-    const faltasUnicas = new Set(faltasPeriodo.map(f => `${f.opsId}_${f.dataReferencia}`)).size;
-    const totalAtestados = atestadosPeriodo.length;
+    /* deduplication de faltas/AA por opsId+data */
+    const faltasUnicas   = new Set(faltasPeriodo.map(f => `${f.opsId}_${f.dataReferencia}`)).size;
+    const aaUnicas        = new Set(aaPeriodo.map(a => `${a.opsId}_${a.dataReferencia}`)).size;
+    const totalAtestados = atestadosPeriodo.length + aaUnicas;
     const totalPeriodo   = faltasUnicas + totalAtestados;
 
-    const diasAfastadosAtestado = atestadosPeriodo.reduce((acc, a) => acc + (a.diasAfastamento || 0), 0);
+    const diasAfastadosAtestado = atestadosPeriodo.reduce((acc, a) => acc + (a.diasAfastamento || 0), 0) + aaUnicas;
     const diasAfastados = faltasUnicas + diasAfastadosAtestado;
 
     /* colaboradores impactados = union dos opsIds */
     const opsIds = new Set([
       ...faltasPeriodo.map(f => f.opsId),
       ...atestadosPeriodo.map(a => a.opsId),
+      ...aaPeriodo.map(a => a.opsId),
     ]);
     const colaboradoresImpactados = opsIds.size;
 
-    /* recorrência: colaboradores com ≥2 ausências (faltas + atestados somados) */
+    /* recorrência: colaboradores com ≥2 ausências (faltas + atestados + AA somados) */
     const mapaAusencias = {};
     faltasPeriodo.forEach(f => { mapaAusencias[f.opsId] = (mapaAusencias[f.opsId] || 0) + 1; });
     atestadosPeriodo.forEach(a => { mapaAusencias[a.opsId] = (mapaAusencias[a.opsId] || 0) + 1; });
+    aaPeriodo.forEach(a => { mapaAusencias[a.opsId] = (mapaAusencias[a.opsId] || 0) + 1; });
     const colaboradoresRecorrentes = Object.values(mapaAusencias).filter(q => q >= 2).length;
     const recorrencia = colaboradoresImpactados > 0
       ? Number(((colaboradoresRecorrentes / colaboradoresImpactados) * 100).toFixed(2))
@@ -205,16 +214,19 @@ const getResumoAbsenteismo = async (req, res) => {
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
     const [
-      faltasHoje, atestadosHoje,
-      faltasSemana, atestadosSemana,
-      faltasMes, atestadosMes,
+      faltasHoje, atestadosHoje, aaHoje,
+      faltasSemana, atestadosSemana, aaSemana,
+      faltasMes, atestadosMes, aaMes,
     ] = await Promise.all([
       prisma.frequencia.count({ where: buildWhereFrequencia(referencia, referencia, empresaId, estacaoId, extras, empresaIds) }),
       prisma.atestadoMedico.count({ where: buildWhereAtestado(referencia, referencia, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.frequencia.count({ where: buildWhereFrequencia(referencia, referencia, empresaId, estacaoId, extras, empresaIds, ["AA"]) }),
       prisma.frequencia.count({ where: buildWhereFrequencia(inicioSemana, hoje, empresaId, estacaoId, extras, empresaIds) }),
       prisma.atestadoMedico.count({ where: buildWhereAtestado(inicioSemana, hoje, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.frequencia.count({ where: buildWhereFrequencia(inicioSemana, hoje, empresaId, estacaoId, extras, empresaIds, ["AA"]) }),
       prisma.frequencia.count({ where: buildWhereFrequencia(inicioMes, hoje, empresaId, estacaoId, extras, empresaIds) }),
       prisma.atestadoMedico.count({ where: buildWhereAtestado(inicioMes, hoje, empresaId, estacaoId, extras, empresaIds) }),
+      prisma.frequencia.count({ where: buildWhereFrequencia(inicioMes, hoje, empresaId, estacaoId, extras, empresaIds, ["AA"]) }),
     ]);
 
     return successResponse(res, {
@@ -229,9 +241,9 @@ const getResumoAbsenteismo = async (req, res) => {
         percentualHC,
         taxaAbsenteismo,
         hcApto,
-        hoje:   faltasHoje + atestadosHoje,
-        semana: faltasSemana + atestadosSemana,
-        mes:    faltasMes + atestadosMes,
+        hoje:   faltasHoje + atestadosHoje + aaHoje,
+        semana: faltasSemana + atestadosSemana + aaSemana,
+        mes:    faltasMes + atestadosMes + aaMes,
       },
     });
   } catch (err) {
@@ -296,18 +308,19 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
       }),
     ]);
 
-    // Filtra em JS: apenas F/FJ/AM/AA, exclui desligados antes do período
-    const CODIGOS_AUSENCIA = new Set(["F", "FJ", "AM", "AA"]);
-    const faltas = frequenciasAll.filter((f) => {
-      const codigo = f.tipoAusencia?.codigo?.toUpperCase();
-      if (!CODIGOS_AUSENCIA.has(codigo)) return false;
+    // Filtra em JS: exclui desligados antes do período
+    const colaboradorValido = (f) => {
       const c = f.colaborador;
       if (!c) return false;
       if (!["ATIVO", "FERIAS", "AFASTADO"].includes(c.status)) {
         if (!c.dataDesligamento || new Date(c.dataDesligamento) < inicioDate) return false;
       }
       return true;
-    });
+    };
+    const CODIGOS_FALTA = new Set(["F", "FJ"]);
+    const faltas = frequenciasAll.filter((f) => CODIGOS_FALTA.has(f.tipoAusencia?.codigo?.toUpperCase()) && colaboradorValido(f));
+    // AA (atestado de acompanhamento) não tem tabela própria — vem só da frequência, contado como atestado
+    const aaRegistros = frequenciasAll.filter((f) => f.tipoAusencia?.codigo?.toUpperCase() === "AA" && colaboradorValido(f));
 
     /* acc: cada chave armazena { faltas, atestados } */
     const acc = { empresa: {}, setor: {}, turno: {}, genero: {}, lider: {}, diaSemana: {}, escala: {} };
@@ -343,6 +356,19 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
       inc(acc.genero,    c.genero                || "N/I", "atestados");
       inc(acc.lider,     c.lider?.nomeCompleto   || "Sem líder", "atestados");
       inc(acc.diaSemana, DIAS_SEMANA[new Date(a.dataInicio).getDay()]          , "atestados");
+      inc(acc.escala,    c.escala?.nomeEscala    || "N/I", "atestados");
+    }
+
+    /* AA (atestado de acompanhamento) — conta como atestado */
+    for (const a of aaRegistros) {
+      const c = a.colaborador;
+      if (!c) continue;
+      inc(acc.empresa,   c.empresa?.razaoSocial || "N/I", "atestados");
+      inc(acc.setor,     c.setor?.nomeSetor      || "N/I", "atestados");
+      inc(acc.turno,     c.turno?.nomeTurno      || "N/I", "atestados");
+      inc(acc.genero,    c.genero                || "N/I", "atestados");
+      inc(acc.lider,     c.lider?.nomeCompleto   || "Sem líder", "atestados");
+      inc(acc.diaSemana, DIAS_SEMANA[new Date(a.dataReferencia).getDay()]     , "atestados");
       inc(acc.escala,    c.escala?.nomeEscala    || "N/I", "atestados");
     }
 
@@ -411,7 +437,7 @@ const getTendenciaAbsenteismo = async (req, res) => {
     const inicioDate = dateOnlyBrasil(inicio);
     const fimDate   = dateOnlyBrasil(fim);
 
-    const [faltas, atestados] = await Promise.all([
+    const [faltas, atestados, aaRegistros] = await Promise.all([
       prisma.frequencia.findMany({
         where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { opsId: true, dataReferencia: true },
@@ -419,6 +445,11 @@ const getTendenciaAbsenteismo = async (req, res) => {
       prisma.atestadoMedico.findMany({
         where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         select: { dataInicio: true, dataFim: true },
+      }),
+      // AA (atestado de acompanhamento) não tem tabela própria — vem só da frequência, contado como atestado
+      prisma.frequencia.findMany({
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds, ["AA"]),
+        select: { opsId: true, dataReferencia: true },
       }),
     ]);
 
@@ -442,6 +473,18 @@ const getTendenciaAbsenteismo = async (req, res) => {
       const df = new Date(Math.min(new Date(a.dataFim).getTime(),    fimDate.getTime()));
       for (let d = new Date(di); d <= df; d.setDate(d.getDate() + 1)) {
         const key = d.toISOString().slice(0, 10);
+        if (!mapa[key]) mapa[key] = { faltas: 0, atestados: 0 };
+        mapa[key].atestados += 1;
+      }
+    });
+
+    /* AA por dia (unique opsId+data) — conta como atestado */
+    const aaVistos = new Set();
+    aaRegistros.forEach((a) => {
+      const key = a.dataReferencia.toISOString().slice(0, 10);
+      const uniq = `${a.opsId}_${key}`;
+      if (!aaVistos.has(uniq)) {
+        aaVistos.add(uniq);
         if (!mapa[key]) mapa[key] = { faltas: 0, atestados: 0 };
         mapa[key].atestados += 1;
       }
@@ -479,7 +522,7 @@ const getColaboradoresAbsenteismo = async (req, res) => {
     const inicioDate = dateOnlyBrasil(inicio);
     const fimDate   = dateOnlyBrasil(fim);
 
-    const [faltas, atestados] = await Promise.all([
+    const [faltas, atestados, aaRegistros] = await Promise.all([
       prisma.frequencia.findMany({
         where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
         include: {
@@ -490,6 +533,15 @@ const getColaboradoresAbsenteismo = async (req, res) => {
       }),
       prisma.atestadoMedico.findMany({
         where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
+        include: {
+          colaborador: {
+            include: { empresa: true, setor: true, turno: true, escala: true },
+          },
+        },
+      }),
+      // AA (atestado de acompanhamento) não tem tabela própria — vem só da frequência, contado como atestado
+      prisma.frequencia.findMany({
+        where: buildWhereFrequencia(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds, ["AA"]),
         include: {
           colaborador: {
             include: { empresa: true, setor: true, turno: true, escala: true },
@@ -545,6 +597,30 @@ const getColaboradoresAbsenteismo = async (req, res) => {
       }
       mapa[a.opsId].totalAtestados += 1;
       mapa[a.opsId].diasAfastados  += a.diasAfastamento || 0;
+    });
+
+    /* AA (atestado de acompanhamento) — conta como atestado, 1 dia cada */
+    aaRegistros.forEach((a) => {
+      const c = a.colaborador;
+      if (!c) return;
+      if (!mapa[c.opsId]) {
+        mapa[c.opsId] = {
+          opsId: c.opsId,
+          matricula: c.matricula || "N/I",
+          nome: c.nomeCompleto,
+          empresa: c.empresa?.razaoSocial || "N/I",
+          setor: c.setor?.nomeSetor || "N/I",
+          turno: c.turno?.nomeTurno || "N/I",
+          escala: c.escala?.nomeEscala || "N/I",
+          diasDsrEscala: c.escala?.diasDsr || [],
+          tempoCasa: getFaixaTempoCasa(c.dataAdmissao, fimDate),
+          diasFaltas: new Set(),
+          totalAtestados: 0,
+          diasAfastados: 0,
+        };
+      }
+      mapa[c.opsId].totalAtestados += 1;
+      mapa[c.opsId].diasAfastados  += 1;
     });
 
     const lista = Object.values(mapa)
