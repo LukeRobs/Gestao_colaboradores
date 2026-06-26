@@ -14,10 +14,22 @@ import MainLayout from "../../components/MainLayout";
 import { AuthContext } from "../../context/AuthContext";
 // import CapacidadeTable from "../../components/gestaoOperacional/CapacidadeTable"; // Comentado - será usado futuramente
 
+// Retorna a data padrão para o turno selecionado.
+// T3 começa às 22h: se ainda não chegou às 22h, o "T3 ativo" é o de ontem.
+function getDataDefaultParaTurno(nomeTurno) {
+  const agora = new Date();
+  if (nomeTurno === "T3" && agora.getHours() < 22) {
+    const ontem = new Date(agora);
+    ontem.setDate(ontem.getDate() - 1);
+    return ontem.toISOString().slice(0, 10);
+  }
+  return agora.toISOString().slice(0, 10);
+}
+
 export default function GestaoOperacional() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [turno, setTurno] = useState("T1");
+  const [data, setData] = useState(() => getDataDefaultParaTurno("T1"));
   const { turnos: turnosOperacionais } = useTurnosOperacionais();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -493,7 +505,11 @@ export default function GestaoOperacional() {
                 <label className="text-sm text-muted">Turno:</label>
                 <select
                   value={turno}
-                  onChange={(e) => setTurno(e.target.value)}
+                  onChange={(e) => {
+                    const novoTurno = e.target.value;
+                    setTurno(novoTurno);
+                    setData(getDataDefaultParaTurno(novoTurno));
+                  }}
                   className="px-4 py-2 bg-surface border border-default rounded-lg text-page"
                 >
                   {turnosOperacionais.map((t) => (

@@ -1,44 +1,86 @@
 # Changelog
 
-## [Atual] — 2026-05-14
+## [Atual] — 2026-06-26
 
-### Dashboard de Desligamentos
+### Dashboard Operacional / Administrativo
 
-- **Gráficos de barras horizontais** — distribuição de desligamentos por motivo e por empresa agora exibida em gráficos de barra horizontal com labels de valor direto na barra, sem precisar do eixo.
-- **Seção de detalhamento** — tabela paginada (50 por página) com busca por nome e ordenação por coluna, listando cada desligamento do período filtrado.
+- **HC Operacional Escalado** — passa a contar todos os colaboradores ATIVOS elegíveis no período, não apenas quem tem registro de frequência lançado.
+- **Critério de "trabalhando normalmente"** — colaborador sem nenhum registro no período conta como trabalhando; colaborador com apenas registros não-escalados (DSR/FE/AFA) passa a ser excluído dessa contagem.
+- **Status dos colaboradores** — o card de status agora usa a mesma lista já filtrada das demais seções, eliminando divergência entre KPIs.
+- **Acumulado multi-dia** — o dashboard operacional passa a suportar acumulado de múltiplos dias, não só o dia corrente.
+- **HC por empresa acumulado** — o headcount por empresa é somado ao longo do período filtrado, com labels da seção adaptados.
+- **Desligados no fluxo de KPIs** — colaborador inativo aparece corretamente no dia do desligamento; colaboradores desligados após a data de referência voltam a entrar nos KPIs e no status do dia; recém-desligados voltam a contar nas ausências, alinhando com o operacional.
+- **Atestados sem frequência** — status do card e KPIs sincronizados com atestados da tabela de atestado médico que não têm registro correspondente na frequência; atestados médicos passam a aparecer na lista de "Ausentes no Turno".
+- **AM/AA com prioridade sobre hora de entrada** — no cálculo de status do dia, atestado médico e atestado de acompanhamento têm prioridade sobre a hora de entrada batida.
+- **KPI de atestados sem dupla contagem** — corrigido cálculo que contava o mesmo evento como atestado e como falta simultaneamente.
+- **BH/DSR e filtros por ativos** — corrigido cálculo de banco de horas/DSR e filtro de dias de ausência/falta para considerar apenas colaboradores ativos no período.
+- **Lista de ausentes** — desligados são ignorados e dias de DSR são pulados corretamente na lista.
 
-### Treinamentos
+### Dashboard de Absenteísmo
 
-- **Setor e turno dos participantes** — a tela de detalhes do treinamento e a ATA gerada agora exibem o setor e o turno de cada participante.
-- **Estação e turno na criação** — ao criar um novo treinamento, o formulário exibe o turno e estação vinculados ao responsável.
-
-### Colaboradores
-
-- **Filtro por setor** — a listagem de colaboradores ganhou filtro por setor, aplicado em conjunto com os demais filtros ativos.
-- **Exportação CSV com filtros** — o botão de exportar respeita todos os filtros ativos (setor, turno, status, busca), exportando exatamente o que está sendo visualizado.
+- **Nova seção de Faltas** — cross-filtering entre gráficos, KPIs de Medida Disciplinar e tabela analítica com paginação e ordenação.
+- **Turnos e contagens** — todos os turnos voltam a ser exibidos; contagem de ausências e atestados corrigida e alinhada com o dashboard operacional, excluindo atestados sem frequência correspondente do cálculo por turno (evita dupla contagem).
+- **Desligados no período** — colaboradores desligados após o período voltam a entrar nas consultas de faltas, atestados e HC Apto.
+- **Tendência mais precisa** — o gráfico de tendência passa a expandir o atestado por todos os dias cobertos (não só o dia de início); atestados com status finalizado entram na contagem mesmo sem outro vínculo.
+- **Correção AM/AA classificados como Falta** — atestado médico (`AM`) e atestado de acompanhamento (`AA`) deixaram de ser contados como "Falta" em todo o dashboard (resumo, distribuições, tendência e tabela de colaboradores). `AM` já tinha registro próprio na tabela de atestados e agora só conta ali; `AA` — que não tem tabela própria — passou a ser contabilizado como "Atestado" em vez de desaparecer da contagem. Corrige casos em que um colaborador aparecia com faltas no painel sem nenhuma falta correspondente no perfil de presença.
 
 ### Controle de Presença
 
-- **Filtro de status unificado** — os quatro checkboxes anteriores (Falta, Onboarding, Entrada sem saída, Pendentes hoje) foram substituídos por um único select de status, simplificando a toolbar.
-- **Filtro de escalas** — adicionado filtro por escala na toolbar de presença.
+- **SU e FO sem justificativa** — status "Suspensão" e "Folga" deixam de exigir justificativa manual no ajuste de presença.
+- **Recarregamento após exclusão** — ao excluir um registro de frequência, a presença é recarregada do servidor em vez de apenas remover o dia do estado local.
+- **Desligamento e afastamento automáticos** — desligamento (forçado ou voluntário) e afastamento preenchem automaticamente o status do dia (DP/DV/DF/AFA); colaboradores desligados ficam visíveis na grade até o fim do mês.
+- **Férias e afastamento em andamento** — passam a aparecer corretamente na grade e na exportação, com o filtro de data de fim de status corrigido.
+- **Pré-admissão** — dias anteriores à data de admissão exibem "Não Contratado" automaticamente; novo botão "Preencher NC" faz o backfill em massa para quem foi admitido no mês atual.
+- **Modal de ajuste de presença** — campos de horário voltaram a aparecer (ocultos só para Banco de Horas e Sinergia enviada); exibição de hora de entrada/saída corrigida ao selecionar "Presente"; corrigido conflito de merge que deixava a tela fora do ar por erro de sintaxe.
+
+### Colaboradores
+
+- **Filtro por setor e exportação CSV** — listagem ganhou filtro por setor; exportação respeita todos os filtros ativos (setor, turno, status, busca).
+- **Histórico de escala** — passa a suportar múltiplas trocas de escala no mesmo dia.
+
+### Escalas
+
+- **Edição liberada para Alta Gestão** — perfil Alta Gestão agora pode editar escalas.
+- **Ajustes de consistência** — diversas correções pontuais no cálculo e exibição de escalas.
+
+### Daily Works / Diaristas
+
+- **Diarias TECH** — nova empresa de diaristas adicionada ao módulo.
+- **Turnos dinâmicos** — suporte a novos turnos no dashboard operacional e no formulário de Daily Work, sem lista fixa no código; mapeamento de turnos e diaristas presentes corrigido.
+- **Exportação e paginação** — exportação CSV e paginação com seletor de itens por página na listagem.
+- **DW Planejado x Real** — DW Planejado passa a usar o banco para todas as estações (Real continua filtrando por estação exata); Estação 1 usa a aba Calculadora do Sheets, igual ao Daily Works; conversão de turno (T1→1) corrigida na Calculadora.
+
+### Treinamentos
+
+- **Setor e turno dos participantes** — exibidos na tela de detalhes do treinamento e na ATA gerada.
+- **Estação e turno na criação** — formulário de novo treinamento exibe turno e estação vinculados ao responsável.
+
+### Dashboard de Desligamentos
+
+- **Gráficos de barras horizontais** — distribuição por motivo e por empresa, com labels de valor direto na barra.
+- **Detalhamento paginado** — tabela com 50 itens por página, busca por nome e ordenação por coluna.
+
+### Exportação e Integrações
+
+- **Google Sheets** — exportação passa a incluir colaboradores inativos do mês e afastados.
+- **R2 (armazenamento)** — corrigido erro de assinatura (`SignatureDoesNotMatch`) causado por espaços nas credenciais.
+- **Seatalk por estação** — relatório operacional enviado para o grupo Seatalk da própria estação, sem depender de variável de ambiente global; e-mails do relatório configuráveis direto no modal de Estações, substituindo lista fixa; popup orienta o usuário (ou o admin, com atalho direto) quando o grupo não está configurado; timeouts aumentados para compensar latência Render → API.
+
+### Gestão Operacional
+
+- **Meta de produtividade dinâmica** — prioriza a planilha sobre o banco para o turno do dia corrente.
 
 ### Autenticação
 
-- **Domínio @shopeemobile-external.com** — o cadastro de usuários agora aceita o domínio `@shopeemobile-external.com` além do `@shopee.com`.
+- **Domínio @shopeemobile-external.com** — cadastro de usuários passa a aceitar esse domínio além do `@shopee.com`.
 
 ### Interface
 
-- **Botão hamburguer no mobile** — o header exibe o botão de menu no mobile para abrir a sidebar, corrigindo o acesso à navegação em telas pequenas.
-
-### Seatalk
-
-- **Grupo por estação** — cada estação tem seu próprio grupo Seatalk configurado. O relatório operacional é enviado para o grupo da estação do usuário, sem depender de variável de ambiente global.
-- **Configuração via Estações** — administradores configuram o ID do grupo diretamente em Organização → Estações, junto com os demais IDs da estação.
-- **Popup informativo** — ao tentar enviar sem grupo configurado, usuários comuns veem aviso para contatar o admin; o admin vê botão "Configurar agora" que navega direto para a tela de estações.
+- **Botão hamburguer no mobile** — corrige acesso à navegação em telas pequenas.
 
 ### Processamento Geral
 
-- **Seção removida** — dashboard, rota e item de menu de Processamento Geral foram descontinuados.
+- **Seção removida** — dashboard, rota e item de menu descontinuados.
 
 ---
 
