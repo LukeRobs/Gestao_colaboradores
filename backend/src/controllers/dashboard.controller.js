@@ -441,10 +441,40 @@ const carregarDashboard = async (req, res) => {
     });
     
     /* ===============================
+       PRÉ-PROCESSAMENTO: Deduplica por (opsId, dataReferencia)
+       Quando um colaborador tem múltiplos registros no mesmo dia,
+       aplica prioridade: DSR > FO > P/horaEntrada > outros > AM/AA > F/FJ
+       Garante que ajustes manuais (ex: FO em feriado) sobrescrevam
+       ausências automáticas (ex: AM do atestado).
+    =============================== */
+    const _prioridadeFreq = (f) => {
+      const codigo = String(f.tipoAusencia?.codigo || "").toUpperCase();
+      if (codigo === "DSR") return 0;
+      if (codigo === "FO") return 1;
+      if (f.horaEntrada || codigo === "P") return 2;
+      if (["BH", "S1", "ON", "NC", "T", "FE", "AFA", "AF", "LM", "LP"].includes(codigo)) return 3;
+      if (codigo === "AM" || codigo === "AA") return 4;
+      if (codigo === "F" || codigo === "FJ") return 5;
+      return 6;
+    };
+
+    const _freqDedupMap = new Map();
+    for (const f of frequenciasPeriodo) {
+      const opsId = f.colaborador?.opsId;
+      if (!opsId) continue;
+      const key = `${opsId}_${isoDate(f.dataReferencia)}`;
+      const existing = _freqDedupMap.get(key);
+      if (!existing || _prioridadeFreq(f) < _prioridadeFreq(existing)) {
+        _freqDedupMap.set(key, f);
+      }
+    }
+    const frequenciasDedup = [..._freqDedupMap.values()];
+
+    /* ===============================
        5️⃣ LOOP PRINCIPAL (ALINHADO AO ADMIN)
     =============================== */
-    // Itera sobre todos os registros do período — acumula para período > 1 dia
-    frequenciasPeriodo
+    // Itera sobre registros dedupliciados — um por colaborador por dia
+    frequenciasDedup
       .forEach((registroSnapshot) => {
       const c = registroSnapshot.colaborador;
       if (!c) return;
@@ -567,7 +597,7 @@ const carregarDashboard = async (req, res) => {
     let totalHcAptoDias = 0;
     let totalAusenciasDias = 0;
 
-    frequenciasPeriodo.forEach((f) => {
+    frequenciasDedup.forEach((f) => {
       // Usa f.colaborador diretamente — inclui desligados que estavam ativos no período
       const c = f.colaborador;
       if (!c) return;
