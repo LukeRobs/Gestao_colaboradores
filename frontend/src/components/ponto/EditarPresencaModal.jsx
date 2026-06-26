@@ -77,8 +77,8 @@ export default function EditarPresencaModal({
   const [justificativa, setJustificativa] = useState("BANCO_DE_HORAS");
   const [loading, setLoading] = useState(false);
 
-  const mostrarHorario = !STATUS_SEM_HORARIO.includes(status);
-  const permiteHorario = STATUS_COM_HORARIO.includes(status);
+  const mostrarHorario = status !== "BH" && status !== "S1" && status !== "";
+  const permiteHorario = status === "P";
 
   useEffect(() => {
     if (!open) return;
