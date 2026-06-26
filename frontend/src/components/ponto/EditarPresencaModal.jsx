@@ -38,11 +38,26 @@ const JUSTIFICATIVAS = [
   { code: "FALTA_INJUSTIFICADA", label: "Falta injustificada" },
 ];
 
+// Status que NÃO mostram campos de hora (justificativa automática)
+const STATUS_SEM_HORARIO = ["BH", "S1"];
+
+// Status que habilitam edição de hora (demais mostram campos mas desabilitados)
+const STATUS_COM_HORARIO = ["P"];
+
 function autoJustificativa(status) {
   if (status === "ON") return "ON";
   if (status === "F") return "FALTA_INJUSTIFICADA";
   if (status === "S1") return "SINERGIA_ENVIADA";
+  if (status === "BH") return "BANCO_DE_HORAS";
   return "BANCO_DE_HORAS";
+}
+
+function toHHMM(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
 export default function EditarPresencaModal({
@@ -56,8 +71,14 @@ export default function EditarPresencaModal({
   onDelete,
 }) {
   const [status, setStatus] = useState("");
+  const [renderKey, setRenderKey] = useState(0);
+  const [horaEntrada, setHoraEntrada] = useState("");
+  const [horaSaida, setHoraSaida] = useState("");
   const [justificativa, setJustificativa] = useState("BANCO_DE_HORAS");
   const [loading, setLoading] = useState(false);
+
+  const mostrarHorario = !STATUS_SEM_HORARIO.includes(status);
+  const permiteHorario = STATUS_COM_HORARIO.includes(status);
 
   useEffect(() => {
     if (!open) return;
@@ -65,11 +86,19 @@ export default function EditarPresencaModal({
       ? registro.status
       : (registro?.entrada ? "P" : "");
     setStatus(statusInicial);
+    setHoraEntrada(toHHMM(registro?.entrada));
+    setHoraSaida(toHHMM(registro?.saida));
     setJustificativa(autoJustificativa(statusInicial));
+    setRenderKey((k) => k + 1);
   }, [open, registro]);
 
   useEffect(() => {
     setJustificativa(autoJustificativa(status));
+    if (STATUS_SEM_HORARIO.includes(status)) {
+      setHoraEntrada("");
+      setHoraSaida("");
+      setRenderKey((k) => k + 1);
+    }
   }, [status]);
 
   if (!open) return null;
@@ -103,6 +132,29 @@ export default function EditarPresencaModal({
       return;
     }
 
+    if (mostrarHorario && permiteHorario) {
+      if (status === "P" && !horaEntrada) {
+        alert("Horário de entrada é obrigatório para status 'Presente'");
+        return;
+      }
+
+      if (horaSaida && !horaEntrada) {
+        alert("Hora de saída não pode existir sem hora de entrada");
+        return;
+      }
+
+      if (horaEntrada && horaSaida) {
+        const [hE, mE] = horaEntrada.split(":").map(Number);
+        const [hS, mS] = horaSaida.split(":").map(Number);
+        let minutos = (hS * 60 + mS) - (hE * 60 + mE);
+        if (minutos < 0) minutos += 24 * 60;
+        if (minutos <= 0 || minutos > 16 * 60) {
+          alert("Jornada inválida. Verifique os horários informados.");
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -111,8 +163,8 @@ export default function EditarPresencaModal({
         dataReferencia: dia.date,
         status,
         justificativa,
-        horaEntrada: null,
-        horaSaida: null,
+        horaEntrada: (mostrarHorario && permiteHorario) ? horaEntrada || null : null,
+        horaSaida: (mostrarHorario && permiteHorario) ? horaSaida || null : null,
       });
 
       alert("Presença ajustada com sucesso");
@@ -121,18 +173,15 @@ export default function EditarPresencaModal({
         opsId: colaborador.opsId,
         dataReferencia: dia.date,
         status,
-        horaEntrada: null,
-        horaSaida: null,
+        horaEntrada: (mostrarHorario && permiteHorario) ? horaEntrada || null : null,
+        horaSaida: (mostrarHorario && permiteHorario) ? horaSaida || null : null,
       });
 
       onClose();
 
     } catch (err) {
       console.error(err);
-      alert(
-        err?.response?.data?.message ||
-          "Erro ao ajustar presença"
-      );
+      alert(err?.response?.data?.message || "Erro ao ajustar presença");
     } finally {
       setLoading(false);
     }
@@ -177,7 +226,6 @@ export default function EditarPresencaModal({
             className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2"
           >
             <option value="">Selecione um status</option>
-
             {STATUS_OPTIONS.filter((s) => !s.adminOnly || isAdmin).map((s) => (
               <option key={s.code} value={s.code}>
                 {s.label}
@@ -185,6 +233,39 @@ export default function EditarPresencaModal({
             ))}
           </select>
         </div>
+
+        {/* HORÁRIOS — oculto para BH e S1 */}
+        {mostrarHorario && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-muted">
+                Hora Entrada
+                {status === "P" && <span className="text-red-400 ml-1">*</span>}
+              </label>
+              <input
+                key={`entrada-${renderKey}`}
+                type="time"
+                value={horaEntrada}
+                disabled={!permiteHorario}
+                onChange={(e) => setHoraEntrada(e.target.value)}
+                className={`w-full bg-surface-2 border rounded-xl px-4 py-2 disabled:opacity-40 ${
+                  status === "P" && !horaEntrada ? "border-red-400" : "border-default"
+                }`}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted">Hora Saída</label>
+              <input
+                key={`saida-${renderKey}`}
+                type="time"
+                value={horaSaida}
+                disabled={!permiteHorario}
+                onChange={(e) => setHoraSaida(e.target.value)}
+                className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2 disabled:opacity-40"
+              />
+            </div>
+          </div>
+        )}
 
         {/* JUSTIFICATIVA */}
         <div>
