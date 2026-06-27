@@ -470,12 +470,12 @@ const carregarDashboard = async (req, res) => {
     }
     const frequenciasDedup = [..._freqDedupMap.values()];
 
-    // Set de (opsId_data) onde o registro vencedor NÃO é AM/F — impede que a Seção 6.1
-    // insira o atestado da tabela separada quando já existe FO/P/DSR para o mesmo dia.
+    // Set de (opsId_data) onde o admin lançou FO explícito — impede que a Seção 6.1
+    // insira o AM da tabela de atestados quando o dia foi marcado como folga (ex: feriado).
     const _overrideAtestadoSet = new Set();
     for (const [key, f] of _freqDedupMap) {
-      const p = _prioridadeFreq(f);
-      if (p < 4) _overrideAtestadoSet.add(key); // prioridade 0-3: DSR, FO, P, BH/S1/etc.
+      const codigo = String(f.tipoAusencia?.codigo || "").toUpperCase();
+      if (codigo === "FO") _overrideAtestadoSet.add(key);
     }
 
     /* ===============================
