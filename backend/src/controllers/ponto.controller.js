@@ -872,6 +872,21 @@ const getControlePresenca = async (req, res) => {
         }
 
         /* ===============================
+           STATUS DO COLABORADOR (AFASTADO / FERIAS)
+           Quando não há ausência específica cadastrada na tabela ausencias,
+           usa o status do colaborador como fallback visual para não deixar "-"
+           em dias que o colaborador sabidamente não está disponível.
+        =============================== */
+        if (c.status === "AFASTADO") {
+          diasMap[dataISO] = { status: "AFA", origem: "status", manual: false };
+          continue;
+        }
+        if (c.status === "FERIAS") {
+          diasMap[dataISO] = { status: "FE", origem: "status", manual: false };
+          continue;
+        }
+
+        /* ===============================
            FALTA / SEM LANÇAMENTO
         =============================== */
         // Dias antes da admissão não têm lançamento real — exibe NC visualmente (sem gravar no banco)
