@@ -792,7 +792,7 @@ enum TipoMedidaDisciplinar {
 enum StatusMedidaDisciplinar {
   PENDENTE_ASSINATURA
   ASSINADO
-  CANCELADA
+  CANCELADO
 }
 
 enum StatusSugestao {

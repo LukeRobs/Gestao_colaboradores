@@ -592,11 +592,53 @@ const enviarEmailEvidencia = async (req, res) => {
 
 };
 
+/* =====================================================
+   CANCELAR MEDIDA
+===================================================== */
+
+const cancelarMedida = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    const medida = await prisma.medidaDisciplinar.findUnique({
+      where: { idMedida: Number(id) },
+    });
+
+    if (!medida) {
+      return notFoundResponse(res, "Medida disciplinar não encontrada");
+    }
+
+    if (medida.status === "CANCELADO") {
+      return errorResponse(res, "Medida já está cancelada", 400);
+    }
+
+    const atualizada = await prisma.medidaDisciplinar.update({
+      where: { idMedida: Number(id) },
+      data: {
+        status: "CANCELADO",
+        dataAtualizacao: new Date(),
+      },
+    });
+
+    return successResponse(res, atualizada, "Medida disciplinar cancelada");
+
+  } catch (err) {
+
+    console.error("❌ CANCELAR MD:", err);
+    return errorResponse(res, "Erro ao cancelar medida", 500);
+
+  }
+
+};
+
 module.exports = {
   presignUpload,
   presignDownload,
   createMedida,
   finalizarMedida,
+  cancelarMedida,
   getAllMedidas,
   getMedidaById,
   enviarEmailEvidencia,

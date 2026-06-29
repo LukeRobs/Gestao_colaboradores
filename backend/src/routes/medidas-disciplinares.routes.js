@@ -17,6 +17,7 @@ router.get("/:id/presign-download", controller.presignDownload);
 ===================================================== */
 
 router.post("/:id/finalizar", controller.finalizarMedida);
+router.patch("/:id/cancelar", controller.cancelarMedida);
 
 /* =====================================================
    ENVIAR EVIDÊNCIA POR E-MAIL

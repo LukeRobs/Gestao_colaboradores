@@ -55,6 +55,11 @@ export const MedidasDisciplinaresAPI = {
   finalizar: (id, payload) =>
     api.post(`/medidas-disciplinares/${id}/finalizar`, payload),
 
+  /* ================= CANCELAR ================= */
+
+  cancelar: (id) =>
+    api.patch(`/medidas-disciplinares/${id}/cancelar`),
+
   /* ================= ENVIAR EMAIL EVIDÊNCIA ================= */
 
   enviarEmailEvidencia: (id) =>

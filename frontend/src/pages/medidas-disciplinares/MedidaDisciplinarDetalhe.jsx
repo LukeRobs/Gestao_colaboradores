@@ -25,6 +25,7 @@ export default function MedidaDisciplinarDetalhe() {
   const [emailInput, setEmailInput] = useState("");
   const [salvandoRh, setSalvandoRh] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
 
   async function load() {
     try {
@@ -128,6 +129,20 @@ export default function MedidaDisciplinarDetalhe() {
 
   function removerEmail(email) {
     setEmailsRh((prev) => prev.filter((e) => e !== email));
+  }
+
+  async function handleCancelar() {
+    if (!window.confirm("Tem certeza que deseja cancelar esta medida disciplinar? Esta ação não pode ser desfeita.")) return;
+    setCancelando(true);
+    try {
+      await MedidasDisciplinaresAPI.cancelar(id);
+      await load();
+    } catch (err) {
+      console.error(err);
+      alert("❌ Erro ao cancelar medida. Tente novamente.");
+    } finally {
+      setCancelando(false);
+    }
   }
 
   async function handleEnviarEmail() {
@@ -292,6 +307,20 @@ export default function MedidaDisciplinarDetalhe() {
                 >
                   <Settings size={16} />
                   RH Local
+                </button>
+              )}
+              {permissions?.isAdmin && medida.status !== "CANCELADO" && (
+                <button
+                  onClick={handleCancelar}
+                  disabled={cancelando}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
+                    cancelando
+                      ? "bg-[#3A3A3C] text-muted cursor-not-allowed"
+                      : "bg-red-900/40 hover:bg-red-800/60 text-red-400 cursor-pointer"
+                  }`}
+                >
+                  <XCircle size={16} />
+                  {cancelando ? "Cancelando..." : "Cancelar Medida"}
                 </button>
               )}
             </div>
