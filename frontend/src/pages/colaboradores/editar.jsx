@@ -56,6 +56,8 @@ export default function EditarColaborador() {
     tipoDesligamento: "",
     dataInicioStatus: "",
     dataFimStatus: "",
+    cipa: false,
+    gestante: false,
   });
 
   /* ================= LOAD ================= */
@@ -105,6 +107,8 @@ export default function EditarColaborador() {
           tipoDesligamento: c.tipoDesligamento || "",
           dataInicioStatus: c.dataInicioStatus ? c.dataInicioStatus.substring(0, 10) : "",
           dataFimStatus: c.dataFimStatus ? c.dataFimStatus.substring(0, 10) : "",
+          cipa: c.cipa ?? false,
+          gestante: c.gestante ?? false,
         });
       } catch (err) {
         console.error(err);
@@ -215,6 +219,8 @@ export default function EditarColaborador() {
         tipoDesligamento: form.tipoDesligamento || null,
         dataInicioStatus: form.dataInicioStatus || null,
         dataFimStatus: form.dataFimStatus || null,
+        cipa: form.cipa,
+        gestante: form.gestante,
       };
 
       await api.put(`/colaboradores/${opsId}`, payload);
@@ -287,6 +293,20 @@ export default function EditarColaborador() {
               onChange={handleChange}
               options={["MASCULINO", "FEMININO"]}
             />
+
+            <Toggle
+              label="CIPA"
+              checked={form.cipa}
+              onChange={(v) => setForm(prev => ({ ...prev, cipa: v }))}
+            />
+
+            {form.genero === "FEMININO" && (
+              <Toggle
+                label="Gestante"
+                checked={form.gestante}
+                onChange={(v) => setForm(prev => ({ ...prev, gestante: v }))}
+              />
+            )}
           </Section>
 
           <Section title="Contato de Emergência">
@@ -421,6 +441,27 @@ export default function EditarColaborador() {
 }
 
 /* ================= COMPONENTES ================= */
+
+function Toggle({ label, checked, onChange }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-muted">{label}</label>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          checked ? "bg-[#FA4C00]" : "bg-surface-2 border border-default"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+            checked ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
 
 function Section({ title, children }) {
   return (

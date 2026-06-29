@@ -292,6 +292,8 @@ model Colaborador {
   telefone                   String?                     @db.VarChar(20)
   contatoEmergenciaNome      String?                     @map("contato_emergencia_nome") @db.VarChar(200)
   contatoEmergenciaTelefone  String?                     @map("contato_emergencia_telefone") @db.VarChar(20)
+  cipa                       Boolean                     @default(false)
+  gestante                   Boolean                     @default(false)
   acidentes                  AcidenteTrabalho[]
   atestadosMedicos           AtestadoMedico[]
   ausencias                  Ausencia[]

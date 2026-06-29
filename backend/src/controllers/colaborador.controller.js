@@ -750,6 +750,8 @@ const updateColaborador = async (req, res) => {
       dataInicioStatus,
       dataFimStatus,
       idLider,
+      cipa,
+      gestante,
     } = req.body;
 
     const data = {};
@@ -787,6 +789,8 @@ const updateColaborador = async (req, res) => {
     if (tipoDesligamento !== undefined) data.tipoDesligamento = tipoDesligamento || null;
     if (dataInicioStatus !== undefined) data.dataInicioStatus = dataInicioStatus ? new Date(`${dataInicioStatus}T00:00:00`) : null;
     if (dataFimStatus !== undefined) data.dataFimStatus = dataFimStatus ? new Date(`${dataFimStatus}T00:00:00`) : null;
+    if (cipa !== undefined) data.cipa = Boolean(cipa);
+    if (gestante !== undefined) data.gestante = Boolean(gestante);
 
     if (dataAdmissao !== undefined) {
       data.dataAdmissao = dataAdmissao ? new Date(`${dataAdmissao}T00:00:00`) : undefined;

@@ -194,6 +194,16 @@ export default function PerfilColaborador() {
                       <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
                       {statusCfg.label}
                     </span>
+                    {colaborador.cipa && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400">
+                        CIPA
+                      </span>
+                    )}
+                    {colaborador.gestante && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-200/20 text-blue-300">
+                        GESTANTE
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
