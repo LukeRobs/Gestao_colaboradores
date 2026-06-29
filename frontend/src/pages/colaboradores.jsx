@@ -22,8 +22,6 @@ export default function ColaboradoresPage() {
   const [statusSelecionado, setStatusSelecionado] = useState("TODOS");
   const [cargoSelecionado, setCargoSelecionado] = useState("TODOS");
   const [setorSelecionado, setSetorSelecionado] = useState("TODOS");
-  const [cipaSelecionado, setCipaSelecionado] = useState("TODOS");
-  const [gestanteSelecionado, setGestanteSelecionado] = useState("TODOS");
 
   const [lideres, setLideres] = useState([]);
   const [cargos, setCargos] = useState([]);
@@ -74,11 +72,11 @@ export default function ColaboradoresPage() {
         turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
         escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
         idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
-        status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
         idCargo: cargoSelecionado !== "TODOS" ? Number(cargoSelecionado) : undefined,
         idSetor: setorSelecionado !== "TODOS" ? Number(setorSelecionado) : undefined,
-        cipa: cipaSelecionado === "SIM" ? "true" : undefined,
-        gestante: gestanteSelecionado === "SIM" ? "true" : undefined,
+        status: !["TODOS", "CIPA", "GESTANTE"].includes(statusSelecionado) ? statusSelecionado : undefined,
+        cipa: statusSelecionado === "CIPA" ? "true" : undefined,
+        gestante: statusSelecionado === "GESTANTE" ? "true" : undefined,
       };
 
       const res = await ColaboradoresAPI.listar(params);
@@ -104,8 +102,6 @@ export default function ColaboradoresPage() {
     statusSelecionado,
     cargoSelecionado,
     setorSelecionado,
-    cipaSelecionado,
-    gestanteSelecionado,
   ]);
 
   useEffect(() => {
@@ -158,15 +154,6 @@ export default function ColaboradoresPage() {
     setPage(1);
   };
 
-  const handleCipaChange = (val) => {
-    setCipaSelecionado(val);
-    setPage(1);
-  };
-
-  const handleGestanteChange = (val) => {
-    setGestanteSelecionado(val);
-    setPage(1);
-  };
 
   const handleBackfillNc = async () => {
     if (!window.confirm("Preencher NC para todos os colaboradores admitidos neste mês (dias anteriores à admissão)? Esta ação não pode ser desfeita.")) return;
@@ -189,11 +176,11 @@ export default function ColaboradoresPage() {
         turno: turnoSelecionado !== "TODOS" ? turnoSelecionado : undefined,
         escala: escalaSelecionada !== "TODOS" ? escalaSelecionada : undefined,
         idLider: liderSelecionado !== "TODOS" ? liderSelecionado : undefined,
-        status: statusSelecionado !== "TODOS" ? statusSelecionado : undefined,
         idCargo: cargoSelecionado !== "TODOS" ? Number(cargoSelecionado) : undefined,
         idSetor: setorSelecionado !== "TODOS" ? Number(setorSelecionado) : undefined,
-        cipa: cipaSelecionado === "SIM" ? "true" : undefined,
-        gestante: gestanteSelecionado === "SIM" ? "true" : undefined,
+        status: !["TODOS", "CIPA", "GESTANTE"].includes(statusSelecionado) ? statusSelecionado : undefined,
+        cipa: statusSelecionado === "CIPA" ? "true" : undefined,
+        gestante: statusSelecionado === "GESTANTE" ? "true" : undefined,
       };
       const res = await ColaboradoresAPI.exportarCsv(params);
       const url = URL.createObjectURL(res.data);
@@ -303,6 +290,9 @@ export default function ColaboradoresPage() {
                 <option value="INATIVO">Inativo</option>
                 <option value="AFASTADO">Afastado</option>
                 <option value="FERIAS">Férias</option>
+                <option disabled>──────────</option>
+                <option value="CIPA">CIPA</option>
+                <option value="GESTANTE">Gestante</option>
               </select>
             </div>
 
@@ -320,25 +310,6 @@ export default function ColaboradoresPage() {
                 ))}
               </select>
 
-              {/* CIPA */}
-              <select
-                value={cipaSelecionado}
-                onChange={(e) => handleCipaChange(e.target.value)}
-                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
-              >
-                <option value="TODOS">CIPA</option>
-                <option value="SIM">Somente CIPA</option>
-              </select>
-
-              {/* GESTANTE */}
-              <select
-                value={gestanteSelecionado}
-                onChange={(e) => handleGestanteChange(e.target.value)}
-                className="bg-surface border border-default px-4 py-2 rounded-xl text-sm text-page"
-              >
-                <option value="TODOS">Gestantes</option>
-                <option value="SIM">Somente Gestantes</option>
-              </select>
 
               <div className="flex items-center gap-2 ml-auto">
                 {/* EXPORTAR CSV */}

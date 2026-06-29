@@ -294,19 +294,20 @@ export default function EditarColaborador() {
               options={["MASCULINO", "FEMININO"]}
             />
 
-            <Toggle
-              label="CIPA"
-              checked={form.cipa}
-              onChange={(v) => setForm(prev => ({ ...prev, cipa: v }))}
-            />
-
-            {form.genero === "FEMININO" && (
+            <div className="md:col-span-2 flex items-center gap-10 pt-1">
               <Toggle
-                label="Gestante"
-                checked={form.gestante}
-                onChange={(v) => setForm(prev => ({ ...prev, gestante: v }))}
+                label="CIPA"
+                checked={form.cipa}
+                onChange={(v) => setForm(prev => ({ ...prev, cipa: v }))}
               />
-            )}
+              {form.genero === "FEMININO" && (
+                <Toggle
+                  label="Gestante"
+                  checked={form.gestante}
+                  onChange={(v) => setForm(prev => ({ ...prev, gestante: v }))}
+                />
+              )}
+            </div>
           </Section>
 
           <Section title="Contato de Emergência">
