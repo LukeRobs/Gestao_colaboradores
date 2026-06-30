@@ -26,6 +26,8 @@ export default function ControlePresenca() {
   const [busca, setBusca] = useState("");
   const [lider, setLider] = useState("TODOS");
   const [statusFiltro, setStatusFiltro] = useState("TODOS");
+  const [cargo, setCargo] = useState("TODOS");
+  const [cargos, setCargos] = useState([]);
 
   const pendenciaSaida  = statusFiltro === "PENDENCIA_SAIDA";
   const pendentesHoje   = statusFiltro === "PENDENTES_HOJE";
@@ -128,6 +130,7 @@ export default function ControlePresenca() {
         ...(turno !== "TODOS" ? { turno } : {}),
         ...(escala !== "TODOS" ? { escala } : {}),
         ...(lider !== "TODOS" ? { lider } : {}),
+        ...(cargo !== "TODOS" ? { idCargo: cargo } : {}),
         ...(pendenciaSaida ? { pendenciaSaida: "true" } : {}),
         ...(pendentesHoje ? { pendentesHoje: "true" } : {}),
       };
@@ -151,7 +154,7 @@ export default function ControlePresenca() {
     } finally {
       setLoading(false);
     }
-  }, [mes, turno, escala, lider, pendenciaSaida, pendentesHoje]);
+  }, [mes, turno, escala, lider, cargo, pendenciaSaida, pendentesHoje]);
 
   /* ================== FILTROS LOCAIS ================== */
   const colaboradores = useMemo(() => {
@@ -258,6 +261,19 @@ export default function ControlePresenca() {
     loadEscalas();
   }, []);
 
+  useEffect(() => {
+    async function loadCargos() {
+      try {
+        const res = await api.get("/colaboradores/filtros");
+        setCargos(res.data?.data?.cargos || []);
+      } catch (err) {
+        console.error("Erro ao carregar cargos", err);
+        setCargos([]);
+      }
+    }
+    loadCargos();
+  }, []);
+
   /* ================== UI ================== */
   return (
     <div className="flex min-h-screen bg-page text-page">
@@ -285,6 +301,8 @@ export default function ControlePresenca() {
             busca={busca}
             lider={lider}
             lideres={lideres}
+            cargo={cargo}
+            cargos={cargos}
             status={statusFiltro}
             onStatusChange={setStatusFiltro}
             onMesChange={setMes}
@@ -292,6 +310,7 @@ export default function ControlePresenca() {
             onEscalaChange={setEscala}
             onBuscaChange={setBusca}
             onLiderChange={setLider}
+            onCargoChange={setCargo}
             onExportarSheets={exportarSheets}
             onExportarCsv={exportarCsv}
             isAdmin={isAdmin}

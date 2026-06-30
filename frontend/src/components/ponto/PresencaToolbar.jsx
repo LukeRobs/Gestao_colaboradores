@@ -30,12 +30,15 @@ export default function PresencaToolbar({
   busca,
   lider,
   lideres = [],
+  cargo = "TODOS",
+  cargos = [],
   status = "TODOS",
   onMesChange,
   onTurnoChange,
   onEscalaChange,
   onBuscaChange,
   onLiderChange,
+  onCargoChange,
   onStatusChange,
   onExportarSheets,
   onExportarCsv,
@@ -46,6 +49,7 @@ export default function PresencaToolbar({
     turno !== "TODOS" ||
     escala !== "TODOS" ||
     lider !== "TODOS" ||
+    cargo !== "TODOS" ||
     status !== "TODOS" ||
     busca.trim() !== "";
 
@@ -53,6 +57,7 @@ export default function PresencaToolbar({
     onTurnoChange("TODOS");
     onEscalaChange("TODOS");
     onLiderChange("TODOS");
+    onCargoChange("TODOS");
     onStatusChange("TODOS");
     onBuscaChange("");
   }
@@ -123,6 +128,23 @@ export default function PresencaToolbar({
             {escalas.map((e) => (
               <option key={e.idEscala} value={e.nomeEscala}>
                 {e.nomeEscala}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted text-xs">▾</span>
+        </div>
+
+        {/* Cargo */}
+        <div className="relative">
+          <select
+            value={cargo}
+            onChange={(e) => onCargoChange(e.target.value)}
+            className={selectCls + " pr-7"}
+          >
+            <option value="TODOS">Cargo • Todos</option>
+            {cargos.map((c) => (
+              <option key={c.idCargo} value={c.idCargo}>
+                {c.nomeCargo}
               </option>
             ))}
           </select>

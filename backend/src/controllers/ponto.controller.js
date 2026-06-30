@@ -509,6 +509,7 @@ const getControlePresenca = async (req, res) => {
       escala,
       search,
       lider,
+      idCargo,
       pendenciaSaida,
       pendentesHoje,
     } = req.query;
@@ -580,6 +581,9 @@ const getControlePresenca = async (req, res) => {
         : {}),
       ...(lider && lider !== "TODOS"
         ? { idLider: lider }
+        : {}),
+      ...(idCargo && idCargo !== "TODOS"
+        ? { idCargo: Number(idCargo) }
         : {}),
       ...(search
         ? { nomeCompleto: { contains: String(search), mode: "insensitive" } }
@@ -1280,18 +1284,7 @@ const exportarPresencaSheets = async (req, res) => {
         },
       ],
       ...(req.dbContext?.estacaoId ? { idEstacao: req.dbContext.estacaoId } : {}),
-      cargo: {
-        nomeCargo: {
-          in: [
-            "Auxiliar de Logística I",
-            "Auxiliar de Logística II",
-            "Auxiliar de Logística I - PCD",
-            "Auxiliar de Returns I",
-            "Auxilíar de Returns II",
-            "Fiscal de pátio"
-          ]
-        }
-      },
+      idCargo: { in: [8, 9, 39] },
     };
 
     console.log(`[${reqId}] Buscando colaboradores...`);
