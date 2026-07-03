@@ -1295,8 +1295,10 @@ const importColaboradores = async (req, res) => {
       let criados = 0;
       let atualizados = 0;
       let skipped = 0;
-      const errors = [];
+      let erroCount = 0;
       const skippedDetails = [];
+      const updatedDetails = [];
+      const errorDetails = [];
 
       const parseHorario = (v) => {
         if (!v) return null;
@@ -1413,7 +1415,11 @@ const importColaboradores = async (req, res) => {
 
           const existing = await prisma.colaborador.findUnique({
             where: { opsId },
-            select: { opsId: true, idEscala: true },
+            select: {
+              opsId: true, nomeCompleto: true, matricula: true,
+              idEscala: true, idCargo: true, idTurno: true,
+              idSetor: true, idEmpresa: true, idLider: true,
+            },
           });
 
           const data = {
@@ -1511,7 +1517,22 @@ const importColaboradores = async (req, res) => {
             });
           }
 
-          existing ? atualizados++ : criados++;
+          if (existing) {
+            atualizados++;
+            const LABELS = {
+              nomeCompleto: "Nome", matricula: "Matrícula",
+              idCargo: "Cargo", idTurno: "Turno", idSetor: "Setor",
+              idEmpresa: "Empresa", idLider: "Líder", idEscala: "Escala",
+            };
+            const campos = Object.entries(LABELS)
+              .filter(([key]) => String(existing[key] ?? "") !== String(data[key] ?? ""))
+              .map(([key, label]) => `${label}: ${existing[key] ?? "-"} → ${data[key] ?? "-"}`);
+            if (campos.length > 0) {
+              updatedDetails.push({ linha: i + 1, ops_id: opsId, nome: existing.nomeCompleto, campos });
+            }
+          } else {
+            criados++;
+          }
 
           // Onboarding: gera se ainda não existir registro para o dia de admissão
           try {
@@ -1529,11 +1550,9 @@ const importColaboradores = async (req, res) => {
           }
 
         } catch (err) {
-          skipped++;
+          erroCount++;
           const opsId = String(row["ops_id"] || "N/A").trim();
-          const msg = `Linha ${i + 1} (Ops ${opsId}): ${err.message}`;
-          errors.push(msg);
-          skippedDetails.push({ linha: i + 1, ops_id: opsId, motivo: `Erro: ${err.message}` });
+          errorDetails.push({ linha: i + 1, ops_id: opsId, motivo: err.message });
         }
       }
 
@@ -1542,8 +1561,10 @@ const importColaboradores = async (req, res) => {
         criados,
         atualizados,
         skipped,
-        erros: errors.length,
+        erros: erroCount,
         skippedDetails,
+        updatedDetails,
+        errorDetails,
         finalizado: true,
         data: new Date(),
       };
@@ -1552,9 +1573,9 @@ const importColaboradores = async (req, res) => {
 
       console.log("✅ Import CSV finalizado", resultado);
 
-      if (errors.length) {
+      if (errorDetails.length) {
         console.log("⚠ ERROS CSV:");
-        errors.slice(0, 20).forEach((e) => console.log(e));
+        errorDetails.slice(0, 20).forEach((e) => console.log(`L${e.linha} ${e.ops_id}: ${e.motivo}`));
       }
     });
 

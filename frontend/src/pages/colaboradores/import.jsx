@@ -28,6 +28,8 @@ export default function ImportarColaboradores() {
   const [status, setStatus] = useState({ message: "", type: "" })
   const [checkingStatus, setCheckingStatus] = useState(false)
   const [skippedDetails, setSkippedDetails] = useState([])
+  const [updatedDetails, setUpdatedDetails] = useState([])
+  const [errorDetails, setErrorDetails] = useState([])
 
   // FIX #1: guardar o interval em uma ref para poder limpar corretamente
   const intervalRef = useRef(null)
@@ -107,9 +109,9 @@ export default function ImportarColaboradores() {
             message: `Importação finalizada ✔\n\nCriados: ${res.data.criados}\nAtualizados: ${res.data.atualizados}\nIgnorados: ${res.data.skipped}\nErros: ${res.data.erros}`,
             type: res.data.erros > 0 ? "error" : "success",
           })
-          if (res.data.skippedDetails?.length) {
-            setSkippedDetails(res.data.skippedDetails)
-          }
+          setSkippedDetails(res.data.skippedDetails || [])
+          setUpdatedDetails(res.data.updatedDetails || [])
+          setErrorDetails(res.data.errorDetails || [])
         }
       } catch (err) {
         console.error("Erro ao verificar status:", err)
@@ -151,6 +153,8 @@ export default function ImportarColaboradores() {
       setStatus({ message: res.data?.message || "Importação iniciada com sucesso.", type: "success" })
       startStatusCheck()
       setSkippedDetails([])
+      setUpdatedDetails([])
+      setErrorDetails([])
       setFile(null)
       setProgress(0)
 
@@ -410,7 +414,33 @@ export default function ImportarColaboradores() {
             {loading ? "Enviando..." : checkingStatus ? "Processando..." : "Iniciar Importação"}
           </button>
 
-          {/* IGNORADOS COM MOTIVO */}
+          {/* ATUALIZADOS */}
+          {updatedDetails.length > 0 && (
+            <div className="bg-surface border border-blue-500/30 rounded-2xl p-6 space-y-3">
+              <p className="text-sm font-semibold text-blue-400">
+                Registros atualizados ({updatedDetails.length})
+              </p>
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {updatedDetails.map((d, idx) => (
+                  <div key={idx} className="text-xs border-b border-default pb-2 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-white shrink-0">L{d.linha}</span>
+                      <span className="text-[#6B6B6F] shrink-0">·</span>
+                      <span className="font-mono text-blue-400 shrink-0">{d.ops_id}</span>
+                      <span className="text-muted truncate">{d.nome}</span>
+                    </div>
+                    <ul className="pl-4 space-y-0.5">
+                      {d.campos.map((c, ci) => (
+                        <li key={ci} className="text-muted">{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* IGNORADOS */}
           {skippedDetails.length > 0 && (
             <div className="bg-surface border border-yellow-500/30 rounded-2xl p-6 space-y-3">
               <p className="text-sm font-semibold text-yellow-400">
@@ -422,6 +452,26 @@ export default function ImportarColaboradores() {
                     <span className="font-mono text-white shrink-0">L{d.linha}</span>
                     <span className="text-[#6B6B6F] shrink-0">·</span>
                     <span className="font-mono text-yellow-400 shrink-0">{d.ops_id}</span>
+                    <span className="text-[#6B6B6F] shrink-0">→</span>
+                    <span>{d.motivo}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ERROS */}
+          {errorDetails.length > 0 && (
+            <div className="bg-surface border border-red-500/30 rounded-2xl p-6 space-y-3">
+              <p className="text-sm font-semibold text-red-400">
+                Erros ({errorDetails.length})
+              </p>
+              <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+                {errorDetails.map((d, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-xs text-muted border-b border-default pb-1">
+                    <span className="font-mono text-white shrink-0">L{d.linha}</span>
+                    <span className="text-[#6B6B6F] shrink-0">·</span>
+                    <span className="font-mono text-red-400 shrink-0">{d.ops_id}</span>
                     <span className="text-[#6B6B6F] shrink-0">→</span>
                     <span>{d.motivo}</span>
                   </div>
