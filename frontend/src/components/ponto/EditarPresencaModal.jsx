@@ -8,7 +8,7 @@ import { ajustarPresencaManual, deletarFrequencia } from "../../services/presenc
 const STATUS_OPTIONS = [
   { code: "AFA", label: "Afastamento" },
   { code: "BH", label: "Banco de horas" },
-  { code: "DSR", label: "DSR" },
+  { code: "DSR", label: "DSR", adminOnly: true },
   { code: "DF", label: "Desligamento Forçado"},
   { code: "DV", label: "Desligamento Voluntario"},
   { code: "FE", label: "Férias" },
