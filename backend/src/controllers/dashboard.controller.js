@@ -219,6 +219,7 @@ const carregarDashboard = async (req, res) => {
           periodo: { inicio: dataOperacionalStr, fim: dataOperacionalStr },
           kpis: {
             totalColaboradores: 0,
+            colaboradoresPlanejados: 0,
             presentes: 0,
             ausencias: 0,
             diaristasPlanejados: 0,
@@ -752,6 +753,58 @@ const carregarDashboard = async (req, res) => {
         : 0;
 
 /* ===============================
+   6️⃣.2 DATAS NO PERÍODO (compartilhado com 7️⃣.1 e 6️⃣.3)
+=============================== */
+const datasNoPeriodo = [];
+{
+  const cur = new Date(isoDate(inicio) + "T00:00:00.000Z");
+  const fimDate = new Date(isoDate(fim) + "T00:00:00.000Z");
+  while (cur <= fimDate) {
+    datasNoPeriodo.push(isoDate(cur));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+}
+
+/* ===============================
+   6️⃣.3 COLABORADORES PLANEJADOS (FIXO — BASEADO NA ESCALA)
+   Não depende de lançamento de presença no dia: conta todo colaborador
+   ativo/elegível cujo dia da semana não seja um dia de DSR da sua escala.
+   Usado apenas no card "Colaboradores Planejados" — não altera
+   totalEscalados (base de ausências/absenteísmo/tendência).
+=============================== */
+const colaboradoresPlanejadosPorTurno = Object.fromEntries(turnoNomes.map((t) => [t, 0]));
+
+colaboradores.forEach((c) => {
+  const foiDesligadoDepois = c.dataDesligamento && new Date(c.dataDesligamento) >= inicio;
+  if (!["ATIVO", "FERIAS", "AFASTADO"].includes(c.status) && !foiDesligadoDepois) return;
+
+  const turno = normalizeTurno(c.turno?.nomeTurno);
+  if (turno === "Sem turno") return;
+  if (turnoFiltro && turno !== turnoFiltro) return;
+
+  const diasDsr = c.escala?.diasDsr || [];
+  const admissao = c.dataAdmissao ? new Date(c.dataAdmissao) : null;
+  const desligamento = c.dataDesligamento ? new Date(c.dataDesligamento) : null;
+
+  for (const dataStr of datasNoPeriodo) {
+    const dia = new Date(`${dataStr}T00:00:00.000Z`);
+
+    if (admissao && dia < admissao) continue;
+    if (desligamento && dia > desligamento) continue;
+    if (!isCargoElegivelNoDia(c.opsId, dia, c.cargo?.idCargo)) continue;
+
+    const diaSemana = dia.getUTCDay();
+    if (diasDsr.includes(diaSemana)) continue; // dia de folga na escala — não planejado
+
+    colaboradoresPlanejadosPorTurno[turno] += 1;
+  }
+});
+
+const totalColaboradoresPlanejados = Object.values(
+  colaboradoresPlanejadosPorTurno
+).reduce((a, b) => a + b, 0);
+
+/* ===============================
    7️⃣ DIARISTAS PRESENTES (REAIS)
 =============================== */
 const diaristasPresentes = Object.fromEntries(turnoNomes.map((t) => [t, 0]));
@@ -793,16 +846,7 @@ await Promise.all(
 =============================== */
 const diaristasPlanejadosPorTurno = Object.fromEntries(turnoNomes.map((t) => [t, 0]));
 
-// Gera lista de datas no período
-const datasNoPeriodo = [];
-{
-  const cur = new Date(isoDate(inicio) + "T00:00:00.000Z");
-  const fimDate = new Date(isoDate(fim) + "T00:00:00.000Z");
-  while (cur <= fimDate) {
-    datasNoPeriodo.push(isoDate(cur));
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-}
+// datasNoPeriodo já calculado na seção 6️⃣.2
 
 // Mapa de turno nome → número (T1→1, T2→2, T3→3) para lookup na Calculadora
 // A Calculadora usa TURNO_COL = {1:3, 2:4, 3:5} que corresponde ao número do turno, não ao idTurno do banco
@@ -922,6 +966,7 @@ const aderenciaDW =
         // KPIs alinhados ao Admin
         kpis: {
           totalColaboradores: totalHcAptoDias,
+          colaboradoresPlanejados: totalColaboradoresPlanejados,
           presentes: totalHcAptoDias - totalAusenciasDias,
           ausencias: totalAusenciasDias,
           diaristasPlanejados: totalDiaristasPlanejados,
@@ -934,6 +979,7 @@ const aderenciaDW =
           const t = turnoSetorAgg[turno] || { turno, totalEscalados: 0, presentes: 0, ausentes: 0, setores: {} };
           return {
             ...t,
+            colaboradoresPlanejados: colaboradoresPlanejadosPorTurno[turno] || 0,
             diaristasPlanejados: diaristasPlanejadosPorTurno[turno] || 0,
             diaristasPresentes: diaristasPresentes[turno] || 0,
             aderenciaDW: aderenciaDwPorTurno[turno] || 0,
