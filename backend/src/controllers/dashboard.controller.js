@@ -277,7 +277,7 @@ const carregarDashboard = async (req, res) => {
           where: {
             // Inclui ativos + desligados no dia do início do período em diante (para preservar histórico)
             OR: [
-              { status: "ATIVO", dataDesligamento: null },
+              { status: { in: ["ATIVO", "FERIAS", "AFASTADO"] }, dataDesligamento: null },
               { dataDesligamento: { gte: inicio } },
             ],
             ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
@@ -839,6 +839,9 @@ colaboradores.forEach((c) => {
     const freqRecord = _freqDedupMap.get(key);
     const semLancamento = !freqRecord || isRegistroVazio(freqRecord);
     const sSnapPlan = !semLancamento ? getStatusDoDiaOperacional(freqRecord) : null;
+
+    // FERIAS/AFASTADO sem lançamento real não estavam disponíveis para ser escalados
+    if (semLancamento && ["FERIAS", "AFASTADO"].includes(c.status) && !foiDesligadoDepois) continue;
 
     if (ehDiaDsr) {
       // Dia de folga na escala — só entra em "Planejados" se há lançamento real
