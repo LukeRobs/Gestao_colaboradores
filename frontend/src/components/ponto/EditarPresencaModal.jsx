@@ -22,6 +22,8 @@ const STATUS_OPTIONS = [
   { code: "SU", label: "Suspensão" },
   { code: "TR", label: "Transferido" },
   { code: "ON", label: "Onboarding" },
+  { code: "AB", label: "Licença - Atestado de Óbito" },
+  { code: "JE", label: "Licença - Justiça Eleitoral" },
 ];
 
 /* =============================
@@ -40,16 +42,21 @@ const JUSTIFICATIVAS = [
 ];
 
 // Status que NÃO mostram campos de hora (justificativa automática)
-const STATUS_SEM_HORARIO = ["BH", "S1"];
+const STATUS_SEM_HORARIO = ["BH", "S1", "AB", "JE"];
 
 // Status que habilitam edição de hora (demais mostram campos mas desabilitados)
 const STATUS_COM_HORARIO = ["P"];
+
+// Status abonados: não contam como presença nem ausência, sem campo de justificativa manual
+const STATUS_ABONADOS = ["AB", "JE"];
 
 function autoJustificativa(status) {
   if (status === "ON") return "ON";
   if (status === "F") return "FALTA_INJUSTIFICADA";
   if (status === "S1") return "SINERGIA_ENVIADA";
   if (status === "BH") return "BANCO_DE_HORAS";
+  if (status === "AB") return "ATESTADO_OBITO";
+  if (status === "JE") return "JUSTICA_ELEITORAL";
   return "BANCO_DE_HORAS";
 }
 
@@ -81,7 +88,8 @@ export default function EditarPresencaModal({
   const isFaltaInjustificada = status === "F";
   const isFolga = status === "FO";
   const isSuspensao = status === "SU";
-  const mostrarHorario = status !== "BH" && status !== "S1" && status !== "";
+  const isAbonado = STATUS_ABONADOS.includes(status);
+  const mostrarHorario = !STATUS_SEM_HORARIO.includes(status) && status !== "";
   const permiteHorario = status === "P";
 
   /* =============================
@@ -111,6 +119,8 @@ export default function EditarPresencaModal({
       setJustificativa("FOLGA");
     } else if (isSuspensao) {
       setJustificativa("SUSPENSAO");
+    } else if (isAbonado) {
+      setJustificativa(autoJustificativa(status));
     }
   }, [status]);
 
@@ -140,7 +150,7 @@ export default function EditarPresencaModal({
       return;
     }
 
-    if (!justificativa && !isFolga && !isSuspensao) {
+    if (!justificativa && !isFolga && !isSuspensao && !isAbonado) {
       alert("Justificativa é obrigatória");
       return;
     }
@@ -281,7 +291,7 @@ export default function EditarPresencaModal({
         )}
 
         {/* JUSTIFICATIVA */}
-        {!isFolga && !isSuspensao && (
+        {!isFolga && !isSuspensao && !isAbonado && (
           <div>
             <label className="text-xs text-muted">
               Justificativa <span className="text-red-400">*</span>

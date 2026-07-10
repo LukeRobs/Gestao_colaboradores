@@ -97,7 +97,7 @@ function getStatusDoDia(f) {
     if (codigo === "BH" || codigo === "BHDSR") {
       return { code: "BH", contaComoEscalado: true, impactaAbsenteismo: false };
     }
-    if (["AFA", "AF", "LM", "LP", "T"].includes(codigo)) {
+    if (["AFA", "AF", "LM", "LP", "T", "AB", "JE"].includes(codigo)) {
       return { code: codigo, contaComoEscalado: false, impactaAbsenteismo: false };
     }
     // F / FJ e demais → ausência que impacta

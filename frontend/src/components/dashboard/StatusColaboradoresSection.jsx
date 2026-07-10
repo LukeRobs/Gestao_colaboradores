@@ -17,6 +17,9 @@
     if (l.includes("AFAST")) return "#AF52DE";
     if (l.includes("INSS")) return "#FF6B00";
     if (l.includes("INAT")) return "#8E8E93";
+    // Categoria informativa (sem lançamento no dia) — não é ausência/falta,
+    // por isso usa neutro em vez do vermelho/laranja das demais categorias.
+    if (l.includes("SEM LAN")) return "#8E8E93";
     return "#FA4C00";
   };
 

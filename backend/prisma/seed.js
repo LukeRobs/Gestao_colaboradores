@@ -23,6 +23,8 @@ async function main() {
       { codigo: "AA", descricao: "Atestado de Acompanhamento" },
       { codigo: "T", descricao: "Transferido" },
       { codigo: "SU", descricao: "Suspensão" },
+      { codigo: "AB", descricao: "Licença - Atestado de Óbito" },
+      { codigo: "JE", descricao: "Licença - Justiça Eleitoral" },
     ],
   });
 

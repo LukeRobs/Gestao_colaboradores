@@ -344,6 +344,16 @@ export default function DashboardOperacional() {
     [dados, turnoSelecionado]
   );
 
+  // Presenças/lançamentos registrados num dia de DSR do colaborador — não conta
+  // como planejado, mas o registro existe (ex: trabalhou no dia de folga).
+  const presencasForaEscalaTurno = useMemo(
+    () => {
+      if (turnoSelecionado === "TODOS") return dados?.presencasForaEscala || [];
+      return dados?.presencasForaEscala?.filter((p) => p.turno === turnoSelecionado) || [];
+    },
+    [dados, turnoSelecionado]
+  );
+
   const setoresItems = useMemo(
     () =>
       (turnoData.setores || []).map((s) => ({
@@ -568,6 +578,11 @@ export default function DashboardOperacional() {
             <StatusColaboradoresSection
               title="Status dos Colaboradores"
               items={statusItems}
+              footer={
+                presencasForaEscalaTurno.length > 0
+                  ? `⚠ ${presencasForaEscalaTurno.length} lançamento(s) em dia de DSR (colaborador trabalhou fora da escala)`
+                  : ""
+              }
             />
           </div>
 

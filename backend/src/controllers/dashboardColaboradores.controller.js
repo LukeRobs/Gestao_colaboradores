@@ -155,6 +155,14 @@ function getStatusDoDiaOperacional(f) {
       return { label: "Afastamento", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
     }
 
+    // AB / JE → licença abonada, fora do HC
+    if (codigo === "AB") {
+      return { label: "Licença - Atestado de Óbito", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+    }
+    if (codigo === "JE") {
+      return { label: "Licença - Justiça Eleitoral", contaComoEscalado: false, impactaAbsenteismo: false, origem: "tipoAusencia" };
+    }
+
     // FJ → ausência que impacta
     if (codigo === "FJ") {
       return { label: "Falta Justificada", contaComoEscalado: true, impactaAbsenteismo: true, origem: "tipoAusencia" };

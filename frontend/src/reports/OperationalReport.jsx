@@ -27,6 +27,7 @@ export default function OperationalReport({ report, estacaoId }) {
     genero = [],
     statusColaboradores = [],
     vinculo = [],
+    tempoCasa = [],
     setores = [],
     ausenciasHoje = [],
     insights,
@@ -335,6 +336,32 @@ export default function OperationalReport({ report, estacaoId }) {
           <PieCard title="SPX x BPO" data={vinculo} />
           <PieCard title="Status" data={statusColaboradores} />
         </div>
+        {/* ================= TEMPO DE CASA ================= */}
+        <Card>
+          <h2 className="font-medium mb-4">Tempo de Casa (HC do dia)</h2>
+          <ChartContainer>
+            <RBarChart
+              width={isExporting ? 1180 : undefined}
+              height={isExporting ? 320 : undefined}
+              data={tempoCasa}
+              margin={{ top: 32, right: 16, left: 8, bottom: 8 }}
+            >
+              <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="0" />
+              <XAxis dataKey="name" tick={{ fill: "#BFBFC3", fontSize: 12 }} stroke="rgba(255,255,255,0.1)" />
+              <YAxis tick={{ fill: "#BFBFC3", fontSize: 12 }} stroke="rgba(255,255,255,0.1)" />
+              <Tooltip contentStyle={{ background: "#1c1c1c", border: "none" }} />
+              <Bar dataKey="value">
+                <LabelList position="top" fill="#fff" fontSize={12} />
+                {tempoCasa.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={fadeColor("#0A84FF", "#FA4C00", tempoCasa.length > 1 ? i / (tempoCasa.length - 1) : 0)}
+                  />
+                ))}
+              </Bar>
+            </RBarChart>
+          </ChartContainer>
+        </Card>
         {/* ================= SETORES ================= */}
         <Card>
           <h2 className="font-medium mb-4">Presença por Setor</h2>
@@ -423,8 +450,20 @@ function ChartContainer({ children }) {
     </div>
   )
 }
-function PieCard({ title, data }) {
-  const COLORS = ["#FA4C00", "#3b82f6", "#FFB37A", "#FFD2B0"]
+function fadeColor(fromHex, toHex, t) {
+  const parse = (hex) => {
+    const n = hex.replace("#", "")
+    return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)]
+  }
+  const [r1, g1, b1] = parse(fromHex)
+  const [r2, g2, b2] = parse(toHex)
+  const mix = (a, b) => Math.round(a + (b - a) * t)
+  const toHex2 = (v) => v.toString(16).padStart(2, "0")
+  return `#${toHex2(mix(r1, r2))}${toHex2(mix(g1, g2))}${toHex2(mix(b1, b2))}`
+}
+
+function PieCard({ title, data, colors }) {
+  const COLORS = colors || ["#FA4C00", "#3b82f6", "#FFB37A", "#FFD2B0"]
   const total = data.reduce((sum, d) => sum + (Number(d.value) || 0), 0)
   const isExporting = typeof document !== "undefined" && document.body.classList.contains("exporting-report")
   return (

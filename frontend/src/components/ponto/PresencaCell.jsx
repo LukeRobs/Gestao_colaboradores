@@ -28,6 +28,8 @@ const STATUS_CONFIG = {
   S1:  { label: "Sinergia", short: "S1", bg: "bg-pink-600/40", text: "text-red-400" },
   SU:  { label: "Suspensão", short: "SU", bg: "bg-amber-700/30", text: "text-amber-400" },
   ON:  { label: "Onboarding", short: "ON", bg: "bg-orange-600/20", text: "text-orange-400" },
+  AB:  { label: "Licença - Atestado de Óbito", short: "AB", bg: "bg-slate-600/20", text: "text-slate-400" },
+  JE:  { label: "Licença - Justiça Eleitoral", short: "JE", bg: "bg-slate-600/20", text: "text-slate-400" },
 };
 
 

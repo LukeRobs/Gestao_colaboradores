@@ -987,6 +987,8 @@ const ajusteManualPresenca = async (req, res) => {
       "ON",
       "FOLGA",
       "SUSPENSAO",
+      "ATESTADO_OBITO",
+      "JUSTICA_ELEITORAL",
     ];
 
     const justificativaNormalizada = String(justificativa)

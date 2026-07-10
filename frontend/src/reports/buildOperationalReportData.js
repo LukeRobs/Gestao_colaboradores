@@ -15,6 +15,23 @@ export function buildOperationalReportData({ dados, turno, periodo, belts = null
       value: safe(i?.[valueKey]),
     }))
 
+  // Ordem cronológica das faixas de tempo de casa (calcularTempoDeCasa, backend)
+  const FAIXA_TEMPO_CASA_ORDEM = [
+    "0 a 30 Dias",
+    "1 a 3 meses",
+    "3 a 6 meses",
+    "6 a 12 meses",
+    "1 a 2 anos",
+    "2 anos +",
+    "-",
+  ]
+  const ordenarFaixasTempoCasa = (arr) =>
+    [...arr].sort(
+      (a, b) =>
+        FAIXA_TEMPO_CASA_ORDEM.indexOf(a.name) -
+        FAIXA_TEMPO_CASA_ORDEM.indexOf(b.name)
+    )
+
   /* ================= BASE DO TURNO (FONTE ÚNICA) ================= */
   const turnoData =
     dados.distribuicaoTurnoSetor?.find((t) => t.turno === turnoKey) || {}
@@ -155,6 +172,10 @@ export function buildOperationalReportData({ dados, turno, periodo, belts = null
       dados.distribuicaoVinculoPorTurno?.[turnoKey],
       "name",
       "value"
+    ),
+
+    tempoCasa: ordenarFaixasTempoCasa(
+      normalizePie(dados.tempoCasaPorTurno?.[turnoKey], "name", "value")
     ),
 
     setores,
