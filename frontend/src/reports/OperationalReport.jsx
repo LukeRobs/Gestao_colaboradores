@@ -358,6 +358,7 @@ export default function OperationalReport({ report, estacaoId }) {
                   <th className="py-2">Motivo</th>
                   <th className="py-2">Setor</th>
                   <th className="py-2">Empresa</th>
+                  <th className="py-2">Tempo de Casa</th>
                   <th className="py-2">Dias de Folga</th>
                 </tr>
               </thead>
@@ -368,6 +369,7 @@ export default function OperationalReport({ report, estacaoId }) {
                     <td className="text-center text-[#FF9F0A]">{a.motivo}</td>
                     <td className="text-center">{a.setor}</td>
                     <td className="text-center">{a.empresa}</td>
+                    <td className="text-center">{a.tempoCasa || "-"}</td>
                     <td className="text-center">{a.diasFolga || "-"}</td>
                   </tr>
                 ))}
