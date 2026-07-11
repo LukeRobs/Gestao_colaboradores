@@ -344,7 +344,15 @@ const carregarGestaoOperacional = async (req, res) => {
         }
       } else {
         // Turno em andamento: planilha é sempre mais atualizada
-        if (quantidadePorHora[h] !== undefined && quantidadePorHora[h] > 0) {
+        const horaIniciada = turno === 'T3'
+          ? posicaoNoTurnoT3(h) <= posicaoAtualT3
+          : h <= horaAtual;
+
+        if (!horaIniciada) {
+          realizadoHora = 0;
+          origem = "futuro";
+          console.log(`  ⏭️ Hora ${h} ainda não iniciou — ignorando`);
+        } else if (quantidadePorHora[h] !== undefined && quantidadePorHora[h] > 0) {
           realizadoHora = Math.round(quantidadePorHora[h]);
           origem = "planilha";
           console.log(`  ✅ Usando quantidade da planilha: ${realizadoHora}`);
