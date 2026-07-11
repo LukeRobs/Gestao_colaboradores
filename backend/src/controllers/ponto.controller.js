@@ -1467,6 +1467,16 @@ const exportarPresencaSheets = async (req, res) => {
           continue;
         }
 
+        // Status do colaborador como fallback visual (FERIAS/AFASTADO sem registro de frequência)
+        if (c.status === "AFASTADO") {
+          diasMap[dataISO] = { status: "AFA", manual: false };
+          continue;
+        }
+        if (c.status === "FERIAS") {
+          diasMap[dataISO] = { status: "FE", manual: false };
+          continue;
+        }
+
         // DSR
         if (diaDSR) {
           diasMap[dataISO] = {
