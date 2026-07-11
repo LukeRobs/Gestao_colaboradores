@@ -847,10 +847,35 @@ const getControlePresenca = async (req, res) => {
         }
 
         /* ===============================
+           FREQUÊNCIA
+           Se colaborador está de FERIAS/AFASTADO e o registro é DSR,
+           ignora para que as férias sobreponham o DSR automático.
+        =============================== */
+        if (freqMap[key]) {
+          const f = freqMap[key];
+          const codigoFreq = f.tipoAusencia?.codigo || "";
+          const dsrDuranteFerias =
+            codigoFreq === "DSR" &&
+            (c.status === "FERIAS" || c.status === "AFASTADO");
+
+          if (!dsrDuranteFerias) {
+            diasMap[dataISO] = {
+              idFrequencia: f.idFrequencia,
+              status: codigoFreq || "-",
+              entrada: f.horaEntrada,
+              saida: f.horaSaida,
+              validado: !!f.validado,
+              manual: !!f.manual,
+            };
+            continue;
+          }
+          // DSR durante férias: cai para o bloco de status abaixo
+        }
+
+        /* ===============================
            STATUS DO COLABORADOR (AFASTADO / FERIAS)
-           Sobrepõe frequência e DSR — colaborador em férias/afastado
-           não deve mostrar DSR nem registros automáticos.
-           Manual já foi tratado acima e mantém prioridade.
+           Sobrepõe DSR da escala e DSR automático.
+           Registros reais (P, BH, FO…) já foram tratados acima.
         =============================== */
         if (c.status === "AFASTADO") {
           diasMap[dataISO] = { status: "AFA", origem: "status", manual: false };
@@ -858,23 +883,6 @@ const getControlePresenca = async (req, res) => {
         }
         if (c.status === "FERIAS") {
           diasMap[dataISO] = { status: "FE", origem: "status", manual: false };
-          continue;
-        }
-
-        /* ===============================
-           FREQUÊNCIA
-        =============================== */
-        if (freqMap[key]) {
-          const f = freqMap[key];
-
-          diasMap[dataISO] = {
-            idFrequencia: f.idFrequencia,
-            status: f.tipoAusencia?.codigo || "-",
-            entrada: f.horaEntrada,
-            saida: f.horaSaida,
-            validado: !!f.validado,
-            manual: !!f.manual,
-          };
           continue;
         }
 
@@ -1454,26 +1462,33 @@ const exportarPresencaSheets = async (req, res) => {
           continue;
         }
 
-        // FERIAS/AFASTADO sobrepõe frequência automática e DSR
+        // Frequência — ignora DSR automático quando colaborador está de férias/afastado
+        if (freqMap[key]) {
+          const f = freqMap[key];
+          const codigoFreq = f.tipoAusencia?.codigo || "";
+          const dsrDuranteFerias =
+            codigoFreq === "DSR" &&
+            (c.status === "FERIAS" || c.status === "AFASTADO");
+
+          if (!dsrDuranteFerias) {
+            diasMap[dataISO] = {
+              status: codigoFreq || "-",
+              entrada: f.horaEntrada,
+              saida: f.horaSaida,
+              validado: f.validado,
+              manual: f.manual ?? false,
+            };
+            continue;
+          }
+        }
+
+        // FERIAS/AFASTADO sobrepõe DSR (automático e da escala)
         if (c.status === "AFASTADO") {
           diasMap[dataISO] = { status: "AFA", manual: false };
           continue;
         }
         if (c.status === "FERIAS") {
           diasMap[dataISO] = { status: "FE", manual: false };
-          continue;
-        }
-
-        // Frequência
-        if (freqMap[key]) {
-          const f = freqMap[key];
-          diasMap[dataISO] = {
-            status: f.tipoAusencia?.codigo || "-",
-            entrada: f.horaEntrada,
-            saida: f.horaSaida,
-            validado: f.validado,
-            manual: f.manual ?? false,
-          };
           continue;
         }
 
