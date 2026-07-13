@@ -847,16 +847,25 @@ const getControlePresenca = async (req, res) => {
         }
 
         /* ===============================
+           FERIAS / AFASTADO — verifica se o dia está dentro do range
+           da ausência cadastrada antes de sobrepor DSR ou preencher vazio.
+        =============================== */
+        const ausenciaStatusCodigo = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
+        const statusCobreDia = ausenciaStatusCodigo && c.ausencias?.some(
+          (a) =>
+            a.tipoAusencia?.codigo === ausenciaStatusCodigo &&
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+
+        /* ===============================
            FREQUÊNCIA
-           Se colaborador está de FERIAS/AFASTADO e o registro é DSR,
-           ignora para que as férias sobreponham o DSR automático.
+           Se o dia está coberto por uma ausência FE/AFA, ignora DSR automático.
         =============================== */
         if (freqMap[key]) {
           const f = freqMap[key];
           const codigoFreq = f.tipoAusencia?.codigo || "";
-          const dsrDuranteFerias =
-            codigoFreq === "DSR" &&
-            (c.status === "FERIAS" || c.status === "AFASTADO");
+          const dsrDuranteFerias = codigoFreq === "DSR" && statusCobreDia;
 
           if (!dsrDuranteFerias) {
             diasMap[dataISO] = {
@@ -869,20 +878,15 @@ const getControlePresenca = async (req, res) => {
             };
             continue;
           }
-          // DSR durante férias: cai para o bloco de status abaixo
+          // DSR coberto por ausência FE/AFA: cai para o bloco abaixo
         }
 
         /* ===============================
            STATUS DO COLABORADOR (AFASTADO / FERIAS)
-           Sobrepõe DSR da escala e DSR automático.
-           Registros reais (P, BH, FO…) já foram tratados acima.
+           Só aplica se o dia está dentro do range da ausência cadastrada.
         =============================== */
-        if (c.status === "AFASTADO") {
-          diasMap[dataISO] = { status: "AFA", origem: "status", manual: false };
-          continue;
-        }
-        if (c.status === "FERIAS") {
-          diasMap[dataISO] = { status: "FE", origem: "status", manual: false };
+        if (statusCobreDia) {
+          diasMap[dataISO] = { status: ausenciaStatusCodigo, origem: "status", manual: false };
           continue;
         }
 
@@ -1462,13 +1466,20 @@ const exportarPresencaSheets = async (req, res) => {
           continue;
         }
 
-        // Frequência — ignora DSR automático quando colaborador está de férias/afastado
+        // Verifica se o dia está coberto por ausência FE/AFA cadastrada
+        const ausenciaStatusCodigoExp = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
+        const statusCobreDiaExp = ausenciaStatusCodigoExp && c.ausencias?.some(
+          (a) =>
+            a.tipoAusencia?.codigo === ausenciaStatusCodigoExp &&
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+
+        // Frequência — ignora DSR automático quando coberto por ausência FE/AFA
         if (freqMap[key]) {
           const f = freqMap[key];
           const codigoFreq = f.tipoAusencia?.codigo || "";
-          const dsrDuranteFerias =
-            codigoFreq === "DSR" &&
-            (c.status === "FERIAS" || c.status === "AFASTADO");
+          const dsrDuranteFerias = codigoFreq === "DSR" && statusCobreDiaExp;
 
           if (!dsrDuranteFerias) {
             diasMap[dataISO] = {
@@ -1482,13 +1493,9 @@ const exportarPresencaSheets = async (req, res) => {
           }
         }
 
-        // FERIAS/AFASTADO sobrepõe DSR (automático e da escala)
-        if (c.status === "AFASTADO") {
-          diasMap[dataISO] = { status: "AFA", manual: false };
-          continue;
-        }
-        if (c.status === "FERIAS") {
-          diasMap[dataISO] = { status: "FE", manual: false };
+        // FERIAS/AFASTADO — só aplica se o dia está dentro do range da ausência
+        if (statusCobreDiaExp) {
+          diasMap[dataISO] = { status: ausenciaStatusCodigoExp, manual: false };
           continue;
         }
 
