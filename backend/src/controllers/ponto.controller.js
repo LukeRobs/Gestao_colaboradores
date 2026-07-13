@@ -842,6 +842,21 @@ const getControlePresenca = async (req, res) => {
         }
 
         /* ===============================
+           FERIAS/AFASTADO POR DATAS DO STATUS
+        =============================== */
+        const ausenciaStatusCodigo = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
+        if (
+          ausenciaStatusCodigo &&
+          c.dataInicioStatus &&
+          c.dataFimStatus &&
+          dataCalendario >= startOfDay(c.dataInicioStatus) &&
+          dataCalendario <= startOfDay(c.dataFimStatus)
+        ) {
+          diasMap[dataISO] = { status: ausenciaStatusCodigo, origem: "status", manual: false };
+          continue;
+        }
+
+        /* ===============================
            FREQUÊNCIA
         =============================== */
         if (freqMap[key]) {
@@ -855,21 +870,6 @@ const getControlePresenca = async (req, res) => {
             validado: !!f.validado,
             manual: !!f.manual,
           };
-          continue;
-        }
-
-        /* ===============================
-           FERIAS/AFASTADO POR DATAS DO STATUS
-        =============================== */
-        const ausenciaStatusCodigo = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
-        if (
-          ausenciaStatusCodigo &&
-          c.dataInicioStatus &&
-          c.dataFimStatus &&
-          dataCalendario >= startOfDay(c.dataInicioStatus) &&
-          dataCalendario <= startOfDay(c.dataFimStatus)
-        ) {
-          diasMap[dataISO] = { status: ausenciaStatusCodigo, origem: "status", manual: false };
           continue;
         }
 
@@ -1444,19 +1444,6 @@ const exportarPresencaSheets = async (req, res) => {
           continue;
         }
 
-        // Frequência
-        if (freqMap[key]) {
-          const f = freqMap[key];
-          diasMap[dataISO] = {
-            status: f.tipoAusencia?.codigo || "-",
-            entrada: f.horaEntrada,
-            saida: f.horaSaida,
-            validado: f.validado,
-            manual: f.manual ?? false,
-          };
-          continue;
-        }
-
         // FERIAS/AFASTADO por datas do status
         const ausenciaStatusCodigoExp = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
         if (
@@ -1467,6 +1454,19 @@ const exportarPresencaSheets = async (req, res) => {
           dataCalendario <= startOfDay(c.dataFimStatus)
         ) {
           diasMap[dataISO] = { status: ausenciaStatusCodigoExp, origem: "status", manual: false };
+          continue;
+        }
+
+        // Frequência
+        if (freqMap[key]) {
+          const f = freqMap[key];
+          diasMap[dataISO] = {
+            status: f.tipoAusencia?.codigo || "-",
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: f.validado,
+            manual: f.manual ?? false,
+          };
           continue;
         }
 
