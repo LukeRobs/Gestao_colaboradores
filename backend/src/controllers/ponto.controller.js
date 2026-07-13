@@ -509,7 +509,6 @@ const getControlePresenca = async (req, res) => {
       escala,
       search,
       lider,
-      idCargo,
       pendenciaSaida,
       pendentesHoje,
     } = req.query;
@@ -541,22 +540,22 @@ const getControlePresenca = async (req, res) => {
       return successResponse(res, { dias: [], colaboradores: [] });
     }
 
-    // Inclui colaboradores ATIVO + FERIAS/AFASTADO cujo período já encerrou
-    // (equivalente ao aplicarStatusDinamico — status virtual ATIVO mas banco ainda desatualizado)
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
     const whereColaborador = {
       OR: [
-        { status: "ATIVO", dataDesligamento: null },
-        // FERIAS/AFASTADO: tanto em andamento quanto com período expirado ainda não atualizado
-        { status: { in: ["FERIAS", "AFASTADO"] }, dataDesligamento: null },
-        // Desligados no mês visualizado: permanecem visíveis até o fim do mês do desligamento
+        { status: "ATIVO" },
+        // FERIAS/AFASTADO cujo período encerrou antes do mês (status desatualizado no banco)
         {
-          status: "INATIVO",
-          dataDesligamento: { gte: inicioMes, lte: fimMes },
+          status: { in: ["FERIAS", "AFASTADO"] },
+          dataFimStatus: { lt: inicioMes },
+        },
+        // FERIAS/AFASTADO ativos que cobrem o mês consultado
+        {
+          status: { in: ["FERIAS", "AFASTADO"] },
+          dataInicioStatus: { lte: fimMes },
+          dataFimStatus: { gte: inicioMes },
         },
       ],
+      dataDesligamento: null,
       // Isolamento por estação: ADMIN vê todas, demais só a sua
       ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
         ? { idEstacao: req.dbContext.estacaoId }
@@ -581,9 +580,6 @@ const getControlePresenca = async (req, res) => {
         : {}),
       ...(lider && lider !== "TODOS"
         ? { idLider: lider }
-        : {}),
-      ...(idCargo && idCargo !== "TODOS"
-        ? { idCargo: Number(idCargo) }
         : {}),
       ...(search
         ? { nomeCompleto: { contains: String(search), mode: "insensitive" } }
@@ -784,12 +780,30 @@ const getControlePresenca = async (req, res) => {
         const dataISO = ymd(dataCalendario);
         const key = `${c.opsId}_${dataISO}`;
 
+        /* ===============================
+           ATESTADO MÉDICO TEM PRIORIDADE MÁXIMA
+           (exceto quando o dia é DSR)
+        =============================== */
         const diasDsrAtestado = getDiasDsrNoDia(c.opsId, dataCalendario, historicoMap, c.escala?.diasDsr || []);
         const diaDSR = isDiaDSRSync(dataCalendario, diasDsrAtestado);
 
+        const atestadoDia = !diaDSR && c.atestadosMedicos?.find(
+          (a) =>
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+
+        if (atestadoDia) {
+          diasMap[dataISO] = {
+            status: "AM",
+            origem: "atestado",
+            manual: false,
+          };
+          continue;
+        }
+
         /* ===============================
-           MANUAL TEM PRIORIDADE MÁXIMA
-           (sobrepõe atestado — override explícito do operador)
+           MANUAL TEM PRIORIDADE
         =============================== */
         if (freqMap[key]?.manual) {
           const f = freqMap[key];
@@ -805,25 +819,6 @@ const getControlePresenca = async (req, res) => {
               ? (userNomeMap[f.registradoPor] || f.registradoPor)
               : null,
             justificativa: f.justificativa || null,
-          };
-          continue;
-        }
-
-        /* ===============================
-           ATESTADO MÉDICO
-           (exceto quando o dia é DSR)
-        =============================== */
-        const atestadoDia = !diaDSR && c.atestadosMedicos?.find(
-          (a) =>
-            dataCalendario >= startOfDay(a.dataInicio) &&
-            dataCalendario <= startOfDay(a.dataFim)
-        );
-
-        if (atestadoDia) {
-          diasMap[dataISO] = {
-            status: "AM",
-            origem: "atestado",
-            manual: false,
           };
           continue;
         }
@@ -847,46 +842,34 @@ const getControlePresenca = async (req, res) => {
         }
 
         /* ===============================
-           FERIAS / AFASTADO — verifica se o dia está dentro do range
-           da ausência cadastrada antes de sobrepor DSR ou preencher vazio.
+           FERIAS/AFASTADO POR DATAS DO STATUS
         =============================== */
         const ausenciaStatusCodigo = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
-        const statusCobreDia = ausenciaStatusCodigo && c.ausencias?.some(
-          (a) =>
-            a.tipoAusencia?.codigo === ausenciaStatusCodigo &&
-            dataCalendario >= startOfDay(a.dataInicio) &&
-            dataCalendario <= startOfDay(a.dataFim)
-        );
-
-        /* ===============================
-           FREQUÊNCIA
-           Se o dia está coberto por uma ausência FE/AFA, ignora DSR automático.
-        =============================== */
-        if (freqMap[key]) {
-          const f = freqMap[key];
-          const codigoFreq = f.tipoAusencia?.codigo || "";
-          const dsrDuranteFerias = codigoFreq === "DSR" && statusCobreDia;
-
-          if (!dsrDuranteFerias) {
-            diasMap[dataISO] = {
-              idFrequencia: f.idFrequencia,
-              status: codigoFreq || "-",
-              entrada: f.horaEntrada,
-              saida: f.horaSaida,
-              validado: !!f.validado,
-              manual: !!f.manual,
-            };
-            continue;
-          }
-          // DSR coberto por ausência FE/AFA: cai para o bloco abaixo
+        if (
+          ausenciaStatusCodigo &&
+          c.dataInicioStatus &&
+          c.dataFimStatus &&
+          dataCalendario >= startOfDay(c.dataInicioStatus) &&
+          dataCalendario <= startOfDay(c.dataFimStatus)
+        ) {
+          diasMap[dataISO] = { status: ausenciaStatusCodigo, origem: "status", manual: false };
+          continue;
         }
 
         /* ===============================
-           STATUS DO COLABORADOR (AFASTADO / FERIAS)
-           Só aplica se o dia está dentro do range da ausência cadastrada.
+           FREQUÊNCIA
         =============================== */
-        if (statusCobreDia) {
-          diasMap[dataISO] = { status: ausenciaStatusCodigo, origem: "status", manual: false };
+        if (freqMap[key]) {
+          const f = freqMap[key];
+
+          diasMap[dataISO] = {
+            idFrequencia: f.idFrequencia,
+            status: f.tipoAusencia?.codigo || "-",
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: !!f.validado,
+            manual: !!f.manual,
+          };
           continue;
         }
 
@@ -905,12 +888,8 @@ const getControlePresenca = async (req, res) => {
         /* ===============================
            FALTA / SEM LANÇAMENTO
         =============================== */
-        // Dias antes da admissão não têm lançamento real — exibe NC visualmente (sem gravar no banco)
-        const admissao = c.dataAdmissao ? new Date(c.dataAdmissao) : null;
-        const antesAdmissao = admissao && dataCalendario < new Date(Date.UTC(admissao.getUTCFullYear(), admissao.getUTCMonth(), admissao.getUTCDate()));
-
         diasMap[dataISO] = {
-          status: antesAdmissao ? "NC" : "-",
+          status: "-",
           manual: false,
         };
       }
@@ -997,10 +976,6 @@ const ajusteManualPresenca = async (req, res) => {
       "LICENCA",
       "FALTA_INJUSTIFICADA",
       "ON",
-      "FOLGA",
-      "SUSPENSAO",
-      "ATESTADO_OBITO",
-      "JUSTICA_ELEITORAL",
     ];
 
     const justificativaNormalizada = String(justificativa)
@@ -1285,20 +1260,23 @@ const exportarPresencaSheets = async (req, res) => {
 
     console.log(`[${reqId}] Período: ${inicioMes.toISOString()} até ${fimMes.toISOString()}`);
 
-    // Exporta cargos operacionais (inclui INATIVO do mês e FERIAS/AFASTADO)
+    // Exporta cargos operacionais
     const whereColaborador = {
-      OR: [
-        { status: "ATIVO", dataDesligamento: null },
-        // FERIAS/AFASTADO: tanto em andamento quanto com período expirado ainda não atualizado
-        { status: { in: ["FERIAS", "AFASTADO"] }, dataDesligamento: null },
-        // Desligados no mês exportado: aparecem até o fim do mês do desligamento
-        {
-          status: "INATIVO",
-          dataDesligamento: { gte: inicioMes, lte: fimMes },
-        },
-      ],
+      status: "ATIVO",
+      dataDesligamento: null,
       ...(req.dbContext?.estacaoId ? { idEstacao: req.dbContext.estacaoId } : {}),
-      idCargo: { in: [8, 9, 39] },
+      cargo: {
+        nomeCargo: {
+          in: [
+            "Auxiliar de Logística I",
+            "Auxiliar de Logística II",
+            "Auxiliar de Logística I - PCD",
+            "Auxiliar de Returns I",
+            "Auxilíar de Returns II",
+            "Fiscal de pátio"
+          ]
+        }
+      },
     };
 
     console.log(`[${reqId}] Buscando colaboradores...`);
@@ -1427,7 +1405,18 @@ const exportarPresencaSheets = async (req, res) => {
         const diasDsrDiaCtrl = getDiasDsrNoDia(c.opsId, dataCalendario, historicoMap, c.escala?.diasDsr || []);
         const diaDSR = isDiaDSRSync(dataCalendario, diasDsrDiaCtrl);
 
-        // Manual tem prioridade máxima (override explícito do operador, sobrepõe atestado)
+        // Atestado médico tem prioridade máxima (exceto em dias de DSR)
+        const atestadoDia = !diaDSR && c.atestadosMedicos?.find(
+          (a) =>
+            dataCalendario >= startOfDay(a.dataInicio) &&
+            dataCalendario <= startOfDay(a.dataFim)
+        );
+        if (atestadoDia) {
+          diasMap[dataISO] = { status: "AM", origem: "atestado", manual: false };
+          continue;
+        }
+
+        // Manual tem prioridade
         if (freqMap[key]?.manual) {
           const f = freqMap[key];
           diasMap[dataISO] = {
@@ -1437,17 +1426,6 @@ const exportarPresencaSheets = async (req, res) => {
             validado: !!f.validado,
             manual: true,
           };
-          continue;
-        }
-
-        // Atestado médico (exceto em dias de DSR)
-        const atestadoDia = !diaDSR && c.atestadosMedicos?.find(
-          (a) =>
-            dataCalendario >= startOfDay(a.dataInicio) &&
-            dataCalendario <= startOfDay(a.dataFim)
-        );
-        if (atestadoDia) {
-          diasMap[dataISO] = { status: "AM", origem: "atestado", manual: false };
           continue;
         }
 
@@ -1466,36 +1444,29 @@ const exportarPresencaSheets = async (req, res) => {
           continue;
         }
 
-        // Verifica se o dia está coberto por ausência FE/AFA cadastrada
+        // FERIAS/AFASTADO por datas do status
         const ausenciaStatusCodigoExp = c.status === "FERIAS" ? "FE" : c.status === "AFASTADO" ? "AFA" : null;
-        const statusCobreDiaExp = ausenciaStatusCodigoExp && c.ausencias?.some(
-          (a) =>
-            a.tipoAusencia?.codigo === ausenciaStatusCodigoExp &&
-            dataCalendario >= startOfDay(a.dataInicio) &&
-            dataCalendario <= startOfDay(a.dataFim)
-        );
-
-        // Frequência — ignora DSR automático quando coberto por ausência FE/AFA
-        if (freqMap[key]) {
-          const f = freqMap[key];
-          const codigoFreq = f.tipoAusencia?.codigo || "";
-          const dsrDuranteFerias = codigoFreq === "DSR" && statusCobreDiaExp;
-
-          if (!dsrDuranteFerias) {
-            diasMap[dataISO] = {
-              status: codigoFreq || "-",
-              entrada: f.horaEntrada,
-              saida: f.horaSaida,
-              validado: f.validado,
-              manual: f.manual ?? false,
-            };
-            continue;
-          }
+        if (
+          ausenciaStatusCodigoExp &&
+          c.dataInicioStatus &&
+          c.dataFimStatus &&
+          dataCalendario >= startOfDay(c.dataInicioStatus) &&
+          dataCalendario <= startOfDay(c.dataFimStatus)
+        ) {
+          diasMap[dataISO] = { status: ausenciaStatusCodigoExp, origem: "status", manual: false };
+          continue;
         }
 
-        // FERIAS/AFASTADO — só aplica se o dia está dentro do range da ausência
-        if (statusCobreDiaExp) {
-          diasMap[dataISO] = { status: ausenciaStatusCodigoExp, manual: false };
+        // Frequência
+        if (freqMap[key]) {
+          const f = freqMap[key];
+          diasMap[dataISO] = {
+            status: f.tipoAusencia?.codigo || "-",
+            entrada: f.horaEntrada,
+            saida: f.horaSaida,
+            validado: f.validado,
+            manual: f.manual ?? false,
+          };
           continue;
         }
 

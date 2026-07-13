@@ -53,12 +53,27 @@ const getAusenciaById = async (req, res) => {
 const createAusencia = async (req, res) => {
   const { opsId, idTipoAusencia, dataInicio, dataFim, dataPrevistaRetorno, diasCorridos, diasUteis, motivo, documentoAnexo, numeroProtocolo, status } = req.body;
 
+  const novaInicio = new Date(dataInicio);
+  const novaFim = new Date(dataFim);
+
+  // Desativa ausências ativas do mesmo tipo que se sobrepõem com o novo período
+  await prisma.ausencia.updateMany({
+    where: {
+      opsId,
+      idTipoAusencia: parseInt(idTipoAusencia),
+      status: 'ATIVO',
+      dataInicio: { lte: novaFim },
+      dataFim: { gte: novaInicio },
+    },
+    data: { status: 'CANCELADO' },
+  });
+
   const ausencia = await prisma.ausencia.create({
     data: {
       opsId,
       idTipoAusencia: parseInt(idTipoAusencia),
-      dataInicio: new Date(dataInicio),
-      dataFim: new Date(dataFim),
+      dataInicio: novaInicio,
+      dataFim: novaFim,
       dataPrevistaRetorno: dataPrevistaRetorno ? new Date(dataPrevistaRetorno) : null,
       diasCorridos: diasCorridos ? parseInt(diasCorridos) : null,
       diasUteis: diasUteis ? parseInt(diasUteis) : null,
