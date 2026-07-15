@@ -8,7 +8,11 @@ const DEFAULT_SPREADSHEET_ID = "17Dpmr1Kn6ybvK3rah2JvoCBsAeOvotvM6k_7uaATPz0";
 const DEFAULT_PRODUCAO_ONTIME_SPREADSHEET_ID = "1QKrqffSjAXrOWtMeTwDYhhfbyU0BakjvSODg3C6bxCI";
 
 const META_SHEET = "Meta";
-const PRODUCAO_ONTIME_SHEET = "ProdutividadeSPX";
+// Aba principal e aba de backup (ambas na mesma planilha OnTime, estrutura semelhante)
+const PRODUCAO_ONTIME_SHEET_PRIMARY = "ProdutividadeSPX";
+const PRODUCAO_ONTIME_SHEET_BACKUP = "db30s";
+// Mantido para compatibilidade com chamadores que não informam a aba
+const PRODUCAO_ONTIME_SHEET = PRODUCAO_ONTIME_SHEET_PRIMARY;
 
 /* =====================================================
    CACHE POR SPREADSHEET ID
@@ -21,7 +25,7 @@ function getCache(spreadsheetId) {
   if (!cacheMap.has(spreadsheetId)) {
     cacheMap.set(spreadsheetId, {
       meta: null, metaTs: null,
-      ontime: null, ontimeTs: null,
+      ontimeBySheet: {}, // { [sheetName]: { data, ts } }
     });
   }
   return cacheMap.get(spreadsheetId);
@@ -131,21 +135,22 @@ async function carregarPlanilha(spreadsheetId) {
    CARREGAR ABA PRODUTIVIDADE ONTIME (ProdutividadeSPX)
 ===================================================== */
 
-async function carregarProdutividadeOnTime(spreadsheetId) {
+async function carregarProdutividadeOnTime(spreadsheetId, sheetName = PRODUCAO_ONTIME_SHEET_PRIMARY) {
   const cache = getCache(spreadsheetId);
-  if (isCacheValid(cache.ontimeTs)) {
-    console.log("📦 ProdutividadeSPX retornada do cache");
-    return cache.ontime;
+  const entry = cache.ontimeBySheet[sheetName];
+  if (entry && isCacheValid(entry.ts)) {
+    console.log(`📦 ${sheetName} retornada do cache`);
+    return entry.data;
   }
 
-  console.log(`🌎 Buscando ProdutividadeSPX no Google Sheets [${spreadsheetId}]...`);
+  console.log(`🌎 Buscando ${sheetName} no Google Sheets [${spreadsheetId}]...`);
   const sheets = getGoogleSheetsClient();
 
   let response;
   try {
     response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${PRODUCAO_ONTIME_SHEET}!A:ZZ`,
+      range: `${sheetName}!A:ZZ`,
       valueRenderOption: "FORMATTED_VALUE",
     });
   } catch (err) {
@@ -165,9 +170,8 @@ async function carregarProdutividadeOnTime(spreadsheetId) {
   const rows = response.data.values;
   if (!rows || rows.length === 0) return [];
 
-  cache.ontime = rows;
-  cache.ontimeTs = Date.now();
-  console.log("✅ ProdutividadeSPX armazenada em cache");
+  cache.ontimeBySheet[sheetName] = { data: rows, ts: Date.now() };
+  console.log(`✅ ${sheetName} armazenada em cache`);
   return rows;
 }
 
@@ -264,9 +268,9 @@ async function buscarMetasProducao(turno, dataISO, spreadsheetId = DEFAULT_SPREA
    - dataISO ignorado pois a aba sempre reflete o período atual
 ===================================================== */
 
-async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_PRODUCAO_ONTIME_SPREADSHEET_ID) {
+async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_PRODUCAO_ONTIME_SPREADSHEET_ID, sheetName = PRODUCAO_ONTIME_SHEET_PRIMARY) {
   try {
-    const rows = await carregarProdutividadeOnTime(spreadsheetId);
+    const rows = await carregarProdutividadeOnTime(spreadsheetId, sheetName);
     if (!rows || rows.length < 2) return { success: false, data: {} };
 
     const headerRow = rows[0];
@@ -274,6 +278,12 @@ async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_PRODUC
     // Mapeia índice de coluna → número da hora (ex: "16:00" → 16)
     const colToHora = {};
     let colAtualizadoEm = -1;
+    // Algumas abas (ex: db30s) não têm coluna "Atualizado em" por linha —
+    // o timestamp vem embutido no próprio texto do cabeçalho, ex:
+    // "Atualizado: 15/07/2026 09:45:28". Nesse caso o timestamp é global
+    // (um só para a aba inteira), não por operador.
+    let timestampGlobalHeader = null;
+    const EMBED_DATETIME_RE = /(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/;
 
     for (let i = 0; i < headerRow.length; i++) {
       const cell = normalizar(headerRow[i]);
@@ -281,41 +291,58 @@ async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_PRODUC
       if (matchHora) {
         colToHora[i] = parseInt(matchHora[1], 10);
       } else if (cell.toLowerCase().includes("atualizado")) {
-        colAtualizadoEm = i;
+        const embed = cell.match(EMBED_DATETIME_RE);
+        if (embed) {
+          timestampGlobalHeader = parseDateBR(embed[1]);
+        } else {
+          colAtualizadoEm = i;
+        }
       }
     }
 
     // Data esperada no formato DD/MM/YYYY para filtrar pelo campo "Atualizado em"
     const dataBusca = dataISO ? formatarData(dataISO) : null;
 
+    // Se o timestamp é global (embutido no header) e uma data foi pedida,
+    // a aba inteira só é válida se a data do timestamp bater com a buscada.
+    if (timestampGlobalHeader && dataBusca) {
+      const dataHeader = `${String(timestampGlobalHeader.getDate()).padStart(2, "0")}/${String(timestampGlobalHeader.getMonth() + 1).padStart(2, "0")}/${timestampGlobalHeader.getFullYear()}`;
+      if (dataHeader !== dataBusca) {
+        return { success: true, data: {}, ultimaAtualizacaoSheets: timestampGlobalHeader.toISOString() };
+      }
+    }
+
     // Soma operadores por hora, filtrando pela data de atualização
     const quantidadePorHora = {};
     let operadoresFiltrados = 0;
-    let maxTimestamp = null; // timestamp mais recente do campo "Atualizado em"
+    let maxTimestamp = timestampGlobalHeader; // timestamp mais recente do campo "Atualizado em"
 
     for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) {
       const row = rows[rowIdx];
       if (!row || row.length === 0) continue;
 
       const nomeOp = normalizar(row[0]);
-      if (!nomeOp || nomeOp.toLowerCase() === "operador") continue;
+      const nomeOpLower = nomeOp.toLowerCase();
+      // Ignora linhas de cabeçalho residual e de totalização (ex: "TOTAL GERAL"),
+      // que não são operadores e não devem entrar na soma.
+      if (!nomeOp || nomeOpLower === "operador" || nomeOpLower === "operator" || nomeOpLower.includes("total")) continue;
 
-      // Filtra pelo campo "Atualizado em" — só inclui operadores atualizados na data buscada
+      // Filtra pelo campo "Atualizado em" por linha — só quando essa coluna existe
       let atualizadoEm = "";
       if (colAtualizadoEm >= 0) {
         atualizadoEm = normalizar(row[colAtualizadoEm] ?? "");
-      }
 
-      if (dataBusca && colAtualizadoEm >= 0) {
-        const dataAtualizacao = atualizadoEm.split(" ")[0]; // extrai "DD/MM/YYYY"
-        if (dataAtualizacao !== dataBusca) continue;
-      }
+        if (dataBusca) {
+          const dataAtualizacao = atualizadoEm.split(" ")[0]; // extrai "DD/MM/YYYY"
+          if (dataAtualizacao !== dataBusca) continue;
+        }
 
-      // Rastreia o timestamp mais recente entre os operadores filtrados
-      if (atualizadoEm) {
-        const tsDate = parseDateBR(atualizadoEm);
-        if (tsDate && (!maxTimestamp || tsDate > maxTimestamp)) {
-          maxTimestamp = tsDate;
+        // Rastreia o timestamp mais recente entre os operadores filtrados
+        if (atualizadoEm) {
+          const tsDate = parseDateBR(atualizadoEm);
+          if (tsDate && (!maxTimestamp || tsDate > maxTimestamp)) {
+            maxTimestamp = tsDate;
+          }
         }
       }
 
@@ -335,10 +362,10 @@ async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_PRODUC
     }
 
     const ultimaAtualizacaoSheets = maxTimestamp ? maxTimestamp.toISOString() : null;
-    console.log(`✅ Quantidade realizada OnTime: ${Object.keys(quantidadePorHora).length} horas | ${operadoresFiltrados} operadores | última atualização: ${ultimaAtualizacaoSheets ?? "—"}`);
+    console.log(`✅ Quantidade realizada [${sheetName}]: ${Object.keys(quantidadePorHora).length} horas | ${operadoresFiltrados} operadores | última atualização: ${ultimaAtualizacaoSheets ?? "—"}`);
     return { success: true, data: quantidadePorHora, ultimaAtualizacaoSheets };
   } catch (error) {
-    console.error("❌ Erro ao buscar quantidade realizada OnTime:", error.message);
+    console.error(`❌ Erro ao buscar quantidade realizada [${sheetName}]:`, error.message);
     return { success: false, data: {} };
   }
 }
@@ -349,4 +376,6 @@ module.exports = {
   limparCache,
   DEFAULT_SPREADSHEET_ID,
   DEFAULT_PRODUCAO_ONTIME_SPREADSHEET_ID,
+  PRODUCAO_ONTIME_SHEET_PRIMARY,
+  PRODUCAO_ONTIME_SHEET_BACKUP,
 };

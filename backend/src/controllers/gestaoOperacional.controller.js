@@ -2,9 +2,17 @@ const { prisma } = require("../config/database");
 const {
   buscarMetasProducao,
   buscarQuantidadeRealizada,
+  limparCache,
   DEFAULT_SPREADSHEET_ID,
   DEFAULT_PRODUCAO_ONTIME_SPREADSHEET_ID,
 } = require("../services/googleSheetsMetaProducao.service");
+const {
+  obterConfigFonteProducao,
+  obterFonteProducaoAtiva,
+  fonteParaNomeAba,
+  definirFonteProducao,
+} = require("../services/fonteProducao.service");
+const { salvarProducaoHistorico } = require("../services/producaoHistorico.service");
 
 function agoraBrasil() {
   const now = new Date();
@@ -91,14 +99,18 @@ const carregarGestaoOperacional = async (req, res) => {
       console.log(`   Hora ${hora}: ${meta}`);
     }
 
-    // Buscar quantidade realizada da planilha OnTime
+    // Buscar quantidade realizada da planilha OnTime (respeitando a fonte ativa: PRIMARY/BACKUP)
+    const fonteProducaoAtiva = await obterFonteProducaoAtiva();
+    const sheetNameOnTime = fonteParaNomeAba(fonteProducaoAtiva);
+    console.log(`📡 Fonte de produção ativa: ${fonteProducaoAtiva} (${sheetNameOnTime})`);
+
     let quantidadePorHora = {};
     let ultimaAtualizacaoSheets = null;
 
     if (turno === 'T3') {
       const [quantidadeOntem, quantidadeHoje] = await Promise.all([
-        buscarQuantidadeRealizada(dataStr, producaoSpreadsheetId),
-        buscarQuantidadeRealizada(dataStrT3Seguinte, producaoSpreadsheetId),
+        buscarQuantidadeRealizada(dataStr, producaoSpreadsheetId, sheetNameOnTime),
+        buscarQuantidadeRealizada(dataStrT3Seguinte, producaoSpreadsheetId, sheetNameOnTime),
       ]);
 
       if (quantidadeOntem.success) {
@@ -117,7 +129,7 @@ const carregarGestaoOperacional = async (req, res) => {
         }
       }
     } else {
-      const quantidadeResult = await buscarQuantidadeRealizada(dataStr, producaoSpreadsheetId);
+      const quantidadeResult = await buscarQuantidadeRealizada(dataStr, producaoSpreadsheetId, sheetNameOnTime);
       quantidadePorHora = quantidadeResult.success ? quantidadeResult.data : {};
       ultimaAtualizacaoSheets = quantidadeResult.ultimaAtualizacaoSheets ?? null;
     }
@@ -468,6 +480,7 @@ const carregarGestaoOperacional = async (req, res) => {
         dataReferencia: data ?? dataStr,
         turno,
         ultimaAtualizacao: ultimaAtualizacaoSheets ?? new Date().toISOString(),
+        fonteProducaoAtiva,
         kpis: {
           metaDia: Math.round(metaDia),
           metaHoraProjetada: Math.round(metaHoraProjetada),
@@ -652,8 +665,69 @@ const verificarStatusSalvamentos = async () => {
   }
 };
 
-module.exports = { 
-  carregarGestaoOperacional, 
+/**
+ * Retorna qual fonte de produção (planilha) está ativa: PRIMARY (ProdutividadeSPX) ou BACKUP (db30s)
+ */
+const obterFonteProducao = async (req, res) => {
+  try {
+    const config = await obterConfigFonteProducao();
+    return res.json({
+      success: true,
+      data: {
+        fonte: config?.fonte === "BACKUP" ? "BACKUP" : "PRIMARY",
+        atualizadoEm: config?.atualizadoEm ?? null,
+        atualizadoPorNome: config?.atualizadoPorNome ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Erro ao obter fonte de produção:", error);
+    return res.status(500).json({ success: false, message: "Erro ao obter fonte de produção", error: error.message });
+  }
+};
+
+/**
+ * Troca a fonte de produção ativa (PRIMARY/BACKUP) — restrito a ADMIN/ALTA_GESTAO na rota
+ */
+const alterarFonteProducao = async (req, res) => {
+  try {
+    const { fonte, turno, data } = req.body;
+    if (!["PRIMARY", "BACKUP"].includes(fonte)) {
+      return res.status(400).json({ success: false, message: "Campo 'fonte' deve ser PRIMARY ou BACKUP" });
+    }
+
+    const config = await definirFonteProducao(fonte, req.user);
+
+    // Limpa o cache da planilha OnTime para a troca surtir efeito imediatamente
+    limparCache(DEFAULT_PRODUCAO_ONTIME_SPREADSHEET_ID);
+
+    console.log(`🔀 Fonte de produção alterada para ${fonte} por ${req.user?.name} (${req.user?.role})`);
+
+    // Ressincroniza o histórico do turno/data em tela com a nova fonte imediatamente.
+    // Sem isso, horas sem dado ainda na planilha nova caem no fallback do banco,
+    // que fica com valores da fonte anterior (escala diferente) até o próximo job horário.
+    if (turno && ["T1", "T2", "T3"].includes(turno)) {
+      const resultResync = await salvarProducaoHistorico(turno, data || null);
+      console.log(`🔄 Histórico ressincronizado após troca de fonte:`, resultResync);
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        fonte: config.fonte,
+        atualizadoEm: config.atualizadoEm,
+        atualizadoPorNome: config.atualizadoPorNome,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Erro ao alterar fonte de produção:", error);
+    return res.status(500).json({ success: false, message: "Erro ao alterar fonte de produção", error: error.message });
+  }
+};
+
+module.exports = {
+  carregarGestaoOperacional,
   consultarHistoricoProducao,
-  verificarStatusSalvamentos
+  verificarStatusSalvamentos,
+  obterFonteProducao,
+  alterarFonteProducao,
 };

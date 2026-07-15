@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useContext } from "react";
 import { useEstacao } from "../../context/EstacaoContext";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Package, Send, X } from "lucide-react";
+import { Calendar, Package, Send, X, ArrowLeftRight } from "lucide-react";
 import api from "../../services/api";
 import { useTurnosOperacionais } from "../../hooks/useTurnosOperacionais";
 import Sidebar from "../../components/Sidebar";
@@ -43,6 +43,9 @@ export default function GestaoOperacional() {
   const { permissions } = useContext(AuthContext);
   const navigate = useNavigate();
   const isAdmin = permissions?.isAdmin;
+  const podeTrocarFonteProducao = permissions?.isAdmin || permissions?.isAltaGestao;
+  const [fonteProducao, setFonteProducao] = useState("PRIMARY");
+  const [trocandoFonte, setTrocandoFonte] = useState(false);
 
   useEffect(() => {
     if (turnosOperacionais.length > 0 && !turnosOperacionais.find((t) => t.nomeTurno === turno)) {
@@ -112,6 +115,7 @@ export default function GestaoOperacional() {
         });
         console.log("📊 [FRONTEND] kpis:", d.kpis);
         setDashboardData(d);
+        if (d.fonteProducaoAtiva) setFonteProducao(d.fonteProducaoAtiva);
       }
     } catch (error) {
       console.error("❌ Erro ao carregar dashboard:", error);
@@ -132,6 +136,35 @@ export default function GestaoOperacional() {
     }
   };
 
+
+  const trocarFonteProducao = async () => {
+    const novaFonte = fonteProducao === "BACKUP" ? "PRIMARY" : "BACKUP";
+    const labelNovaFonte = novaFonte === "BACKUP" ? "BACKUP (db30s)" : "PRINCIPAL (ProdutividadeSPX)";
+
+    if (!window.confirm(`Trocar a base de produção para ${labelNovaFonte}? Isso afeta a tela de todos os usuários.`)) {
+      return;
+    }
+
+    try {
+      setTrocandoFonte(true);
+      toast.loading("Trocando base e ressincronizando dados...", { id: "trocar-fonte" });
+      const response = await api.put("/dashboard/gestao-operacional/fonte-producao", {
+        fonte: novaFonte,
+        turno,
+        data,
+      });
+      if (response.data.success) {
+        setFonteProducao(response.data.data.fonte);
+        toast.success(`Base de produção alterada para ${labelNovaFonte}`, { id: "trocar-fonte" });
+        await carregarDados();
+      }
+    } catch (error) {
+      const mensagemErro = error.response?.data?.message || "Erro ao trocar base de produção";
+      toast.error(mensagemErro, { id: "trocar-fonte" });
+    } finally {
+      setTrocandoFonte(false);
+    }
+  };
 
   const enviarScreenshotParaSeatalk = async () => {
     if (segundosParaSeatalk > 0) {
@@ -477,6 +510,27 @@ export default function GestaoOperacional() {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* Botão de trocar base de produção (ProdutividadeSPX <-> db30s) — só ADMIN/ALTA_GESTAO */}
+              {podeTrocarFonteProducao && (
+                <button
+                  onClick={trocarFonteProducao}
+                  disabled={trocandoFonte || loading}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 border disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                    fonteProducao === "BACKUP"
+                      ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/20"
+                      : "bg-surface border-default text-muted hover:text-page"
+                  }`}
+                  title={
+                    fonteProducao === "BACKUP"
+                      ? "Base de backup (db30s) ativa — clique para voltar à principal"
+                      : "Base principal (ProdutividadeSPX) ativa — clique para trocar para o backup"
+                  }
+                >
+                  <ArrowLeftRight className="w-4 h-4" />
+                  {trocandoFonte ? "Trocando..." : fonteProducao === "BACKUP" ? "Usando Backup" : "Trocar base"}
+                </button>
+              )}
+
               {/* Botão de enviar screenshot para Seatalk */}
               {(() => {
                 const bloqueado = segundosParaSeatalk > 0;
@@ -553,9 +607,14 @@ export default function GestaoOperacional() {
                     | Última atualização da planilha: {new Date(dashboardData.ultimaAtualizacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                 )}
+                {fonteProducao === "BACKUP" && (
+                  <span className="ml-4 text-xs font-semibold text-yellow-400">
+                    ⚠️ Usando base de backup (db30s)
+                  </span>
+                )}
               </span>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 divide-x divide-default">
               {/* Meta do Dia */}
               <div className="bg-surface text-page p-6 text-center">

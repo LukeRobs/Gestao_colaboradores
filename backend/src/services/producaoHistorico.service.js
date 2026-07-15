@@ -5,6 +5,7 @@ const {
   buscarQuantidadeRealizada,
   limparCache
 } = require("./googleSheetsMetaProducao.service");
+const { obterFonteProducaoAtiva, fonteParaNomeAba } = require("./fonteProducao.service");
 
 /**
  * Salva os dados de produção por hora no banco de dados
@@ -42,9 +43,12 @@ async function salvarProducaoHistorico(turno, dataStr = null) {
     const { metasPorHora } = metasResult.data;
     console.log(`✅ Metas carregadas: ${Object.keys(metasPorHora).length} horas`);
 
-    // Buscar quantidade realizada
+    // Buscar quantidade realizada (respeitando a fonte ativa: PRIMARY/BACKUP)
     // Para T3, buscar de duas datas: dataStr (horas 22-23) e dataStr+1 (horas 0-5)
     const turnoId = turno === "T1" ? 1 : turno === "T2" ? 2 : 3;
+    const fonteProducaoAtiva = await obterFonteProducaoAtiva();
+    const sheetNameOnTime = fonteParaNomeAba(fonteProducaoAtiva);
+    console.log(`📡 [HISTÓRICO] Fonte de produção ativa: ${fonteProducaoAtiva} (${sheetNameOnTime})`);
     let quantidadePorHora = {};
 
     if (turno === 'T3') {
@@ -52,19 +56,19 @@ async function salvarProducaoHistorico(turno, dataStr = null) {
       dataHojeObj.setDate(dataHojeObj.getDate() + 1);
       const dataHojeStr = dataHojeObj.toISOString().slice(0, 10);
 
-      const qOntem = await buscarQuantidadeRealizada(dataStr);
+      const qOntem = await buscarQuantidadeRealizada(dataStr, undefined, sheetNameOnTime);
       if (qOntem.success) {
         if (qOntem.data[22]) quantidadePorHora[22] = qOntem.data[22];
         if (qOntem.data[23]) quantidadePorHora[23] = qOntem.data[23];
       }
-      const qHoje = await buscarQuantidadeRealizada(dataHojeStr);
+      const qHoje = await buscarQuantidadeRealizada(dataHojeStr, undefined, sheetNameOnTime);
       if (qHoje.success) {
         for (let h = 0; h <= 5; h++) {
           if (qHoje.data[h]) quantidadePorHora[h] = qHoje.data[h];
         }
       }
     } else {
-      const quantidadeResult = await buscarQuantidadeRealizada(dataStr);
+      const quantidadeResult = await buscarQuantidadeRealizada(dataStr, undefined, sheetNameOnTime);
       quantidadePorHora = quantidadeResult.success ? quantidadeResult.data : {};
     }
     console.log(`✅ Quantidade realizada carregada: ${Object.keys(quantidadePorHora).length} horas`);
@@ -221,7 +225,10 @@ async function salvarHoraUnica(turno, dataStr, hora) {
       dataSheets = d.toISOString().slice(0, 10);
     }
 
-    const qtdResult = await buscarQuantidadeRealizada(dataSheets);
+    const fonteProducaoAtiva = await obterFonteProducaoAtiva();
+    const sheetNameOnTime = fonteParaNomeAba(fonteProducaoAtiva);
+
+    const qtdResult = await buscarQuantidadeRealizada(dataSheets, undefined, sheetNameOnTime);
     const realizadoHora = qtdResult.success ? Math.round(qtdResult.data[hora] || 0) : 0;
     const percentual = meta > 0 ? parseFloat(((realizadoHora / meta) * 100).toFixed(2)) : 0;
 

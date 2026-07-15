@@ -554,8 +554,12 @@ const getControlePresenca = async (req, res) => {
           dataInicioStatus: { lte: fimMes },
           dataFimStatus: { gte: inicioMes },
         },
+        // Desligados no mês visualizado: permanecem visíveis até o fim do mês do desligamento
+        {
+          status: "INATIVO",
+          dataDesligamento: { gte: inicioMes, lte: fimMes },
+        },
       ],
-      dataDesligamento: null,
       // Isolamento por estação: ADMIN vê todas, demais só a sua
       ...(!req.dbContext?.isGlobal && req.dbContext?.estacaoId
         ? { idEstacao: req.dbContext.estacaoId }
@@ -976,6 +980,11 @@ const ajusteManualPresenca = async (req, res) => {
       "LICENCA",
       "FALTA_INJUSTIFICADA",
       "ON",
+      "BANCO_DE_HORAS",
+      "FOLGA",
+      "SUSPENSAO",
+      "ATESTADO_OBITO",
+      "JUSTICA_ELEITORAL",
     ];
 
     const justificativaNormalizada = String(justificativa)
@@ -1262,8 +1271,25 @@ const exportarPresencaSheets = async (req, res) => {
 
     // Exporta cargos operacionais
     const whereColaborador = {
-      status: "ATIVO",
-      dataDesligamento: null,
+      OR: [
+        { status: "ATIVO" },
+        // FERIAS/AFASTADO cujo período encerrou antes do mês (status desatualizado no banco)
+        {
+          status: { in: ["FERIAS", "AFASTADO"] },
+          dataFimStatus: { lt: inicioMes },
+        },
+        // FERIAS/AFASTADO ativos que cobrem o mês exportado
+        {
+          status: { in: ["FERIAS", "AFASTADO"] },
+          dataInicioStatus: { lte: fimMes },
+          dataFimStatus: { gte: inicioMes },
+        },
+        // Desligados no mês exportado: permanecem visíveis até o fim do mês do desligamento
+        {
+          status: "INATIVO",
+          dataDesligamento: { gte: inicioMes, lte: fimMes },
+        },
+      ],
       ...(req.dbContext?.estacaoId ? { idEstacao: req.dbContext.estacaoId } : {}),
       cargo: {
         nomeCargo: {

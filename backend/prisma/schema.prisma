@@ -689,6 +689,16 @@ model ProducaoHoraHistorico {
   @@map("producao_hora_historico")
 }
 
+model FonteProducaoConfig {
+  id                Int      @id @default(1)
+  fonte             String   @default("PRIMARY") @db.VarChar(10)
+  atualizadoPorId   String?  @map("atualizado_por_id")
+  atualizadoPorNome String?  @map("atualizado_por_nome")
+  atualizadoEm      DateTime @default(now()) @updatedAt @map("atualizado_em")
+
+  @@map("fonte_producao_config")
+}
+
 model ProducaoColaboradorHistorico {
   id             Int      @id @default(autoincrement())
   dataReferencia DateTime @map("data_referencia") @db.Date

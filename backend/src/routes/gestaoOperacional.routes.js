@@ -1,9 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { carregarGestaoOperacional, consultarHistoricoProducao } = require("../controllers/gestaoOperacional.controller");
+const {
+  carregarGestaoOperacional,
+  consultarHistoricoProducao,
+  obterFonteProducao,
+  alterarFonteProducao,
+} = require("../controllers/gestaoOperacional.controller");
 const { buscarMetasProducao, limparCache } = require("../services/googleSheetsMetaProducao.service");
 const { testarSalvamentoManual } = require("../jobs/salvarProducaoHistorico.job");
-const { adminAltaGestaoLideranca } = require("../utils/roles");
+const { adminAltaGestaoLideranca, adminOrAltaGestao } = require("../utils/roles");
 const onlyEstacao = require("../middlewares/onlyEstacao");
 
 // Exclusivo estação 1 — ADMIN global passa direto
@@ -11,6 +16,11 @@ router.use(adminAltaGestaoLideranca, onlyEstacao([1]));
 
 router.get("/", carregarGestaoOperacional);
 router.get("/historico", consultarHistoricoProducao);
+
+// Fonte de produção (planilha principal x backup) — leitura liberada pra quem já vê a tela,
+// troca restrita a ADMIN/ALTA_GESTAO
+router.get("/fonte-producao", obterFonteProducao);
+router.put("/fonte-producao", adminOrAltaGestao, alterarFonteProducao);
 
 // Endpoint para verificar status dos salvamentos
 router.get("/status-salvamentos", async (req, res) => {
