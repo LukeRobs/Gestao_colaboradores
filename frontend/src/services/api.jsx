@@ -20,10 +20,12 @@ api.interceptors.request.use((config) => {
   }
 
   // Injeta estacaoId como query param se estiver selecionado
+  // Passa _skipEstacao: true na config para ignorar o filtro de estação
   const estacaoId = localStorage.getItem("estacao_selecionada");
-  if (estacaoId) {
+  if (estacaoId && !config._skipEstacao) {
     config.params = { ...config.params, estacaoId: Number(estacaoId) };
   }
+  delete config._skipEstacao;
 
   return config;
 });

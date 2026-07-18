@@ -73,7 +73,7 @@ export default function DetalhesTreinamento() {
   const abrirModal = async () => {
     try {
       const [colabRes, setoresRes, turnosRes] = await Promise.all([
-        api.get("/colaboradores", { params: { status: "ATIVO", limit: 1000 } }),
+        api.get("/colaboradores", { params: { status: "ATIVO", limit: 9999 }, _skipEstacao: true }),
         api.get("/setores"),
         api.get("/turnos"),
       ]);
