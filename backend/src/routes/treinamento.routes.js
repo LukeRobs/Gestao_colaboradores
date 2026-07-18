@@ -15,6 +15,24 @@ const upload = multer({
   },
 });
 
+// Multer para planilhas (xlsx/xls/csv)
+const uploadPlanilha = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "text/csv",
+    ];
+    if (allowed.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls|csv)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Apenas arquivos XLSX, XLS ou CSV são aceitos"), false);
+    }
+  },
+});
+
 /* =====================================================
    TREINAMENTOS
 ===================================================== */
@@ -25,6 +43,15 @@ router.get(
   authenticate,
   authorize("ADMIN", "ALTA_GESTAO", "LIDERANCA"),
   treinamentoController.listParticipantesPorSetor
+);
+
+/* IMPORTAR TREINAMENTO VIA PLANILHA */
+router.post(
+  "/import",
+  authenticate,
+  authorize("ADMIN", "ALTA_GESTAO"),
+  uploadPlanilha.single("file"),
+  treinamentoController.importTreinamento
 );
 
 /* CRIAR TREINAMENTO */

@@ -292,8 +292,6 @@ model Colaborador {
   telefone                   String?                     @db.VarChar(20)
   contatoEmergenciaNome      String?                     @map("contato_emergencia_nome") @db.VarChar(200)
   contatoEmergenciaTelefone  String?                     @map("contato_emergencia_telefone") @db.VarChar(20)
-  cipa                       Boolean                     @default(false)
-  gestante                   Boolean                     @default(false)
   acidentes                  AcidenteTrabalho[]
   atestadosMedicos           AtestadoMedico[]
   ausencias                  Ausencia[]
@@ -549,6 +547,9 @@ model Treinamento {
   soc                   String                    @db.VarChar(50)
   liderResponsavelOpsId String                    @map("lider_responsavel_ops_id") @db.VarChar(50)
   status                StatusTreinamento         @default(ABERTO)
+  local                 String?                   @db.VarChar(200)
+  horarioInicio         String?                   @map("horario_inicio") @db.VarChar(10)
+  horarioFim            String?                   @map("horario_fim") @db.VarChar(10)
   ataPdfUrl             String?                   @map("ata_pdf_url") @db.VarChar(500)
   ataPdfNome            String?                   @map("ata_pdf_nome") @db.VarChar(200)
   ataPdfMime            String?                   @map("ata_pdf_mime") @db.VarChar(100)
@@ -794,7 +795,7 @@ enum TipoMedidaDisciplinar {
 enum StatusMedidaDisciplinar {
   PENDENTE_ASSINATURA
   ASSINADO
-  CANCELADO
+  CANCELADA
 }
 
 enum StatusSugestao {
@@ -824,7 +825,9 @@ enum MotivoDesligamento {
 }
 
 enum StatusTreinamento {
+  RASCUNHO
   ABERTO
+  AGUARDANDO_VALIDACAO
   FINALIZADO
   CANCELADO
 }
