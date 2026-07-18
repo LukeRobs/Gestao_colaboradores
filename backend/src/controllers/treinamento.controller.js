@@ -301,7 +301,7 @@ exports.uploadAta = async (req, res) => {
       return res.status(404).json({ success: false, message: "Treinamento não encontrado" });
     }
 
-    if (treinamento.status !== "ABERTO") {
+    if (!["ABERTO", "RASCUNHO"].includes(treinamento.status)) {
       return res.status(400).json({ success: false, message: "Treinamento já finalizado" });
     }
 
@@ -501,7 +501,7 @@ exports.atualizarParticipantes = async (req, res) => {
       });
     }
 
-    if (treinamento.status !== "ABERTO") {
+    if (!["ABERTO", "RASCUNHO"].includes(treinamento.status)) {
       return res.status(400).json({
         success: false,
         message: "Não é possível editar participantes de um treinamento finalizado",
@@ -622,7 +622,7 @@ exports.cancelarTreinamento = async (req, res) => {
       return res.status(404).json({ success: false, message: "Treinamento não encontrado" });
     }
 
-    if (treinamento.status !== "ABERTO") {
+    if (!["ABERTO", "RASCUNHO"].includes(treinamento.status)) {
       return res.status(400).json({
         success: false,
         message: "Apenas treinamentos em aberto podem ser cancelados",
