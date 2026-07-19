@@ -587,6 +587,7 @@ export default function DashboardOperacional() {
             <StatusColaboradoresSection
               title="Status dos Colaboradores"
               items={statusItems}
+              foraDeEscala={presencasForaEscalaTurno.map((p) => p.colaboradorId)}
               footer={
                 presencasForaEscalaTurno.length > 0
                   ? `⚠ ${presencasForaEscalaTurno.length} lançamento(s) em dia de DSR (colaborador trabalhou fora da escala)`

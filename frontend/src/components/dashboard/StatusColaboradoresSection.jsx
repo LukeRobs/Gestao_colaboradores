@@ -1,21 +1,31 @@
 import { useState, useMemo } from "react";
-import { X, Search, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { X, Search, ChevronLeft, ChevronRight, Users, AlertTriangle } from "lucide-react";
 
 const PAGE_SIZE = 20;
+const FORA_ESCALA_COLOR = "#FFD60A";
 
-function ColaboradoresModal({ status, color, onClose }) {
+function ColaboradoresModal({ status, color, foraDeEscalaSet, onClose }) {
   const [busca, setBusca] = useState("");
   const [page, setPage] = useState(1);
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    if (!termo) return status.colaboradores;
-    return status.colaboradores.filter(
-      (c) =>
-        c.nome?.toLowerCase().includes(termo) ||
-        c.setor?.toLowerCase().includes(termo)
-    );
-  }, [status.colaboradores, busca]);
+    let base = status.colaboradores;
+    if (termo) {
+      base = base.filter(
+        (c) =>
+          c.nome?.toLowerCase().includes(termo) ||
+          c.setor?.toLowerCase().includes(termo)
+      );
+    }
+    // Colaboradores que lançaram fora da escala (dia de DSR) sempre no topo, em destaque
+    return [...base].sort((a, b) => {
+      const aFora = foraDeEscalaSet.has(a.opsId);
+      const bFora = foraDeEscalaSet.has(b.opsId);
+      if (aFora !== bFora) return aFora ? -1 : 1;
+      return (a.nome || "").localeCompare(b.nome || "");
+    });
+  }, [status.colaboradores, busca, foraDeEscalaSet]);
 
   const totalPages = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
   const pageClamped = Math.min(page, totalPages);
@@ -74,15 +84,33 @@ function ColaboradoresModal({ status, color, onClose }) {
           {paginaAtual.length === 0 ? (
             <p className="text-center text-muted text-sm py-10">Nenhum colaborador encontrado</p>
           ) : (
-            paginaAtual.map((c, i) => (
-              <div
-                key={c.opsId || i}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 border border-transparent hover:bg-surface-2 transition-colors"
-              >
-                <span className="text-sm text-page truncate">{c.nome}</span>
-                <span className="text-xs text-muted shrink-0 ml-3 truncate max-w-[40%]">{c.setor}</span>
-              </div>
-            ))
+            paginaAtual.map((c, i) => {
+              const foraDaEscala = foraDeEscalaSet.has(c.opsId);
+              return (
+                <div
+                  key={c.opsId || i}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl mb-1 border transition-colors ${
+                    foraDaEscala
+                      ? "border-[#FFD60A]/40 bg-[#FFD60A]/10"
+                      : "border-transparent hover:bg-surface-2"
+                  }`}
+                  title={foraDaEscala ? "Lançamento em dia de DSR — trabalhou fora da escala" : undefined}
+                >
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    {foraDaEscala && (
+                      <AlertTriangle size={13} className="shrink-0" style={{ color: FORA_ESCALA_COLOR }} />
+                    )}
+                    <span
+                      className="text-sm truncate"
+                      style={{ color: foraDaEscala ? FORA_ESCALA_COLOR : "var(--color-text)" }}
+                    >
+                      {c.nome}
+                    </span>
+                  </span>
+                  <span className="text-xs text-muted shrink-0 ml-3 truncate max-w-[40%]">{c.setor}</span>
+                </div>
+              );
+            })
           )}
         </div>
 
@@ -119,8 +147,11 @@ export default function StatusColaboradoresSection({
   title = "Status dos Colaboradores",
   items = [],
   footer = "",
+  foraDeEscala = [],
 }) {
   const [modalStatus, setModalStatus] = useState(null);
+
+  const foraDeEscalaSet = useMemo(() => new Set(foraDeEscala), [foraDeEscala]);
 
   if (!items || items.length === 0) return null;
 
@@ -233,6 +264,7 @@ export default function StatusColaboradoresSection({
         <ColaboradoresModal
           status={modalStatus}
           color={modalStatus.color}
+          foraDeEscalaSet={foraDeEscalaSet}
           onClose={() => setModalStatus(null)}
         />
       )}
