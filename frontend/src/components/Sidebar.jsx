@@ -361,11 +361,11 @@ export default function Sidebar({ isOpen, onClose }) {
                   ? "bg-surface-2 text-page"
                   : "text-muted hover:bg-surface-3"
               } ${isCollapsed ? "lg:justify-center" : ""}`}
-              title={isCollapsed ? "Gestão & Desenvolvimento" : ""}
+              title={isCollapsed ? "Gestão & Treinamento" : ""}
             >
               <div className="flex items-center gap-3">
                 <Layers size={18} />
-                <span className={`${labelCls} whitespace-nowrap`}>Gestão & Desenvolvimento</span>
+                <span className={`${labelCls} whitespace-nowrap`}>Gestão & Treinamento</span>
               </div>
               <ChevronDown size={16} className={chevronCls(gestaoOpen)} />
             </button>
