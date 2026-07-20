@@ -1,11 +1,14 @@
 import { useEffect, useState, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, X, Pencil, UserCheck, UserX, Users, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Plus, X, Pencil, UserCheck, UserX, Users, ShieldCheck, Building2 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
 import { AprovadoresTreinamentoAPI } from "../../services/aprovadoresTreinamento";
 import { AuthContext } from "../../context/AuthContext";
+import api from "../../services/api";
+
+const TODAS_AS_ESTACOES = "TODAS";
 
 function iniciais(nome) {
   const partes = (nome || "").trim().split(/\s+/);
@@ -15,13 +18,15 @@ function iniciais(nome) {
 export default function AprovadoresTreinamentoPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aprovadores, setAprovadores] = useState([]);
+  const [estacoes, setEstacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
+  const { logout, permissions } = useContext(AuthContext);
+  const isAdmin = !!permissions?.isAdmin;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState(null);
-  const [form, setForm] = useState({ nome: "", email: "", ativo: true });
+  const [form, setForm] = useState({ nome: "", email: "", ativo: true, idEstacao: "" });
   const [salvando, setSalvando] = useState(false);
 
   async function load() {
@@ -38,15 +43,27 @@ export default function AprovadoresTreinamentoPage() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    api.get("/estacoes", { params: { limit: 999 } })
+      .then((res) => setEstacoes(res.data?.data || res.data || []))
+      .catch(() => setEstacoes([]));
+  }, [isAdmin]);
+
   const abrirNovo = () => {
     setEditando(null);
-    setForm({ nome: "", email: "", ativo: true });
+    setForm({ nome: "", email: "", ativo: true, idEstacao: "" });
     setModalOpen(true);
   };
 
   const abrirEditar = (a) => {
     setEditando(a);
-    setForm({ nome: a.nome, email: a.email, ativo: a.ativo });
+    setForm({
+      nome: a.nome,
+      email: a.email,
+      ativo: a.ativo,
+      idEstacao: a.idEstacao == null ? TODAS_AS_ESTACOES : String(a.idEstacao),
+    });
     setModalOpen(true);
   };
 
@@ -55,12 +72,22 @@ export default function AprovadoresTreinamentoPage() {
       alert("Nome e email são obrigatórios");
       return;
     }
+    if (isAdmin && !form.idEstacao) {
+      alert("Selecione a estação do aprovador (ou \"Todas as estações\")");
+      return;
+    }
+
+    const payload = { nome: form.nome, email: form.email, ativo: form.ativo };
+    if (isAdmin) {
+      payload.idEstacao = form.idEstacao === TODAS_AS_ESTACOES ? null : Number(form.idEstacao);
+    }
+
     setSalvando(true);
     try {
       if (editando) {
-        await AprovadoresTreinamentoAPI.atualizar(editando.idAprovador, form);
+        await AprovadoresTreinamentoAPI.atualizar(editando.idAprovador, payload);
       } else {
-        await AprovadoresTreinamentoAPI.criar(form);
+        await AprovadoresTreinamentoAPI.criar(payload);
       }
       setModalOpen(false);
       await load();
@@ -110,6 +137,12 @@ export default function AprovadoresTreinamentoPage() {
             </button>
           </div>
 
+          {!isAdmin && (
+            <p className="text-xs text-muted bg-surface-2 border border-default rounded-xl px-4 py-3">
+              Mostrando apenas os aprovadores da sua estação (e aprovadores válidos em todas as estações, cadastrados pelo Admin).
+            </p>
+          )}
+
           {/* ── STAT CARDS ── */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-surface rounded-2xl p-4 sm:p-5 border border-default flex items-center justify-between">
@@ -141,6 +174,7 @@ export default function AprovadoresTreinamentoPage() {
                 <tr className="bg-surface-2 border-b border-default">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">Nome</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">Estação</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wide">Status</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-muted uppercase tracking-wide">Ações</th>
                 </tr>
@@ -148,7 +182,7 @@ export default function AprovadoresTreinamentoPage() {
               <tbody>
                 {!loading && aprovadores.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-16 text-center">
+                    <td colSpan={5} className="px-4 py-16 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center">
                           <Users size={20} className="text-subtle" />
@@ -158,7 +192,9 @@ export default function AprovadoresTreinamentoPage() {
                     </td>
                   </tr>
                 )}
-                {aprovadores.map((a) => (
+                {aprovadores.map((a) => {
+                  const podeGerenciar = isAdmin || a.idEstacao != null;
+                  return (
                   <tr key={a.idAprovador} className="border-t border-default hover:bg-surface-2/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -170,6 +206,15 @@ export default function AprovadoresTreinamentoPage() {
                     </td>
                     <td className="px-4 py-3 text-muted">{a.email}</td>
                     <td className="px-4 py-3">
+                      {a.estacao?.nomeEstacao ? (
+                        <span className="text-muted">{a.estacao.nomeEstacao}</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0A84FF]/10 text-[#0A84FF]">
+                          <Building2 size={11} /> Todas as estações
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${a.ativo ? "bg-[#34C759]/10 text-[#34C759]" : "bg-surface-2 text-muted"}`}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: a.ativo ? "#34C759" : "#71717A" }} />
                         {a.ativo ? "Ativo" : "Inativo"}
@@ -177,20 +222,27 @@ export default function AprovadoresTreinamentoPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => abrirEditar(a)} className="p-1.5 rounded-lg text-muted hover:text-page hover:bg-surface-2 transition-colors cursor-pointer" title="Editar">
+                        <button
+                          onClick={() => podeGerenciar && abrirEditar(a)}
+                          disabled={!podeGerenciar}
+                          className="p-1.5 rounded-lg text-muted hover:text-page hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={podeGerenciar ? "Editar" : "Somente Admin pode editar um aprovador de todas as estações"}
+                        >
                           <Pencil size={15} />
                         </button>
                         <button
-                          onClick={() => alternarAtivo(a)}
-                          className="p-1.5 rounded-lg text-muted hover:text-page hover:bg-surface-2 transition-colors cursor-pointer"
-                          title={a.ativo ? "Desativar" : "Ativar"}
+                          onClick={() => podeGerenciar && alternarAtivo(a)}
+                          disabled={!podeGerenciar}
+                          className="p-1.5 rounded-lg text-muted hover:text-page hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={podeGerenciar ? (a.ativo ? "Desativar" : "Ativar") : "Somente Admin pode gerenciar um aprovador de todas as estações"}
                         >
                           {a.ativo ? <UserX size={15} /> : <UserCheck size={15} />}
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -227,6 +279,28 @@ export default function AprovadoresTreinamentoPage() {
                   className="w-full px-3 py-2.5 bg-surface-2 border border-default rounded-xl text-sm text-page focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50"
                 />
               </div>
+
+              {isAdmin ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted">Estação</label>
+                  <select
+                    value={form.idEstacao}
+                    onChange={(e) => setForm({ ...form, idEstacao: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-surface-2 border border-default rounded-xl text-sm text-page focus:outline-none focus:ring-2 focus:ring-[#FA4C00]/50 appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>Selecione a estação</option>
+                    {estacoes.map((e) => (
+                      <option key={e.idEstacao} value={e.idEstacao}>{e.nomeEstacao}</option>
+                    ))}
+                    <option value={TODAS_AS_ESTACOES}>Todas as estações</option>
+                  </select>
+                </div>
+              ) : (
+                <p className="text-xs text-muted bg-surface-2 border border-default rounded-xl px-3 py-2.5">
+                  Este aprovador será cadastrado na sua estação atual.
+                </p>
+              )}
+
               <label className="flex items-center gap-2 text-sm text-muted cursor-pointer">
                 <input
                   type="checkbox"

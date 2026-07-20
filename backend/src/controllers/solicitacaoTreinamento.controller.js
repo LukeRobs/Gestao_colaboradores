@@ -40,10 +40,18 @@ function overlaps(aInicio, aFim, bInicio, bFim) {
   return ai < bf && bi < af;
 }
 
-async function isAprovadorAtivo(email) {
+/**
+ * Um aprovador só pode decidir solicitações da própria estação —
+ * exceto quem tem idEstacao null (aprovador global, só Admin cadastra).
+ */
+async function isAprovadorAtivo(email, idEstacaoSolicitacao) {
   if (!email) return false;
   const aprovador = await prisma.aprovadorTreinamento.findFirst({
-    where: { email: email.trim().toLowerCase(), ativo: true },
+    where: {
+      email: email.trim().toLowerCase(),
+      ativo: true,
+      OR: [{ idEstacao: idEstacaoSolicitacao ?? null }, { idEstacao: null }],
+    },
   });
   return !!aprovador;
 }
@@ -133,6 +141,17 @@ function estacaoWhereSolicitacao(req) {
   return !req.dbContext?.isGlobal && req.dbContext?.estacaoId
     ? { setor: { idEstacao: req.dbContext.estacaoId } }
     : {};
+}
+
+/**
+ * Usado em buscas por ID (que não passam pelo where da listagem):
+ * bloqueia acesso a registros de outra estação. Setores legados sem
+ * idEstacao (null) ficam visíveis para todos, como no resto do sistema.
+ */
+function pertenceAEstacaoDoUsuario(req, idEstacaoRegistro) {
+  if (req.dbContext?.isGlobal || !req.dbContext?.estacaoId) return true;
+  if (!idEstacaoRegistro) return true;
+  return idEstacaoRegistro === req.dbContext.estacaoId;
 }
 
 /* =====================================================
@@ -295,7 +314,7 @@ exports.getSolicitacao = async (req, res) => {
     const solicitacao = await prisma.solicitacaoTreinamento.findUnique({
       where: { idSolicitacao: Number(id) },
       include: {
-        setor: { select: { nomeSetor: true } },
+        setor: { select: { nomeSetor: true, idEstacao: true } },
         turno: { select: { nomeTurno: true } },
         solicitante: { select: { name: true, email: true, opsId: true } },
         decididoPor: { select: { name: true, email: true } },
@@ -317,11 +336,13 @@ exports.getSolicitacao = async (req, res) => {
       },
     });
 
-    if (!solicitacao) {
+    if (!solicitacao || !pertenceAEstacaoDoUsuario(req, solicitacao.setor?.idEstacao)) {
       return notFoundResponse(res, "Solicitação não encontrada");
     }
 
-    const podeDecidir = solicitacao.status === "PENDENTE" && (await isAprovadorAtivo(req.user.email));
+    const podeDecidir =
+      solicitacao.status === "PENDENTE" &&
+      (await isAprovadorAtivo(req.user.email, solicitacao.setor?.idEstacao));
 
     return successResponse(res, { ...solicitacao, podeDecidir });
   } catch (err) {
@@ -436,6 +457,20 @@ exports.createSolicitacao = async (req, res) => {
       return errorResponse(res, "Usuário logado não está vinculado a um colaborador (ops_id). Não é possível criar solicitações.", 400);
     }
 
+    // Impede criar solicitação para um setor de outra estação
+    if (!req.dbContext?.isGlobal && req.dbContext?.estacaoId) {
+      const setorValido = await prisma.setor.findFirst({
+        where: {
+          idSetor: Number(idSetor),
+          OR: [{ idEstacao: req.dbContext.estacaoId }, { idEstacao: null }],
+        },
+        select: { idSetor: true },
+      });
+      if (!setorValido) {
+        return errorResponse(res, "Setor inválido para a sua estação", 400);
+      }
+    }
+
     const dataNormalizada = normalizeDateOnly(dataTreinamento);
     const participantesOpsIds = (participantes || [])
       .map((p) => (typeof p === "string" ? p : p.opsId))
@@ -485,13 +520,19 @@ exports.createSolicitacao = async (req, res) => {
 
     // Notificação por e-mail — não bloqueia a criação da solicitação em caso de falha
     try {
-      const aprovadoresAtivos = await prisma.aprovadorTreinamento.findMany({ where: { ativo: true } });
-      if (aprovadoresAtivos.length > 0) {
-        const setor = await prisma.setor.findUnique({
-          where: { idSetor: Number(idSetor) },
-          select: { nomeSetor: true },
-        });
+      const setor = await prisma.setor.findUnique({
+        where: { idSetor: Number(idSetor) },
+        select: { nomeSetor: true, idEstacao: true },
+      });
 
+      // Só aprovadores da mesma estação do setor (+ aprovadores globais)
+      const aprovadoresAtivos = await prisma.aprovadorTreinamento.findMany({
+        where: {
+          ativo: true,
+          OR: [{ idEstacao: setor?.idEstacao ?? null }, { idEstacao: null }],
+        },
+      });
+      if (aprovadoresAtivos.length > 0) {
         await sendSolicitacaoTreinamentoEmail({
           to: aprovadoresAtivos.map((a) => a.email),
           solicitacao: {
@@ -532,7 +573,16 @@ exports.aprovarSolicitacao = async (req, res) => {
   try {
     const idSolicitacao = Number(req.params.id);
 
-    const autorizado = await isAprovadorAtivo(req.user.email);
+    const solicitacaoAtual = await prisma.solicitacaoTreinamento.findUnique({
+      where: { idSolicitacao },
+      select: { setor: { select: { idEstacao: true } } },
+    });
+
+    if (!solicitacaoAtual || !pertenceAEstacaoDoUsuario(req, solicitacaoAtual.setor?.idEstacao)) {
+      return notFoundResponse(res, "Solicitação não encontrada");
+    }
+
+    const autorizado = await isAprovadorAtivo(req.user.email, solicitacaoAtual.setor?.idEstacao);
     if (!autorizado) {
       return errorResponse(res, "Você não está cadastrado como aprovador.", 403);
     }
@@ -624,7 +674,16 @@ exports.negarSolicitacao = async (req, res) => {
       return errorResponse(res, "Motivo da negativa é obrigatório", 400);
     }
 
-    const autorizado = await isAprovadorAtivo(req.user.email);
+    const solicitacaoAtual = await prisma.solicitacaoTreinamento.findUnique({
+      where: { idSolicitacao },
+      select: { setor: { select: { idEstacao: true } } },
+    });
+
+    if (!solicitacaoAtual || !pertenceAEstacaoDoUsuario(req, solicitacaoAtual.setor?.idEstacao)) {
+      return notFoundResponse(res, "Solicitação não encontrada");
+    }
+
+    const autorizado = await isAprovadorAtivo(req.user.email, solicitacaoAtual.setor?.idEstacao);
     if (!autorizado) {
       return errorResponse(res, "Você não está cadastrado como aprovador.", 403);
     }

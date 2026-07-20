@@ -145,7 +145,7 @@ exports.getTreinamento = async (req, res) => {
       where: { idTreinamento: Number(id) },
       include: {
         liderResponsavel: {
-          select: { nomeCompleto: true },
+          select: { nomeCompleto: true, idEstacao: true },
         },
         setores: {
           include: { setor: true },
@@ -166,6 +166,17 @@ exports.getTreinamento = async (req, res) => {
     });
 
     if (!treinamento) {
+      return res.status(404).json({ success: false, message: "Treinamento não encontrado" });
+    }
+
+    // Bloqueia acesso a treinamento de outra estação (não-admin/global)
+    const idEstacaoTreinamento = treinamento.liderResponsavel?.idEstacao;
+    if (
+      !req.dbContext?.isGlobal &&
+      req.dbContext?.estacaoId &&
+      idEstacaoTreinamento &&
+      idEstacaoTreinamento !== req.dbContext.estacaoId
+    ) {
       return res.status(404).json({ success: false, message: "Treinamento não encontrado" });
     }
 
