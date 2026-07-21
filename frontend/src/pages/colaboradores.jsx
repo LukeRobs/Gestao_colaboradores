@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useCallback, useContext } from "react";
-import { Plus, Search, Download } from "lucide-react";
+import { Plus, Search, Download, Sheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import MainLayout from "../components/MainLayout";
@@ -12,6 +12,7 @@ import Pagination from "../components/Pagination";
 import LoadingScreen from "../components/LoadingScreen";
 import MultiSelect from "../components/MultiSelect";
 import { ColaboradoresAPI } from "../services/colaboradores";
+import { ExportColaboradoresAPI } from "../services/exportColaboradores";
 
 const STATUS_OPTIONS = [
   { value: "ATIVO", label: "Ativo" },
@@ -57,6 +58,11 @@ export default function ColaboradoresPage() {
   const [exportando, setExportando] = useState(false);
   const [backfillNcLoading, setBackfillNcLoading] = useState(false);
 
+  /* ---- export automático para Google Sheets (só ADMIN) ---- */
+  const [exportSheetsStatus, setExportSheetsStatus] = useState(null);
+  const [segundosParaProximoExport, setSegundosParaProximoExport] = useState(null);
+  const [exportandoSheets, setExportandoSheets] = useState(false);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -85,6 +91,63 @@ export default function ColaboradoresPage() {
       .then(setLideres)
       .catch(() => {});
   }, []);
+
+  /* ================= EXPORT SHEETS: STATUS + CONTADOR ================= */
+  const carregarExportSheetsStatus = useCallback(async () => {
+    try {
+      const status = await ExportColaboradoresAPI.status();
+      setExportSheetsStatus(status);
+    } catch {
+      // silencioso: card fica oculto/sem dados se a chamada falhar
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!permissions.isAdmin) return;
+    carregarExportSheetsStatus();
+    const intervalo = setInterval(carregarExportSheetsStatus, 60000);
+    return () => clearInterval(intervalo);
+  }, [permissions.isAdmin, carregarExportSheetsStatus]);
+
+  useEffect(() => {
+    if (!permissions.isAdmin || !exportSheetsStatus?.proximaExecucao) {
+      setSegundosParaProximoExport(null);
+      return;
+    }
+
+    function calcularSegundos() {
+      const alvo = new Date(exportSheetsStatus.proximaExecucao).getTime();
+      return Math.max(0, Math.round((alvo - Date.now()) / 1000));
+    }
+
+    setSegundosParaProximoExport(calcularSegundos());
+    const timer = setInterval(() => {
+      setSegundosParaProximoExport(calcularSegundos());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [permissions.isAdmin, exportSheetsStatus?.proximaExecucao]);
+
+  function formatarContadorHoras(segundos) {
+    if (segundos === null) return "--";
+    const h = Math.floor(segundos / 3600);
+    const m = Math.floor((segundos % 3600) / 60);
+    const s = segundos % 60;
+    if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+    return `${m}m ${String(s).padStart(2, "0")}s`;
+  }
+
+  const handleExportarSheetsAgora = async () => {
+    try {
+      setExportandoSheets(true);
+      await ExportColaboradoresAPI.exportarAgora();
+      toast.success("Exportação para o Sheets concluída.");
+      await carregarExportSheetsStatus();
+    } catch {
+      toast.error("Erro ao exportar colaboradores para o Sheets.");
+    } finally {
+      setExportandoSheets(false);
+    }
+  };
 
   /* ================= LOAD ================= */
   const load = useCallback(async () => {
@@ -320,6 +383,32 @@ export default function ColaboradoresPage() {
                   <Download size={15} />
                   {exportando ? "Gerando CSV…" : "Exportar CSV"}
                 </button>
+
+                {/* EXPORT AUTOMÁTICO PARA SHEETS — apenas ADMIN */}
+                {permissions.isAdmin && (
+                  <div className="flex items-center gap-3 px-4 py-2 bg-surface border border-default rounded-xl text-xs text-muted">
+                    <Sheet size={15} className="text-[#0F9D58] shrink-0" />
+                    <div className="flex flex-col leading-tight">
+                      <span>
+                        Última exportação:{" "}
+                        {exportSheetsStatus?.ultimaExecucao
+                          ? new Date(exportSheetsStatus.ultimaExecucao).toLocaleTimeString("pt-BR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "--"}
+                      </span>
+                      <span>Próxima em {formatarContadorHoras(segundosParaProximoExport)}</span>
+                    </div>
+                    <button
+                      onClick={handleExportarSheetsAgora}
+                      disabled={exportandoSheets}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 border border-default hover:border-[#0F9D58]/40 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-page transition"
+                    >
+                      {exportandoSheets ? "Exportando…" : "Exportar agora"}
+                    </button>
+                  </div>
+                )}
 
                 {/* BACKFILL NC — apenas ADMIN */}
                 {permissions.isAdmin && (

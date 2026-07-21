@@ -4,7 +4,16 @@
       "Bash(node -e \":*)",
       "Bash(xargs grep *)",
       "Bash(npx prisma *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST http://localhost:5000/api/colaboradores/export/agora -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(kill 1823)",
+      "Bash(jobs)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 20660 -Force\")",
+      "Bash(node -e \"require\\('./src/services/googleSheetsColaboradores.service.js'\\); console.log\\('OK sintaxe'\\)\")",
+      "Bash(cd ../frontend && grep -n \"react-big-calendar\\\\|date-fns\" package.json)",
+      "Read(//c/Users/SPXBR23814/Documents/**)",
+      "Bash(npm install *)"
     ]
   }
 }
