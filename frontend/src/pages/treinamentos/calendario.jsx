@@ -283,6 +283,8 @@ export default function CalendarioTreinamentos() {
       local: null,
       horarioInicio: selecionada.horarioInicio,
       horarioFim: selecionada.horarioFim,
+      tempoPrevistoMinutos: selecionada.tempoPrevistoMinutos,
+      observacoes: selecionada.observacoes,
       setores: selecionada.setor ? [{ setor: selecionada.setor }] : [],
       participantes: selecionada.participantes || [],
     });
