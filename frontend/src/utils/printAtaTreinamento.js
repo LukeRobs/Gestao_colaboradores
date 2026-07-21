@@ -1,29 +1,60 @@
 /* =====================================================
-   PRINT ATA TREINAMENTO
-   - Gera HTML A4
-   - Abre nova aba
-   - Chama window.print()
+   PRINT ATA TREINAMENTO (LISTA DE PRESENÇA)
+   - Modelo no padrão ShopeeXpress
+   - Gera HTML A4, abre nova aba, chama window.print()
 ===================================================== */
 
-function fmtDateBR(dateLike) {
+import logoShopeeXpress from "../assets/shopee-xpress-logo.png";
+
+/**
+ * Formata uma data-only (string "YYYY-MM-DD" ou ISO timestamp) para "DD/MM/AAAA"
+ * sem passar por `new Date(...)`, evitando o shift de 1 dia causado por fuso horário
+ * (um "2026-07-21" vira meia-noite UTC, que em UTC-3 é 20/07 às 21h).
+ */
+function fmtDateOnlyBR(dateLike) {
   if (!dateLike) return "-";
-  const d = new Date(dateLike);
-  return d.toLocaleDateString("pt-BR");
+  const str = typeof dateLike === "string" ? dateLike : new Date(dateLike).toISOString();
+  const isoPart = str.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoPart)) return "-";
+  return isoPart.split("-").reverse().join("/");
 }
 
-function fmtTimeBR(dateLike) {
-  if (!dateLike) return "";
-  const d = new Date(dateLike);
-  return d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function fmtDateTimeAgoraBR() {
+  const agora = new Date();
+  const data = agora.toLocaleDateString("pt-BR");
+  const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return { data, hora };
 }
 
 function normalizeCpf(cpf) {
   const v = String(cpf || "").replace(/\D/g, "");
   if (v.length !== 11) return cpf || "-";
   return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
+function calcCargaHoraria(treinamento) {
+  const paraTexto = (minutos) => {
+    const h = Math.floor(minutos / 60);
+    const m = minutos % 60;
+    if (h && m) return `${h}h${String(m).padStart(2, "0")}min`;
+    if (h) return `${h}h`;
+    return `${m}min`;
+  };
+
+  if (treinamento.tempoPrevistoMinutos) {
+    return paraTexto(treinamento.tempoPrevistoMinutos);
+  }
+
+  if (treinamento.horarioInicio && treinamento.horarioFim) {
+    const [h1, m1] = treinamento.horarioInicio.split(":").map(Number);
+    const [h2, m2] = treinamento.horarioFim.split(":").map(Number);
+    if (![h1, m1, h2, m2].some(Number.isNaN)) {
+      const diff = h2 * 60 + m2 - (h1 * 60 + m1);
+      if (diff > 0) return paraTexto(diff);
+    }
+  }
+
+  return "-";
 }
 
 /* =====================================================
@@ -37,7 +68,7 @@ export function printAtaTreinamento(treinamento) {
 
   const participantes = (treinamento.participantes || []).map((p) => ({
     nome: p.colaborador?.nomeCompleto || p.opsId || "-",
-    cpf: normalizeCpf(p.cpf),
+    cpf: normalizeCpf(p.cpf ?? p.colaborador?.cpf),
     setor: p.colaborador?.setor?.nomeSetor || "-",
     turno: p.colaborador?.turno?.nomeTurno || "-",
   }));
@@ -47,6 +78,8 @@ export function printAtaTreinamento(treinamento) {
     .filter(Boolean)
     .join(", ");
 
+  const { data: dataGeracao, hora: horaGeracao } = fmtDateTimeAgoraBR();
+
   const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -55,124 +88,205 @@ export function printAtaTreinamento(treinamento) {
 <title>Ata de Treinamento</title>
 
 <style>
-  @page { size: A4; margin: 14mm; }
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
   body {
     font-family: Arial, Helvetica, sans-serif;
     color: #111;
     font-size: 12px;
+    margin: 0;
   }
-  h1 {
-    font-size: 18px;
-    border-bottom: 2px solid #FA4C00;
-    padding-bottom: 6px;
-  }
-  .meta {
-    margin: 10px 0;
-    font-size: 11px;
-    color: #444;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     gap: 12px;
-    margin-top: 12px;
+    border: 1px solid #000;
   }
-  .box {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 8px;
+  .header .logo-cell {
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    border-right: 1px solid #000;
   }
-  .label {
-    font-size: 10px;
-    color: #555;
+  .header .logo-cell img {
+    height: 42px;
+    width: auto;
+  }
+  .header .title-cell {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .3px;
+  }
+  .header .rev-table {
+    flex: 0 0 auto;
+    border-collapse: collapse;
+  }
+  .header .rev-table td, .header .rev-table th {
+    border-left: 1px solid #000;
+    padding: 4px 10px;
+    font-size: 9px;
+    text-align: center;
+  }
+  .header .rev-table th {
+    background: #e8e8e8;
+    border-bottom: 1px solid #000;
     text-transform: uppercase;
+    font-weight: 700;
   }
-  .value {
-    font-weight: bold;
-    margin-top: 4px;
-  }
-  table {
+
+  .info-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 16px;
+    border: 1px solid #000;
+    border-top: none;
+  }
+  .info-table td {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    vertical-align: top;
+  }
+  .info-table .field-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #444;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .info-table .field-value {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .checkbox {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1px solid #111;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
+  table.participantes {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #000;
+    border-top: none;
     font-size: 11px;
   }
-  th, td {
-    border-bottom: 1px solid #ddd;
-    padding: 6px;
+  table.participantes th, table.participantes td {
+    border: 1px solid #000;
+    padding: 6px 8px;
     text-align: left;
   }
-  th {
+  table.participantes th {
+    background: #e8e8e8;
     font-size: 10px;
     text-transform: uppercase;
+    font-weight: 700;
   }
-  .sig {
-    height: 22px;
-    border-bottom: 1px solid #111;
+  table.participantes td.num {
+    width: 28px;
+    text-align: center;
   }
-  .signatures {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+  .sig-cell {
+    height: 20px;
+  }
+
+  .assinatura-instrutor {
     margin-top: 24px;
+    font-size: 12px;
   }
-  .sign {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
+  .assinatura-instrutor .linha {
+    display: inline-block;
+    border-bottom: 1px solid #111;
+    width: 320px;
+    margin-left: 8px;
+  }
+
+  .rodape {
+    margin-top: 16px;
+    font-size: 9px;
+    color: #666;
   }
 </style>
 </head>
 
 <body>
-  <h1>ATA DE TREINAMENTO</h1>
 
-  <div class="meta">
-    Data do treinamento: <b>${fmtDateBR(treinamento.dataTreinamento)}</b><br/>
-    SOC: <b>${treinamento.soc}</b> • Processo: <b>${treinamento.processo}</b><br/>
-    Gerado em: ${fmtDateBR(new Date())} às ${fmtTimeBR(new Date())}
+  <!-- CABEÇALHO -->
+  <div class="header">
+    <div class="logo-cell">
+      <img src="${logoShopeeXpress}" alt="ShopeeXpress" />
+    </div>
+    <div class="title-cell">LISTA DE PRESENÇA</div>
+    <table class="rev-table">
+      <tr>
+        <th>Data Geração</th>
+        <th>Página</th>
+      </tr>
+      <tr>
+        <td>${dataGeracao}</td>
+        <td>1 de 1</td>
+      </tr>
+    </table>
   </div>
 
-  <div class="grid">
-    <div class="box">
-      <div class="label">Tema</div>
-      <div class="value">${treinamento.tema}</div>
-    </div>
+  <!-- DADOS DO TREINAMENTO -->
+  <table class="info-table">
+    <tr>
+      <td colspan="3">
+        <div class="field-label">Título do Treinamento</div>
+        <div class="field-value">${treinamento.tema || "-"}</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="field-label">Data</div>
+        <div class="field-value">${fmtDateOnlyBR(treinamento.dataTreinamento)}</div>
+      </td>
+      <td>
+        <div class="field-label">Horário</div>
+        <div class="field-value">${treinamento.horarioInicio || "-"}${treinamento.horarioFim ? ` às ${treinamento.horarioFim}` : ""}</div>
+      </td>
+      <td>
+        <div class="field-label">Carga Horária</div>
+        <div class="field-value">${calcCargaHoraria(treinamento)}</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="field-label">Instrutor</div>
+        <div class="field-value">${treinamento.liderResponsavel?.nomeCompleto || "-"}</div>
+      </td>
+      <td>
+        <div class="field-label">Local</div>
+        <div class="field-value">${treinamento.local || setores || "-"}</div>
+      </td>
+      <td>
+        <div class="field-label">Avaliação?</div>
+        <div class="field-value"><span class="checkbox"></span>Sim &nbsp; <span class="checkbox"></span>Não</div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
+        <div class="field-label">Assuntos abordados</div>
+        <div class="field-value">${treinamento.observacoes || treinamento.processo || "-"}</div>
+      </td>
+    </tr>
+  </table>
 
-    <div class="box">
-      <div class="label">Instrutor / Líder</div>
-      <div class="value">
-        ${treinamento.liderResponsavel?.nomeCompleto || "-"}
-      </div>
-    </div>
-
-    <div class="box">
-      <div class="label">Local</div>
-      <div class="value">${treinamento.local || "-"}</div>
-    </div>
-
-    <div class="box">
-      <div class="label">Horário</div>
-      <div class="value">${treinamento.horarioInicio || "-"}${treinamento.horarioFim ? ` – ${treinamento.horarioFim}` : ""}</div>
-    </div>
-
-    <div class="box">
-      <div class="label">Setores</div>
-      <div class="value">${setores || "-"}</div>
-    </div>
-
-    <div class="box">
-      <div class="label">Processo / SOC</div>
-      <div class="value">${treinamento.processo} / ${treinamento.soc}</div>
-    </div>
-  </div>
-
-  <h3 style="margin-top:20px">Participantes</h3>
-
-  <table>
+  <!-- PARTICIPANTES -->
+  <table class="participantes">
     <thead>
       <tr>
-        <th>Nome</th>
+        <th class="num">Nº</th>
+        <th>Nome Completo</th>
         <th>CPF</th>
         <th>Setor</th>
         <th>Turno</th>
@@ -182,13 +296,14 @@ export function printAtaTreinamento(treinamento) {
     <tbody>
       ${participantes
         .map(
-          (p) => `
+          (p, idx) => `
         <tr>
+          <td class="num">${idx + 1}</td>
           <td>${p.nome}</td>
           <td>${p.cpf}</td>
           <td>${p.setor}</td>
           <td>${p.turno}</td>
-          <td><div class="sig"></div></td>
+          <td class="sig-cell"></td>
         </tr>
       `
         )
@@ -196,23 +311,13 @@ export function printAtaTreinamento(treinamento) {
     </tbody>
   </table>
 
-  <div class="signatures">
-    <div class="sign">
-      <b>${treinamento.liderResponsavel?.nomeCompleto || "-"}</b><br/>
-      Líder / Instrutor<br/><br/>
-      <div class="sig"></div>
-    </div>
-
-    <div class="sign">
-      <b>RH / Gestão</b><br/>
-      Validação<br/><br/>
-      <div class="sig"></div>
-    </div>
+  <div class="assinatura-instrutor">
+    Assinatura Instrutor: <span class="linha"></span>
   </div>
 
-  <p style="margin-top:20px;font-size:10px;color:#444">
-    Documento interno • Controle de Treinamentos
-  </p>
+  <div class="rodape">
+    Documento interno • Controle de Treinamentos • Gerado em ${dataGeracao} às ${horaGeracao}
+  </div>
 </body>
 </html>
 `;
