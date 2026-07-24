@@ -42,12 +42,12 @@ async function executarVarreduraFaltas() {
 }
 
 function iniciarJobVarrerFaltas() {
-  // 3x ao dia: 06:00, 14:00 e 22:00 (horário de Brasília)
-  cron.schedule("0 6,14,22 * * *", executarVarreduraFaltas, {
+  // 3x ao dia: 06:35, 14:35 e 22:35 (horário de Brasília)
+  cron.schedule("35 6,14,22 * * *", executarVarreduraFaltas, {
     timezone: "America/Sao_Paulo",
   });
 
-  logger.info("🕵️  [VARREDURA-FALTAS] Job agendado (06:00, 14:00 e 22:00).");
+  logger.info("🕵️  [VARREDURA-FALTAS] Job agendado (06:35, 14:35 e 22:35).");
 }
 
 module.exports = { detectarFaltasAutomatico, iniciarJobVarrerFaltas };
