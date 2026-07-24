@@ -11,6 +11,7 @@ const { iniciarSyncPresencaSheets } = require('./jobs/syncPresencaSheets.job');
 const { iniciarJobsProducao } = require('./jobs/salvarProducaoHistorico.job');
 const { iniciarJobDSRFuturo } = require('./jobs/gerarDSRFuturo.job');
 const { iniciarJobExportColaboradores } = require('./jobs/exportColaboradores.job');
+const { iniciarJobVarrerFaltas } = require('./jobs/detectarFaltasAutomatico.job');
 
 
 // =====================================================
@@ -45,6 +46,9 @@ const startServer = async () => {
 
       // Inicia job de exportação automática de colaboradores para Google Sheets
       iniciarJobExportColaboradores();
+
+      // Inicia varredura automática de faltas (invalida sugestões cujo F virou AM)
+      iniciarJobVarrerFaltas();
     });
 
     // Tratamento de erros não capturados
