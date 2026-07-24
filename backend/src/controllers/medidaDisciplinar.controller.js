@@ -610,14 +610,14 @@ const cancelarMedida = async (req, res) => {
       return notFoundResponse(res, "Medida disciplinar não encontrada");
     }
 
-    if (medida.status === "CANCELADO") {
+    if (medida.status === "CANCELADA") {
       return errorResponse(res, "Medida já está cancelada", 400);
     }
 
     const atualizada = await prisma.medidaDisciplinar.update({
       where: { idMedida: Number(id) },
       data: {
-        status: "CANCELADO",
+        status: "CANCELADA",
         dataAtualizacao: new Date(),
       },
     });

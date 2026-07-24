@@ -203,8 +203,8 @@ export default function MedidaDisciplinarDetalhe() {
         borderColor: "border-[#34C759]/40",
         icon: CheckCircle2
       },
-      CANCELADO: {
-        label: "Cancelado",
+      CANCELADA: {
+        label: "Cancelada",
         color: "text-[#FF453A]",
         bgColor: "bg-[#FF453A]/10",
         borderColor: "border-[#FF453A]/40",
@@ -309,7 +309,7 @@ export default function MedidaDisciplinarDetalhe() {
                   RH Local
                 </button>
               )}
-              {permissions?.isAdmin && medida.status !== "CANCELADO" && (
+              {permissions?.isAdmin && medida.status !== "CANCELADA" && (
                 <button
                   onClick={handleCancelar}
                   disabled={cancelando}
