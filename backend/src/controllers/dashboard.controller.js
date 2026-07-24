@@ -24,8 +24,9 @@ const normalize = (v) => String(v || "").trim();
 
 const normalizeTurno = (t) => {
   const v = normalize(t).toUpperCase();
-  const match = v.match(/T\d+/);
-  return match ? match[0] : "Sem turno";
+  // Aceita tanto "T1" quanto formas por extenso como "TURNO 1" (com ou sem espaço)
+  const match = v.match(/T\D*(\d+)/);
+  return match ? `T${match[1]}` : "Sem turno";
 };
 
 /* =====================================================
@@ -194,7 +195,10 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        1️⃣ FILTROS DE DATA
     =============================== */
-    const { data, dataInicio, dataFim, turno: turnoFiltro } = req.query;
+    const { data, dataInicio, dataFim, turno: turnoFiltroRaw } = req.query;
+    // Normaliza para a forma canônica (T1/T2/T3) — o front pode enviar o nome
+    // por extenso da estação (ex: "TURNO 2") como veio do cadastro de turnos.
+    const turnoFiltro = turnoFiltroRaw ? normalizeTurno(turnoFiltroRaw) : turnoFiltroRaw;
 
     const agora = agoraBrasil();
     const { dataOperacional, dataOperacionalStr, turnoAtual } =
@@ -405,14 +409,18 @@ const carregarDashboard = async (req, res) => {
     /* ===============================
        4️⃣ AGREGADORES
     =============================== */
-    // Turnos operacionais cadastrados no banco — filtrado pela estação atual
-    const turnoNomes = [...new Set(turnos.map((t) => t.nomeTurno))];
+    // Turnos operacionais cadastrados no banco — filtrado pela estação atual.
+    // Normalizado para a forma canônica (T1/T2/T3) para casar com o turno
+    // resolvido por colaborador via normalizeTurno(), independente do nome
+    // cadastrado ser "T1" ou por extenso ("TURNO 1").
+    const turnoNomes = [...new Set(turnos.map((t) => normalizeTurno(t.nomeTurno)))];
     // Prioriza o turno da estação atual; cai para idEstacao=null se não houver específico
     const _estacaoIdParaMap = req.dbContext?.isGlobal ? null : (req.dbContext?.estacaoId ?? null);
     const turnoIdMap = {};
     for (const t of turnos) {
-      if (!turnoIdMap[t.nomeTurno] || t.idEstacao === _estacaoIdParaMap) {
-        turnoIdMap[t.nomeTurno] = t.idTurno;
+      const chave = normalizeTurno(t.nomeTurno);
+      if (!turnoIdMap[chave] || t.idEstacao === _estacaoIdParaMap) {
+        turnoIdMap[chave] = t.idTurno;
       }
     }
 
