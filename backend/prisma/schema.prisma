@@ -793,6 +793,18 @@ model FonteProducaoConfig {
   @@map("fonte_producao_config")
 }
 
+model ExportColaboradoresConfig {
+  id              Int       @id @default(1)
+  ultimaExecucao  DateTime? @map("ultima_execucao")
+  proximaExecucao DateTime? @map("proxima_execucao")
+  status          String?   @db.VarChar(20)
+  mensagemErro    String?   @map("mensagem_erro")
+  totalRegistros  Int?      @map("total_registros")
+  atualizadoEm    DateTime  @default(now()) @updatedAt @map("atualizado_em")
+
+  @@map("export_colaboradores_config")
+}
+
 model ProducaoColaboradorHistorico {
   id             Int      @id @default(autoincrement())
   dataReferencia DateTime @map("data_referencia") @db.Date

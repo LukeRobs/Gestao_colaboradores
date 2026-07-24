@@ -39,7 +39,7 @@ export default function NovoTreinamento() {
       try {
         const [setoresRes, colaboradoresRes, estacoesRes] = await Promise.all([
           api.get("/setores"),
-          api.get("/colaboradores", { params: { status: "ATIVO", limit: 1000 } }),
+          api.get("/colaboradores", { params: { status: "ATIVO", limit: 5000 } }),
           api.get("/estacoes"),
         ]);
         setSetores(setoresRes.data.data || setoresRes.data);
