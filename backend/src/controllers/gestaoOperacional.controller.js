@@ -13,6 +13,24 @@ const {
   definirFonteProducao,
 } = require("../services/fonteProducao.service");
 const { salvarProducaoHistorico } = require("../services/producaoHistorico.service");
+const { carregarDashboard } = require("./dashboard.controller");
+
+// Chama internamente a mesma lógica do card "Colaboradores Planejados" do
+// Dashboard Operacional, para que o HC Planejado use exatamente a mesma
+// fonte de verdade (cargo elegível + desconto de DSR + ausências reais).
+function buscarColaboradoresPlanejados(turno, dataStr, estacaoId) {
+  return new Promise((resolve, reject) => {
+    const reqFake = {
+      query: { data: dataStr, turno },
+      dbContext: { isGlobal: false, estacaoId },
+    };
+    const resFake = {
+      json: (payload) => resolve(payload),
+      status: () => ({ json: (payload) => resolve(payload) }),
+    };
+    carregarDashboard(reqFake, resFake).catch(reject);
+  });
+}
 
 function agoraBrasil() {
   const now = new Date();
@@ -92,7 +110,7 @@ const carregarGestaoOperacional = async (req, res) => {
       throw new Error("Erro ao buscar metas da planilha");
     }
 
-    const { metaDia, metasPorHora, metaProdutividade } = metasResult.data;
+    const { metaDia, metasPorHora } = metasResult.data;
     console.log("✅ Metas carregadas:", { metaDia, horasComMeta: Object.keys(metasPorHora).length });
     console.log("📋 Detalhamento das metas por hora:");
     for (const [hora, meta] of Object.entries(metasPorHora)) {
@@ -171,8 +189,23 @@ const carregarGestaoOperacional = async (req, res) => {
     console.log("🔍 Buscando total de colaboradores presentes do turno", turno, "...");
     console.log("📅 Data para busca:", dataStr, "| Data objeto:", new Date(dataStr));
     const estacaoId = estacaoIdCtx;
-    // Setores que entram no divisor de produtividade
-    const SETORES_PRODUCAO = ["Esteira", "Processamento Manual"];
+    const normalizarSetor = (v) =>
+      String(v || "")
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .trim()
+        .toUpperCase();
+    // Setores de apoio/indireto que NÃO contam como HC presente para o cálculo
+    // de produtividade (ex: "Áreas de apoio" — funções como Auxiliar de Returns,
+    // que não trabalham na linha de produção)
+    const SETORES_APOIO = ["AREAS DE APOIO", "AREA DE APOIO"];
+    const isSetorApoio = (nomeSetor) => SETORES_APOIO.includes(normalizarSetor(nomeSetor));
+    // Mesmo critério de cargo operacional usado no HC Planejado — exclui
+    // liderança (Líder, Supervisor, Fiscal de Pátio) da contagem de presentes
+    const isCargoElegivel = (nomeCargo) => {
+      const n = String(nomeCargo || "").toUpperCase();
+      return n.includes("AUXILIAR DE LOGÍSTICA I") || n.includes("AUXILIAR DE LOGÍSTICA II");
+    };
 
     let totalPresentes = 0;
     try {
@@ -186,6 +219,7 @@ const carregarGestaoOperacional = async (req, res) => {
             include: {
               turno: true,
               setor: true,
+              cargo: true,
             }
           }
         },
@@ -199,20 +233,37 @@ const carregarGestaoOperacional = async (req, res) => {
       frequencias.forEach(f => {
         if (!f.horaEntrada) return;
         if (f.colaborador?.turno?.nomeTurno !== turno) return;
-        // Apenas setores de produção contam para o divisor
+        // Conta todo colaborador presente, exceto setores de apoio e cargos de liderança
         const nomeSetor = f.colaborador?.setor?.nomeSetor;
-        if (!SETORES_PRODUCAO.includes(nomeSetor)) return;
+        if (isSetorApoio(nomeSetor)) return;
+        if (!isCargoElegivel(f.colaborador?.cargo?.nomeCargo)) return;
         presentesSet.add(f.opsId);
         totalDoTurno++;
       });
 
       totalPresentes = presentesSet.size;
-      console.log(`📊 Colaboradores do ${turno} presentes (Esteira + Proc. Manual): ${totalDoTurno}`);
+      console.log(`📊 Colaboradores do ${turno} presentes (exceto apoio, cargo operacional): ${totalDoTurno}`);
       console.log(`✅ Total de colaboradores presentes do ${turno} (unique): ${totalPresentes}`);
     } catch (error) {
       console.error("⚠️ Erro ao buscar colaboradores presentes:", error.message);
       console.error("Stack:", error.stack);
       console.log("⚠️ Continuando com totalPresentes = 0");
+    }
+
+    // Buscar HC planejado: reaproveita a mesma lógica do card "Colaboradores
+    // Planejados" do Dashboard Operacional (cargo elegível + desconto de DSR
+    // do dia + tratamento de ausências reais), para garantir que os dois
+    // números batam sempre — em vez de recalcular em paralelo e divergir.
+    console.log("🔍 Buscando HC planejado do turno", turno, "...");
+    let hcPlanejado = 0;
+    try {
+      const dashboardResult = await buscarColaboradoresPlanejados(turno, dataStr, estacaoId);
+      hcPlanejado = dashboardResult?.data?.kpis?.colaboradoresPlanejados || 0;
+      console.log(`✅ HC planejado do ${turno} (via Colaboradores Planejados): ${hcPlanejado}`);
+    } catch (error) {
+      console.error("⚠️ Erro ao buscar HC planejado:", error.message);
+      console.error("Stack:", error.stack);
+      console.log("⚠️ Continuando com hcPlanejado = 0");
     }
 
     // Buscar diaristas presentes
@@ -492,11 +543,13 @@ const carregarGestaoOperacional = async (req, res) => {
           realizado,
           mediaHoraRealizado,
           produtividade,
-          // meta de produtividade lida da coluna C do sheet "Meta"
-          // se a planilha não tiver essa coluna, retorna 0 e o front usa 770 como padrão
-          metaProdutividade: Math.round(metaProdutividade || 0),
+          // meta de produtividade calculada dinamicamente: Meta do Dia / HC planejado
+          metaProdutividade: hcPlanejado > 0
+            ? Math.round(metaDia / hcPlanejado)
+            : 0,
           performance: Number(performance),
           totalPresentes,
+          hcPlanejado,
           diaristasPresentes
         },
         producaoPorHora: producaoComMeta,

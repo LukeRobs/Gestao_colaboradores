@@ -419,8 +419,8 @@ export default function GestaoOperacional() {
   }
 
   const kpis = dashboardData?.kpis || {};
-  // meta de produtividade: lida da planilha (coluna C do sheet "Meta"), padrão 770
-  const metaProdutividadeTarget = kpis.metaProdutividade > 0 ? kpis.metaProdutividade : 770;
+  // meta de produtividade: calculada dinamicamente (Meta do Dia / HC planejado) pelo backend
+  const metaProdutividadeTarget = kpis.metaProdutividade > 0 ? kpis.metaProdutividade : 0;
 
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
