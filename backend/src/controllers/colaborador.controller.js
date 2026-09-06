@@ -1132,6 +1132,19 @@ const updateColaborador = async (req, res) => {
     if (err?.name === "PrismaClientValidationError") {
       console.error("📋 Prisma validation detail:", err.message);
     }
+
+    if (err?.code === "P2002") {
+      const campo = err?.meta?.target;
+      const mensagens = {
+        matricula: `Matrícula "${req.body?.matricula}" já está em uso por outro colaborador`,
+        email: `E-mail "${req.body?.email}" já está em uso por outro colaborador`,
+        cpf: `CPF "${req.body?.cpf}" já está cadastrado para outro colaborador`,
+      };
+      const campoChave = Array.isArray(campo) ? campo[0] : campo;
+      const msg = mensagens[campoChave] ?? `Dado duplicado (${campoChave ?? "campo único"}): verifique matrícula, e-mail ou CPF`;
+      return errorResponse(res, msg, 409);
+    }
+
     return errorResponse(res, "Erro ao atualizar colaborador", 400, { name: err?.name, message: err?.message, detail: err?.message?.split('\n').slice(0,10).join(' | ') });
   }
 };
@@ -1668,7 +1681,17 @@ const importColaboradores = async (req, res) => {
         } catch (err) {
           erroCount++;
           const opsId = String(row["ops_id"] || "N/A").trim();
-          errorDetails.push({ linha: i + 1, ops_id: opsId, motivo: err.message });
+          let motivo = err.message;
+          if (err?.code === "P2002") {
+            const campo = Array.isArray(err?.meta?.target) ? err.meta.target[0] : err?.meta?.target;
+            const mensagens = {
+              matricula: `Matrícula "${row["matricula"]}" já está em uso por outro colaborador`,
+              cpf: `CPF "${row["cpf"]}" já está cadastrado para outro colaborador`,
+              email: `E-mail "${row["email"]}" já está em uso por outro colaborador`,
+            };
+            motivo = mensagens[campo] ?? `Dado duplicado (${campo ?? "campo único"})`;
+          }
+          errorDetails.push({ linha: i + 1, ops_id: opsId, motivo });
         }
       }
 
