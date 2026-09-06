@@ -919,6 +919,7 @@ const getControlePresenca = async (req, res) => {
         turno: c.turno?.nomeTurno || null,
         escala: c.escala?.nomeEscala || null,
         diasDsr: c.escala?.diasDsr || [],
+        idEstacao: c.idEstacao ?? null,
         dias: diasMap,
       });
     }
@@ -1011,11 +1012,19 @@ const ajusteManualPresenca = async (req, res) => {
       "SUSPENSAO",
       "ATESTADO_OBITO",
       "JUSTICA_ELEITORAL",
+      "TREINAMENTO_PE2",
     ];
 
-    const justificativaNormalizada = String(justificativa)
+    let justificativaNormalizada = String(justificativa)
       .trim()
       .toUpperCase();
+
+    // PE2 é um status exclusivo da Recife com justificativa sempre automática
+    // — ignora o que veio do corpo da requisição e força o valor certo,
+    // pra não depender só da trava do front-end.
+    if (status === "PE2") {
+      justificativaNormalizada = "TREINAMENTO_PE2";
+    }
 
     if (!JUSTIFICATIVAS_PERMITIDAS.includes(justificativaNormalizada)) {
       return errorResponse(res, "Justificativa inválida", 400);
@@ -1034,6 +1043,12 @@ const ajusteManualPresenca = async (req, res) => {
 
     if (colaborador.dataDesligamento || colaborador.status !== "ATIVO") {
       return errorResponse(res, "Colaborador não está ativo", 403);
+    }
+
+    // Status PE2 é exclusivo da estação Recife (SoC_PE_Recife, id 6)
+    const ESTACAO_RECIFE = 6;
+    if (status === "PE2" && colaborador.idEstacao !== ESTACAO_RECIFE) {
+      return errorResponse(res, "O status PE2 é exclusivo da estação Recife", 403);
     }
 
     // Isolamento por estação: não-ADMIN só pode ajustar colaboradores da sua estação
@@ -1546,6 +1561,7 @@ const exportarPresencaSheets = async (req, res) => {
         turno: c.turno?.nomeTurno,
         escala: c.escala?.nomeEscala,
         diasDsr: c.escala?.diasDsr || [],
+        idEstacao: c.idEstacao ?? null,
         dias: diasMap,
       };
     });

@@ -24,6 +24,7 @@ const STATUS_OPTIONS = [
   { code: "ON", label: "Onboarding" },
   { code: "AB", label: "Licença - Atestado de Óbito" },
   { code: "JE", label: "Licença - Justiça Eleitoral" },
+  { code: "PE2", label: "PE2", onlyEstacao: 6 }, // exclusivo da estação Recife (SoC_PE_Recife)
 ];
 
 // Códigos que a Liderança não pode mais lançar manualmente — precisam
@@ -46,7 +47,7 @@ const JUSTIFICATIVAS = [
 ];
 
 // Status que NÃO mostram campos de hora (justificativa automática)
-const STATUS_SEM_HORARIO = ["BH", "S1", "AB", "JE"];
+const STATUS_SEM_HORARIO = ["BH", "S1", "AB", "JE", "PE2"];
 
 // Status que habilitam edição de hora (demais mostram campos mas desabilitados)
 const STATUS_COM_HORARIO = ["P"];
@@ -61,6 +62,7 @@ function autoJustificativa(status) {
   if (status === "BH") return "BANCO_DE_HORAS";
   if (status === "AB") return "ATESTADO_OBITO";
   if (status === "JE") return "JUSTICA_ELEITORAL";
+  if (status === "PE2") return "TREINAMENTO_PE2";
   return "BANCO_DE_HORAS";
 }
 
@@ -94,6 +96,7 @@ export default function EditarPresencaModal({
   const isFolga = status === "FO";
   const isSuspensao = status === "SU";
   const isAbonado = STATUS_ABONADOS.includes(status);
+  const isPE2 = status === "PE2";
   const mostrarHorario = !STATUS_SEM_HORARIO.includes(status) && status !== "";
   const permiteHorario = status === "P";
 
@@ -155,7 +158,7 @@ export default function EditarPresencaModal({
       return;
     }
 
-    if (!justificativa && !isFolga && !isSuspensao && !isAbonado) {
+    if (!justificativa && !isFolga && !isSuspensao && !isAbonado && !isPE2) {
       alert("Justificativa é obrigatória");
       return;
     }
@@ -259,7 +262,11 @@ export default function EditarPresencaModal({
             className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2"
           >
             <option value="">Selecione um status</option>
-            {STATUS_OPTIONS.filter((s) => (!s.adminOnly || isAdmin) && (!s.hideForLideranca || !isLideranca)).map((s) => (
+            {STATUS_OPTIONS.filter((s) =>
+              (!s.adminOnly || isAdmin) &&
+              (!s.hideForLideranca || !isLideranca) &&
+              (!s.onlyEstacao || colaborador?.idEstacao === s.onlyEstacao)
+            ).map((s) => (
               <option key={s.code} value={s.code}>
                 {s.label}
               </option>
@@ -306,7 +313,7 @@ export default function EditarPresencaModal({
         )}
 
         {/* JUSTIFICATIVA */}
-        {!isFolga && !isSuspensao && !isAbonado && (
+        {!isFolga && !isSuspensao && !isAbonado && !isPE2 && (
           <div>
             <label className="text-xs text-muted">
               Justificativa <span className="text-red-400">*</span>
