@@ -7,6 +7,7 @@ const {
   paginatedResponse,
 } = require("../utils/response");
 const { isDiaDSR } = require("../utils/dsr");
+const { getEstacoesDoGrupo } = require("../config/estacaoGrupos");
 const {
   sendSolicitacaoOperacionalEmail,
   sendDecisaoOperacionalEmail,
@@ -138,8 +139,9 @@ function pertenceAEstacaoDoUsuario(req, idEstacaoRegistro) {
 }
 
 /**
- * Um aprovador só pode decidir solicitações da própria estação —
- * exceto quem tem idEstacao null (aprovador global, só Admin cadastra).
+ * Um aprovador só pode decidir solicitações da própria estação (ou de uma
+ * estação "irmã" dela — ver config/estacaoGrupos.js) — exceto quem tem
+ * idEstacao null (aprovador global, só Admin cadastra).
  */
 async function isAprovadorAtivo(email, idEstacaoSolicitacao) {
   if (!email) return false;
@@ -147,7 +149,7 @@ async function isAprovadorAtivo(email, idEstacaoSolicitacao) {
     where: {
       email: email.trim().toLowerCase(),
       ativo: true,
-      OR: [{ idEstacao: idEstacaoSolicitacao ?? null }, { idEstacao: null }],
+      OR: [{ idEstacao: { in: getEstacoesDoGrupo(idEstacaoSolicitacao) } }, { idEstacao: null }],
     },
   });
   return !!aprovador;
@@ -155,7 +157,7 @@ async function isAprovadorAtivo(email, idEstacaoSolicitacao) {
 
 /**
  * Segunda etapa: RH ou Coordenador, dependendo do tipo da solicitação.
- * Mesma regra de escopo por estação do primeiro aprovador.
+ * Mesma regra de escopo por estação (irmãs incluídas) do primeiro aprovador.
  */
 async function isSegundoAprovadorAtivo(email, tipoSegundo, idEstacaoSolicitacao) {
   if (!email || !tipoSegundo) return false;
@@ -164,7 +166,7 @@ async function isSegundoAprovadorAtivo(email, tipoSegundo, idEstacaoSolicitacao)
       tipo: tipoSegundo,
       email: email.trim().toLowerCase(),
       ativo: true,
-      OR: [{ idEstacao: idEstacaoSolicitacao ?? null }, { idEstacao: null }],
+      OR: [{ idEstacao: { in: getEstacoesDoGrupo(idEstacaoSolicitacao) } }, { idEstacao: null }],
     },
   });
   return !!aprovador;
@@ -445,11 +447,11 @@ exports.importarSinergiaLote = async (req, res) => {
     // Notificações resumidas do lote — best-effort, não bloqueia a resposta
     if (criadas.length > 0) {
       try {
-        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null))];
+        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null).flatMap(getEstacoesDoGrupo))];
         const aprovadoresAtivos = await prisma.aprovadorOperacional.findMany({
           where: {
             ativo: true,
-            OR: [...idsEstacao.map((id) => ({ idEstacao: id })), { idEstacao: null }],
+            OR: [{ idEstacao: { in: idsEstacao } }, { idEstacao: null }],
           },
         });
 
@@ -606,11 +608,11 @@ exports.importarBancoHorasLote = async (req, res) => {
     // Notificações resumidas do lote — best-effort, não bloqueia a resposta
     if (criadas.length > 0) {
       try {
-        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null))];
+        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null).flatMap(getEstacoesDoGrupo))];
         const aprovadoresAtivos = await prisma.aprovadorOperacional.findMany({
           where: {
             ativo: true,
-            OR: [...idsEstacao.map((id) => ({ idEstacao: id })), { idEstacao: null }],
+            OR: [{ idEstacao: { in: idsEstacao } }, { idEstacao: null }],
           },
         });
 
@@ -778,11 +780,11 @@ exports.importarInternalizacaoLote = async (req, res) => {
     // Notificações resumidas do lote — best-effort, não bloqueia a resposta
     if (criadas.length > 0) {
       try {
-        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null))];
+        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null).flatMap(getEstacoesDoGrupo))];
         const aprovadoresAtivos = await prisma.aprovadorOperacional.findMany({
           where: {
             ativo: true,
-            OR: [...idsEstacao.map((id) => ({ idEstacao: id })), { idEstacao: null }],
+            OR: [{ idEstacao: { in: idsEstacao } }, { idEstacao: null }],
           },
         });
 
@@ -1575,7 +1577,7 @@ exports.createSolicitacao = async (req, res) => {
     const aprovadoresAtivos = await prisma.aprovadorOperacional.findMany({
       where: {
         ativo: true,
-        OR: [{ idEstacao: colaborador?.idEstacao ?? null }, { idEstacao: null }],
+        OR: [{ idEstacao: { in: getEstacoesDoGrupo(colaborador?.idEstacao) } }, { idEstacao: null }],
       },
     });
 
@@ -1951,7 +1953,7 @@ async function processarAprovacaoSolicitacao(req, idSolicitacao) {
         where: {
           tipo: segundaEtapaTipo,
           ativo: true,
-          OR: [{ idEstacao: idEstacaoSolicitacao ?? null }, { idEstacao: null }],
+          OR: [{ idEstacao: { in: getEstacoesDoGrupo(idEstacaoSolicitacao) } }, { idEstacao: null }],
         },
       });
       const colaboradorNotif = await prisma.colaborador.findUnique({

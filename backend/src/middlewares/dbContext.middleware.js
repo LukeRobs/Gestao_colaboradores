@@ -2,10 +2,13 @@
  * Middleware de Contexto de Estação
  * Injeta req.dbContext para uso nos controllers.
  * ADMIN tem acesso global (sem filtro de estação) e pode navegar entre estações via ?estacaoId=X.
- * ALTA_GESTAO vê os mesmos dados que ADMIN, mas fixado na estação definida no banco (idEstacao).
+ * ALTA_GESTAO e LIDERANCA veem a estação definida no banco (idEstacao) — mas se essa
+ * estação tiver uma "irmã" (ver config/estacaoGrupos.js), também podem trocar pra ela
+ * via ?estacaoId=X, com o mesmo nível de acesso.
  */
 
 const { prisma } = require('../config/database');
+const { getEstacoesDoGrupo } = require('../config/estacaoGrupos');
 
 const GLOBAL_ROLES = ['ADMIN'];
 
@@ -13,7 +16,6 @@ const injectDbContext = async (req, res, next) => {
   if (!req.user) return next();
 
   const isAdmin = req.user.role === 'ADMIN';
-  const isAltaGestao = req.user.role === 'ALTA_GESTAO';
 
   // ADMIN pode filtrar por estação via query param
   const estacaoIdParam = req.query.estacaoId ? Number(req.query.estacaoId) : null;
@@ -35,16 +37,18 @@ const injectDbContext = async (req, res, next) => {
       isGlobal: !estacaoIdParam,
       estacaoId: estacaoIdParam ?? null,
     };
-  } else if (isAltaGestao) {
-    // ALTA_GESTAO: visão ampla mas fixada na estação do banco
-    req.dbContext = {
-      isGlobal: false,
-      estacaoId: req.user.idEstacao ?? null,
-    };
   } else {
+    // Cobre ALTA_GESTAO e LIDERANCA — fixados na própria estação, mas podem
+    // trocar pra uma estação "irmã" (ex: Jaboatão <-> Recife) via ?estacaoId=X.
+    const home = req.user.idEstacao ?? null;
+    const permitidas = getEstacoesDoGrupo(home); // [home] se não tiver irmã, ou o grupo inteiro
+    const estacaoEfetiva = (estacaoIdParam && permitidas.includes(estacaoIdParam))
+      ? estacaoIdParam
+      : home;
+
     req.dbContext = {
       isGlobal: false,
-      estacaoId: req.user.idEstacao ?? null,
+      estacaoId: estacaoEfetiva,
     };
   }
 

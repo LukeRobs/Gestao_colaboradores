@@ -1,22 +1,27 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2, ChevronDown } from "lucide-react";
 import { useEstacao } from "../context/EstacaoContext";
 import { EstacoesAPI } from "../services/estacoes";
 
 export default function EstacaoSelector() {
-  const { estacaoId, isGlobal, selecionarEstacao } = useEstacao();
+  const { estacaoId, isGlobal, podeAlternar, estacoesPermitidas, selecionarEstacao } = useEstacao();
   const [estacoes, setEstacoes] = useState([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!isGlobal) return;
+    if (!podeAlternar) return;
     EstacoesAPI.listar().then(setEstacoes).catch(() => {});
-  }, [isGlobal]);
+  }, [podeAlternar]);
 
-  if (!isGlobal) return null;
+  if (!podeAlternar) return null;
 
-  const selecionada = estacoes.find((e) => e.idEstacao === estacaoId);
-  const label = selecionada ? selecionada.nomeEstacao : "Todas as estações";
+  // Admin vê todas; quem não é admin só vê as estações do próprio grupo
+  const opcoes = isGlobal
+    ? estacoes
+    : estacoes.filter((e) => estacoesPermitidas.includes(e.idEstacao));
+
+  const selecionada = opcoes.find((e) => e.idEstacao === estacaoId);
+  const label = selecionada ? selecionada.nomeEstacao : (isGlobal ? "Todas as estações" : "Selecionar estação");
 
   return (
     <div className="relative">
@@ -31,16 +36,19 @@ export default function EstacaoSelector() {
 
       {open && (
         <div className="absolute right-0 mt-2 w-56 bg-surface border border-[#2C2C2F] rounded-xl shadow-2xl py-1 z-50">
-          <button
-            onClick={() => { selecionarEstacao(null); setOpen(false); }}
-            className={`w-full px-4 py-2 text-left text-sm transition hover:bg-surface-2 ${!estacaoId ? "text-[#FA4C00]" : "text-muted"}`}
-          >
-            Todas as estações
-          </button>
+          {isGlobal && (
+            <>
+              <button
+                onClick={() => { selecionarEstacao(null); setOpen(false); }}
+                className={`w-full px-4 py-2 text-left text-sm transition hover:bg-surface-2 ${!estacaoId ? "text-[#FA4C00]" : "text-muted"}`}
+              >
+                Todas as estações
+              </button>
+              <div className="border-t border-[#2C2C2F] my-1" />
+            </>
+          )}
 
-          <div className="border-t border-[#2C2C2F] my-1" />
-
-          {estacoes.map((e) => (
+          {opcoes.map((e) => (
             <button
               key={e.idEstacao}
               onClick={() => { selecionarEstacao(e.idEstacao); setOpen(false); }}

@@ -8,6 +8,7 @@ const {
 } = require("../utils/response");
 const { sendSolicitacaoTreinamentoEmail } = require("../reports/email");
 const { sendSolicitacaoNotification } = require("../services/seatalkSolicitacoes.service");
+const { getEstacoesDoGrupo } = require("../config/estacaoGrupos");
 
 function formatDataBR(date) {
   if (!date) return "N/A";
@@ -52,8 +53,9 @@ function overlaps(aInicio, aFim, bInicio, bFim) {
 }
 
 /**
- * Um aprovador só pode decidir solicitações da própria estação —
- * exceto quem tem idEstacao null (aprovador global, só Admin cadastra).
+ * Um aprovador só pode decidir solicitações da própria estação (ou de uma
+ * estação "irmã" dela — ver config/estacaoGrupos.js) — exceto quem tem
+ * idEstacao null (aprovador global, só Admin cadastra).
  */
 async function isAprovadorAtivo(email, idEstacaoSolicitacao) {
   if (!email) return false;
@@ -61,7 +63,7 @@ async function isAprovadorAtivo(email, idEstacaoSolicitacao) {
     where: {
       email: email.trim().toLowerCase(),
       ativo: true,
-      OR: [{ idEstacao: idEstacaoSolicitacao ?? null }, { idEstacao: null }],
+      OR: [{ idEstacao: { in: getEstacoesDoGrupo(idEstacaoSolicitacao) } }, { idEstacao: null }],
     },
   });
   return !!aprovador;
@@ -539,7 +541,7 @@ exports.createSolicitacao = async (req, res) => {
     const aprovadoresAtivos = await prisma.aprovadorTreinamento.findMany({
       where: {
         ativo: true,
-        OR: [{ idEstacao: setor?.idEstacao ?? null }, { idEstacao: null }],
+        OR: [{ idEstacao: { in: getEstacoesDoGrupo(setor?.idEstacao) } }, { idEstacao: null }],
       },
     });
 

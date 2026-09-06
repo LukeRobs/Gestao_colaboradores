@@ -12,6 +12,7 @@ const {
   errorResponse,
   createdResponse,
 } = require('../utils/response');
+const { getEstacoesDoGrupo } = require('../config/estacaoGrupos');
 
 /**
  * REGISTRO
@@ -103,8 +104,9 @@ const login = async (req, res) => {
   });
 
   const { password: _, ...safeUser } = user;
+  const estacoesIrmas = getEstacoesDoGrupo(user.idEstacao);
 
-  return successResponse(res, { user: safeUser, token }, 'Login realizado com sucesso');
+  return successResponse(res, { user: { ...safeUser, estacoesIrmas }, token }, 'Login realizado com sucesso');
 };
 
 /**
@@ -128,7 +130,9 @@ const getMe = async (req, res) => {
     },
   });
 
-  return successResponse(res, user);
+  if (!user) return errorResponse(res, 'Usuário não encontrado', 404);
+
+  return successResponse(res, { ...user, estacoesIrmas: getEstacoesDoGrupo(user.idEstacao) });
 };
 
 /**
