@@ -540,6 +540,14 @@ model Desligamento {
   observacao       String?
   registradoPor    String?     @map("registrado_por") @db.VarChar(50)
   dataRegistro     DateTime    @default(now()) @map("data_registro") @db.Timestamp(6)
+  // Quando o INATIVO foi de fato aplicado ao colaborador — null = ainda
+  // pendente (data prevista no futuro; o job diário de efetivação aplica e
+  // preenche este campo). Nunca null pra registros já efetivados na hora
+  // da aprovação (data passada/hoje) nem pra registros antigos, já
+  // marcados via backfill na migration que introduziu esta coluna — o job
+  // só olha pra registros com este campo null, então nunca reinterpreta
+  // histórico anterior a essa migration.
+  efetivadoEm      DateTime?   @map("efetivado_em") @db.Timestamp(6)
   colaborador      Colaborador @relation(fields: [opsId], references: [opsId], map: "fk_desligamento_colaborador")
   empresa          Empresa?    @relation(fields: [idEmpresa], references: [idEmpresa], map: "fk_desligamento_empresa")
   estacao          Estacao?    @relation(fields: [idEstacao], references: [idEstacao], map: "fk_desligamento_estacao")
@@ -548,6 +556,7 @@ model Desligamento {
   @@index([idEmpresa], map: "idx_desligamento_empresa")
   @@index([idEstacao], map: "idx_desligamento_estacao")
   @@index([opsId], map: "idx_desligamento_ops_id")
+  @@index([efetivadoEm], map: "idx_desligamento_efetivado_em")
   @@map("desligamento")
 }
 

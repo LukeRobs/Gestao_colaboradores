@@ -1766,15 +1766,27 @@ async function aplicarMudancaCadastral(tx, solicitacao, registradoPor) {
       select: { idEmpresa: true, idEstacao: true },
     });
 
-    await tx.colaborador.update({
-      where: { opsId: solicitacao.opsId },
-      data: {
-        status: "INATIVO",
-        dataDesligamento: solicitacao.dataDesligamentoSolicitada,
-        motivoDesligamento: solicitacao.motivoDesligamentoSolicitado,
-        tipoDesligamento: solicitacao.tipoDesligamentoSolicitado,
-      },
-    });
+    // A data prevista pode ser futura (ex: aviso prévio). Só efetiva o
+    // desligamento (inativar + travar o ponto) quando essa data já chegou —
+    // senão o colaborador ficaria impedido de bater ponto antes da hora.
+    // Se ainda é futura, o registro em `desligamento` (criado abaixo, como
+    // sempre) fica pendente e o job `efetivarDesligamentosAgendados` aplica
+    // o INATIVO automaticamente no dia certo.
+    const hoje = startOfDayBR();
+    const dataEfetiva = startOfDayBR(solicitacao.dataDesligamentoSolicitada);
+    const dataJaChegou = dataEfetiva <= hoje;
+
+    if (dataJaChegou) {
+      await tx.colaborador.update({
+        where: { opsId: solicitacao.opsId },
+        data: {
+          status: "INATIVO",
+          dataDesligamento: solicitacao.dataDesligamentoSolicitada,
+          motivoDesligamento: solicitacao.motivoDesligamentoSolicitado,
+          tipoDesligamento: solicitacao.tipoDesligamentoSolicitado,
+        },
+      });
+    }
 
     const jaExiste = await tx.desligamento.findFirst({
       where: { opsId: solicitacao.opsId, dataDesligamento: solicitacao.dataDesligamentoSolicitada },
@@ -1790,6 +1802,8 @@ async function aplicarMudancaCadastral(tx, solicitacao, registradoPor) {
           motivo: solicitacao.motivoDesligamentoSolicitado,
           observacao: "Gerado via Solicitação Operacional",
           registradoPor,
+          // null = ainda pendente, o job diário de efetivação aplica na data certa
+          efetivadoEm: dataJaChegou ? new Date() : null,
         },
       });
     }
