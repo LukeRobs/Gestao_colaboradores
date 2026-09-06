@@ -302,7 +302,7 @@ model Colaborador {
   status                            StatusColaborador                    @default(ATIVO)
   dataCriacao                       DateTime                             @default(now()) @map("data_criacao")
   dataAtualizacao                   DateTime                             @default(now()) @updatedAt @map("data_atualizacao")
-  cpf                               String?                              @db.VarChar(14)
+  cpf                               String?                              @unique @db.VarChar(14)
   dataNascimento                    DateTime?                            @map("data_nascimento")
   email                             String?                              @unique @db.VarChar(200)
   telefone                          String?                              @db.VarChar(20)

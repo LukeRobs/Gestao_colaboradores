@@ -665,6 +665,7 @@ const createColaborador = async (req, res) => {
         matricula: `Matrícula "${req.body?.matricula}" já está em uso por outro colaborador`,
         email: `E-mail "${req.body?.email}" já está em uso por outro colaborador`,
         ops_id: `OPS ID "${req.body?.opsId}" já está em uso`,
+        cpf: `CPF "${req.body?.cpf}" já está cadastrado para outro colaborador`,
       };
       const campoChave = Array.isArray(campo) ? campo[0] : campo;
       const msg = mensagens[campoChave] ?? `Dado duplicado (${campoChave ?? "campo único"}): verifique matrícula, e-mail ou OPS ID`;
