@@ -73,6 +73,15 @@ export const SolicitacoesOperacionaisAPI = {
     return res.data.data;
   },
 
+  importarFolgaLote: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await api.post("/solicitacoes-operacionais/folga/importar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data.data; // { criadas, totalLinhas, erros }
+  },
+
   importarSinergiaLote: async (file) => {
     const formData = new FormData();
     formData.append("file", file);

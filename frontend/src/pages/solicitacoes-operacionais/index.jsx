@@ -19,7 +19,7 @@ import { AprovadoresOperacionaisModal } from "../../components/solicitacoesOpera
 
 const LIMIT = 20;
 const STATUS_APROVAVEIS = ["PENDENTE", "AGUARDANDO_SEGUNDA_APROVACAO"];
-const TIPOS_APROVACAO_LOTE = ["SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"];
+const TIPOS_APROVACAO_LOTE = ["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"];
 
 /* ─── CHECKBOX (custom, com estado indeterminado) ──── */
 function Checkbox({ checked, indeterminate = false, onChange, disabled, title, size = 18 }) {

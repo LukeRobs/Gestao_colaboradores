@@ -13,6 +13,7 @@ import { AuthContext } from "../../context/AuthContext";
 import api from "../../services/api";
 import { SolicitacoesOperacionaisAPI } from "../../services/solicitacoesOperacionais";
 import { BuscaColaboradorPorCpf } from "../../components/solicitacoesOperacionais/BuscaColaboradorPorCpf";
+import { ImportarFolgaModal } from "../../components/solicitacoesOperacionais/ImportarFolgaModal";
 import { ImportarSinergiaModal } from "../../components/solicitacoesOperacionais/ImportarSinergiaModal";
 import { ImportarBancoHorasModal } from "../../components/solicitacoesOperacionais/ImportarBancoHorasModal";
 import { ImportarInternalizacaoModal } from "../../components/solicitacoesOperacionais/ImportarInternalizacaoModal";
@@ -695,8 +696,8 @@ export default function NovaSolicitacaoOperacional() {
                 </div>
               )}
 
-              <div className={`flex items-center pt-2 ${["SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"].includes(tipo) ? "justify-between" : "justify-end"}`}>
-                {["SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"].includes(tipo) && (
+              <div className={`flex items-center pt-2 ${["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"].includes(tipo) ? "justify-between" : "justify-end"}`}>
+                {["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"].includes(tipo) && (
                   <button
                     onClick={() => setImportarAberto(true)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-sm text-muted hover:text-page transition-colors cursor-pointer"
@@ -722,6 +723,9 @@ export default function NovaSolicitacaoOperacional() {
             </div>
           )}
 
+          {importarAberto && tipo === "FOLGA" && (
+            <ImportarFolgaModal onClose={() => setImportarAberto(false)} />
+          )}
           {importarAberto && tipo === "SINERGIA" && (
             <ImportarSinergiaModal onClose={() => setImportarAberto(false)} />
           )}

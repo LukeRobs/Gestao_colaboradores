@@ -31,6 +31,16 @@ router.get("/stats", authenticate, authorize(...roles), solicitacaoController.st
 /* IDs APROVÁVEIS PELO FILTRO ATUAL (seleção "todos os resultados") */
 router.get("/aprovaveis/ids", authenticate, authorize(...roles), solicitacaoController.listarIdsAprovaveis);
 
+/* IMPORTAR FOLGA EM LOTE (CSV) */
+router.post(
+  "/folga/importar",
+  authenticate,
+  authorize(...roles),
+  upload.single("file"),
+  handleMulterError,
+  solicitacaoController.importarFolgaLote
+);
+
 /* IMPORTAR SINERGIA EM LOTE (CSV) */
 router.post(
   "/sinergia/importar",

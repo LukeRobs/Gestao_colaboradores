@@ -489,6 +489,139 @@ exports.importarSinergiaLote = async (req, res) => {
 };
 
 /* =====================================================
+   IMPORTAR FOLGA EM LOTE (CSV)
+   Mesmo padrão de importarSinergiaLote: cada linha é validada e criada
+   isoladamente — uma linha inválida não derruba as demais.
+===================================================== */
+exports.importarFolgaLote = async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return errorResponse(res, "Usuário não autenticado", 401);
+    }
+    if (!req.file) {
+      return errorResponse(res, "Nenhum arquivo enviado", 400);
+    }
+
+    const csvString = req.file.buffer.toString("utf-8");
+    const rows = await csv({ delimiter: "," }).fromString(csvString);
+
+    if (!rows.length) {
+      return errorResponse(res, "Arquivo CSV vazio", 400);
+    }
+    if (rows.length > 500) {
+      return errorResponse(res, "Máximo de 500 linhas por importação", 400);
+    }
+
+    const criadas = [];
+    const erros = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const linha = i + 2; // +2: linha 1 é o cabeçalho
+      const raw = normalizarLinhaCsv(rows[i]);
+      const cpfOriginal = raw.cpf || "";
+
+      try {
+        const cpfDigits = String(cpfOriginal).replace(/\D/g, "");
+        if (cpfDigits.length !== 11) {
+          throw new HttpError(`CPF inválido: "${cpfOriginal}"`, 400);
+        }
+
+        const motivoLinha = String(raw.motivo || "").trim();
+        if (!motivoLinha) {
+          throw new HttpError("Motivo é obrigatório", 400);
+        }
+
+        const dataIso = parseDataFlexivel(raw.data);
+        if (!dataIso) {
+          throw new HttpError(`Data inválida: "${raw.data || ""}". Use o formato dd/mm/aaaa`, 400);
+        }
+
+        const colaborador = await prisma.colaborador.findFirst({
+          where: { cpf: cpfDigits },
+          select: { opsId: true, nomeCompleto: true, idEstacao: true, cpf: true },
+        });
+        if (!colaborador || !pertenceAEstacaoDoUsuario(req, colaborador.idEstacao)) {
+          throw new HttpError(`Colaborador não encontrado para o CPF ${cpfOriginal}`, 400);
+        }
+
+        await validarColaboradorDisponivel(colaborador.opsId, dataIso);
+
+        const solicitacao = await prisma.$transaction(async (tx) => {
+          const nova = await tx.solicitacaoOperacional.create({
+            data: {
+              tipo: "FOLGA",
+              opsId: colaborador.opsId,
+              data: normalizeDateOnly(dataIso),
+              motivo: motivoLinha,
+              solicitanteUserId: req.user.id,
+            },
+          });
+          await tx.solicitacaoOperacionalHistorico.create({
+            data: {
+              idSolicitacao: nova.idSolicitacao,
+              evento: `Solicitação criada por ${req.user.name} (importação em lote)`,
+            },
+          });
+          return nova;
+        });
+
+        criadas.push({
+          linha,
+          idSolicitacao: solicitacao.idSolicitacao,
+          colaboradorNome: colaborador.nomeCompleto,
+          idEstacao: colaborador.idEstacao,
+        });
+      } catch (err) {
+        const mensagem = err instanceof HttpError ? err.message : err.message || "Erro desconhecido";
+        erros.push({ linha, cpf: cpfOriginal, motivo: mensagem });
+      }
+    }
+
+    // Notificações resumidas do lote — best-effort, não bloqueia a resposta
+    if (criadas.length > 0) {
+      try {
+        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null).flatMap(getEstacoesDoGrupo))];
+        const aprovadoresAtivos = await prisma.aprovadorOperacional.findMany({
+          where: {
+            ativo: true,
+            OR: [{ idEstacao: { in: idsEstacao } }, { idEstacao: null }],
+          },
+        });
+
+        if (aprovadoresAtivos.length > 0) {
+          const emails = [...new Set(aprovadoresAtivos.map((a) => a.email))];
+          const listaColaboradores = criadas
+            .slice(0, 15)
+            .map((c) => `- ${c.colaboradorNome} (Nº ${c.idSolicitacao})`)
+            .join("\n");
+          const resto = criadas.length > 15 ? `\n- ...e mais ${criadas.length - 15}` : "";
+
+          await sendSolicitacaoNotification(
+            `# 📋 Folga — Importação em Lote\n\n` +
+              `- **Solicitações criadas:** ${criadas.length}\n` +
+              `- **Solicitante:** ${req.user.name}\n\n` +
+              `---\n\n${listaColaboradores}${resto}\n\n` +
+              `[Ver todas as solicitações](${(process.env.FRONTEND_URL || "http://localhost:5173")}/solicitacoes-operacionais)`,
+            { mentionEmails: emails }
+          );
+        }
+      } catch (notifErr) {
+        console.error("⚠️ Falha ao notificar importação em lote de folga:", notifErr.message);
+      }
+    }
+
+    return successResponse(
+      res,
+      { criadas: criadas.length, totalLinhas: rows.length, erros },
+      `${criadas.length} solicitação(ões) criada(s), ${erros.length} erro(s)`
+    );
+  } catch (err) {
+    console.error("❌ importarFolgaLote:", err);
+    return errorResponse(res, "Erro ao importar solicitações de folga", 500);
+  }
+};
+
+/* =====================================================
    IMPORTAR BANCO DE HORAS EM LOTE (CSV)
    Mesmo padrão de importarSinergiaLote: cada linha é validada e criada
    isoladamente — uma linha inválida não derruba as demais.
@@ -2219,7 +2352,7 @@ exports.listarIdsAprovaveis = async (req, res) => {
       return successResponse(res, { ids: [], total: 0, truncado: false });
     }
 
-    const TIPOS_APROVACAO_LOTE = ["SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"];
+    const TIPOS_APROVACAO_LOTE = ["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"];
     if (tipo && !TIPOS_APROVACAO_LOTE.includes(tipo)) {
       return successResponse(res, { ids: [], total: 0, truncado: false });
     }
