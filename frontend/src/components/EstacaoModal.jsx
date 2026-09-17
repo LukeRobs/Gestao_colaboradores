@@ -9,6 +9,7 @@ export default function EstacaoModal({ estacao, onClose, onSave, isAdmin = false
     sheetsMetaProducaoId: estacao?.sheetsMetaProducaoId || "",
     sheetsPresencaId: estacao?.sheetsPresencaId || "",
     seatalkGroupId: estacao?.seatalkGroupId || "",
+    seatalkGroupIdPacking: estacao?.seatalkGroupIdPacking || "",
   }));
 
   const [emailRh, setEmailRh] = useState(() =>
@@ -153,6 +154,14 @@ export default function EstacaoModal({ estacao, onClose, onSave, isAdmin = false
                 label="ID do Grupo Seatalk (Relatório Operacional)"
                 name="seatalkGroupId"
                 value={form.seatalkGroupId}
+                onChange={handleChange}
+                placeholder="Ex: oc_xxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+
+              <Input
+                label="ID do Grupo Seatalk (Gestão Operacional / Packing)"
+                name="seatalkGroupIdPacking"
+                value={form.seatalkGroupIdPacking}
                 onChange={handleChange}
                 placeholder="Ex: oc_xxxxxxxxxxxxxxxxxxxxxxxx"
               />

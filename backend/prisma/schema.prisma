@@ -206,6 +206,7 @@ model Estacao {
   sheetsPresencaId       String?                @map("sheets_presenca_id") @db.VarChar(200)
   emailRh                String[]               @default([]) @map("email_rh")
   seatalkGroupId         String?                @map("seatalk_group_id") @db.VarChar(200)
+  seatalkGroupIdPacking  String?                @map("seatalk_group_id_packing") @db.VarChar(200)
   colaboradores          Colaborador[]
   users                  User[]
   setores                Setor[]
