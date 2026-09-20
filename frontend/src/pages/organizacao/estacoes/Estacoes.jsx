@@ -168,6 +168,7 @@ export default function EstacoesPage() {
                 sheetsMetaProducaoId: data.sheetsMetaProducaoId || null,
                 sheetsPresencaId: data.sheetsPresencaId || null,
                 seatalkGroupId: data.seatalkGroupId || null,
+                seatalkGroupIdPacking: data.seatalkGroupIdPacking || null,
                 emailRh: Array.isArray(data.emailRh) ? data.emailRh : [],
               };
               if (selected) {

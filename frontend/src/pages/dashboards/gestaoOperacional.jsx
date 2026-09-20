@@ -174,7 +174,7 @@ export default function GestaoOperacional() {
 
     // Pre-check: verificar se o grupo Seatalk está configurado antes de iniciar o processo
     try {
-      const check = await api.get("/reports/seatalk/check");
+      const check = await api.get("/reports/seatalk/check", { params: { reportType: "gestaoOperacional" } });
       if (!check.data?.configured) {
         setModalSeatalkConfig(true);
         return;

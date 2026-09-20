@@ -4,21 +4,29 @@ const { PrismaClient } = require("@prisma/client")
 
 const prisma = new PrismaClient()
 
-async function getEstacaoGroupId(req) {
-  const estacaoId = req.user?.idEstacao || (req.query?.estacaoId ? Number(req.query.estacaoId) : null);
+// Estação efetiva da requisição: respeita a troca pra estação "irmã" feita no
+// seletor da tela (req.dbContext, calculado pelo middleware injectDbContext) —
+// nunca usar req.user.idEstacao direto, que é sempre a estação-mãe do usuário
+// e ignoraria a troca.
+function getEstacaoEfetivaId(req) {
+  return req.dbContext?.estacaoId ?? req.user?.idEstacao ?? null;
+}
+
+async function getEstacaoGroupId(req, reportType) {
+  const estacaoId = getEstacaoEfetivaId(req);
   if (!estacaoId) return null;
 
-  const rows = await prisma.$queryRaw`
-    SELECT seatalk_group_id FROM estacao WHERE id_estacao = ${estacaoId}
-  `;
-  return rows[0]?.seatalk_group_id ?? null;
+  const coluna = reportType === "gestaoOperacional" ? "seatalk_group_id_packing" : "seatalk_group_id";
+
+  const rows = await prisma.$queryRawUnsafe(
+    `SELECT ${coluna} AS group_id FROM estacao WHERE id_estacao = $1`,
+    estacaoId
+  );
+  return rows[0]?.group_id ?? null;
 }
 
 async function getEstacaoEmails(req) {
-  const estacaoId =
-    (req.body?.estacaoId ? Number(req.body.estacaoId) : null) ||
-    (req.user?.idEstacao  ? Number(req.user.idEstacao)  : null) ||
-    (req.query?.estacaoId ? Number(req.query.estacaoId) : null);
+  const estacaoId = getEstacaoEfetivaId(req);
   if (!estacaoId) return [];
 
   const rows = await prisma.$queryRaw`
@@ -69,8 +77,26 @@ async function sendReportByEmail(req, res, next) {
 
 async function checkSeatalkConfig(req, res, next) {
   try {
-    const groupId = await getEstacaoGroupId(req);
-    return res.json({ success: true, configured: !!groupId });
+    const reportType = req.query?.reportType;
+    const groupId = await getEstacaoGroupId(req, reportType);
+
+    console.log(
+      `🔍 [SEATALK-CHECK] user=${req.user?.email} homeEstacao=${req.user?.idEstacao} ` +
+      `dbContextEstacaoId=${req.dbContext?.estacaoId} reportType=${reportType || "(default)"} ` +
+      `groupId=${groupId || "(não configurado)"}`
+    );
+
+    return res.json({
+      success: true,
+      configured: !!groupId,
+      // Só pra debug — não expõe nada sensível, o id do grupo já é visível em Organização > Estações
+      debug: {
+        homeEstacaoId: req.user?.idEstacao ?? null,
+        estacaoIdUsada: req.dbContext?.estacaoId ?? null,
+        reportType: reportType || null,
+        groupId: groupId || null,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -82,7 +108,7 @@ async function sendReportToSeatalk(req, res, next) {
     console.log("📥 [SEATALK] User:", req.user?.email || "não autenticado")
     console.log("📥 [SEATALK] Body keys:", Object.keys(req.body))
 
-    const { image, periodo, turno } = req.body
+    const { image, periodo, turno, reportType } = req.body
 
     if (!image) {
       console.error("❌ [SEATALK] Imagem não enviada")
@@ -100,7 +126,7 @@ async function sendReportToSeatalk(req, res, next) {
       })
     }
 
-    const groupId = await getEstacaoGroupId(req);
+    const groupId = await getEstacaoGroupId(req, reportType);
 
     if (!groupId) {
       console.error("❌ [SEATALK] Group ID não configurado para esta estação")
