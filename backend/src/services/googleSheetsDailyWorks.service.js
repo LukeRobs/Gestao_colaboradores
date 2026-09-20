@@ -3,14 +3,28 @@ const { buscarDwLista } = require("./dwLista.service");
 
 /* =====================================================
    CONFIGURAÇÕES DA ABA DE DAILY WORKS
-   Reaproveita a mesma planilha já usada para Colaboradores
-   (já compartilhada com a conta de serviço), só numa aba nova.
+   Jaboatão reaproveita a mesma planilha já usada para Colaboradores
+   (já compartilhada com a conta de serviço), só numa aba nova. Recife
+   tem planilha própria, informada pelo usuário.
 ===================================================== */
-const SPREADSHEET_ID =
-  process.env.SHEETS_COLABORADORES_SPREADSHEET_ID ||
-  "1KV1aZh5k2moYIaUQRWPguf1hjB2nJT44sybzkk0Ki7U";
-const DW_SHEET = process.env.SHEETS_DAILY_WORKS_ABA || "daily_works";
-const ESTACAO_DAILY_WORKS = 1; // SoC_PE_Jabotao_dos_Guararapes
+const CONFIG_JABOATAO = {
+  spreadsheetId:
+    process.env.SHEETS_COLABORADORES_SPREADSHEET_ID ||
+    "1KV1aZh5k2moYIaUQRWPguf1hjB2nJT44sybzkk0Ki7U",
+  aba: process.env.SHEETS_DAILY_WORKS_ABA || "daily_works",
+  idEstacao: 1, // SoC_PE_Jabotao_dos_Guararapes
+  label: "Jaboatão",
+};
+
+const CONFIG_RECIFE = {
+  spreadsheetId:
+    process.env.SHEETS_DAILY_WORKS_RECIFE_SPREADSHEET_ID ||
+    "1zF4PeOXxrd53ETTl6U5rqNHKe9IGlf4u9rtU7sea6K0",
+  aba: process.env.SHEETS_DAILY_WORKS_RECIFE_ABA || "Daily_Works",
+  idEstacao: 6, // SoC_PE_Recife
+  label: "Recife",
+};
+
 // Início do histórico — nunca "roda" com a virada do mês, mantém tudo desde essa data
 const DATA_INICIO_HISTORICO = process.env.SHEETS_DAILY_WORKS_INICIO || "2026-07-01";
 
@@ -29,34 +43,35 @@ const getGoogleSheetsClient = () => {
 };
 
 /** Garante que a aba exista na planilha, criando se necessário. */
-async function garantirAbaExiste(sheets) {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
-  const existe = meta.data.sheets?.some((s) => s.properties?.title === DW_SHEET);
+async function garantirAbaExiste(sheets, spreadsheetId, aba) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const existe = meta.data.sheets?.some((s) => s.properties?.title === aba);
 
   if (!existe) {
     await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
+      spreadsheetId,
       resource: {
-        requests: [{ addSheet: { properties: { title: DW_SHEET } } }],
+        requests: [{ addSheet: { properties: { title: aba } } }],
       },
     });
-    console.log(`📄 Aba "${DW_SHEET}" criada na planilha`);
+    console.log(`📄 Aba "${aba}" criada na planilha`);
   }
 }
 
 /* =====================================================
    EXPORTAR DAILY WORKS DO DIA PARA O GOOGLE SHEETS
    Mesmas colunas do botão "Exportar CSV" da tela Daily Works.
+   Parametrizada por estação — ver CONFIG_JABOATAO / CONFIG_RECIFE.
 ===================================================== */
-const exportarDailyWorks = async () => {
-  console.log("\n📊 ===== EXPORTAR DAILY WORKS =====");
+const executarExport = async ({ spreadsheetId, aba, idEstacao, label }) => {
+  console.log(`\n📊 ===== EXPORTAR DAILY WORKS (${label}) =====`);
 
   const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
 
   const listaBruta = await buscarDwLista({
     dataInicio: DATA_INICIO_HISTORICO,
     dataFim: hoje,
-    idEstacao: ESTACAO_DAILY_WORKS,
+    idEstacao,
   });
 
   // Histórico completo do mais antigo para o mais recente (mais fácil de ler na planilha)
@@ -93,20 +108,20 @@ const exportarDailyWorks = async () => {
   const values = [headers, ...rows];
 
   const sheets = getGoogleSheetsClient();
-  await garantirAbaExiste(sheets);
+  await garantirAbaExiste(sheets, spreadsheetId, aba);
 
   try {
     await sheets.spreadsheets.values.clear({
-      spreadsheetId: SPREADSHEET_ID,
-      range: DW_SHEET,
+      spreadsheetId,
+      range: aba,
     });
   } catch (clearError) {
     console.warn("⚠️ Erro ao limpar aba (continuando):", clearError.message);
   }
 
   const response = await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${DW_SHEET}!A1`,
+    spreadsheetId,
+    range: `${aba}!A1`,
     valueInputOption: "RAW",
     resource: { values },
   });
@@ -122,14 +137,14 @@ const exportarDailyWorks = async () => {
   });
 
   await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${DW_SHEET}!K1`,
+    spreadsheetId,
+    range: `${aba}!K1`,
     valueInputOption: "RAW",
     resource: { values: [[`Última atualização: ${horaAtualizacao}`]] },
   });
 
   console.log(`🕐 Hora de atualização registrada: ${horaAtualizacao}`);
-  console.log(`✅ Exportação concluída: ${response.data.updatedCells} células atualizadas`);
+  console.log(`✅ Exportação concluída (${label}): ${response.data.updatedCells} células atualizadas`);
   console.log("=================================\n");
 
   return {
@@ -137,9 +152,12 @@ const exportarDailyWorks = async () => {
     data: {
       totalLinhas: lista.length,
       celulasAtualizadas: response.data.updatedCells,
-      spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`,
+      spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
     },
   };
 };
 
-module.exports = { exportarDailyWorks };
+const exportarDailyWorks = () => executarExport(CONFIG_JABOATAO);
+const exportarDailyWorksRecife = () => executarExport(CONFIG_RECIFE);
+
+module.exports = { exportarDailyWorks, exportarDailyWorksRecife };
