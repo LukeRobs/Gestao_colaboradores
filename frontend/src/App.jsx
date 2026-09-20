@@ -167,7 +167,7 @@ export default function App() {
       <Route
         path="/dashboard/gestao-operacional"
         element={
-          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} onlyEstacoes={[1]}>
+          <ProtectedRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} onlyEstacoes={[1, 6]}>
             <GestaoOperacional />
           </ProtectedRoute>
         }
