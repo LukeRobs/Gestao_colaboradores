@@ -311,8 +311,13 @@ async function buscarQuantidadeRealizada(dataISO, spreadsheetId = DEFAULT_PRODUC
 
     // Se o timestamp é global (embutido no header) e uma data foi pedida,
     // a aba inteira só é válida se a data do timestamp bater com a buscada.
+    // getDate()/getMonth()/getFullYear() usam o fuso LOCAL do processo — em
+    // produção (Render, UTC) isso adiantava o dia sempre que já tinha passado
+    // das 21h em Brasília (UTC já virou amanhã), fazendo a data nunca bater
+    // e a planilha inteira ser tratada como vazia. Precisa extrair a data
+    // explicitamente no fuso de Brasília, não no fuso do processo.
     if (timestampGlobalHeader && dataBusca) {
-      const dataHeader = `${String(timestampGlobalHeader.getDate()).padStart(2, "0")}/${String(timestampGlobalHeader.getMonth() + 1).padStart(2, "0")}/${timestampGlobalHeader.getFullYear()}`;
+      const dataHeader = timestampGlobalHeader.toLocaleDateString("en-GB", { timeZone: "America/Sao_Paulo" });
       if (!dataBate(dataHeader)) {
         return { success: true, data: {}, ultimaAtualizacaoSheets: timestampGlobalHeader.toISOString() };
       }
