@@ -14,16 +14,34 @@ import MainLayout from "../../components/MainLayout";
 import { AuthContext } from "../../context/AuthContext";
 // import CapacidadeTable from "../../components/gestaoOperacional/CapacidadeTable"; // Comentado - será usado futuramente
 
+// "YYYY-MM-DD" no fuso de Brasília — nunca usar toISOString() aqui, que é
+// sempre UTC: depois das 21h (Brasília) o dia UTC já virou amanhã, e o
+// dashboard acabava carregando a data errada (meta pré-cadastrada de amanhã
+// + produção real do dia seguinte já em andamento na planilha).
+function formatarDataBrasil(date) {
+  return date.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+function horaAtualBrasil() {
+  return Number(
+    new Date().toLocaleString("en-US", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      hour12: false,
+    })
+  );
+}
+
 // Retorna a data padrão para o turno selecionado.
 // T3 começa às 22h: se ainda não chegou às 22h, o "T3 ativo" é o de ontem.
 function getDataDefaultParaTurno(nomeTurno) {
   const agora = new Date();
-  if (nomeTurno === "T3" && agora.getHours() < 22) {
+  if (nomeTurno === "T3" && horaAtualBrasil() < 22) {
     const ontem = new Date(agora);
     ontem.setDate(ontem.getDate() - 1);
-    return ontem.toISOString().slice(0, 10);
+    return formatarDataBrasil(ontem);
   }
-  return agora.toISOString().slice(0, 10);
+  return formatarDataBrasil(agora);
 }
 
 export default function GestaoOperacional() {
