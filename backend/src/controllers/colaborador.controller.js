@@ -2091,6 +2091,7 @@ const exportarCsvColaboradores = async (req, res) => {
 
     const rows = data.map(aplicarStatusDinamico).map((c) => [
       c.nomeCompleto || "",
+      c.opsId || "",
       c.matricula || "",
       c.cpf || "",
       c.email || "",
@@ -2104,7 +2105,7 @@ const exportarCsvColaboradores = async (req, res) => {
       c.lider?.nomeCompleto || "",
     ]);
 
-    const header = ["Nome", "Matrícula", "CPF", "Email", "Empresa", "Setor", "Turno", "Escala", "Cargo", "Status", "Admissão", "Liderança"];
+    const header = ["Nome", "Ops ID", "Matrícula", "CPF", "Email", "Empresa", "Setor", "Turno", "Escala", "Cargo", "Status", "Admissão", "Liderança"];
     const csvLines = [header, ...rows].map((r) =>
       r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
     );
