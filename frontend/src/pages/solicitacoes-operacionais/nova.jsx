@@ -20,7 +20,7 @@ import { ImportarInternalizacaoModal } from "../../components/solicitacoesOperac
 import { TIPO_DESLIGAMENTO_LABEL, MOTIVO_DESLIGAMENTO_LABEL } from "./shared";
 
 const TIPOS = [
-  { key: "FOLGA", label: "Folga", desc: "Solicitar folga para um colaborador em uma data específica", icon: CalendarOff },
+  { key: "FOLGA", label: "Folga", desc: "Solicitar um ou mais dias de folga para um colaborador", icon: CalendarOff },
   { key: "BANCO_HORAS", label: "Banco de Horas", desc: "Dia completo ou horas parciais, com hora de entrada", icon: Clock3 },
   { key: "SINERGIA", label: "Sinergia", desc: "Envio para FULL, tratativas ou outra operação", icon: Share2 },
   { key: "TROCA_DSR", label: "Troca de DSR", desc: "Inversão do DSR entre dois colaboradores", icon: ArrowLeftRight },
@@ -34,7 +34,24 @@ const TIPOS = [
   { key: "INTERNALIZACAO", label: "Internalização", desc: "Colaborador terceirizado passa a ser SPX (empresa e matrícula)", icon: Building2 },
 ];
 
-const TIPOS_COM_DATA_GENERICA = ["FOLGA", "BANCO_HORAS", "SINERGIA", "HORA_EXTRA"];
+const TIPOS_COM_DATA_GENERICA = ["BANCO_HORAS", "SINERGIA", "HORA_EXTRA"];
+
+// Gera a lista de datas (YYYY-MM-DD) entre início e fim, inclusive, em UTC
+// pra não depender do fuso horário do navegador.
+function gerarIntervaloDatas(dataInicio, dataFim) {
+  const [anoI, mesI, diaI] = dataInicio.split("-").map(Number);
+  const [anoF, mesF, diaF] = dataFim.split("-").map(Number);
+  const inicio = Date.UTC(anoI, mesI - 1, diaI);
+  const fim = Date.UTC(anoF, mesF - 1, diaF);
+  const datas = [];
+  for (let t = inicio; t <= fim; t += 24 * 60 * 60 * 1000) {
+    const d = new Date(t);
+    datas.push(
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`
+    );
+  }
+  return datas;
+}
 
 // Retorna a duração em minutos entre entrada e saída, considerando turnos
 // que atravessam a meia-noite (ex.: T3, entrada 21:00 / saída 05:55).
@@ -80,6 +97,10 @@ export default function NovaSolicitacaoOperacional() {
   const [colaborador, setColaborador] = useState(null);
   const [data, setData] = useState("");
   const [motivo, setMotivo] = useState("");
+
+  /* folga (intervalo de datas) */
+  const [folgaDataInicio, setFolgaDataInicio] = useState("");
+  const [folgaDataFim, setFolgaDataFim] = useState("");
 
   /* banco de horas */
   const [bhDiaCompleto, setBhDiaCompleto] = useState(true);
@@ -135,6 +156,7 @@ export default function NovaSolicitacaoOperacional() {
 
   const resetForm = () => {
     setColaborador(null); setData(""); setMotivo("");
+    setFolgaDataInicio(""); setFolgaDataFim("");
     setBhDiaCompleto(true); setBhQuantidadeHoras(""); setBhHoraEntrada("");
     setSinergiaDestino("");
     setColaborador2(null); setDsrDataAtual1(""); setDsrDataNova1(""); setDsrDataAtual2(""); setDsrDataNova2("");
@@ -219,6 +241,9 @@ export default function NovaSolicitacaoOperacional() {
     ? dsrDataAtual1 === dsrDataNova2 && dsrDataAtual2 === dsrDataNova1
     : true;
 
+  const folgaIntervaloValido = !!folgaDataInicio && !!folgaDataFim && folgaDataFim >= folgaDataInicio;
+  const folgaDias = folgaIntervaloValido ? gerarIntervaloDatas(folgaDataInicio, folgaDataFim).length : 0;
+
   const podeEnviar = (() => {
     if (!motivo.trim()) return false;
     if (tipo === "TROCA_DSR") {
@@ -228,6 +253,7 @@ export default function NovaSolicitacaoOperacional() {
       return inversaoValida;
     }
     if (!colaborador) return false;
+    if (tipo === "FOLGA") return folgaIntervaloValido;
     if (TIPOS_COM_DATA_GENERICA.includes(tipo)) {
       if (!data) return false;
       if (tipo === "BANCO_HORAS" && !bhDiaCompleto && (!bhQuantidadeHoras || !bhHoraEntrada)) return false;
@@ -254,11 +280,61 @@ export default function NovaSolicitacaoOperacional() {
     return false;
   })();
 
+  const enviarFolga = async () => {
+    const datas = gerarIntervaloDatas(folgaDataInicio, folgaDataFim);
+    const resultados = [];
+    for (const dataFolga of datas) {
+      try {
+        const criada = await SolicitacoesOperacionaisAPI.criar({
+          tipo: "FOLGA",
+          opsId: colaborador.opsId,
+          motivo: motivo.trim(),
+          data: dataFolga,
+        });
+        resultados.push({ data: dataFolga, ok: true, idSolicitacao: criada.idSolicitacao });
+      } catch (e) {
+        if (e.response?.status === 401) throw e;
+        resultados.push({ data: dataFolga, ok: false, erro: e.response?.data?.message || "Erro ao criar solicitação" });
+      }
+    }
+
+    const sucesso = resultados.filter((r) => r.ok);
+    const falhas = resultados.filter((r) => !r.ok);
+
+    if (sucesso.length === 1 && falhas.length === 0) {
+      navigate(`/solicitacoes-operacionais/${sucesso[0].idSolicitacao}`);
+      return;
+    }
+
+    const nome = colaborador?.nomeCompleto || "o colaborador";
+    if (falhas.length === 0) {
+      setSucessoMsg(`${sucesso.length} solicitações de folga criadas com sucesso para ${nome}.`);
+    } else if (sucesso.length === 0) {
+      setErro(`Nenhuma solicitação de folga foi criada. ${falhas[0].data}: ${falhas[0].erro}`);
+    } else {
+      setSucessoMsg(`${sucesso.length} de ${resultados.length} dias de folga criados para ${nome}.`);
+      setErro(`Falha em ${falhas.length} dia(s): ${falhas.map((f) => `${f.data} (${f.erro})`).join("; ")}`);
+    }
+
+    if (sucesso.length > 0) {
+      setColaborador(null);
+      setFolgaDataInicio("");
+      setFolgaDataFim("");
+      setMotivo("");
+      setFormKey((k) => k + 1);
+    }
+  };
+
   const enviar = async () => {
     if (!podeEnviar) return;
     setEnviando(true);
     setErro(null);
     try {
+      if (tipo === "FOLGA") {
+        await enviarFolga();
+        return;
+      }
+
       const payload = { tipo, motivo: motivo.trim() };
 
       if (tipo === "TROCA_DSR") {
@@ -426,6 +502,31 @@ export default function NovaSolicitacaoOperacional() {
               ) : (
                 <>
                   <BuscaColaboradorPorCpf key={formKey} onFound={setColaborador} onClear={() => setColaborador(null)} />
+
+                  {tipo === "FOLGA" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Data início">
+                          <input type="date" value={folgaDataInicio} onChange={(e) => setFolgaDataInicio(e.target.value)} className={fieldCls()} />
+                        </Field>
+                        <Field label="Data fim">
+                          <input type="date" value={folgaDataFim} onChange={(e) => setFolgaDataFim(e.target.value)} className={fieldCls()} />
+                        </Field>
+                      </div>
+                      {folgaDataInicio && folgaDataFim && !folgaIntervaloValido && (
+                        <div className="flex gap-2.5 rounded-xl border border-[#FF453A]/30 bg-[#FF453A]/5 p-3">
+                          <AlertTriangle size={15} className="text-[#FF453A] shrink-0 mt-0.5" />
+                          <p className="text-xs text-[#FF453A]">A data de fim não pode ser anterior à data de início.</p>
+                        </div>
+                      )}
+                      {folgaIntervaloValido && (
+                        <p className="text-xs text-muted bg-surface-2 rounded-xl px-3 py-2.5">
+                          Dias de folga: <span className="text-page font-semibold">{folgaDias}</span>
+                          {folgaDias > 1 ? " — será criada uma solicitação por dia." : ""}
+                        </p>
+                      )}
+                    </>
+                  )}
 
                   {TIPOS_COM_DATA_GENERICA.includes(tipo) && (
                     <Field label={tipo === "HORA_EXTRA" ? "Data (dia de DSR)" : "Data"}>
