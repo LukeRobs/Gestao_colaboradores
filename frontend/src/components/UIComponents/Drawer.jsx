@@ -18,7 +18,7 @@ export function Drawer({ open, onOpenChange, title, icon, children, footer }) {
           style={{ animation: "drawerFadeIn 0.2s ease-out" }}
         />
         <Dialog.Content
-          className="fixed right-0 top-0 z-50 h-full w-full sm:max-w-md bg-surface border-l border-default shadow-2xl flex flex-col"
+          className="fixed right-0 top-0 z-50 h-screen w-full sm:max-w-md bg-surface border-l border-default shadow-2xl flex flex-col"
           style={{ animation: "drawerSlideIn 0.25s ease-out" }}
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-default shrink-0">
