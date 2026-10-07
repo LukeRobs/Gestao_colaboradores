@@ -39,6 +39,7 @@ import DistribuicaoColaboradoresCadastradosChart from "../../components/dashboar
 import HierarquiaSection from "../../components/HierarquiaSection";
 import InputsManuaisTable from "../../components/dashboard/InputsManuaisTable";
 import FaltasPorTempoCasaChart from "../../components/dashboard/FaltasPorTempoCasaChart";
+import SinergiasCard from "../../components/dashboard/SinergiasCard";
 
 
 import { AuthContext } from "../../context/AuthContext";
@@ -86,6 +87,7 @@ const INITIAL_DATA = {
   lideres: [],   
   eventos: [],
   inputsManuais: { total: 0, porColaborador: [], porJustificativa: [] },
+  sinergias: { total: 0, turnos: [], porDestino: [] },
   faltasPorTempoCasa: [],
   series: { headcountMensal: [], admissoesMensal: [], desligamentosMensal: [] },
 };
@@ -668,6 +670,8 @@ export default function DashboardAdmin() {
               labelKey="setor"
             />
           </div>
+
+          <SinergiasCard data={dados.sinergias} />
 
           <HierarquiaSection
             resumo={dados.resumoHierarquia}
