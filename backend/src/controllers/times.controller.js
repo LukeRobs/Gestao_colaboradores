@@ -35,7 +35,17 @@ const listarTimes = async (req, res) => {
       orderBy: [{ operacao: "asc" }, { nome: "asc" }],
     });
 
-    return successResponse(res, times);
+    // Doca em que cada time está alocado agora (null = livre): quem lista usa para travar a escolha.
+    const emDoca = await prisma.mapaAlocacao.findMany({
+      where: { idEstacao, fim: null, idTime: { in: times.map((t) => t.idTime) } },
+      select: { idTime: true, numeroDoca: true },
+    });
+    const docaPorTime = new Map(emDoca.map((a) => [a.idTime, a.numeroDoca]));
+
+    return successResponse(
+      res,
+      times.map((t) => ({ ...t, docaAtual: docaPorTime.get(t.idTime) ?? null }))
+    );
   } catch (err) {
     console.error("❌ Erro ao listar times:", err);
     return errorResponse(res, "Erro ao listar times", 500);

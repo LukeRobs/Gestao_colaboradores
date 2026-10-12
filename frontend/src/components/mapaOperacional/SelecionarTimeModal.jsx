@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, User, UserPlus2, Users } from "lucide-react";
+import { ArrowLeft, Lock, User, UserPlus2, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import { DocasAPI } from "../../services/docas";
 import { TimesAPI } from "../../services/times";
@@ -116,23 +116,39 @@ export function SelecionarTimeModal({ numero, operacaoAtual, onClose, onAllocate
                 </p>
               ) : (
                 <ul className="rounded-xl border border-default divide-y divide-default max-h-72 overflow-y-auto">
-                  {timesProntos.map((t) => (
-                    <li key={t.idTime}>
-                      <button
-                        type="button"
-                        onClick={() => alocarTime(t.idTime)}
-                        disabled={salvando}
-                        className={`w-full text-left px-3.5 py-3 min-h-[44px] hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait ${FOCO}`}
-                      >
-                        <span className="block text-sm font-medium">
-                          {t.nome} {t.tipo === "FIFO" && <span className="text-xs font-normal text-muted">(FIFO)</span>}
-                        </span>
-                        <span className="block text-xs text-muted mt-0.5">
-                          {t.integrantes.length} {t.integrantes.length === 1 ? "integrante" : "integrantes"} · Turno {t.turno}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+                  {timesProntos.map((t) => {
+                    const ocupado = t.docaAtual != null;
+                    return (
+                      <li key={t.idTime}>
+                        <button
+                          type="button"
+                          onClick={() => alocarTime(t.idTime)}
+                          disabled={salvando || ocupado}
+                          title={ocupado ? `Libere a Doca ${t.docaAtual} para poder alocar este time em outra doca` : undefined}
+                          className={`w-full text-left px-3.5 py-3 min-h-[44px] transition-colors disabled:cursor-not-allowed ${FOCO} ${
+                            ocupado ? "opacity-60" : "hover:bg-surface-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                          }`}
+                        >
+                          <span className="flex items-center justify-between gap-3">
+                            <span className="text-sm font-medium">
+                              {t.nome} {t.tipo === "FIFO" && <span className="text-xs font-normal text-muted">(FIFO)</span>}
+                            </span>
+                            {ocupado && (
+                              <span className="shrink-0 inline-flex items-center gap-1 h-6 px-2 rounded-full bg-[#FF453A]/15 text-[#FF453A] text-xs font-semibold">
+                                <Lock size={11} aria-hidden="true" /> Já alocado na Doca {t.docaAtual}
+                              </span>
+                            )}
+                          </span>
+                          <span className="block text-xs text-muted mt-0.5">
+                            {ocupado
+                              ? `Libere a Doca ${t.docaAtual} para alocar aqui · `
+                              : ""}
+                            {t.integrantes.length} {t.integrantes.length === 1 ? "integrante" : "integrantes"} · Turno {t.turno}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
