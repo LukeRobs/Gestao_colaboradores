@@ -84,6 +84,9 @@ async function getStatusDocas() {
       placa: row[5] || null,
       duracaoSegundos: Number(row[6]) || 0,
       duracao: formatDuracao(row[6]),
+      // idle_time: segundos desde que o último veículo saiu; waiting_truck_num: caminhões na fila da doca
+      ociosaSegundos: Number(row[16]) || 0,
+      caminhoesAguardando: Number(row[7]) || 0,
       motorista: row[23] || null,
     });
   }

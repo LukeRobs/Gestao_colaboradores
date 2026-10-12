@@ -16,6 +16,7 @@ const { iniciarJobExportDailyWorks } = require('./jobs/exportDailyWorks.job');
 const { iniciarJobEfetivarDesligamentos } = require('./jobs/efetivarDesligamentos.job');
 const { iniciarJobSyncAutoAlocacoesLabel } = require('./jobs/syncAutoAlocacoesLabel.job');
 const { iniciarJobSinergiaInterna } = require('./jobs/sinergiaInterna.job');
+const { iniciarJobLiberarDocasSemVeiculo } = require('./jobs/liberarDocasSemVeiculo.job');
 
 
 // =====================================================
@@ -65,6 +66,9 @@ const startServer = async () => {
 
       // Sinergia Interna (Label): fim previsto -> aguardando retorno / expiração
       iniciarJobSinergiaInterna();
+
+      // Gestão de Docas: desatrela a equipe da doca quando o veículo saiu e a doca ficou livre
+      iniciarJobLiberarDocasSemVeiculo();
     });
 
     // Tratamento de erros não capturados

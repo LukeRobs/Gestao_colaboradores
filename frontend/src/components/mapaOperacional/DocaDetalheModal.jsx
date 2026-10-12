@@ -162,9 +162,19 @@ export function DocaDetalheModal({ numero, onClose, onChanged }) {
             </Secao>
 
             {doca.alocacao ? (
-              <button type="button" onClick={liberar} disabled={liberando} className={`${BTN_PERIGO} w-full`}>
-                {liberando ? "Liberando…" : "Liberar doca"}
-              </button>
+              <>
+                {doca.sheet && !doca.sheet.fisicamenteOcupada && doca.liberacaoAutomaticaMinutos && (
+                  <p className="flex items-start gap-2 text-xs text-muted">
+                    <Info size={14} className="shrink-0 mt-px" aria-hidden="true" />
+                    {doca.sheet.caminhoesAguardando > 0
+                      ? "Há caminhão aguardando esta doca: a equipe continua alocada."
+                      : `Sem veículo na doca${doca.sheet.ociosaSegundos >= 60 ? ` há ${Math.floor(doca.sheet.ociosaSegundos / 60)} min` : ""}. A equipe é liberada automaticamente após ${doca.liberacaoAutomaticaMinutos} min sem veículo, desde que o último veículo tenha saído depois de ela ser alocada.`}
+                  </p>
+                )}
+                <button type="button" onClick={liberar} disabled={liberando} className={`${BTN_PERIGO} w-full`}>
+                  {liberando ? "Liberando…" : "Liberar doca"}
+                </button>
+              </>
             ) : (
               doca.ocupada && (
                 <p className="flex items-start gap-2 text-xs text-muted">

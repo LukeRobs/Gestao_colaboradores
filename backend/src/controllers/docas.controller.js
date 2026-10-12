@@ -5,6 +5,7 @@ const { validarColaboradorElegivel, contextoDaOperacao } = require("../services/
 const { calcularSaldoDiaristas } = require("./mapaOperacional.controller");
 const { avaliarConflitoDoca, avaliarConflitoTime } = require("../services/mapaOperacional/alocacaoConflito.service");
 const { getTurnoOperacionalAtual } = require("../utils/turnoMapaOperacional");
+const { MINUTOS_SEM_VEICULO } = require("../services/mapaOperacional/docaAutoLiberacao.service");
 
 const OPERACAO_LABEL = { INBOUND: "Recebimento", OUTBOUND: "Expedição" };
 // LOG II e Volante existem nas duas operações, igual às esteiras.
@@ -136,7 +137,7 @@ const obterDoca = async (req, res) => {
     ]);
 
     const doca = montarDoca(numero, statusMap.get(numero), alocPorNumero.get(numero));
-    return successResponse(res, { ...doca, historico });
+    return successResponse(res, { ...doca, historico, liberacaoAutomaticaMinutos: MINUTOS_SEM_VEICULO });
   } catch (err) {
     console.error("❌ Erro ao obter doca:", err);
     return errorResponse(res, "Erro ao obter doca", 500);
