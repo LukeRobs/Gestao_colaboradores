@@ -12,7 +12,7 @@ export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onA
   // Pesca fica em um braço: pergunta já na entrada ("sem" = definir depois, arrastando no mapa).
   const pedeBraco = laborValue === "PESCA";
   const [bracoLado, setBracoLado] = useState("");
-  // Pesca é alocada em sequência: o modal fica aberto e a busca recomeça limpa a cada pessoa.
+  // O modal fica aberto após cada alocação (só fecha no X ou clicando fora) e a busca recomeça limpa.
   const [chaveBusca, setChaveBusca] = useState(0);
   const bracos = (esteira.bracos || [])
     .filter((b) => b.habilitado)
@@ -37,10 +37,8 @@ export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onA
       });
       toast.success(diarista ? "Diarista alocado com sucesso" : "Colaborador alocado com sucesso");
       onAllocated?.();
-      if (pedeBraco) {
-        setChaveBusca((n) => n + 1);
-        if (diarista) MapaOperacionalAPI.diaristasDisponiveis().then(setSaldoDiarista).catch(() => {});
-      } else onClose();
+      setChaveBusca((n) => n + 1);
+      if (diarista) MapaOperacionalAPI.diaristasDisponiveis().then(setSaldoDiarista).catch(() => {});
     } catch (e) {
       if (!e.tratado) toast.error(e.response?.data?.message || "Erro ao alocar");
     } finally {
