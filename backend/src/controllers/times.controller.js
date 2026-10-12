@@ -224,6 +224,19 @@ const adicionarIntegrante = async (req, res) => {
     });
     if (jaNoTime) return errorResponse(res, `${colaborador.nomeCompleto} já faz parte desse time`, 400);
 
+    // Uma pessoa só pode estar em um time (de qualquer turno/operação); time excluído não conta.
+    const emOutroTime = await prisma.timeIntegrante.findFirst({
+      where: { opsId, idTime: { not: time.idTime }, time: { idEstacao, ativo: true } },
+      include: { time: { select: { nome: true, turno: true } } },
+    });
+    if (emOutroTime) {
+      return errorResponse(
+        res,
+        `${colaborador.nomeCompleto} já faz parte do time "${emOutroTime.time.nome}" (${emOutroTime.time.turno}). Remova-o de lá antes de adicionar neste time.`,
+        400
+      );
+    }
+
     await prisma.timeIntegrante.create({
       data: { idTime: time.idTime, opsId, funcao: time.tipo === "FIFO" ? null : funcao },
     });
