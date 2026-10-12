@@ -364,9 +364,17 @@ const deleteFrequencia = async (req, res) => {
     }
   }
 
-  await prisma.frequencia.delete({
-    where: { idFrequencia: parseInt(id) },
-  });
+  const idFrequencia = parseInt(id);
+
+  // Uma falta que virou DSR/atestado/etc. por ajuste manual continua referenciada pela sugestão de
+  // medida disciplinar gerada na época (FK) e isso impedia apagar o registro. Sugestão ainda
+  // pendente perde o sentido sem a falta e é removida; as já decididas (aprovada/rejeitada) ficam
+  // no histórico, só sem o vínculo com o registro apagado.
+  await prisma.$transaction([
+    prisma.sugestaoMedidaDisciplinar.deleteMany({ where: { idFrequencia, status: "PENDENTE" } }),
+    prisma.sugestaoMedidaDisciplinar.updateMany({ where: { idFrequencia }, data: { idFrequencia: null } }),
+    prisma.frequencia.delete({ where: { idFrequencia } }),
+  ]);
 
   return deletedResponse(res, "Frequência excluída com sucesso");
 };

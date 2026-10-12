@@ -188,6 +188,33 @@ export function AbasSegmentadas({ rotulo, opcoes, valor, onChange }) {
   );
 }
 
+/* ---------- Abas da página (troca de visão: Docas / Equipes) ---------- */
+
+export function AbasPagina({ rotulo, opcoes, valor, onChange }) {
+  return (
+    <div role="tablist" aria-label={rotulo} className="flex gap-1 border-b border-default overflow-x-auto">
+      {opcoes.map((o) => {
+        const ativo = valor === o.valor;
+        return (
+          <button
+            key={o.valor}
+            role="tab"
+            type="button"
+            aria-selected={ativo}
+            onClick={() => onChange(o.valor)}
+            className={`-mb-px h-11 px-4 inline-flex items-center gap-2 border-b-2 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${FOCO} ${
+              ativo ? "border-[#FA4C00] text-page" : "border-transparent text-muted hover:text-page"
+            }`}
+          >
+            {o.icone}
+            {o.rotulo}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ---------- Modal ---------- */
 
 // Com modais empilhados (detalhe da doca -> adicionar equipe), só o de cima reage ao Esc.
@@ -269,7 +296,8 @@ export function Modal({ titulo, subtitulo, kicker, onClose, bloqueado = false, l
 
 /* ---------- Busca de colaborador elegível (nome, CPF ou Ops ID) ---------- */
 
-export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado = false }) {
+// `indisponivel(colaborador)` devolve o motivo (texto) quando a pessoa não pode ser escolhida, ou null.
+export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado = false, indisponivel }) {
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
@@ -318,21 +346,27 @@ export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado =
         <p className="text-xs text-muted">Digite ao menos 2 letras. Só aparecem presentes (P) do turno e do setor correto.</p>
       ) : lista.length > 0 ? (
         <ul className="rounded-xl border border-default divide-y divide-default max-h-64 overflow-y-auto">
-          {lista.map((c) => (
-            <li key={c.opsId}>
-              <button
-                type="button"
-                onClick={() => onSelecionar(c)}
-                disabled={desabilitado}
-                className={`w-full text-left px-3.5 py-2.5 min-h-[44px] hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait ${FOCO}`}
-              >
-                <span className="block text-sm">{c.nomeCompleto}</span>
-                <span className="block text-xs text-muted mt-0.5">
-                  {c.opsId} · {c.setor?.nomeSetor || c.cargo?.nomeCargo || "—"}
-                </span>
-              </button>
-            </li>
-          ))}
+          {lista.map((c) => {
+            const motivo = indisponivel?.(c) || null;
+            return (
+              <li key={c.opsId}>
+                <button
+                  type="button"
+                  onClick={() => onSelecionar(c)}
+                  disabled={desabilitado || !!motivo}
+                  className={`w-full text-left px-3.5 py-2.5 min-h-[44px] transition-colors ${FOCO} ${
+                    motivo ? "cursor-not-allowed" : "hover:bg-surface-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  }`}
+                >
+                  <span className={`block text-sm ${motivo ? "text-muted" : ""}`}>{c.nomeCompleto}</span>
+                  <span className="block text-xs text-muted mt-0.5">
+                    {c.opsId} · {c.setor?.nomeSetor || c.cargo?.nomeCargo || "—"}
+                  </span>
+                  {motivo && <span className="block text-xs text-[#F59E0B] mt-1">{motivo}</span>}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         !buscando && (

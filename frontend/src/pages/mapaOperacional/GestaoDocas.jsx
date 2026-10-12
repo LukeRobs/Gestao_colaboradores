@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { ChevronDown, Search, SearchX, Truck, Users } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Search, SearchX, Truck, Users } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
-import { EquipesPanel } from "../../components/mapaOperacional/EquipesPanel";
+import { EquipesWorkspace } from "../../components/mapaOperacional/equipes/EquipesWorkspace";
 import { DocaDetalheModal } from "../../components/mapaOperacional/DocaDetalheModal";
 import {
+  AbasPagina,
   AbasSegmentadas,
   Aviso,
   EstadoVazio,
@@ -23,6 +25,10 @@ const FILTROS = [
   { valor: "OUTBOUND", rotulo: "Expedição" },
 ];
 const NOME_OPERACAO = { INBOUND: "Recebimento", OUTBOUND: "Expedição" };
+const ABAS = [
+  { valor: "docas", rotulo: "Docas", icone: <Truck size={15} aria-hidden="true" /> },
+  { valor: "equipes", rotulo: "Equipes", icone: <Users size={15} aria-hidden="true" /> },
+];
 
 const COR = { livre: "#22C55E", ocupada: "#FF453A", indisponivel: "#8B8B93" };
 
@@ -90,8 +96,10 @@ export default function GestaoDocas() {
   const [somenteLivres, setSomenteLivres] = useState(false);
   const [busca, setBusca] = useState("");
   const [docaSelecionada, setDocaSelecionada] = useState(null);
-  const [equipesAbertas, setEquipesAbertas] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  // A aba fica na URL (?aba=equipes): dá para compartilhar o link e o F5 não perde o lugar.
+  const [params, setParams] = useSearchParams();
+  const aba = params.get("aba") === "equipes" ? "equipes" : "docas";
+  const trocarAba = (valor) => setParams(valor === "docas" ? {} : { aba: valor }, { replace: true });
 
   const carregar = useCallback(async () => {
     try {
@@ -104,11 +112,14 @@ export default function GestaoDocas() {
   }, []);
 
   useEffect(() => {
-    carregar();
+    const primeira = setTimeout(carregar, 0);
     const intervalo = setInterval(() => {
       if (!document.hidden) carregar();
     }, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalo);
+    return () => {
+      clearTimeout(primeira);
+      clearInterval(intervalo);
+    };
   }, [carregar]);
 
   const atualizarAgora = async () => {
@@ -167,6 +178,12 @@ export default function GestaoDocas() {
             </Aviso>
           )}
 
+          <AbasPagina rotulo="Visão da página" opcoes={ABAS} valor={aba} onChange={trocarAba} />
+
+          {aba === "equipes" ? (
+            <EquipesWorkspace onChanged={carregar} />
+          ) : (
+            <>
           {ind && (
             <FaixaIndicadores
               rotulo="Indicadores das docas"
@@ -181,25 +198,6 @@ export default function GestaoDocas() {
             />
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-6 items-start">
-            <aside aria-label="Gestão de equipes" className="bg-surface rounded-2xl border border-default lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => setEquipesAbertas((v) => !v)}
-                aria-expanded={equipesAbertas}
-                aria-controls="painel-equipes"
-                className={`w-full flex items-center justify-between gap-2 px-4 h-12 lg:hidden cursor-pointer ${FOCO}`}
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold">
-                  <Users size={15} aria-hidden="true" /> Gestão de equipes
-                </span>
-                <ChevronDown size={16} className={`transition-transform motion-reduce:transition-none ${equipesAbertas ? "rotate-180" : ""}`} aria-hidden="true" />
-              </button>
-              <h2 className="hidden lg:block text-sm font-semibold px-4 pt-4">Gestão de equipes</h2>
-              <div id="painel-equipes" className={`p-4 ${equipesAbertas ? "block" : "hidden lg:block"}`}>
-                <EquipesPanel refreshKey={refreshKey} onChanged={carregar} />
-              </div>
-            </aside>
 
             <section aria-label="Docas" className="space-y-4 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
@@ -246,7 +244,7 @@ export default function GestaoDocas() {
 
               {!dados ? (
                 erro ? null : (
-                  <div aria-busy="true" aria-label="Carregando docas" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+                  <div aria-busy="true" aria-label="Carregando docas" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-3">
                     {Array.from({ length: 12 }).map((_, i) => (
                       <Esqueleto key={i} className="h-[92px]" />
                     ))}
@@ -268,14 +266,15 @@ export default function GestaoDocas() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-3">
                   {docasFiltradas.map((d) => (
                     <CardDoca key={d.numero} doca={d} filtro={filtro} onClick={() => setDocaSelecionada(d.numero)} />
                   ))}
                 </div>
               )}
             </section>
-          </div>
+            </>
+          )}
         </main>
       </MainLayout>
 
@@ -285,7 +284,6 @@ export default function GestaoDocas() {
           onClose={() => setDocaSelecionada(null)}
           onChanged={() => {
             carregar();
-            setRefreshKey((k) => k + 1);
           }}
         />
       )}
