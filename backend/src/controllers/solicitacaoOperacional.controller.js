@@ -1842,12 +1842,23 @@ async function aplicarNaFrequencia(tx, solicitacao, registradoPor) {
   } else if (solicitacao.tipo === "SINERGIA") {
     await upsertFrequencia(solicitacao.opsId, solicitacao.data, idPorCodigo.S1, SEM_BATIDA);
   } else if (solicitacao.tipo === "TROCA_DSR") {
+    // Dia que deixa de ser DSR: se o colaborador já bateu o ponto nele (ex.: dia em andamento ou
+    // folga dominical em que trabalhou), vira Presente — senão ficava com batida e sem status.
+    // Sem batida, continua sem status para o fluxo normal de presença resolver.
+    const liberarDiaDeDsr = async (opsId, data) => {
+      const atual = await tx.frequencia.findUnique({
+        where: { opsId_dataReferencia: { opsId, dataReferencia: data } },
+        select: { horaEntrada: true },
+      });
+      await upsertFrequencia(opsId, data, atual?.horaEntrada ? idPorCodigo.P : null);
+    };
+
     // Colaborador 1: nova data vira DSR; data atual deixa de ser DSR
     await upsertFrequencia(solicitacao.opsId, solicitacao.dsrDataNova1, idPorCodigo.DSR);
-    await upsertFrequencia(solicitacao.opsId, solicitacao.dsrDataAtual1, null);
+    await liberarDiaDeDsr(solicitacao.opsId, solicitacao.dsrDataAtual1);
     // Colaborador 2: espelho
     await upsertFrequencia(solicitacao.opsId2, solicitacao.dsrDataNova2, idPorCodigo.DSR);
-    await upsertFrequencia(solicitacao.opsId2, solicitacao.dsrDataAtual2, null);
+    await liberarDiaDeDsr(solicitacao.opsId2, solicitacao.dsrDataAtual2);
   } else if (solicitacao.tipo === "HORA_EXTRA") {
     // Dia era DSR e o colaborador trabalhou: sai de DSR, vira presença com horário registrado
     const [hE, mE] = solicitacao.heHoraEntrada.split(":").map(Number);
