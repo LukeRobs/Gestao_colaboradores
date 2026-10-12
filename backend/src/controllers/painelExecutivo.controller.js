@@ -156,6 +156,35 @@ const obterPainelExecutivo = async (req, res) => {
       });
     });
 
+    // Recebimento e Expedição: o time ativo é o efetivo da operação no turno. No turno em andamento
+    // contam todos os integrantes presentes (P) hoje, estejam ou não numa doca neste instante (a doca é
+    // só onde estão trabalhando agora; senão 19 pessoas em time apareciam como 3, as da doca). Os times
+    // não guardam histórico de composição, então turnos encerrados seguem só pelas alocações.
+    const turnosAtuais = TURNOS.filter((t) => statusTurno[t] === "ATUAL");
+    if (turnosAtuais.length) {
+      const timesAtivos = await prisma.timeOperacional.findMany({
+        where: { idEstacao, ativo: true, turno: { in: turnosAtuais } },
+        select: { operacao: true, turno: true, integrantes: { select: { opsId: true } } },
+      });
+      const opsIdsDosTimes = [...new Set(timesAtivos.flatMap((t) => t.integrantes.map((i) => i.opsId)))];
+      const presentesDosTimes = new Set(
+        (
+          await prisma.frequencia.findMany({
+            where: { opsId: { in: opsIdsDosTimes }, dataReferencia: new Date(`${dia}T00:00:00.000Z`), idTipoAusencia: 2 },
+            select: { opsId: true },
+          })
+        ).map((f) => f.opsId)
+      );
+      timesAtivos.forEach((t) => {
+        const area = t.operacao === "INBOUND" ? "RECEBIMENTO" : "EXPEDICAO";
+        t.integrantes.forEach(({ opsId }) => {
+          if (!presentesDosTimes.has(opsId)) return;
+          porArea[area][t.turno].add(opsId);
+          geral[t.turno].add(opsId);
+        });
+      });
+    }
+
     // Sinergia Interna confirmada no destino: a pessoa está LOCALIZADA lá, então conta no HC real
     // da área de destino (e, por já ter saído da origem, deixa de ser contada lá daqui pra frente).
     const AREA_DO_CARD = {
