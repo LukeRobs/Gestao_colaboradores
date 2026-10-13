@@ -2578,7 +2578,7 @@ exports.listarIdsAprovaveis = async (req, res) => {
       return successResponse(res, { ids: [], total: 0, truncado: false });
     }
 
-    const TIPOS_APROVACAO_LOTE = ["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"];
+    const TIPOS_APROVACAO_LOTE = ["FOLGA", "SINERGIA", "BANCO_HORAS", "HORA_EXTRA", "INTERNALIZACAO"];
     if (tipo && !TIPOS_APROVACAO_LOTE.includes(tipo)) {
       return successResponse(res, { ids: [], total: 0, truncado: false });
     }
