@@ -207,7 +207,8 @@ async function validarColaboradorDisponivel(opsId, dataStr, { excluirIdSolicitac
   const dataNormalizada = normalizeDateOnly(dataStr);
   const duplicada = await prisma.solicitacaoOperacional.findFirst({
     where: {
-      status: { in: ["PENDENTE", "APROVADA"] },
+      // Inclui as que aguardam a 2ª aprovação: antes só PENDENTE/APROVADA, e um segundo pedido para o mesmo dia passava.
+      status: { in: ["PENDENTE", "AGUARDANDO_SEGUNDA_APROVACAO", "APROVADA"] },
       data: dataNormalizada,
       OR: [{ opsId }, { opsId2: opsId }],
       ...(excluirIdSolicitacao ? { idSolicitacao: { not: excluirIdSolicitacao } } : {}),
