@@ -31,18 +31,27 @@ function Pessoa({ alocacao, somenteLeitura, encerrando, onEncerrar }) {
   );
 }
 
-export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAllocated }) {
+/**
+ * `agendamento` ({ turno, data }): turno que ainda não começou. `alocacoes` passa a ser a lista de
+ * pré-alocações (idAlocacao = id da pré-alocação) e o "+" pré-aloca em vez de alocar agora.
+ */
+export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAllocated, agendamento = null }) {
   const [modalLabor, setModalLabor] = useState(null); // { value, label }
   const [encerrando, setEncerrando] = useState(null);
 
   async function encerrar(idAlocacao) {
     setEncerrando(idAlocacao);
     try {
-      await MapaOperacionalAPI.encerrarAlocacao(esteira.idEsteira, idAlocacao);
-      toast.success("Alocação encerrada");
+      if (agendamento) {
+        await MapaOperacionalAPI.removerAgendada(idAlocacao);
+        toast.success("Pré-alocação removida");
+      } else {
+        await MapaOperacionalAPI.encerrarAlocacao(esteira.idEsteira, idAlocacao);
+        toast.success("Alocação encerrada");
+      }
       onAllocated?.();
     } catch (e) {
-      toast.error(e.response?.data?.message || "Erro ao encerrar alocação");
+      toast.error(e.response?.data?.message || (agendamento ? "Erro ao remover pré-alocação" : "Erro ao encerrar alocação"));
     } finally {
       setEncerrando(null);
     }
@@ -51,7 +60,9 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
   return (
     <section aria-labelledby="titulo-manuais" className="bg-surface rounded-2xl border border-default">
       <div className="flex items-baseline justify-between gap-3 px-5 sm:px-6 py-4 border-b border-default">
-        <h2 id="titulo-manuais" className="text-base font-semibold">Alocações manuais</h2>
+        <h2 id="titulo-manuais" className="text-base font-semibold">
+          {agendamento ? `Pré-alocações do ${agendamento.turno}` : "Alocações manuais"}
+        </h2>
         <p className="text-xs text-muted tabular-nums">{alocacoes.length} {alocacoes.length === 1 ? "pessoa" : "pessoas"}</p>
       </div>
 
@@ -68,7 +79,7 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
 
               <div className="flex-1 min-w-0 pt-0.5">
                 {pessoas.length === 0 ? (
-                  <p className="text-sm text-muted pt-0.5">Ninguém alocado</p>
+                  <p className="text-sm text-muted pt-0.5">{agendamento ? "Ninguém pré-alocado" : "Ninguém alocado"}</p>
                 ) : (
                   <ul aria-label={`Alocados em ${labor.label}`} className="flex flex-wrap gap-2">
                     {pessoas.map((p) => (
@@ -105,6 +116,7 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
           esteira={esteira}
           laborLabel={modalLabor.label}
           laborValue={modalLabor.value}
+          agendar={agendamento}
           onClose={() => setModalLabor(null)}
           onAllocated={onAllocated}
         />

@@ -7,7 +7,7 @@ import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
 import { AlocarFullD1Modal } from "../../components/mapaOperacional/AlocarFullD1Modal";
 import { Aviso, DiaNavegador, EstadoVazio, Esqueleto, PageHeader, TurnoTabs } from "../../components/mapaOperacional/ui";
-import { BTN_PRIMARIO, BTN_SECUNDARIO, FOCO, formatNumero } from "../../components/mapaOperacional/uiTokens";
+import { BTN_PRIMARIO, BTN_SECUNDARIO, FOCO, ehTurnoFuturo, formatNumero, somarDias } from "../../components/mapaOperacional/uiTokens";
 import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
 const POLL_INTERVAL_MS = 20000;
@@ -32,6 +32,8 @@ export default function FullD1() {
 
   const estaNoTurnoAtual =
     !!turnoAtual && turnoSelecionado === turnoAtual.turno && dataSelecionada === turnoAtual.diaOperacionalStr;
+  // Turno que ainda não começou: dá para pré-alocar (as pessoas entram sozinhas quando ele começar).
+  const ehFuturo = ehTurnoFuturo(turnoAtual, dataSelecionada, turnoSelecionado);
 
   const atualizarParams = (mudancas) => {
     const proximo = new URLSearchParams(params);
@@ -48,26 +50,36 @@ export default function FullD1() {
   const carregar = useCallback(async () => {
     if (!turnoSelecionado || !dataSelecionada) return;
     try {
-      const res = await MapaOperacionalAPI.listarFullD1({ turno: turnoSelecionado, data: dataSelecionada });
-      setDados({ ...res, turno: turnoSelecionado, data: dataSelecionada });
+      const [res, agendadas] = await Promise.all([
+        MapaOperacionalAPI.listarFullD1({ turno: turnoSelecionado, data: dataSelecionada }),
+        ehFuturo || estaNoTurnoAtual
+          ? MapaOperacionalAPI.listarAgendadas({ turno: turnoSelecionado, data: dataSelecionada, full: true }).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+      setDados({ ...res, agendadas, turno: turnoSelecionado, data: dataSelecionada });
       setErro(null);
       setAtualizadoEm(new Date());
     } catch (e) {
       setErro(e.response?.data?.message || "Não foi possível carregar o FULL D+1");
     }
-  }, [turnoSelecionado, dataSelecionada]);
+  }, [turnoSelecionado, dataSelecionada, ehFuturo, estaNoTurnoAtual]);
 
   useEffect(() => {
     carregar();
   }, [carregar]);
 
+  // Ao vivo e em turno futuro: recarrega a cada 20 s e confere se o turno virou (o futuro vira o atual sozinho).
   useEffect(() => {
-    if (!estaNoTurnoAtual) return undefined;
+    if (!estaNoTurnoAtual && !ehFuturo) return undefined;
     const intervalo = setInterval(() => {
-      if (!document.hidden) carregar();
+      if (document.hidden) return;
+      MapaOperacionalAPI.obterTurnoAtual()
+        .then((t) => setTurnoAtual((prev) => (prev && prev.turno === t.turno && prev.diaOperacionalStr === t.diaOperacionalStr ? prev : t)))
+        .catch(() => {});
+      carregar();
     }, POLL_INTERVAL_MS);
     return () => clearInterval(intervalo);
-  }, [estaNoTurnoAtual, carregar]);
+  }, [estaNoTurnoAtual, ehFuturo, carregar]);
 
   const atualizarAgora = async () => {
     setAtualizando(true);
@@ -88,8 +100,23 @@ export default function FullD1() {
     }
   }
 
+  async function removerPreAlocacao(idAgendada) {
+    setEncerrando(idAgendada);
+    try {
+      await MapaOperacionalAPI.removerAgendada(idAgendada);
+      toast.success("Pré-alocação removida");
+      carregar();
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Erro ao remover pré-alocação");
+    } finally {
+      setEncerrando(null);
+    }
+  }
+
   const dadosAtuais = dados && dados.turno === turnoSelecionado && dados.data === dataSelecionada ? dados : null;
   const pessoas = dadosAtuais?.pessoas || [];
+  const preAlocadas = (dadosAtuais?.agendadas || []).filter((a) => a.status === "PENDENTE");
+  const naoEntraram = (dadosAtuais?.agendadas || []).filter((a) => a.status === "FALHOU");
 
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
@@ -115,7 +142,7 @@ export default function FullD1() {
             />
             <DiaNavegador
               data={dataSelecionada}
-              maximo={turnoAtual?.diaOperacionalStr}
+              maximo={turnoAtual ? somarDias(turnoAtual.diaOperacionalStr, 1) : undefined}
               onChange={(d) => atualizarParams({ data: d })}
             />
           </div>
@@ -128,7 +155,16 @@ export default function FullD1() {
                 </button>
               }
             >
-              Turno histórico: o painel mostra check-in e check-out registrados.
+              {ehFuturo
+                ? "Turno futuro: pré-aloque quem vai trabalhar. As pessoas entram sozinhas quando o turno começar."
+                : "Turno histórico: o painel mostra check-in e check-out registrados."}
+            </Aviso>
+          )}
+
+          {estaNoTurnoAtual && naoEntraram.length > 0 && (
+            <Aviso tipo="alerta">
+              {naoEntraram.length === 1 ? "1 pré-alocação não entrou" : `${naoEntraram.length} pré-alocações não entraram`}:{" "}
+              {naoEntraram.map((a) => `${a.diarista ? "Diarista" : a.colaborador?.nomeCompleto} (${a.motivoFalha})`).join("; ")}
             </Aviso>
           )}
 
@@ -146,6 +182,66 @@ export default function FullD1() {
             </Aviso>
           )}
 
+          {ehFuturo ? (
+            <section aria-labelledby="titulo-prealocados" className="bg-surface rounded-2xl border border-default overflow-hidden">
+              <div className="flex items-baseline justify-between gap-3 px-5 py-4 border-b border-default">
+                <h2 id="titulo-prealocados" className="font-semibold">
+                  Pré-alocados no {turnoSelecionado}
+                </h2>
+                <div className="flex items-center gap-4">
+                  {dadosAtuais && (
+                    <p className="text-sm text-muted">
+                      <b className="text-page text-xl tabular-nums mr-1">{formatNumero(preAlocadas.length)}</b>
+                      {preAlocadas.length === 1 ? "pessoa" : "pessoas"}
+                    </p>
+                  )}
+                  <button type="button" onClick={() => setModalAdicionar(true)} className={`${BTN_PRIMARIO} h-10`}>
+                    <Plus size={15} aria-hidden="true" /> Pré-alocar
+                  </button>
+                </div>
+              </div>
+
+              {!dadosAtuais ? (
+                erro ? null : (
+                  <div aria-busy="true" aria-label="Carregando" className="p-4 space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <Esqueleto key={i} className="h-10" />
+                    ))}
+                  </div>
+                )
+              ) : preAlocadas.length === 0 ? (
+                <EstadoVazio
+                  icone={<Users size={28} aria-hidden="true" />}
+                  titulo="Ninguém pré-alocado"
+                  descricao="Adicione quem vai trabalhar no FULL D+1 neste turno. A presença é conferida quando o turno começar."
+                />
+              ) : (
+                <ul className="divide-y divide-default">
+                  {preAlocadas.map((a) => (
+                    <li key={a.idAgendada} className="flex items-center gap-3 px-5 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium flex items-center gap-2 flex-wrap">
+                          {a.diarista ? "Diarista" : a.colaborador?.nomeCompleto}
+                          <span className="text-[11px] font-medium text-[#FA4C00] bg-[#FA4C00]/10 px-1.5 py-0.5 rounded-md">Agendado</span>
+                        </p>
+                        <p className="text-xs text-muted">{a.colaborador?.cargo?.nomeCargo || a.colaborador?.opsId || "—"}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removerPreAlocacao(a.idAgendada)}
+                        disabled={encerrando === a.idAgendada}
+                        aria-label={`Remover pré-alocação de ${a.diarista ? "diarista" : a.colaborador?.nomeCompleto}`}
+                        title="Remover pré-alocação"
+                        className={`h-10 w-10 grid place-items-center rounded-lg text-muted hover:text-[#FF453A] hover:bg-[#FF453A]/10 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait ${FOCO}`}
+                      >
+                        <X size={16} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ) : (
           <section aria-labelledby="titulo-logados" className="bg-surface rounded-2xl border border-default overflow-hidden">
             <div className="flex items-baseline justify-between gap-3 px-5 py-4 border-b border-default">
               <h2 id="titulo-logados" className="font-semibold">
@@ -277,10 +373,17 @@ export default function FullD1() {
               </div>
             )}
           </section>
+          )}
         </main>
       </MainLayout>
 
-      {modalAdicionar && <AlocarFullD1Modal onClose={() => setModalAdicionar(false)} onAllocated={carregar} />}
+      {modalAdicionar && (
+        <AlocarFullD1Modal
+          agendar={ehFuturo ? { turno: turnoSelecionado, data: dataSelecionada } : null}
+          onClose={() => setModalAdicionar(false)}
+          onAllocated={carregar}
+        />
+      )}
     </div>
   );
 }

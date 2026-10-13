@@ -46,6 +46,14 @@ export const LABORS_MANUAIS = [
   { value: "LOG_II", label: "LOG II" },
 ];
 
+// Turno que ainda não começou (aceita pré-alocação). `atual` é a resposta de obterTurnoAtual.
+const ORDEM_TURNO = { T1: 1, T2: 2, T3: 3 };
+export function ehTurnoFuturo(atual, data, turno) {
+  if (!atual || !data || !turno) return false;
+  if (data !== atual.diaOperacionalStr) return data > atual.diaOperacionalStr;
+  return ORDEM_TURNO[turno] > ORDEM_TURNO[atual.turno];
+}
+
 // Posição de uma pesca na esteira: sem braço ou "Braço 3A".
 export const rotuloPosicao = (braco, lado) => (braco == null ? "Sem braço" : `Braço ${braco}${lado}`);
 

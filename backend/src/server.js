@@ -17,6 +17,7 @@ const { iniciarJobEfetivarDesligamentos } = require('./jobs/efetivarDesligamento
 const { iniciarJobSyncAutoAlocacoesLabel } = require('./jobs/syncAutoAlocacoesLabel.job');
 const { iniciarJobSinergiaInterna } = require('./jobs/sinergiaInterna.job');
 const { iniciarJobLiberarDocasSemVeiculo } = require('./jobs/liberarDocasSemVeiculo.job');
+const { iniciarJobAlocacoesAgendadas } = require('./jobs/ativarAlocacoesAgendadas.job');
 
 
 // =====================================================
@@ -69,6 +70,9 @@ const startServer = async () => {
 
       // Gestão de Docas: desatrela a equipe da doca quando o veículo saiu e a doca ficou livre
       iniciarJobLiberarDocasSemVeiculo();
+
+      // Label: pré-alocações viram alocações reais quando o turno começa
+      iniciarJobAlocacoesAgendadas();
     });
 
     // Tratamento de erros não capturados

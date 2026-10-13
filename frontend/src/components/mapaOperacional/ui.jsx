@@ -297,7 +297,7 @@ export function Modal({ titulo, subtitulo, kicker, onClose, bloqueado = false, l
 /* ---------- Busca de colaborador elegível (nome, CPF ou Ops ID) ---------- */
 
 // `indisponivel(colaborador)` devolve o motivo (texto) quando a pessoa não pode ser escolhida, ou null.
-export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado = false, indisponivel }) {
+export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado = false, indisponivel, semPresenca = false }) {
   const [busca, setBusca] = useState("");
   const [resultados, setResultados] = useState([]);
   const [buscando, setBuscando] = useState(false);
@@ -310,7 +310,7 @@ export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado =
     const timer = setTimeout(async () => {
       setBuscando(true);
       try {
-        const lista = await MapaOperacionalAPI.buscarColaboradoresElegiveis({ contexto, turno, search: termo });
+        const lista = await MapaOperacionalAPI.buscarColaboradoresElegiveis({ contexto, turno, search: termo, semPresenca });
         if (ativo) setResultados(lista);
       } catch {
         if (ativo) setResultados([]);
@@ -322,7 +322,7 @@ export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado =
       ativo = false;
       clearTimeout(timer);
     };
-  }, [termo, termoValido, contexto, turno]);
+  }, [termo, termoValido, contexto, turno, semPresenca]);
 
   const lista = termoValido ? resultados : [];
 
@@ -343,7 +343,11 @@ export function BuscaColaborador({ contexto, turno, onSelecionar, desabilitado =
       </div>
 
       {!termoValido ? (
-        <p className="text-xs text-muted">Digite ao menos 2 letras. Só aparecem presentes (P) do turno e do setor correto.</p>
+        <p className="text-xs text-muted">
+          {semPresenca
+            ? "Digite ao menos 2 letras. Aparecem colaboradores do turno e do setor corretos; a presença é conferida quando o turno começar."
+            : "Digite ao menos 2 letras. Só aparecem presentes (P) do turno e do setor correto."}
+        </p>
       ) : lista.length > 0 ? (
         <ul className="rounded-xl border border-default divide-y divide-default max-h-64 overflow-y-auto">
           {lista.map((c) => {

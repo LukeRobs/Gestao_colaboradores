@@ -1227,6 +1227,26 @@ model TimeIntegrante {
   @@map("time_integrante")
 }
 
+// Pré-alocação da Label (esteira sem braço e FULL D+1) de um turno futuro; um job converte em MapaAlocacao no início do turno.
+model MapaAlocacaoAgendada {
+  idAgendada     String    @id @default(uuid()) @map("id_agendada")
+  idEstacao      Int       @map("id_estacao")
+  idEsteira      Int?      @map("id_esteira") // null = FULL D+1
+  labor          String    @db.VarChar(30)
+  opsId          String?   @map("ops_id") @db.VarChar(50)
+  diarista       Boolean   @default(false)
+  diaOperacional DateTime  @map("dia_operacional") @db.Date
+  turno          String    @db.VarChar(2)
+  status         String    @default("PENDENTE") @db.VarChar(12) // PENDENTE | ATIVADA | FALHOU
+  motivoFalha    String?   @map("motivo_falha")
+  idUsuario      String?   @map("id_usuario")
+  criadoEm       DateTime  @default(now()) @map("criado_em")
+  ativadoEm      DateTime? @map("ativado_em")
+
+  @@index([idEstacao, diaOperacional, turno, status], map: "idx_mapa_alocacao_agendada_turno")
+  @@map("mapa_alocacao_agendada")
+}
+
 model MapaDocaHistorico {
   id            Int               @id @default(autoincrement())
   idEstacao     Int               @map("id_estacao")

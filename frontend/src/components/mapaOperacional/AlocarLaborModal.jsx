@@ -5,7 +5,8 @@ import { AbasSegmentadas, BuscaColaborador, Modal, PainelDiarista } from "./ui";
 import { INPUT } from "./uiTokens";
 import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
-export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onAllocated }) {
+/** `agendar` ({ turno, data }): pré-aloca num turno que ainda não começou, em vez de alocar agora. */
+export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onAllocated, agendar = null }) {
   const [aba, setAba] = useState("colaborador");
   const [salvando, setSalvando] = useState(false);
   const [saldoDiarista, setSaldoDiarista] = useState(null);
@@ -20,25 +21,30 @@ export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onA
   const aguardandoBraco = pedeBraco && !bracoLado;
 
   useEffect(() => {
-    MapaOperacionalAPI.diaristasDisponiveis()
+    MapaOperacionalAPI.diaristasDisponiveis(agendar || undefined)
       .then(setSaldoDiarista)
       .catch(() => setSaldoDiarista(null));
-  }, []);
+  }, [agendar]);
 
   async function alocar(opsId, diarista) {
     setSalvando(true);
     try {
-      const posicao = pedeBraco && bracoLado !== "sem" ? bracoLado.split("-") : [];
-      await MapaOperacionalAPI.alocar(esteira.idEsteira, {
-        opsId,
-        diarista,
-        labor: laborValue,
-        ...(posicao.length ? { braco: Number(posicao[0]), lado: posicao[1] } : {}),
-      });
-      toast.success(diarista ? "Diarista alocado com sucesso" : "Colaborador alocado com sucesso");
+      if (agendar) {
+        await MapaOperacionalAPI.agendarAlocacao({ idEsteira: esteira.idEsteira, labor: laborValue, opsId, diarista, ...agendar });
+        toast.success(`Pré-alocado em ${laborLabel} (${agendar.turno})`);
+      } else {
+        const posicao = pedeBraco && bracoLado !== "sem" ? bracoLado.split("-") : [];
+        await MapaOperacionalAPI.alocar(esteira.idEsteira, {
+          opsId,
+          diarista,
+          labor: laborValue,
+          ...(posicao.length ? { braco: Number(posicao[0]), lado: posicao[1] } : {}),
+        });
+        toast.success(diarista ? "Diarista alocado com sucesso" : "Colaborador alocado com sucesso");
+      }
       onAllocated?.();
       setChaveBusca((n) => n + 1);
-      if (diarista) MapaOperacionalAPI.diaristasDisponiveis().then(setSaldoDiarista).catch(() => {});
+      if (diarista) MapaOperacionalAPI.diaristasDisponiveis(agendar || undefined).then(setSaldoDiarista).catch(() => {});
     } catch (e) {
       if (!e.tratado) toast.error(e.response?.data?.message || "Erro ao alocar");
     } finally {
@@ -48,9 +54,9 @@ export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onA
 
   return (
     <Modal
-      kicker={esteira.nome}
+      kicker={agendar ? `${esteira.nome} · pré-alocação do ${agendar.turno}` : esteira.nome}
       titulo={laborLabel}
-      subtitulo="Alocar colaborador ou diarista nesta função"
+      subtitulo={agendar ? "A pessoa entra sozinha quando o turno começar" : "Alocar colaborador ou diarista nesta função"}
       onClose={onClose}
       bloqueado={salvando}
     >
@@ -85,9 +91,21 @@ export function AlocarLaborModal({ esteira, laborLabel, laborValue, onClose, onA
           />
 
           {aba === "colaborador" ? (
-            <BuscaColaborador key={chaveBusca} contexto="ESTEIRA" onSelecionar={(c) => alocar(c.opsId, false)} desabilitado={salvando} />
+            <BuscaColaborador
+              key={chaveBusca}
+              contexto="ESTEIRA"
+              turno={agendar?.turno}
+              semPresenca={!!agendar}
+              onSelecionar={(c) => alocar(c.opsId, false)}
+              desabilitado={salvando}
+            />
           ) : (
-            <PainelDiarista saldo={saldoDiarista} rotuloAcao="Alocar diarista nesta função" onAlocar={() => alocar(null, true)} ocupado={salvando} />
+            <PainelDiarista
+              saldo={saldoDiarista}
+              rotuloAcao={agendar ? "Pré-alocar diarista nesta função" : "Alocar diarista nesta função"}
+              onAlocar={() => alocar(null, true)}
+              ocupado={salvando}
+            />
           )}
         </>
       )}

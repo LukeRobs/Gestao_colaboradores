@@ -48,7 +48,7 @@ function contextoDaOperacao(operacao) {
  * como Presente (idTipoAusencia = 2) na Frequência do dia operacional.
  * Usado pelas esteiras, docas e times — mesma regra, um lugar só.
  */
-async function validarColaboradorElegivel(opsId, { contexto, turno } = {}) {
+async function validarColaboradorElegivel(opsId, { contexto, turno, semPresenca = false } = {}) {
   const colaborador = await prisma.colaborador.findUnique({
     where: { opsId },
     include: {
@@ -93,18 +93,21 @@ async function validarColaboradorElegivel(opsId, { contexto, turno } = {}) {
     };
   }
 
-  const frequencia = await prisma.frequencia.findUnique({
-    where: { opsId_dataReferencia: { opsId, dataReferencia: diaOperacional } },
-  });
-  if (!frequencia || frequencia.idTipoAusencia !== 2) {
-    return { colaborador, erro: `${colaborador.nomeCompleto} não está marcado como presente nessa data` };
+  // Pré-alocação de turno futuro: a presença só existe quando o turno começar, e é conferida de novo na ativação.
+  if (!semPresenca) {
+    const frequencia = await prisma.frequencia.findUnique({
+      where: { opsId_dataReferencia: { opsId, dataReferencia: diaOperacional } },
+    });
+    if (!frequencia || frequencia.idTipoAusencia !== 2) {
+      return { colaborador, erro: `${colaborador.nomeCompleto} não está marcado como presente nessa data` };
+    }
   }
 
   return { colaborador, erro: null };
 }
 
 /** Busca (nome/CPF/Ops ID) só entre quem passaria na validação acima. */
-async function buscarColaboradoresElegiveis({ idEstacao, contexto, turno, search }) {
+async function buscarColaboradoresElegiveis({ idEstacao, contexto, turno, search, semPresenca = false }) {
   const regra = CONTEXTOS[contexto];
   const { turno: turnoAtual, diaOperacional } = getTurnoOperacionalAtual();
   const termo = String(search || "").trim();
@@ -132,7 +135,7 @@ async function buscarColaboradoresElegiveis({ idEstacao, contexto, turno, search
             ],
           }
         : {}),
-      frequencias: { some: { dataReferencia: diaOperacional, idTipoAusencia: 2 } },
+      ...(semPresenca ? {} : { frequencias: { some: { dataReferencia: diaOperacional, idTipoAusencia: 2 } } }),
       ...(termo
         ? {
             OR: [

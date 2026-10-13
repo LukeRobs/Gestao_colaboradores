@@ -17,7 +17,7 @@ import {
   PageHeader,
   TurnoTabs,
 } from "../../components/mapaOperacional/ui";
-import { BTN_SECUNDARIO, FOCO, formatNumero } from "../../components/mapaOperacional/uiTokens";
+import { BTN_SECUNDARIO, FOCO, ehTurnoFuturo, formatNumero, somarDias } from "../../components/mapaOperacional/uiTokens";
 import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
 const POLL_INTERVAL_MS = 20000;
@@ -100,6 +100,8 @@ export default function EsteiraDetalhe() {
 
   const estaNoTurnoAtual =
     !!turnoAtual && turnoSelecionado === turnoAtual.turno && dataSelecionada === turnoAtual.diaOperacionalStr;
+  // Turno que ainda não começou: dá para pré-alocar as funções (as pessoas entram sozinhas quando ele começar).
+  const ehFuturo = ehTurnoFuturo(turnoAtual, dataSelecionada, turnoSelecionado);
 
   const atualizarParams = (mudancas) => {
     const proximo = new URLSearchParams(params);
@@ -144,16 +146,20 @@ export default function EsteiraDetalhe() {
     if (!turnoSelecionado || !dataSelecionada) return;
     try {
       const paramsTurno = { turno: turnoSelecionado, data: dataSelecionada };
-      const [manuais, autos, producaoTurno] = await Promise.all([
+      const [manuais, autos, producaoTurno, agendadas] = await Promise.all([
         MapaOperacionalAPI.listarAlocacoes(idEsteira, paramsTurno),
         MapaOperacionalAPI.listarAutoAlocacoes(idEsteira, paramsTurno).catch(() => []),
         MapaOperacionalAPI.obterProducaoTurno(idEsteira, paramsTurno).catch(() => null),
+        ehFuturo || estaNoTurnoAtual
+          ? MapaOperacionalAPI.listarAgendadas({ ...paramsTurno, idEsteira }).catch(() => [])
+          : Promise.resolve([]),
       ]);
       setDados({
         idEsteira: String(idEsteira),
         turno: turnoSelecionado,
         data: dataSelecionada,
         alocacoes: [...manuais, ...autos],
+        agendadas,
         producao: producaoTurno?.producaoAcumulada,
       });
       setErro(null);
@@ -161,19 +167,25 @@ export default function EsteiraDetalhe() {
     } catch (e) {
       setErro(e.response?.data?.message || "Não foi possível carregar as alocações");
     }
-  }, [idEsteira, turnoSelecionado, dataSelecionada]);
+  }, [idEsteira, turnoSelecionado, dataSelecionada, ehFuturo, estaNoTurnoAtual]);
 
   useEffect(() => {
-    carregar();
+    const primeira = setTimeout(carregar, 0);
+    return () => clearTimeout(primeira);
   }, [carregar]);
 
+  // Ao vivo e em turno futuro: recarrega a cada 20 s e confere se o turno virou (o futuro vira o atual sozinho).
   useEffect(() => {
-    if (!estaNoTurnoAtual) return undefined;
+    if (!estaNoTurnoAtual && !ehFuturo) return undefined;
     const intervalo = setInterval(() => {
-      if (!document.hidden) carregar();
+      if (document.hidden) return;
+      MapaOperacionalAPI.obterTurnoAtual()
+        .then((t) => setTurnoAtual((prev) => (prev && prev.turno === t.turno && prev.diaOperacionalStr === t.diaOperacionalStr ? prev : t)))
+        .catch(() => {});
+      carregar();
     }, POLL_INTERVAL_MS);
     return () => clearInterval(intervalo);
-  }, [estaNoTurnoAtual, carregar]);
+  }, [estaNoTurnoAtual, ehFuturo, carregar]);
 
   const atualizarAgora = async () => {
     setAtualizando(true);
@@ -188,7 +200,13 @@ export default function EsteiraDetalhe() {
     dados && dados.idEsteira === String(idEsteira) && dados.turno === turnoSelecionado && dados.data === dataSelecionada
       ? dados
       : null;
-  const alocacoes = dadosAtuais?.alocacoes || [];
+  // Turno futuro ainda não tem ninguém alocado: as alocações abertas agora pertencem ao turno em andamento.
+  const alocacoes = ehFuturo ? [] : dadosAtuais?.alocacoes || [];
+  // Pré-alocações pendentes no formato das alocações manuais (idAlocacao = id da pré-alocação).
+  const preAlocadas = (dadosAtuais?.agendadas || [])
+    .filter((a) => a.status === "PENDENTE")
+    .map((a) => ({ idAlocacao: a.idAgendada, labor: a.labor, diarista: a.diarista, colaborador: a.colaborador, opsId: a.colaborador?.opsId }));
+  const naoEntraram = (dadosAtuais?.agendadas || []).filter((a) => a.status === "FALHOU");
 
   function handleBracoClick(braco, alocacaoAtual) {
     if (alocacaoAtual && alocacaoAtual.origem === "AUTO") {
@@ -257,7 +275,7 @@ export default function EsteiraDetalhe() {
             />
             <DiaNavegador
               data={dataSelecionada}
-              maximo={turnoAtual?.diaOperacionalStr}
+              maximo={turnoAtual ? somarDias(turnoAtual.diaOperacionalStr, 1) : undefined}
               onChange={(d) => atualizarParams({ data: d })}
             />
           </div>
@@ -270,7 +288,16 @@ export default function EsteiraDetalhe() {
                 </button>
               }
             >
-              Turno histórico: somente leitura e sem produtividade retroativa.
+              {ehFuturo
+                ? "Turno futuro: pré-aloque as funções (Gol, Indução, Endereçamento...). As pessoas entram sozinhas quando o turno começar. Braços, pesca e packing automático só no turno em andamento."
+                : "Turno histórico: somente leitura e sem produtividade retroativa."}
+            </Aviso>
+          )}
+
+          {estaNoTurnoAtual && naoEntraram.length > 0 && (
+            <Aviso tipo="alerta">
+              {naoEntraram.length === 1 ? "1 pré-alocação não entrou" : `${naoEntraram.length} pré-alocações não entraram`}:{" "}
+              {naoEntraram.map((a) => `${a.diarista ? "Diarista" : a.colaborador?.nomeCompleto} (${a.motivoFalha})`).join("; ")}
             </Aviso>
           )}
 
@@ -360,8 +387,9 @@ export default function EsteiraDetalhe() {
 
               <LaborManualSection
                 esteira={esteiraAtual}
-                alocacoes={alocacoesLabor}
-                somenteLeitura={!estaNoTurnoAtual}
+                alocacoes={ehFuturo ? preAlocadas : alocacoesLabor}
+                somenteLeitura={!estaNoTurnoAtual && !ehFuturo}
+                agendamento={ehFuturo ? { turno: turnoSelecionado, data: dataSelecionada } : null}
                 onAllocated={carregar}
               />
             </>

@@ -13,6 +13,7 @@ const {
 } = require("../services/mapaOperacional/colaboradorElegibilidade.service");
 const { encerrarAlocacoesManuaisDeDiasAnteriores } = require("../services/mapaOperacional/viradaDiaOperacional.service");
 const { avaliarConflitoAlocacao } = require("../services/mapaOperacional/alocacaoConflito.service");
+const { saldoDiaristasFuturo, ativarAgendadasVencidas } = require("../services/mapaOperacional/alocacaoAgendada.service");
 const { partesSP, getTurnoOperacionalAtual, getJanelaTurno, formatDataHora } = require("../utils/turnoMapaOperacional");
 
 function turnoParaId(turno) {
@@ -129,6 +130,7 @@ const listarAlocacoes = async (req, res) => {
 
     await encerrarAlocacoesManuaisDeDiasAnteriores(idEstacao);
     const { turno, diaOperacionalStr, isAtual } = resolverTurnoRequisicao(req);
+    if (isAtual) await ativarAgendadasVencidas().catch(() => {}); // turno que acabou de começar já mostra as pré-alocações
 
     const where = isAtual
       ? // No turno ao vivo, o automático vem de listarAutoAlocacoes (lido direto
@@ -310,6 +312,7 @@ const listarFullD1 = async (req, res) => {
     const { turno, diaOperacionalStr, isAtual } = resolverTurnoRequisicao(req);
 
     await encerrarAlocacoesManuaisDeDiasAnteriores(idEstacao);
+    if (isAtual) await ativarAgendadasVencidas().catch(() => {}); // turno que acabou de começar já mostra as pré-alocações
 
     if (!isAtual) {
       const janela = getJanelaTurno(diaOperacionalStr, turno);
@@ -826,10 +829,10 @@ async function calcularSaldoDiaristas(idEstacao, dataOperacional, turnoAtual) {
 const buscarElegiveis = async (req, res) => {
   try {
     const idEstacao = req.dbContext?.estacaoId ?? 1;
-    const { contexto, turno, search } = req.query;
+    const { contexto, turno, search, semPresenca } = req.query;
     if (!CONTEXTOS[contexto]) return errorResponse(res, "Contexto inválido", 400);
 
-    const colaboradores = await buscarColaboradoresElegiveis({ idEstacao, contexto, turno, search });
+    const colaboradores = await buscarColaboradoresElegiveis({ idEstacao, contexto, turno, search, semPresenca: semPresenca === "true" });
     return successResponse(res, colaboradores);
   } catch (err) {
     console.error("❌ Erro ao buscar colaboradores elegíveis:", err);
@@ -840,6 +843,12 @@ const buscarElegiveis = async (req, res) => {
 const diaristasDisponiveis = async (req, res) => {
   try {
     const idEstacao = req.dbContext?.estacaoId ?? 1;
+    // ?turno=&data= de um turno futuro (pré-alocação): saldo do Daily Works daquele turno.
+    const { data, turno } = req.query;
+    if (data && turno) {
+      return successResponse(res, await saldoDiaristasFuturo(idEstacao, data, turno));
+    }
+
     const { diaOperacional, turno: turnoAtual } = getTurnoOperacionalAtual();
 
     const saldo = await calcularSaldoDiaristas(idEstacao, diaOperacional, turnoAtual);

@@ -75,9 +75,10 @@ export const MapaOperacionalAPI = {
 
   moverFanouts: (corpo) => comTratamentoDeConflito(async (extra) => (await api.post("/mapa-operacional/fanouts/mover", { ...corpo, ...extra })).data),
 
-  buscarColaboradoresElegiveis: async ({ contexto, turno, search }) => {
+  buscarColaboradoresElegiveis: async ({ contexto, turno, search, semPresenca }) => {
     const params = { contexto, search };
     if (turno) params.turno = turno;
+    if (semPresenca) params.semPresenca = true;
     const res = await api.get("/mapa-operacional/colaboradores-elegiveis", { params });
     return res.data.data;
   },
@@ -102,9 +103,29 @@ export const MapaOperacionalAPI = {
     return res.data.data;
   },
 
-  diaristasDisponiveis: async () => {
-    const res = await api.get("/mapa-operacional/diaristas-disponiveis");
+  // Com { turno, data } de um turno futuro: saldo do Daily Works daquele turno (pré-alocação).
+  diaristasDisponiveis: async (turnoSelecionado) => {
+    const res = await api.get("/mapa-operacional/diaristas-disponiveis", { params: turnoParams(turnoSelecionado) });
     return res.data.data;
+  },
+
+  // Pré-alocação de turno futuro (esteira sem braço e FULL D+1). idEsteira nulo/ausente = FULL D+1.
+  listarAgendadas: async ({ turno, data, idEsteira, full }) => {
+    const params = { turno, data };
+    if (idEsteira) params.idEsteira = idEsteira;
+    if (full) params.full = true;
+    const res = await api.get("/mapa-operacional/agendadas", { params });
+    return res.data.data;
+  },
+
+  agendarAlocacao: async ({ idEsteira, labor, opsId, diarista, turno, data }) => {
+    const res = await api.post("/mapa-operacional/agendadas", { idEsteira, labor, opsId, diarista, turno, data });
+    return res.data;
+  },
+
+  removerAgendada: async (idAgendada) => {
+    const res = await api.delete(`/mapa-operacional/agendadas/${idAgendada}`);
+    return res.data;
   },
 
   listarFullD1: async (turnoSelecionado) => {

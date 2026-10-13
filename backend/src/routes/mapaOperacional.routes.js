@@ -16,6 +16,7 @@ const {
   diaristasDisponiveis,
   buscarElegiveis,
 } = require("../controllers/mapaOperacional.controller");
+const { agendarAlocacao, listarAgendadas, removerAgendada } = require("../controllers/alocacaoAgendada.controller");
 const { listarEfetivo } = require("../controllers/efetivo.controller");
 const { obterPainelExecutivo } = require("../controllers/painelExecutivo.controller");
 const { listarFanouts, listarHistorico, salvarPosicao, moverFanouts } = require("../controllers/fanouts.controller");
@@ -34,6 +35,11 @@ router.post("/esteiras/:idEsteira/alocacoes", criarAlocacao);
 router.delete("/esteiras/:idEsteira/alocacoes/:idAlocacao", removerAlocacao);
 router.post("/esteiras/:idEsteira/alocacoes/:idAlocacao/mover", moverAlocacao);
 router.get("/esteiras/:idEsteira/pesca/movimentacoes", listarMovimentacoesPesca);
+
+// Pré-alocação de turno futuro (esteira sem braço e FULL D+1)
+router.get("/agendadas", listarAgendadas);
+router.post("/agendadas", agendarAlocacao);
+router.delete("/agendadas/:idAgendada", removerAgendada);
 
 router.get("/diaristas-disponiveis", diaristasDisponiveis);
 router.get("/colaboradores-elegiveis", buscarElegiveis);
