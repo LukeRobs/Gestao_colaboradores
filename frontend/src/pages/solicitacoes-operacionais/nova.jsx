@@ -16,6 +16,7 @@ import { BuscaColaboradorPorCpf } from "../../components/solicitacoesOperacionai
 import { ImportarFolgaModal } from "../../components/solicitacoesOperacionais/ImportarFolgaModal";
 import { ImportarSinergiaModal } from "../../components/solicitacoesOperacionais/ImportarSinergiaModal";
 import { ImportarBancoHorasModal } from "../../components/solicitacoesOperacionais/ImportarBancoHorasModal";
+import { ImportarHoraExtraModal } from "../../components/solicitacoesOperacionais/ImportarHoraExtraModal";
 import { ImportarInternalizacaoModal } from "../../components/solicitacoesOperacionais/ImportarInternalizacaoModal";
 import { TIPO_DESLIGAMENTO_LABEL, MOTIVO_DESLIGAMENTO_LABEL } from "./shared";
 
@@ -798,8 +799,8 @@ export default function NovaSolicitacaoOperacional() {
                 </div>
               )}
 
-              <div className={`flex items-center pt-2 ${["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"].includes(tipo) ? "justify-between" : "justify-end"}`}>
-                {["FOLGA", "SINERGIA", "BANCO_HORAS", "INTERNALIZACAO"].includes(tipo) && (
+              <div className={`flex items-center pt-2 ${["FOLGA", "SINERGIA", "BANCO_HORAS", "HORA_EXTRA", "INTERNALIZACAO"].includes(tipo) ? "justify-between" : "justify-end"}`}>
+                {["FOLGA", "SINERGIA", "BANCO_HORAS", "HORA_EXTRA", "INTERNALIZACAO"].includes(tipo) && (
                   <button
                     onClick={() => setImportarAberto(true)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-sm text-muted hover:text-page transition-colors cursor-pointer"
@@ -833,6 +834,9 @@ export default function NovaSolicitacaoOperacional() {
           )}
           {importarAberto && tipo === "BANCO_HORAS" && (
             <ImportarBancoHorasModal onClose={() => setImportarAberto(false)} />
+          )}
+          {importarAberto && tipo === "HORA_EXTRA" && (
+            <ImportarHoraExtraModal onClose={() => setImportarAberto(false)} />
           )}
           {importarAberto && tipo === "INTERNALIZACAO" && (
             <ImportarInternalizacaoModal onClose={() => setImportarAberto(false)} />

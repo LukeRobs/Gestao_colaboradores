@@ -91,6 +91,15 @@ export const SolicitacoesOperacionaisAPI = {
     return res.data.data; // { criadas, totalLinhas, erros }
   },
 
+  importarHoraExtraLote: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await api.post("/solicitacoes-operacionais/hora-extra/importar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data.data; // { criadas, totalLinhas, erros }
+  },
+
   importarBancoHorasLote: async (file) => {
     const formData = new FormData();
     formData.append("file", file);

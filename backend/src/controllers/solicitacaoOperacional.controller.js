@@ -786,6 +786,167 @@ exports.importarBancoHorasLote = async (req, res) => {
 };
 
 /* =====================================================
+   IMPORTAR HORA EXTRA EM LOTE (CSV)
+   Mesmas regras da solicitação individual (jornada de até 16h e só em dia de
+   DSR do colaborador); cada linha é validada e criada isoladamente.
+===================================================== */
+exports.importarHoraExtraLote = async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return errorResponse(res, "Usuário não autenticado", 401);
+    }
+    if (!req.file) {
+      return errorResponse(res, "Nenhum arquivo enviado", 400);
+    }
+
+    const csvString = req.file.buffer.toString("utf-8");
+    const rows = await csv({ delimiter: "," }).fromString(csvString);
+
+    if (!rows.length) {
+      return errorResponse(res, "Arquivo CSV vazio", 400);
+    }
+    if (rows.length > 500) {
+      return errorResponse(res, "Máximo de 500 linhas por importação", 400);
+    }
+
+    const criadas = [];
+    const erros = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const linha = i + 2; // +2: linha 1 é o cabeçalho
+      const raw = normalizarLinhaCsv(rows[i]);
+      const cpfOriginal = raw.cpf || "";
+
+      try {
+        const cpfDigits = String(cpfOriginal).replace(/\D/g, "");
+        if (cpfDigits.length !== 11) {
+          throw new HttpError(`CPF inválido: "${cpfOriginal}"`, 400);
+        }
+
+        const motivoLinha = String(raw.motivo || "").trim();
+        if (!motivoLinha) {
+          throw new HttpError("Motivo é obrigatório", 400);
+        }
+
+        const dataIso = parseDataFlexivel(raw.data);
+        if (!dataIso) {
+          throw new HttpError(`Data inválida: "${raw.data || ""}". Use o formato dd/mm/aaaa`, 400);
+        }
+
+        const horaEntrada = String(raw["hora de entrada"] || raw["hora_entrada"] || "").trim();
+        const horaSaida = String(raw["hora de saida"] || raw["hora de saída"] || raw["hora_saida"] || "").trim();
+        if (!/^\d{2}:\d{2}$/.test(horaEntrada)) {
+          throw new HttpError(`Hora de entrada inválida: "${horaEntrada}". Use o formato HH:MM`, 400);
+        }
+        if (!/^\d{2}:\d{2}$/.test(horaSaida)) {
+          throw new HttpError(`Hora de saída inválida: "${horaSaida}". Use o formato HH:MM`, 400);
+        }
+        {
+          const [hE, mE] = horaEntrada.split(":").map(Number);
+          const [hS, mS] = horaSaida.split(":").map(Number);
+          if (hE > 23 || hS > 23 || mE > 59 || mS > 59) {
+            throw new HttpError("Horário inválido. Verifique as horas informadas", 400);
+          }
+          let minutosJornada = hS * 60 + mS - (hE * 60 + mE);
+          if (minutosJornada <= 0) minutosJornada += 24 * 60;
+          if (minutosJornada > 16 * 60) {
+            throw new HttpError("Jornada inválida. Verifique os horários informados (máximo de 16h)", 400);
+          }
+        }
+
+        const colaborador = await prisma.colaborador.findFirst({
+          where: { cpf: cpfDigits },
+          select: { opsId: true, nomeCompleto: true, idEstacao: true },
+        });
+        if (!colaborador || !pertenceAEstacaoDoUsuario(req, colaborador.idEstacao)) {
+          throw new HttpError(`Colaborador não encontrado para o CPF ${cpfOriginal}`, 400);
+        }
+
+        const disponivel = await validarColaboradorDisponivel(colaborador.opsId, dataIso);
+
+        const ehDiaDeDSR = await isDiaDSRReal(colaborador.opsId, normalizeDateOnly(dataIso), disponivel.escala?.nomeEscala);
+        if (!ehDiaDeDSR) {
+          throw new HttpError(`${dataIso} não é dia de DSR para ${colaborador.nomeCompleto}. Hora extra só pode ser solicitada em dia de DSR`, 400);
+        }
+
+        const solicitacao = await prisma.$transaction(async (tx) => {
+          const nova = await tx.solicitacaoOperacional.create({
+            data: {
+              tipo: "HORA_EXTRA",
+              opsId: colaborador.opsId,
+              data: normalizeDateOnly(dataIso),
+              heHoraEntrada: horaEntrada,
+              heHoraSaida: horaSaida,
+              motivo: motivoLinha,
+              solicitanteUserId: req.user.id,
+            },
+          });
+          await tx.solicitacaoOperacionalHistorico.create({
+            data: {
+              idSolicitacao: nova.idSolicitacao,
+              evento: `Solicitação criada por ${req.user.name} (importação em lote)`,
+            },
+          });
+          return nova;
+        });
+
+        criadas.push({
+          linha,
+          idSolicitacao: solicitacao.idSolicitacao,
+          colaboradorNome: colaborador.nomeCompleto,
+          idEstacao: colaborador.idEstacao,
+        });
+      } catch (err) {
+        const mensagem = err instanceof HttpError ? err.message : err.message || "Erro desconhecido";
+        erros.push({ linha, cpf: cpfOriginal, motivo: mensagem });
+      }
+    }
+
+    // Notificações resumidas do lote — best-effort, não bloqueia a resposta
+    if (criadas.length > 0) {
+      try {
+        const idsEstacao = [...new Set(criadas.map((c) => c.idEstacao).filter((v) => v != null).flatMap(getEstacoesDoGrupo))];
+        const aprovadoresAtivos = await prisma.aprovadorOperacional.findMany({
+          where: {
+            ativo: true,
+            OR: [{ idEstacao: { in: idsEstacao } }, { idEstacao: null }],
+          },
+        });
+
+        if (aprovadoresAtivos.length > 0) {
+          const emails = [...new Set(aprovadoresAtivos.map((a) => a.email))];
+          const listaColaboradores = criadas
+            .slice(0, 15)
+            .map((c) => `- ${c.colaboradorNome} (Nº ${c.idSolicitacao})`)
+            .join("\n");
+          const resto = criadas.length > 15 ? `\n- ...e mais ${criadas.length - 15}` : "";
+
+          await sendSolicitacaoNotification(
+            `# 📋 Hora Extra — Importação em Lote\n\n` +
+              `- **Solicitações criadas:** ${criadas.length}\n` +
+              `- **Solicitante:** ${req.user.name}\n\n` +
+              `---\n\n${listaColaboradores}${resto}\n\n` +
+              `[Ver todas as solicitações](${(process.env.FRONTEND_URL || "http://localhost:5173")}/solicitacoes-operacionais)`,
+            { mentionEmails: emails }
+          );
+        }
+      } catch (notifErr) {
+        console.error("⚠️ Falha ao notificar importação em lote de hora extra:", notifErr.message);
+      }
+    }
+
+    return successResponse(
+      res,
+      { criadas: criadas.length, totalLinhas: rows.length, erros },
+      `${criadas.length} solicitação(ões) criada(s), ${erros.length} erro(s)`
+    );
+  } catch (err) {
+    console.error("❌ importarHoraExtraLote:", err);
+    return errorResponse(res, "Erro ao importar solicitações de hora extra", 500);
+  }
+};
+
+/* =====================================================
    IMPORTAR INTERNALIZAÇÃO EM LOTE (CSV)
    Mesmo padrão de importarSinergiaLote: cada linha é validada e criada
    isoladamente — uma linha inválida não derruba as demais.
