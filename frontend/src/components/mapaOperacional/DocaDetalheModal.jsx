@@ -4,8 +4,9 @@ import toast from "react-hot-toast";
 import { DocasAPI } from "../../services/docas";
 import { confirmDialog } from "../ConfirmDialog";
 import { Esqueleto, Modal } from "./ui";
-import { BTN_PERIGO, BTN_PRIMARIO } from "./uiTokens";
+import { BTN_PERIGO, BTN_PRIMARIO, BTN_SECUNDARIO } from "./uiTokens";
 import { SelecionarTimeModal } from "./SelecionarTimeModal";
+import { AdicionarPessoaDocaModal } from "./AdicionarPessoaDocaModal";
 
 const LABOR_LABEL = {
   DOCK_RECEIVED: "Received",
@@ -36,6 +37,7 @@ export function DocaDetalheModal({ numero, onClose, onChanged }) {
   const [doca, setDoca] = useState(null);
   const [liberando, setLiberando] = useState(false);
   const [modalTime, setModalTime] = useState(false);
+  const [modalPessoa, setModalPessoa] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -149,6 +151,11 @@ export function DocaDetalheModal({ numero, onClose, onChanged }) {
                       </li>
                     ))}
                   </ul>
+                  <div className="px-4 py-3 border-t border-default">
+                    <button type="button" onClick={() => setModalPessoa(true)} className={`${BTN_SECUNDARIO} h-10 w-full`}>
+                      <Plus size={15} aria-hidden="true" /> Adicionar pessoa
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-xl border border-default px-4 py-3">
@@ -157,6 +164,11 @@ export function DocaDetalheModal({ numero, onClose, onChanged }) {
                     {doca.alocacao?.diarista ? "Diarista" : doca.alocacao?.colaborador?.nomeCompleto || "—"}
                   </p>
                   <p className="text-xs text-muted mt-1">Função: {LABOR_LABEL[doca.alocacao?.labor] || "—"}</p>
+                  {!doca.alocacao?.diarista && doca.alocacao?.colaborador && (
+                    <button type="button" onClick={() => setModalPessoa(true)} className={`${BTN_SECUNDARIO} h-10 w-full mt-3`}>
+                      <Plus size={15} aria-hidden="true" /> Adicionar pessoa
+                    </button>
+                  )}
                 </div>
               )}
             </Secao>
@@ -201,6 +213,17 @@ export function DocaDetalheModal({ numero, onClose, onChanged }) {
           </>
         )}
       </Modal>
+
+      {modalPessoa && doca?.alocacao && (
+        <AdicionarPessoaDocaModal
+          doca={doca}
+          onClose={() => setModalPessoa(false)}
+          onAdicionada={async () => {
+            onChanged?.();
+            await carregar();
+          }}
+        />
+      )}
 
       {modalTime && doca && (
         <SelecionarTimeModal
