@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { calcularLayoutEsteira } from "../../utils/esteiraLayout";
 import { FanoutChips } from "./fanout/FanoutChips";
-import { corDoAviso, descricaoAviso, maisGrave } from "./avisos/avisosConfig";
+import { corDoAviso, descricaoAviso, gravidadeDe, maisGrave, motivoDe } from "./avisos/avisosConfig";
 
 const COR_MANUAL = "#FA4C00";
 const COR_DIARISTA = "#A855F7";
@@ -189,7 +189,7 @@ export default function ConveyorSvg({
                 rx={6}
                 strokeWidth={sobAlvo || corAviso ? 2.5 : 1.5}
                 strokeDasharray={alvoDeSoltar && !sobAlvo ? "4 3" : undefined}
-                style={{ fill: fundo, stroke: corAviso && !sobAlvo ? corAviso : alvoDeSoltar && !sobAlvo && !alocacao && !soPesca ? COR_PESCA : borda, transition: "stroke 150ms, fill 150ms" }}
+                style={{ fill: corAviso && !sobAlvo ? `${corAviso}33` : fundo, stroke: corAviso && !sobAlvo ? corAviso : alvoDeSoltar && !sobAlvo && !alocacao && !soPesca ? COR_PESCA : borda, transition: "stroke 150ms, fill 150ms" }}
               />
               {comFoco && (
                 <rect
@@ -220,13 +220,25 @@ export default function ConveyorSvg({
                   {alocacao.diarista ? "Diarista" : primeiroNome(alocacao.colaborador?.nomeCompleto)}
                 </text>
               ) : null}
-              {corAviso && (
-                <g>
-                  <title>{avisosBraco.map((a) => descricaoAviso(a)).join(" | ")}</title>
-                  <circle cx={pos.x + pos.w - 3} cy={pos.y + 3} r={9} fill={corAviso} />
-                  <text x={pos.x + pos.w - 3} y={pos.y + 7} textAnchor="middle" fontSize="12" fontWeight="800" fill="#FFFFFF">!</text>
-                </g>
-              )}
+              {corAviso && (() => {
+                const g = gravidadeDe(avisoMax);
+                const Icone = motivoDe(avisoMax.motivo).Icone;
+                const cx = pos.x + pos.w - 2;
+                const cy = pos.y + 2;
+                return (
+                  <g>
+                    <title>{avisosBraco.map((a) => descricaoAviso(a)).join(" | ")}</title>
+                    <circle cx={cx} cy={cy} r={12} fill={g.fundo} style={{ stroke: "var(--color-surface)" }} strokeWidth={2} className={avisoMax.severidade === "CRITICO" ? "motion-safe:animate-pulse" : undefined} />
+                    <Icone x={cx - 7} y={cy - 7} width={14} height={14} color={g.texto} strokeWidth={2.75} />
+                    {avisosBraco.length > 1 && (
+                      <>
+                        <circle cx={cx + 9} cy={cy + 10} r={6} fill="var(--color-surface)" stroke={g.fundo} strokeWidth={1.5} />
+                        <text x={cx + 9} y={cy + 13.2} textAnchor="middle" fontSize="8.5" fontWeight="800" style={{ fill: "var(--color-text)" }}>{avisosBraco.length}</text>
+                      </>
+                    )}
+                  </g>
+                );
+              })()}
               {pescasDoBraco.length > 0 && (
                 <g>
                   <title>{`Pesca: ${pescasDoBraco.map((p) => (p.diarista ? "Diarista" : p.colaborador?.nomeCompleto || p.opsId)).join(", ")}`}</title>

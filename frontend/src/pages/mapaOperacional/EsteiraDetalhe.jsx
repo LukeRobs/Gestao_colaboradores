@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { useParams, useSearchParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -303,9 +303,9 @@ export default function EsteiraDetalhe() {
               <button
                 type="button"
                 onClick={() => setModalAviso({})}
-                className={`${BTN_SECUNDARIO} ml-auto`}
+                className={`ml-auto h-11 px-4 inline-flex items-center justify-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#D98A07] text-[#1F1300] text-sm font-bold shadow-sm transition-colors cursor-pointer ${FOCO}`}
               >
-                <TriangleAlert size={16} className="text-[#F59E0B]" aria-hidden="true" /> Sinalizar ocorrência
+                <Megaphone size={17} strokeWidth={2.5} aria-hidden="true" /> Sinalizar ocorrência
               </button>
             )}
           </div>

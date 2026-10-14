@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SearchX, TriangleAlert, Truck, Users } from "lucide-react";
+import { Megaphone, Search, SearchX, Truck, Users } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
@@ -67,11 +67,11 @@ function CardDoca({ doca, filtro, avisos = [], onClick }) {
       className={`text-left bg-surface rounded-xl border p-3.5 min-h-[92px] flex flex-col gap-1 transition-colors cursor-pointer ${FOCO} ${
         status.chave === "indisponivel" ? "border-default opacity-60 hover:opacity-100" : "hover:bg-surface-2"
       }`}
-      style={corAviso ? { borderColor: corAviso, boxShadow: `0 0 0 1px ${corAviso}` } : status.chave === "indisponivel" ? undefined : { borderColor: `${cor}59` }}
+      style={corAviso ? { borderColor: corAviso, background: `${corAviso}14`, boxShadow: `0 0 0 1px ${corAviso}` } : status.chave === "indisponivel" ? undefined : { borderColor: `${cor}59` }}
     >
       <span className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">Doca {doca.numero}</span>
-        {avisos.length > 0 && <AvisoBadge aviso={maisGrave(avisos)} />}
+        {avisos.length > 0 && <AvisoBadge aviso={maisGrave(avisos)} compacto />}
       </span>
       <span className="flex items-center gap-1.5 text-xs" style={{ color: status.chave === "indisponivel" ? undefined : cor }}>
         <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: cor }} />
@@ -260,8 +260,12 @@ export default function GestaoDocas() {
                   Só disponíveis
                 </button>
 
-                <button type="button" onClick={() => setModalAviso(true)} className={BTN_SECUNDARIO}>
-                  <TriangleAlert size={16} className="text-[#F59E0B]" aria-hidden="true" /> Sinalizar doca
+                <button
+                  type="button"
+                  onClick={() => setModalAviso(true)}
+                  className={`h-11 px-4 inline-flex items-center justify-center gap-2 rounded-xl bg-[#F59E0B] hover:bg-[#D98A07] text-[#1F1300] text-sm font-bold shadow-sm transition-colors cursor-pointer ${FOCO}`}
+                >
+                  <Megaphone size={17} strokeWidth={2.5} aria-hidden="true" /> Sinalizar doca
                 </button>
               </div>
 

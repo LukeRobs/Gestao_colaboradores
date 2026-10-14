@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Plus, TriangleAlert, X } from "lucide-react";
+import { Megaphone, Plus, TriangleAlert, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { AlocarLaborModal } from "./AlocarLaborModal";
 import { AvisoBadge } from "./avisos/AvisoBadge";
+import { ICONES_FUNCAO, corDoAviso, maisGrave } from "./avisos/avisosConfig";
 import { FOCO, LABORS_MANUAIS } from "./uiTokens";
 import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
@@ -73,10 +74,16 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
         {LABORS_MANUAIS.filter((labor) => labor.value !== "PESCA").map((labor) => {
           const pessoas = alocacoes.filter((a) => a.labor === labor.value);
           const avisosDaFuncao = avisos.filter((a) => a.alvoTipo === "FUNCAO" && a.labor === labor.value);
+          const corAviso = avisosDaFuncao.length ? corDoAviso(maisGrave(avisosDaFuncao)) : null;
+          const IconeFuncao = ICONES_FUNCAO[labor.value];
           return (
-            <li key={labor.value} className="flex items-start gap-3 sm:gap-6 px-5 sm:px-6 py-3.5">
+            <li key={labor.value} className="relative flex items-start gap-3 sm:gap-6 px-5 sm:px-6 py-3.5" style={corAviso ? { background: `${corAviso}12` } : undefined}>
+              {corAviso && <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-1.5" style={{ background: corAviso }} />}
               <div className="w-32 sm:w-44 shrink-0 pt-1">
-                <p className="text-sm font-medium">{labor.label}</p>
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  {IconeFuncao && <IconeFuncao size={15} className="text-muted shrink-0" aria-hidden="true" />}
+                  {labor.label}
+                </p>
                 {pessoas.length > 0 && <p className="text-xs text-muted tabular-nums">{pessoas.length}</p>}
                 {avisosDaFuncao.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
@@ -112,9 +119,10 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
                   onClick={() => onSinalizar(labor)}
                   aria-label={`Sinalizar ocorrência em ${labor.label}`}
                   title={`Sinalizar ocorrência em ${labor.label}`}
-                  className={`h-11 w-11 sm:h-10 sm:w-10 shrink-0 grid place-items-center rounded-xl border border-default bg-surface-2 text-muted hover:text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] transition-colors cursor-pointer ${FOCO}`}
+                  className={`h-11 sm:h-10 px-3 shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#F59E0B]/45 bg-[#F59E0B]/10 text-[#F59E0B] text-sm font-semibold hover:bg-[#F59E0B] hover:text-[#1F1300] transition-colors cursor-pointer ${FOCO}`}
                 >
-                  <TriangleAlert size={16} aria-hidden="true" />
+                  <Megaphone size={16} aria-hidden="true" />
+                  <span className="hidden lg:inline">Sinalizar</span>
                 </button>
               )}
 
