@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { useParams, useSearchParams } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
@@ -7,6 +8,10 @@ import { AlocarColaboradorModal } from "../../components/mapaOperacional/AlocarC
 import { AutoAlocacaoDetalheModal } from "../../components/mapaOperacional/AutoAlocacaoDetalheModal";
 import { LaborManualSection } from "../../components/mapaOperacional/LaborManualSection";
 import { MapaEsteiraComPescas } from "../../components/mapaOperacional/MapaEsteiraComPescas";
+import { FaixaAvisos } from "../../components/mapaOperacional/avisos/FaixaAvisos";
+import { NovoAvisoModal } from "../../components/mapaOperacional/avisos/NovoAvisoModal";
+import { avisosPorBraco } from "../../components/mapaOperacional/avisos/avisosConfig";
+import { useAvisos } from "../../components/mapaOperacional/avisos/useAvisos";
 import { SinergiasNaArea } from "../../components/mapaOperacional/sinergia/SinergiasNaArea";
 import { codigoDaEsteira } from "../../components/mapaOperacional/sinergia/status";
 import {
@@ -17,11 +22,12 @@ import {
   PageHeader,
   TurnoTabs,
 } from "../../components/mapaOperacional/ui";
-import { BTN_SECUNDARIO, FOCO, ehTurnoFuturo, formatNumero, somarDias } from "../../components/mapaOperacional/uiTokens";
+import { BTN_SECUNDARIO, FOCO, LABORS_MANUAIS, ehTurnoFuturo, formatNumero, somarDias } from "../../components/mapaOperacional/uiTokens";
 import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
 const POLL_INTERVAL_MS = 20000;
 const TURNOS = ["T1", "T2", "T3"];
+const NOMES_LABOR = Object.fromEntries(LABORS_MANUAIS.map((l) => [l.value, l.label]));
 
 // Num turno passado o log traz cada passagem por um braço; no quadro vale a última de cada pessoa.
 function ultimasPescas(linhas, aoVivo) {
@@ -66,6 +72,9 @@ export default function EsteiraDetalhe() {
   const [params, setParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [esteira, setEsteira] = useState(null);
+  const [todasEsteiras, setTodasEsteiras] = useState([]); // nomes, pros avisos de outras áreas
+  const [modalAviso, setModalAviso] = useState(null); // { alvoInicial? }
+  const { avisos, recarregar: recarregarAvisos } = useAvisos();
   const [dados, setDados] = useState(null); // { idEsteira, turno, data, alocacoes, producao }
   const [erro, setErro] = useState(null);
   const [atualizadoEm, setAtualizadoEm] = useState(null);
@@ -121,6 +130,7 @@ export default function EsteiraDetalhe() {
     MapaOperacionalAPI.listarEsteiras()
       .then((lista) => {
         if (!ativo) return;
+        setTodasEsteiras(lista);
         const encontrada = lista.find((e) => String(e.idEsteira) === String(idEsteira));
         if (encontrada) setEsteira(encontrada);
         else setErro("Esteira não encontrada.");
@@ -249,6 +259,17 @@ export default function EsteiraDetalhe() {
   const producaoTurno = dadosAtuais?.producao;
   const produtividade = producaoTurno !== undefined && totalHC > 0 ? producaoTurno / totalHC : undefined;
 
+  // Avisos (estilo Waze) só valem ao vivo: no turno histórico/futuro não aparecem.
+  const avisosVivos = estaNoTurnoAtual ? avisos : [];
+  const avisosDaEsteira = avisosVivos.filter((a) => a.alvoTipo !== "DOCA" && String(a.idEsteira) === String(idEsteira));
+  const avisosOutrasAreas = avisosVivos.filter((a) => a.alvoTipo === "DOCA" || String(a.idEsteira) !== String(idEsteira));
+  const rotuloOutraArea = (a) => (a.alvoTipo === "DOCA" ? "Docas" : todasEsteiras.find((e) => e.idEsteira === a.idEsteira)?.nome || "Outra esteira");
+  const pessoasParaAviso = [...new Map(
+    [...alocacoesBraco, ...alocacoesLabor, ...pescas]
+      .filter((a) => a.origem !== "AUTO" && a.opsId && !a.diarista)
+      .map((a) => [a.opsId, { opsId: a.opsId, nome: a.colaborador?.nomeCompleto || a.opsId }])
+  ).values()];
+
   const carregando = !esteiraAtual || !dadosAtuais;
 
   return (
@@ -278,7 +299,19 @@ export default function EsteiraDetalhe() {
               maximo={turnoAtual ? somarDias(turnoAtual.diaOperacionalStr, 1) : undefined}
               onChange={(d) => atualizarParams({ data: d })}
             />
+            {estaNoTurnoAtual && esteiraAtual && (
+              <button
+                type="button"
+                onClick={() => setModalAviso({})}
+                className={`${BTN_SECUNDARIO} ml-auto`}
+              >
+                <TriangleAlert size={16} className="text-[#F59E0B]" aria-hidden="true" /> Sinalizar ocorrência
+              </button>
+            )}
           </div>
+
+          <FaixaAvisos avisos={avisosDaEsteira} nomesLabor={NOMES_LABOR} titulo="Avisos nesta esteira" onMudou={recarregarAvisos} />
+          <FaixaAvisos avisos={avisosOutrasAreas} nomesLabor={NOMES_LABOR} titulo="Avisos em outras áreas da Label" rotuloArea={rotuloOutraArea} onMudou={recarregarAvisos} />
 
           {!estaNoTurnoAtual && turnoAtual && !erro && (
             <Aviso
@@ -373,6 +406,7 @@ export default function EsteiraDetalhe() {
                   pescas={pescas}
                   fanouts={fanouts}
                   mostrarFanouts={fanoutsAoPassarMouse}
+                  avisosPorBraco={avisosPorBraco(avisosDaEsteira, idEsteira)}
                   somenteLeitura={!estaNoTurnoAtual}
                   onBracoClick={handleBracoClick}
                   versao={atualizadoEm?.getTime()}
@@ -391,6 +425,8 @@ export default function EsteiraDetalhe() {
                 somenteLeitura={!estaNoTurnoAtual && !ehFuturo}
                 agendamento={ehFuturo ? { turno: turnoSelecionado, data: dataSelecionada } : null}
                 onAllocated={carregar}
+                avisos={avisosDaEsteira}
+                onSinalizar={estaNoTurnoAtual ? (labor) => setModalAviso({ alvoInicial: { alvoTipo: "FUNCAO", labor: labor.value } }) : null}
               />
             </>
           )}
@@ -407,6 +443,16 @@ export default function EsteiraDetalhe() {
           todasPescas={pescas}
           onClose={() => setModal(null)}
           onAllocated={carregar}
+        />
+      )}
+
+      {modalAviso && esteiraAtual && (
+        <NovoAvisoModal
+          esteira={esteiraAtual}
+          alvoInicial={modalAviso.alvoInicial}
+          pessoas={pessoasParaAviso}
+          onClose={() => setModalAviso(null)}
+          onCriado={recarregarAvisos}
         />
       )}
 

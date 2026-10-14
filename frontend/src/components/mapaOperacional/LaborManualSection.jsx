@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, TriangleAlert, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { AlocarLaborModal } from "./AlocarLaborModal";
+import { AvisoBadge } from "./avisos/AvisoBadge";
 import { FOCO, LABORS_MANUAIS } from "./uiTokens";
 import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
-function Pessoa({ alocacao, somenteLeitura, encerrando, onEncerrar }) {
+function Pessoa({ alocacao, somenteLeitura, encerrando, comAviso = false, onEncerrar }) {
   const nome = alocacao.diarista ? "Diarista" : alocacao.colaborador?.nomeCompleto || alocacao.opsId || "—";
   return (
     <li
@@ -15,6 +16,7 @@ function Pessoa({ alocacao, somenteLeitura, encerrando, onEncerrar }) {
     >
       {alocacao.diarista && <span aria-hidden="true" className="w-2 h-2 rounded-full bg-[#A855F7] shrink-0" />}
       <span className="truncate max-w-[220px]">{nome}</span>
+      {comAviso && <TriangleAlert size={14} className="shrink-0 text-[#F59E0B]" aria-label="Tem aviso ativo" />}
       {!somenteLeitura && (
         <button
           type="button"
@@ -35,7 +37,7 @@ function Pessoa({ alocacao, somenteLeitura, encerrando, onEncerrar }) {
  * `agendamento` ({ turno, data }): turno que ainda não começou. `alocacoes` passa a ser a lista de
  * pré-alocações (idAlocacao = id da pré-alocação) e o "+" pré-aloca em vez de alocar agora.
  */
-export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAllocated, agendamento = null }) {
+export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAllocated, agendamento = null, avisos = [], onSinalizar = null }) {
   const [modalLabor, setModalLabor] = useState(null); // { value, label }
   const [encerrando, setEncerrando] = useState(null);
 
@@ -70,11 +72,19 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
         {/* Pesca tem quadro próprio (PescaKanban), com posição por braço */}
         {LABORS_MANUAIS.filter((labor) => labor.value !== "PESCA").map((labor) => {
           const pessoas = alocacoes.filter((a) => a.labor === labor.value);
+          const avisosDaFuncao = avisos.filter((a) => a.alvoTipo === "FUNCAO" && a.labor === labor.value);
           return (
             <li key={labor.value} className="flex items-start gap-3 sm:gap-6 px-5 sm:px-6 py-3.5">
               <div className="w-32 sm:w-44 shrink-0 pt-1">
                 <p className="text-sm font-medium">{labor.label}</p>
                 {pessoas.length > 0 && <p className="text-xs text-muted tabular-nums">{pessoas.length}</p>}
+                {avisosDaFuncao.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {avisosDaFuncao.map((a) => (
+                      <AvisoBadge key={a.idAviso} aviso={a} />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 min-w-0 pt-0.5">
@@ -88,12 +98,25 @@ export function LaborManualSection({ esteira, alocacoes, somenteLeitura, onAlloc
                         alocacao={p}
                         somenteLeitura={somenteLeitura}
                         encerrando={encerrando === p.idAlocacao}
+                        comAviso={avisos.some((a) => a.opsId && a.opsId === p.opsId)}
                         onEncerrar={() => encerrar(p.idAlocacao)}
                       />
                     ))}
                   </ul>
                 )}
               </div>
+
+              {!somenteLeitura && onSinalizar && !agendamento && (
+                <button
+                  type="button"
+                  onClick={() => onSinalizar(labor)}
+                  aria-label={`Sinalizar ocorrência em ${labor.label}`}
+                  title={`Sinalizar ocorrência em ${labor.label}`}
+                  className={`h-11 w-11 sm:h-10 sm:w-10 shrink-0 grid place-items-center rounded-xl border border-default bg-surface-2 text-muted hover:text-white hover:bg-[#F59E0B] hover:border-[#F59E0B] transition-colors cursor-pointer ${FOCO}`}
+                >
+                  <TriangleAlert size={16} aria-hidden="true" />
+                </button>
+              )}
 
               {!somenteLeitura && (
                 <button

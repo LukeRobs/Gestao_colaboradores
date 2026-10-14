@@ -1677,3 +1677,32 @@ model SinergiaInternaEvento {
   @@index([idSinergia, criadoEm], map: "idx_sinergia_interna_evento_sinergia")
   @@map("sinergia_interna_evento")
 }
+
+// Avisos da Label (estilo Waze): ocorrência sinalizada num braço, função ou doca. Expira sozinha.
+model MapaAviso {
+  idAviso    String   @id @default(uuid()) @map("id_aviso")
+  idEstacao  Int      @map("id_estacao")
+  alvoTipo   String   @map("alvo_tipo") @db.VarChar(10) // BRACO | FUNCAO | DOCA
+  idEsteira  Int?     @map("id_esteira")
+  braco      Int?
+  lado       String?  @db.VarChar(1)
+  labor      String?  @db.VarChar(30)
+  numeroDoca Int?     @map("numero_doca")
+  motivo     String   @db.VarChar(20)
+  severidade String   @default("ATENCAO") @db.VarChar(10) // ATENCAO | CRITICO
+  texto      String?  @db.VarChar(200)
+  opsId      String?  @map("ops_id") @db.VarChar(50)
+  nomePessoa String?  @map("nome_pessoa")
+
+  criadoPorId      String?   @map("criado_por_id")
+  criadoPorNome    String?   @map("criado_por_nome")
+  criadoEm         DateTime  @default(now()) @map("criado_em")
+  expiraEm         DateTime  @map("expira_em")
+  encerradoEm      DateTime? @map("encerrado_em")
+  encerradoPorId   String?   @map("encerrado_por_id")
+  encerradoPorNome String?   @map("encerrado_por_nome")
+
+  @@index([idEstacao, encerradoEm, expiraEm], map: "idx_mapa_aviso_ativos")
+  @@index([idEstacao, alvoTipo, idEsteira, numeroDoca], map: "idx_mapa_aviso_alvo")
+  @@map("mapa_aviso")
+}

@@ -17,6 +17,7 @@ const {
   buscarElegiveis,
 } = require("../controllers/mapaOperacional.controller");
 const { agendarAlocacao, listarAgendadas, removerAgendada } = require("../controllers/alocacaoAgendada.controller");
+const { listarAvisos, criarAviso, encerrarAviso } = require("../controllers/avisos.controller");
 const { listarEfetivo } = require("../controllers/efetivo.controller");
 const { obterPainelExecutivo } = require("../controllers/painelExecutivo.controller");
 const { listarFanouts, listarHistorico, salvarPosicao, moverFanouts } = require("../controllers/fanouts.controller");
@@ -40,6 +41,11 @@ router.get("/esteiras/:idEsteira/pesca/movimentacoes", listarMovimentacoesPesca)
 router.get("/agendadas", listarAgendadas);
 router.post("/agendadas", agendarAlocacao);
 router.delete("/agendadas/:idAgendada", removerAgendada);
+
+// Avisos (estilo Waze): quem opera a Label cria, vê e encerra — valem para esteiras e docas.
+router.get("/avisos", listarAvisos);
+router.post("/avisos", criarAviso);
+router.delete("/avisos/:idAviso", encerrarAviso);
 
 router.get("/diaristas-disponiveis", diaristasDisponiveis);
 router.get("/colaboradores-elegiveis", buscarElegiveis);

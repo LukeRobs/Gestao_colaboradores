@@ -79,7 +79,7 @@ function ChipPesca({ pesca, fantasma, movendo, somenteLeitura, onAbrir, onAlca }
  * Mapa da esteira + pescas. A pesca fica num braço e é arrastada entre eles: o próprio mapa é a área de soltar.
  * Soltar na faixa "Pescas" tira a pessoa do braço. Cada passagem fica no log do dia (rastreabilidade).
  */
-export function MapaEsteiraComPescas({ esteira, alocacoes, pescas, fanouts, mostrarFanouts, somenteLeitura, onBracoClick, versao, dia, onChanged }) {
+export function MapaEsteiraComPescas({ esteira, alocacoes, pescas, fanouts, mostrarFanouts, avisosPorBraco, somenteLeitura, onBracoClick, versao, dia, onChanged }) {
   const [modalAdicionar, setModalAdicionar] = useState(false);
   const [aberta, setAberta] = useState(null);
   const [otimista, setOtimista] = useState({}); // idAlocacao -> chave de destino, enquanto a API responde
@@ -214,6 +214,7 @@ export function MapaEsteiraComPescas({ esteira, alocacoes, pescas, fanouts, most
         scrollRef={mapaRef}
         fanouts={fanouts}
         mostrarFanouts={mostrarFanouts}
+        avisosPorBraco={avisosPorBraco}
         onBracoClick={onBracoClick}
         somenteLeitura={somenteLeitura}
       />

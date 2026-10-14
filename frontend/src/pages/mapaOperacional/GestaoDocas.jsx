@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SearchX, Truck, Users } from "lucide-react";
+import { Search, SearchX, TriangleAlert, Truck, Users } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
 import { EquipesWorkspace } from "../../components/mapaOperacional/equipes/EquipesWorkspace";
 import { DocaDetalheModal } from "../../components/mapaOperacional/DocaDetalheModal";
+import { AvisoBadge } from "../../components/mapaOperacional/avisos/AvisoBadge";
+import { FaixaAvisos } from "../../components/mapaOperacional/avisos/FaixaAvisos";
+import { NovoAvisoModal } from "../../components/mapaOperacional/avisos/NovoAvisoModal";
+import { corDoAviso, maisGrave } from "../../components/mapaOperacional/avisos/avisosConfig";
+import { useAvisos } from "../../components/mapaOperacional/avisos/useAvisos";
 import {
   AbasPagina,
   AbasSegmentadas,
@@ -17,6 +22,7 @@ import {
 } from "../../components/mapaOperacional/ui";
 import { BTN_SECUNDARIO, FOCO, INPUT } from "../../components/mapaOperacional/uiTokens";
 import { DocasAPI } from "../../services/docas";
+import { MapaOperacionalAPI } from "../../services/mapaOperacional";
 
 const POLL_INTERVAL_MS = 20000;
 const FILTROS = [
@@ -45,9 +51,10 @@ function statusVisual(doca, filtro) {
   return { chave: "indisponivel", curto: "Indisponível", completo: `Indisponível, ocupada por ${operacao}` };
 }
 
-function CardDoca({ doca, filtro, onClick }) {
+function CardDoca({ doca, filtro, avisos = [], onClick }) {
   const status = statusVisual(doca, filtro);
   const cor = COR[status.chave];
+  const corAviso = avisos.length ? corDoAviso(maisGrave(avisos)) : null;
   const nomeOcupante =
     doca.alocacao?.time?.nome || (doca.alocacao?.diarista ? "Diarista" : doca.alocacao?.colaborador?.nomeCompleto);
 
@@ -55,14 +62,17 @@ function CardDoca({ doca, filtro, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Doca ${doca.numero}: ${status.completo}${nomeOcupante ? `, ${nomeOcupante}` : ""}`}
+      aria-label={`Doca ${doca.numero}: ${status.completo}${nomeOcupante ? `, ${nomeOcupante}` : ""}${avisos.length ? `. ${avisos.length === 1 ? "1 aviso ativo" : `${avisos.length} avisos ativos`}` : ""}`}
       title={status.completo}
       className={`text-left bg-surface rounded-xl border p-3.5 min-h-[92px] flex flex-col gap-1 transition-colors cursor-pointer ${FOCO} ${
         status.chave === "indisponivel" ? "border-default opacity-60 hover:opacity-100" : "hover:bg-surface-2"
       }`}
-      style={status.chave === "indisponivel" ? undefined : { borderColor: `${cor}59` }}
+      style={corAviso ? { borderColor: corAviso, boxShadow: `0 0 0 1px ${corAviso}` } : status.chave === "indisponivel" ? undefined : { borderColor: `${cor}59` }}
     >
-      <span className="text-sm font-semibold">Doca {doca.numero}</span>
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold">Doca {doca.numero}</span>
+        {avisos.length > 0 && <AvisoBadge aviso={maisGrave(avisos)} />}
+      </span>
       <span className="flex items-center gap-1.5 text-xs" style={{ color: status.chave === "indisponivel" ? undefined : cor }}>
         <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: cor }} />
         <span className={status.chave === "indisponivel" ? "text-muted" : ""}>{status.curto}</span>
@@ -96,10 +106,19 @@ export default function GestaoDocas() {
   const [somenteLivres, setSomenteLivres] = useState(false);
   const [busca, setBusca] = useState("");
   const [docaSelecionada, setDocaSelecionada] = useState(null);
+  const [modalAviso, setModalAviso] = useState(false);
+  const [nomesEsteiras, setNomesEsteiras] = useState({}); // idEsteira -> nome, pros avisos de esteira
+  const { avisos, recarregar: recarregarAvisos } = useAvisos();
   // A aba fica na URL (?aba=equipes): dá para compartilhar o link e o F5 não perde o lugar.
   const [params, setParams] = useSearchParams();
   const aba = params.get("aba") === "equipes" ? "equipes" : "docas";
   const trocarAba = (valor) => setParams(valor === "docas" ? {} : { aba: valor }, { replace: true });
+
+  useEffect(() => {
+    MapaOperacionalAPI.listarEsteiras()
+      .then((lista) => setNomesEsteiras(Object.fromEntries(lista.map((e) => [e.idEsteira, e.nome]))))
+      .catch(() => {});
+  }, []);
 
   const carregar = useCallback(async () => {
     try {
@@ -147,6 +166,9 @@ export default function GestaoDocas() {
   };
 
   const ind = dados?.indicadores;
+  const avisosDocas = avisos.filter((a) => a.alvoTipo === "DOCA");
+  const avisosEsteiras = avisos.filter((a) => a.alvoTipo !== "DOCA");
+  const avisosDaDoca = (numero) => avisosDocas.filter((a) => a.numeroDoca === numero);
 
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
@@ -184,6 +206,14 @@ export default function GestaoDocas() {
             <EquipesWorkspace onChanged={carregar} />
           ) : (
             <>
+          <FaixaAvisos avisos={avisosDocas} titulo="Avisos nas docas" onMudou={recarregarAvisos} />
+          <FaixaAvisos
+            avisos={avisosEsteiras}
+            titulo="Avisos nas esteiras"
+            rotuloArea={(a) => nomesEsteiras[a.idEsteira] || "Esteira"}
+            onMudou={recarregarAvisos}
+          />
+
           {ind && (
             <FaixaIndicadores
               rotulo="Indicadores das docas"
@@ -229,6 +259,10 @@ export default function GestaoDocas() {
                 >
                   Só disponíveis
                 </button>
+
+                <button type="button" onClick={() => setModalAviso(true)} className={BTN_SECUNDARIO}>
+                  <TriangleAlert size={16} className="text-[#F59E0B]" aria-hidden="true" /> Sinalizar doca
+                </button>
               </div>
 
               <div className="flex items-center justify-between gap-3 flex-wrap text-xs text-muted">
@@ -268,7 +302,7 @@ export default function GestaoDocas() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8 gap-3">
                   {docasFiltradas.map((d) => (
-                    <CardDoca key={d.numero} doca={d} filtro={filtro} onClick={() => setDocaSelecionada(d.numero)} />
+                    <CardDoca key={d.numero} doca={d} filtro={filtro} avisos={avisosDaDoca(d.numero)} onClick={() => setDocaSelecionada(d.numero)} />
                   ))}
                 </div>
               )}
@@ -277,6 +311,8 @@ export default function GestaoDocas() {
           )}
         </main>
       </MainLayout>
+
+      {modalAviso && <NovoAvisoModal docas={docas} onClose={() => setModalAviso(false)} onCriado={recarregarAvisos} />}
 
       {docaSelecionada && (
         <DocaDetalheModal

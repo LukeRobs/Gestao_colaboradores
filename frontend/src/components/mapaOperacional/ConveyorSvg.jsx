@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { calcularLayoutEsteira } from "../../utils/esteiraLayout";
 import { FanoutChips } from "./fanout/FanoutChips";
+import { corDoAviso, descricaoAviso, maisGrave } from "./avisos/avisosConfig";
 
 const COR_MANUAL = "#FA4C00";
 const COR_DIARISTA = "#A855F7";
@@ -57,6 +58,7 @@ export default function ConveyorSvg({
   scrollRef,
   fanouts = null, // { "3-A": ["LPE-93", ...] }
   mostrarFanouts = false,
+  avisosPorBraco = {}, // { "3-A": [avisos] } — ocorrências sinalizadas pela liderança
   onBracoClick,
   somenteLeitura = false,
 }) {
@@ -140,6 +142,11 @@ export default function ConveyorSvg({
           const borda = sobAlvo ? COR_PESCA : soPesca ? COR_PESCA : destacado ? COR_MANUAL : cores.stroke;
           const fundo = sobAlvo ? `${COR_PESCA}33` : soPesca ? `${COR_PESCA}1F` : cores.fill;
 
+          // Aviso ativo no braço: borda e selo "!" na cor da gravidade (vale pra todos que veem a Label)
+          const avisosBraco = avisosPorBraco[chave] || [];
+          const avisoMax = maisGrave(avisosBraco);
+          const corAviso = avisoMax && braco.habilitado ? corDoAviso(avisoMax) : null;
+
           const acionar = () => interativo && onBracoClick?.(braco, alocacao || null);
 
           return (
@@ -148,7 +155,7 @@ export default function ConveyorSvg({
               data-destino={alvoDeSoltar ? chave : undefined}
               role={interativo ? "button" : undefined}
               tabIndex={interativo ? 0 : undefined}
-              aria-label={descricaoDoBraco(braco, alocacao, pescasDoBraco, braco.habilitado && fanouts ? fanouts[chave] ?? [] : null)}
+              aria-label={descricaoDoBraco(braco, alocacao, pescasDoBraco, braco.habilitado && fanouts ? fanouts[chave] ?? [] : null) + (avisosBraco.length ? `. Aviso: ${avisosBraco.map((a) => descricaoAviso(a)).join("; ")}` : "")}
               onClick={acionar}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -180,9 +187,9 @@ export default function ConveyorSvg({
                 width={pos.w}
                 height={pos.h}
                 rx={6}
-                strokeWidth={sobAlvo ? 2.5 : 1.5}
+                strokeWidth={sobAlvo || corAviso ? 2.5 : 1.5}
                 strokeDasharray={alvoDeSoltar && !sobAlvo ? "4 3" : undefined}
-                style={{ fill: fundo, stroke: alvoDeSoltar && !sobAlvo && !alocacao && !soPesca ? COR_PESCA : borda, transition: "stroke 150ms, fill 150ms" }}
+                style={{ fill: fundo, stroke: corAviso && !sobAlvo ? corAviso : alvoDeSoltar && !sobAlvo && !alocacao && !soPesca ? COR_PESCA : borda, transition: "stroke 150ms, fill 150ms" }}
               />
               {comFoco && (
                 <rect
@@ -213,6 +220,13 @@ export default function ConveyorSvg({
                   {alocacao.diarista ? "Diarista" : primeiroNome(alocacao.colaborador?.nomeCompleto)}
                 </text>
               ) : null}
+              {corAviso && (
+                <g>
+                  <title>{avisosBraco.map((a) => descricaoAviso(a)).join(" | ")}</title>
+                  <circle cx={pos.x + pos.w - 3} cy={pos.y + 3} r={9} fill={corAviso} />
+                  <text x={pos.x + pos.w - 3} y={pos.y + 7} textAnchor="middle" fontSize="12" fontWeight="800" fill="#FFFFFF">!</text>
+                </g>
+              )}
               {pescasDoBraco.length > 0 && (
                 <g>
                   <title>{`Pesca: ${pescasDoBraco.map((p) => (p.diarista ? "Diarista" : p.colaborador?.nomeCompleto || p.opsId)).join(", ")}`}</title>

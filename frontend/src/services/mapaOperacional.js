@@ -75,6 +75,13 @@ export const MapaOperacionalAPI = {
 
   moverFanouts: (corpo) => comTratamentoDeConflito(async (extra) => (await api.post("/mapa-operacional/fanouts/mover", { ...corpo, ...extra })).data),
 
+  // Avisos da Label (estilo Waze): ocorrência sinalizada num braço, função ou doca. Expiram sozinhos.
+  listarAvisos: async () => (await api.get("/mapa-operacional/avisos")).data.data,
+
+  criarAviso: async (corpo) => (await api.post("/mapa-operacional/avisos", corpo)).data.data,
+
+  encerrarAviso: async (idAviso) => (await api.delete(`/mapa-operacional/avisos/${idAviso}`)).data,
+
   buscarColaboradoresElegiveis: async ({ contexto, turno, search, semPresenca }) => {
     const params = { contexto, search };
     if (turno) params.turno = turno;
