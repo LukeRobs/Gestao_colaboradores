@@ -40,8 +40,10 @@ async function areasPermitidas(user) {
 
   if (!user.opsId) return new Set();
 
-  const colaborador = await prisma.colaborador.findUnique({
-    where: { opsId: user.opsId },
+  // O opsId do usuário e o do colaborador podem diferir só em maiúscula/minúscula ("ops471046" x "Ops471046"):
+  // a busca exata não achava o colaborador e a pessoa ficava sem nenhum setor para operar.
+  const colaborador = await prisma.colaborador.findFirst({
+    where: { opsId: { equals: String(user.opsId).trim(), mode: "insensitive" } },
     select: { setor: { select: { nomeSetor: true } } },
   });
   const codigos = codigosDoSetor(colaborador?.setor?.nomeSetor);
