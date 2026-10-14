@@ -14,6 +14,7 @@
   ChevronRight,
   Factory,
   Tag,
+  Truck,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useContext, useEffect } from "react";
@@ -80,6 +81,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const [gestaoOpen, setGestaoOpen] = useState(location.pathname.startsWith("/treinamentos"));
   const [operacaoOpen, setOperacaoOpen] = useState(location.pathname.startsWith("/operacao"));
   const [labelOpen, setLabelOpen] = useState(location.pathname.startsWith("/operacao/label"));
+  const [recebimentoOpen, setRecebimentoOpen] = useState(location.pathname.startsWith("/operacao/recebimento"));
 
   // OPERACAO não vê sidebar. O retorno antecipado fica DEPOIS de todos os hooks (regra dos hooks do React).
   if (user?.role === "OPERACAO") {
@@ -483,7 +485,7 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
 
           {/* ===================== OPERAÇÃO ===================== */}
-          {(isAdmin || user?.idEstacao === 1) && (
+          {(isAdmin || user?.idEstacao === 1 || user?.idEstacao === 6) && (
             <div className="mt-2">
               <button
                 onClick={() => setOperacaoOpen(!operacaoOpen)}
@@ -507,7 +509,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 }`}
               >
                 <div className="ml-8 mt-1 space-y-1">
-                  {/* ── Sub-nível: LABEL ── */}
+                  {/* ── Sub-nível: LABEL (só estação 1) ── */}
+                  {(isAdmin || user?.idEstacao === 1) && (
+                  <>
                   <button
                     onClick={() => setLabelOpen(!labelOpen)}
                     className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition ${
@@ -583,6 +587,38 @@ export default function Sidebar({ isOpen, onClose }) {
                         label="Sinergia Interna"
                         active={location.pathname.startsWith("/operacao/label/sinergias")}
                         onClick={() => go("/operacao/label/sinergias")}
+                      />
+                    </div>
+                  </div>
+                  </>
+                  )}
+
+                  {/* ── Sub-nível: RECEBIMENTO (estações 1 e 6) ── */}
+                  <button
+                    onClick={() => setRecebimentoOpen(!recebimentoOpen)}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition ${
+                      location.pathname.startsWith("/operacao/recebimento")
+                        ? "bg-surface-2 text-page"
+                        : "text-muted hover:bg-surface-3"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Truck size={15} />
+                      <span>Recebimento</span>
+                    </div>
+                    <ChevronDown size={14} className={`transition-transform duration-200 ${recebimentoOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      recebimentoOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="ml-6 mt-1 space-y-1">
+                      <SidebarSubItem
+                        label="Transbordo"
+                        active={location.pathname === "/operacao/recebimento/transbordo"}
+                        onClick={() => go("/operacao/recebimento/transbordo")}
                       />
                     </div>
                   </div>

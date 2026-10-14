@@ -57,6 +57,8 @@ const absenteismoRoutes     = require("./absenteismo.routes")
 const esteirasRoutes        = require("./esteiras.routes")
 const mapaOperacionalRoutes = require("./mapaOperacional.routes")
 const docasRoutes           = require("./docas.routes")
+const transbordoRoutes      = require("./transbordo.routes")
+const spxIngestRoutes       = require("./spxIngest.routes")
 const timesRoutes           = require("./times.routes")
 const sinergiaInternaRoutes = require("./sinergiaInterna.routes")
 const solicitacaoTreinamentoRoutes = require("./solicitacaoTreinamento.routes")
@@ -141,6 +143,9 @@ router.get(
   consultaFolgasLimiter,
   require("../controllers/consultaFolgas.controller").consultarFolgas
 );
+
+// 🔓 ENTRADA DE DADOS DO SPX (userscripts do Tampermonkey) — sem login, protegida por token (spxIngestAuth)
+router.use("/spx-ingest", spxIngestRoutes);
 
 /* =========================
    🔐 ROTAS PROTEGIDAS
@@ -240,6 +245,7 @@ router.use("/dashboard/absenteismo",  reportLimiter, absenteismoRoutes)
 router.use("/esteiras",               esteirasRoutes)
 router.use("/mapa-operacional",       mapaOperacionalRoutes)
 router.use("/docas",                  docasRoutes)
+router.use("/transbordo",             transbordoRoutes)
 router.use("/times",                  timesRoutes)
 router.use("/sinergias-internas",     sinergiaInternaRoutes)
 router.use("/solicitacoes-treinamento", solicitacaoTreinamentoRoutes)

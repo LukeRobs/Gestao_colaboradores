@@ -97,6 +97,8 @@ import FolgaDominicalPage from "./pages/folgaDominical/folgaDominical";
 /* ================= PROTEÇÃO ================= */
 import ProtectedRoute from "./routes/ProtectedRoute";
 import LabelRoute from "./routes/LabelRoute";
+import OperacaoRoute from "./routes/OperacaoRoute";
+import Transbordo from "./pages/recebimento/Transbordo";
 import ReportRoute from "./routes/report";
 
 export default function App() {
@@ -199,6 +201,15 @@ export default function App() {
           <LabelRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]}>
             <FullD1 />
           </LabelRoute>
+        }
+      />
+
+      <Route
+        path="/operacao/recebimento/transbordo"
+        element={
+          <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
+            <Transbordo />
+          </OperacaoRoute>
         }
       />
 

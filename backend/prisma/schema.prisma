@@ -204,6 +204,8 @@ model Estacao {
   sheetsProducaoOnTimeId          String?                       @map("sheets_producao_ontime_id") @db.VarChar(200)
   sheetsProducaoOnTimeAba         String?                       @map("sheets_producao_ontime_aba") @db.VarChar(100)
   sheetsPresencaId                String?                       @map("sheets_presenca_id") @db.VarChar(200)
+  // station_id do SPX/Tampermonkey desta estação (liga os envios dos userscripts à estação do COPEOPLE)
+  spxStationId                    Int?                          @unique @map("spx_station_id")
   emailRh                         String[]                      @default([]) @map("email_rh")
   seatalkGroupId                  String?                       @map("seatalk_group_id") @db.VarChar(200)
   seatalkGroupIdPacking           String?                       @map("seatalk_group_id_packing") @db.VarChar(200)
@@ -1245,6 +1247,66 @@ model MapaAlocacaoAgendada {
 
   @@index([idEstacao, diaOperacional, turno, status], map: "idx_mapa_alocacao_agendada_turno")
   @@map("mapa_alocacao_agendada")
+}
+
+// TOs de transbordo (cd_flag) enviadas pelo Tampermonkey, por estação.
+model SpxTransbordoCd {
+  id                  Int       @id @default(autoincrement())
+  idEstacao           Int       @map("id_estacao")
+  toNumber            String    @map("to_number") @db.VarChar(60)
+  packTypeName        String?   @map("pack_type_name") @db.VarChar(80)
+  parcels             Int       @default(0)
+  weightG             Int       @default(0) @map("weight_g")
+  loadedStationName   String?   @map("loaded_station_name") @db.VarChar(150)
+  unloadedStationName String?   @map("unloaded_station_name") @db.VarChar(150)
+  dockNumber          String?   @map("dock_number") @db.VarChar(80)
+  operator            String?   @db.VarChar(150)
+  tripId              BigInt?   @map("trip_id")
+  tripNumber          String?   @map("trip_number") @db.VarChar(80)
+  vehicleNumber       String?   @map("vehicle_number") @db.VarChar(30)
+  driverName          String?   @map("driver_name") @db.VarChar(150)
+  abnormalLabels      String[]  @default([]) @map("abnormal_labels")
+  unloadedAt          DateTime? @map("unloaded_at")
+  firstSeenAt         DateTime  @default(now()) @map("first_seen_at")
+  updatedAt           DateTime  @default(now()) @map("updated_at")
+
+  @@unique([idEstacao, toNumber], map: "uq_spx_transbordo_cd_to")
+  @@index([idEstacao, unloadedAt], map: "idx_spx_transbordo_cd_data")
+  @@map("spx_transbordo_cd")
+}
+
+// Viagens em trânsito (foto única por estação, substituída a cada envio).
+model SpxTripLista {
+  idEstacao  Int      @id @map("id_estacao")
+  payload    Json
+  fetchedAt  BigInt?  @map("fetched_at")
+  recebidoEm DateTime @default(now()) @map("recebido_em")
+
+  @@map("spx_trip_lista")
+}
+
+// Histórico de viagens (acumula por trip_number).
+model SpxTripHistorico {
+  idEstacao    Int      @map("id_estacao")
+  tripNumber   String   @map("trip_number") @db.VarChar(80)
+  payload      Json
+  atualizadoEm DateTime @default(now()) @map("atualizado_em")
+
+  @@id([idEstacao, tripNumber])
+  @@index([atualizadoEm], map: "idx_spx_trip_historico_atualizado")
+  @@map("spx_trip_historico")
+}
+
+// Última sincronização recebida por estação e módulo.
+model SpxIngestStatus {
+  idEstacao         Int      @map("id_estacao")
+  modulo            String   @db.VarChar(20)
+  ultimoFetchedAt   BigInt?  @map("ultimo_fetched_at")
+  ultimoRecebimento DateTime @default(now()) @map("ultimo_recebimento")
+  ultimoTotal       Int      @default(0) @map("ultimo_total")
+
+  @@id([idEstacao, modulo])
+  @@map("spx_ingest_status")
 }
 
 model MapaDocaHistorico {
