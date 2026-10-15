@@ -40,7 +40,7 @@ async function registrarDaFila(idEstacao) {
       chegou: i.chegouSec || 0,
       entrou: i.fila?.entrouSec || 0,
       espera: i.fila?.esperaMin || 0,
-      pacotes_fila: i.fila?.pacotes || 0,
+      pacotes_fila: i.pacotes || 0,
       carregados: i.detalhe.origem?.carregados || 0,
       descarregados: i.detalhe.destino?.descarregados || 0,
       doca_atribuida: i.fila?.docaAtribuida ?? null,

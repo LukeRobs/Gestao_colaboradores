@@ -49,6 +49,9 @@ function montarItem(trip, q) {
     agencia: txt(trip.agency_name) || txt(det.agency_name),
     origem: txt(trip.pre_station_name) || txt(origemEst?.station_name),
     tripName: txt(trip.trip_name),
+    // Pacotes da carga: a viagem informa o total (order_loaded_quantity). A fila só tem o número enquanto o veículo
+    // está nela e some quando ele entra na doca, então vale como segunda opção.
+    pacotes: num(trip.order_loaded_quantity) || num(q?.order_quantity) || num(trip.order_inbound_quantity),
     etaSec: num(dest?.eta) || null,
     chegouSec: num(dest?.ata) || null,
     statusLh: dest?.trip_station_status ?? null,

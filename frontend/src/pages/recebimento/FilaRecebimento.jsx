@@ -27,7 +27,7 @@ const COLUNAS = [
   { chave: "chegada", rotulo: "Desde a chegada", valor: (i) => (i.chegouSec ? -i.chegouSec : -1e15) },
   { chave: "espera", rotulo: "Espera", valor: (i) => i.fila?.esperaMin ?? -1 },
   { chave: "emEspera", rotulo: "Em espera desde", valor: (i) => i.fila?.emEsperaDesdeSec ?? 0 },
-  { chave: "pacotes", rotulo: "Pacotes pend.", direita: true, valor: (i) => i.fila?.pacotes ?? 0 },
+  { chave: "pacotes", rotulo: "Pacotes", direita: true, valor: (i) => i.pacotes ?? 0 },
   { chave: "motorista", rotulo: "Motorista", valor: (i) => (i.motorista || "").toLowerCase() },
   { chave: "docaAtribuida", rotulo: "Doca atrib.", valor: (i) => (i.fila?.docaAtribuida || "").toLowerCase() },
   { chave: "docaOcupada", rotulo: "Doca ocup.", valor: (i) => (i.fila?.docaOcupada || "").toLowerCase() },
@@ -127,7 +127,7 @@ function Detalhe({ i, agora, onClose }) {
           </dl>
 
           <div className="space-y-2">
-            <BlocoEstacao titulo="Origem" e={d.origem} carga={{ rotulo: "TOs carregadas", valor: d.origem?.carregados || i.fila?.pacotes || 0 }} />
+            <BlocoEstacao titulo="Origem" e={d.origem} carga={{ rotulo: "TOs carregadas", valor: d.origem?.carregados || 0 }} />
             <BlocoEstacao titulo="Destino (aqui)" e={d.destino} carga={{ rotulo: "TOs descarregadas", valor: d.destino?.descarregados || 0 }} />
           </div>
 
@@ -232,7 +232,7 @@ export default function FilaRecebimento() {
   const kpis = useMemo(() => {
     const pendentes = itens.filter((i) => i.fila?.status === 1).length;
     const emEspera = itens.filter((i) => i.fila?.status === 5).length;
-    const pacotes = itens.reduce((s, i) => s + (i.fila?.pacotes || 0), 0);
+    const pacotes = itens.reduce((s, i) => s + (i.pacotes || 0), 0);
     const maior = itens.reduce((melhor, i) => (i.chegouSec && (!melhor || i.chegouSec < melhor.chegouSec) ? i : melhor), null);
     return { pendentes, emEspera, pacotes, maior };
   }, [itens]);
@@ -305,7 +305,7 @@ export default function FilaRecebimento() {
               <FaixaIndicadores
                 rotulo="Indicadores da fila"
                 itens={[
-                  { rotulo: "Viagens ativas", valor: formatNumero(itens.length), destaque: true, apoio: `${formatNumero(kpis.pacotes)} pacotes pendentes` },
+                  { rotulo: "Viagens ativas", valor: formatNumero(itens.length), destaque: true, apoio: `${formatNumero(kpis.pacotes)} pacotes nas viagens ativas` },
                   { rotulo: "Em trânsito", valor: formatNumero(contagem.TRANSITO), cor: "#F59E0B", apoio: "a caminho" },
                   { rotulo: "Descarregando", valor: formatNumero(contagem.DESCARREGANDO), cor: "#22C55E", apoio: "na doca" },
                   { rotulo: "Pendentes na fila", valor: formatNumero(kpis.pendentes), cor: "#8B5CF6", apoio: "aguardando doca" },
@@ -408,7 +408,7 @@ export default function FilaRecebimento() {
                                 {i.fila?.esperaMin ? fmtDuracao(i.fila.esperaMin) : <span className="text-muted font-normal">—</span>}
                               </td>
                               <td className="px-3 py-3 whitespace-nowrap tabular-nums text-muted">{fmtHora(i.fila?.emEsperaDesdeSec)}</td>
-                              <td className="px-3 py-3 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(i.fila?.pacotes || 0)}</td>
+                              <td className="px-3 py-3 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(i.pacotes || 0)}</td>
                               <td className="px-3 py-3 font-medium"><div className="max-w-[190px] truncate" title={i.motorista || undefined}>{i.motorista || "—"}</div></td>
                               <td className="px-3 py-3 whitespace-nowrap font-medium text-[#8B5CF6]">{i.fila?.docaAtribuida || "—"}</td>
                               <td className="px-3 py-3 whitespace-nowrap font-medium text-[#22C55E]">{i.fila?.docaOcupada || "—"}</td>
