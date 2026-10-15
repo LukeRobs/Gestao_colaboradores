@@ -6,37 +6,15 @@ import MainLayout from "../../components/MainLayout";
 import { AbasSegmentadas, Aviso, EstadoVazio, Esqueleto, FaixaIndicadores, PageHeader } from "../../components/mapaOperacional/ui";
 import { BTN_SECUNDARIO, FOCO, INPUT, formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { FilaRecebimentoAPI } from "../../services/filaRecebimento";
+import { FUSO, corEspera, fmtDuracao, fmtHora, fmtPeso } from "./filaUtils";
+import { BlocoEstacao, Campo, ComposicaoCarga, Pilula } from "./FilaPecas";
 
 const POLL_MS = 15000;
 const ATRASO_MS = 5 * 60 * 1000; // sem sincronizar há mais que isso = dados desatualizados
-const FUSO = "America/Sao_Paulo";
 
 // Status da viagem na estação (trip_station_status) e da fila (queue_status), como o SPX numera.
 const LH_TRANSITO = 50;
 const LH_DESCARREGANDO = 60;
-
-const fmtHora = (sec) =>
-  sec ? new Date(sec * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: FUSO }) : "—";
-
-function fmtDuracao(min) {
-  if (!min || min <= 0) return "—";
-  if (min < 60) return `${min}min`;
-  return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}m`;
-}
-
-function fmtPeso(g) {
-  if (!g) return "—";
-  const kg = g / 1000;
-  return kg >= 1000 ? `${(kg / 1000).toFixed(2).replace(".", ",")} t` : `${kg.toFixed(1).replace(".", ",")} kg`;
-}
-
-// Tempo parado esperando: verde até 30 min, depois amarelo, laranja (1h) e vermelho (2h).
-function corEspera(min) {
-  if (!min || min < 30) return "#22C55E";
-  if (min < 60) return "#F59E0B";
-  if (min < 120) return "#FA4C00";
-  return "#FF453A";
-}
 
 const minDesdeChegada = (i, agora) => (i.chegouSec ? Math.max(0, Math.floor((agora / 1000 - i.chegouSec) / 60)) : null);
 
@@ -65,14 +43,6 @@ function ordenar(lista, chave, asc) {
     const r = typeof va === "number" ? va - vb : va.localeCompare(vb);
     return asc ? r : -r;
   });
-}
-
-function Pilula({ cor, icone, children }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold whitespace-nowrap" style={{ color: cor, background: `${cor}1A`, borderColor: `${cor}40` }}>
-      {icone} {children}
-    </span>
-  );
 }
 
 function PilulaLh({ status }) {
@@ -105,33 +75,6 @@ function StatusSincronizacao({ estado, detalhe, proxima }) {
   );
 }
 
-function Campo({ rotulo, children, mono }) {
-  return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-wide text-muted">{rotulo}</dt>
-      <dd className={`mt-0.5 text-sm font-medium ${mono ? "tabular-nums" : ""}`}>{children || "—"}</dd>
-    </div>
-  );
-}
-
-function BlocoEstacao({ titulo, e, carga }) {
-  return (
-    <div className="rounded-xl border border-default bg-surface-2 p-3">
-      <p className="text-[11px] uppercase tracking-wide text-muted">{titulo}</p>
-      <p className="mt-0.5 text-sm font-semibold break-words">{e?.nome || "—"}</p>
-      {e && (
-        <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
-          <div><dt className="text-muted">Chegada</dt><dd className="font-medium tabular-nums">{fmtHora(e.ata)}</dd></div>
-          <div><dt className="text-muted">Saída</dt><dd className="font-medium tabular-nums">{fmtHora(e.atd)}</dd></div>
-          <div><dt className="text-muted">{carga.rotulo}</dt><dd className="font-medium tabular-nums">{formatNumero(carga.valor)}</dd></div>
-        </dl>
-      )}
-    </div>
-  );
-}
-
-const TIPOS_CARGA = ["Saca", "Scuttle", "Volumoso"];
-
 function Detalhe({ i, agora, onClose }) {
   useEffect(() => {
     const aoTeclar = (e) => e.key === "Escape" && onClose();
@@ -141,8 +84,6 @@ function Detalhe({ i, agora, onClose }) {
 
   const d = i.detalhe;
   const min = minDesdeChegada(i, agora);
-  const comp = d.composicao;
-  const tipos = comp ? [...new Set([...TIPOS_CARGA, ...Object.keys(comp.porTipo)])].filter((t) => comp.porTipo[t]) : [];
   const passos = [
     { rotulo: "Início carga", sec: d.origem?.inicioCarga },
     { rotulo: "Fim carga", sec: d.origem?.fimCarga },
@@ -186,8 +127,8 @@ function Detalhe({ i, agora, onClose }) {
           </dl>
 
           <div className="space-y-2">
-            <BlocoEstacao titulo="Origem" e={d.origem} carga={{ rotulo: "Carregados", valor: d.origem?.carregados || i.fila?.pacotes || 0 }} />
-            <BlocoEstacao titulo="Destino (aqui)" e={d.destino} carga={{ rotulo: "Descarregados", valor: d.destino?.descarregados || 0 }} />
+            <BlocoEstacao titulo="Origem" e={d.origem} carga={{ rotulo: "TOs carregadas", valor: d.origem?.carregados || i.fila?.pacotes || 0 }} />
+            <BlocoEstacao titulo="Destino (aqui)" e={d.destino} carga={{ rotulo: "TOs descarregadas", valor: d.destino?.descarregados || 0 }} />
           </div>
 
           {(i.fila?.docaAtribuida || i.fila?.docaOcupada) && (
@@ -197,26 +138,7 @@ function Detalhe({ i, agora, onClose }) {
             </dl>
           )}
 
-          {tipos.length > 0 && (
-            <section aria-label="Composição da carga">
-              <h3 className="text-xs uppercase tracking-wide text-muted mb-2">Composição da carga · {formatNumero(comp.total)} TOs</h3>
-              <ul className="space-y-2">
-                {tipos.map((t) => {
-                  const q = comp.porTipo[t];
-                  const pct = comp.total ? Math.round((q / comp.total) * 100) : 0;
-                  return (
-                    <li key={t} className="flex items-center gap-3 text-xs">
-                      <span className="w-20 shrink-0 text-muted">{t}</span>
-                      <div className="flex-1 h-1.5 rounded bg-surface-2 overflow-hidden">
-                        <div className="h-full rounded bg-[#FA4C00]" style={{ width: `${Math.max(3, pct)}%` }} />
-                      </div>
-                      <span className="w-20 text-right tabular-nums font-semibold">{formatNumero(q)} · {pct}%</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
+          <ComposicaoCarga comp={d.composicao} />
 
           <section aria-label="Operação na origem">
             <h3 className="text-xs uppercase tracking-wide text-muted mb-2">Operação na origem</h3>

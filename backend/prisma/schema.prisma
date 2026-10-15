@@ -1295,6 +1295,43 @@ model SpxQueueLista {
   @@map("spx_queue_lista")
 }
 
+// Veículos recebidos: registro definitivo de cada viagem que chegou na estação (a fila do SPX esquece o veículo ao finalizar).
+model SpxVeiculoRecebido {
+  idEstacao       Int       @map("id_estacao")
+  tripNumber      String    @map("trip_number") @db.VarChar(80)
+  placa           String?   @db.VarChar(30)
+  tipoVeiculo     String?   @map("tipo_veiculo") @db.VarChar(80)
+  motorista       String?   @db.VarChar(150)
+  agencia         String?   @db.VarChar(150)
+  origem          String?   @db.VarChar(150)
+  tripName        String?   @map("trip_name") @db.VarChar(200)
+  queueNumber     String?   @map("queue_number") @db.VarChar(40)
+  etaEm           DateTime? @map("eta_em")
+  chegouEm        DateTime? @map("chegou_em")
+  entrouFilaEm    DateTime? @map("entrou_fila_em")
+  descargaFimEm   DateTime? @map("descarga_fim_em")
+  esperaMaxMin    Int       @default(0) @map("espera_max_min")
+  pacotesFila     Int       @default(0) @map("pacotes_fila")
+  carregados      Int       @default(0)
+  descarregados   Int       @default(0)
+  esperados       Int       @default(0)
+  docaAtribuida   String?   @map("doca_atribuida") @db.VarChar(80)
+  docaOcupada     String?   @map("doca_ocupada") @db.VarChar(80)
+  pesoG           Int?      @map("peso_g")
+  composicao      Json?
+  detalhe         Json?
+  tripStatus      Int?      @map("trip_status")
+  finalizadoEm    DateTime? @map("finalizado_em")
+  primeiroVistoEm DateTime  @default(now()) @map("primeiro_visto_em")
+  ultimoVistoEm   DateTime  @default(now()) @map("ultimo_visto_em")
+  atualizadoEm    DateTime  @default(now()) @map("atualizado_em")
+
+  @@id([idEstacao, tripNumber])
+  @@index([idEstacao, chegouEm], map: "idx_spx_veiculo_recebido_chegada")
+  @@index([idEstacao, finalizadoEm], map: "idx_spx_veiculo_recebido_ativos")
+  @@map("spx_veiculo_recebido")
+}
+
 // Histórico de viagens (acumula por trip_number).
 model SpxTripHistorico {
   idEstacao    Int      @map("id_estacao")

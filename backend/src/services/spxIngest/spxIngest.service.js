@@ -1,4 +1,5 @@
 const { prisma } = require("../../config/database");
+const veiculosRecebidos = require("./veiculosRecebidos.service");
 
 /** Dados que os userscripts do SPX enviam ao COPEOPLE: TOs de transbordo (CD) e viagens. */
 
@@ -132,6 +133,8 @@ async function receberQueueList(idEstacao, corpo) {
     update: { payload, fetchedAt, recebidoEm: new Date() },
   });
   await registrarStatus(idEstacao, MODULO.QUEUE_LIST, fetchedAt, lista.length);
+  // Guarda o histórico dos veículos recebidos; se falhar, a fila ao vivo continua funcionando.
+  await veiculosRecebidos.registrarDaFila(idEstacao).catch((e) => console.error("❌ [SPX-INGEST] veículos recebidos (fila):", e.message));
   return { total: lista.length };
 }
 
@@ -155,6 +158,7 @@ async function receberTripHistory(idEstacao, corpo) {
   await prisma.$executeRaw`DELETE FROM spx_trip_historico WHERE id_estacao = ${idEstacao} AND atualizado_em < now() - interval '8 days'`;
 
   await registrarStatus(idEstacao, MODULO.TRIP_HISTORY, corpo.fetchedAt, viagens.length);
+  await veiculosRecebidos.registrarDoHistorico(idEstacao, corpo.station_id, corpo.list).catch((e) => console.error("❌ [SPX-INGEST] veículos recebidos (histórico):", e.message));
   return { total: await prisma.spxTripHistorico.count({ where: { idEstacao } }) };
 }
 
