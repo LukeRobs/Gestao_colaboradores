@@ -55,4 +55,4 @@ Os dados atuais (328 MB) cabem no limite gratuito do Neon (~512 MB). Nenhuma inf
 
 ## Conclusão
 
-Vamos operar a custo zero, com o sistema funcionando normalmente, aceitando limites de desempenho e de espaço. Se o uso crescer além desses limites, reavaliaremos um plano pago de menor custo.
+Vamos operar a custo zero, com o sistema funcionando normalmente, aceitando limites de desempenho e de espaço.

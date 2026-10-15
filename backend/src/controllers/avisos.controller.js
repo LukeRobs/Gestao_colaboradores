@@ -1,5 +1,6 @@
 const { prisma } = require("../config/database");
 const { successResponse, errorResponse, notFoundResponse } = require("../utils/response");
+const { notificarAvisoLabel } = require("../services/seatalkLabel.service");
 
 /* =====================================================
    AVISOS DA LABEL (estilo Waze)
@@ -131,6 +132,8 @@ const criarAviso = async (req, res) => {
         expiraEm,
       },
     });
+    // Report no grupo do Seatalk só na ocorrência nova (renovar "ainda acontece" não repete). Não espera: se falhar, só loga.
+    notificarAvisoLabel(criado);
     return successResponse(res, { ...formatar(criado), renovado: false }, "Aviso criado", 201);
   } catch (err) {
     console.error("❌ Erro ao criar aviso:", err);

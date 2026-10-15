@@ -237,7 +237,40 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
   }
 }
 
+/**
+ * Envia uma mensagem de texto (markdown) para um grupo do Seatalk com o bot de relatórios.
+ * Best-effort: quem chama decide se erro derruba o fluxo (nos avisos da Label, só loga).
+ * @param {string} groupId - ID do grupo
+ * @param {string} content - Texto (format 1 = markdown, 2 = texto puro)
+ * @param {object} [options]
+ * @param {1|2} [options.format]
+ */
+async function sendTextToGroup(groupId, content, options = {}) {
+  const accessToken = await getAccessToken()
+
+  const response = await axios.post(
+    "https://openapi.seatalk.io/messaging/v2/group_chat",
+    {
+      group_id: groupId,
+      message: { tag: "text", text: { format: options.format || 1, content } },
+    },
+    {
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      timeout: 30000,
+    }
+  )
+
+  if (response.data.code !== 0) {
+    const error = createSeatalkError(response.data)
+    console.error("❌ [SEATALK] Erro ao enviar texto:", error.message, "-", getSolution(response.data.code))
+    throw error
+  }
+
+  return { success: true, data: response.data }
+}
+
 module.exports = {
   sendImageToGroup,
+  sendTextToGroup,
   getAccessToken, // Exportar para testes
 }
