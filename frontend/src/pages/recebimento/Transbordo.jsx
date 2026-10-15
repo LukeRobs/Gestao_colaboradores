@@ -465,7 +465,7 @@ export default function Transbordo() {
                     acao={<button type="button" onClick={limpar} className={`${BTN_SECUNDARIO} h-10 mt-2`}>Limpar filtros</button>}
                   />
                 ) : (
-                  <div className="overflow-auto max-h-[640px]">
+                  <div className="overflow-auto max-h-[640px] scroll-tema">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-surface-2">
                         <tr className="text-xs text-muted uppercase tracking-wide">

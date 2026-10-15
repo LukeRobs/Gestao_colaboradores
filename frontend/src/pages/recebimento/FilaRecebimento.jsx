@@ -41,8 +41,7 @@ function corEspera(min) {
 const minDesdeChegada = (i, agora) => (i.chegouSec ? Math.max(0, Math.floor((agora / 1000 - i.chegouSec) / 60)) : null);
 
 const COLUNAS = [
-  { chave: "placa", rotulo: "Placa", valor: (i) => (i.placa || "").toLowerCase() },
-  { chave: "tipoVeiculo", rotulo: "Veículo", valor: (i) => (i.tipoVeiculo || "").toLowerCase() },
+  { chave: "placa", rotulo: "Placa / veículo", valor: (i) => (i.placa || "").toLowerCase() },
   { chave: "tripNumber", rotulo: "LH", valor: (i) => (i.tripNumber || "").toLowerCase() },
   { chave: "origem", rotulo: "Origem", valor: (i) => (i.origem || "").toLowerCase() },
   { chave: "etaSec", rotulo: "ETA", valor: (i) => i.etaSec ?? 0 },
@@ -445,14 +444,14 @@ export default function FilaRecebimento() {
                     acao={<button type="button" onClick={limpar} className={`${BTN_SECUNDARIO} h-10 mt-2`}>Limpar filtros</button>}
                   />
                 ) : (
-                  <div className="overflow-auto max-h-[680px]">
+                  <div className="overflow-auto max-h-[680px] scroll-tema">
                     <table className="w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-surface-2">
                         <tr className="text-xs text-muted uppercase tracking-wide">
                           {COLUNAS.map((c) => {
                             const ativa = ordem.chave === c.chave;
                             return (
-                              <th key={c.chave} scope="col" aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-4 py-3 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
+                              <th key={c.chave} scope="col" aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-3 py-3 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
                                 <button type="button" onClick={() => alternarOrdem(c.chave)} className={`inline-flex items-center gap-1 uppercase tracking-wide cursor-pointer hover:text-page ${ativa ? "text-[#FA4C00]" : ""} ${FOCO}`}>
                                   {c.rotulo}
                                   {ativa && (ordem.asc ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
@@ -473,24 +472,26 @@ export default function FilaRecebimento() {
                               onKeyDown={(e) => e.key === "Enter" && setSelecionado(i.tripNumber)}
                               className={`cursor-pointer hover:bg-surface-2 transition-colors ${FOCO}`}
                             >
-                              <td className="px-4 py-3 whitespace-nowrap font-medium tabular-nums">{i.placa || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-muted">{i.tipoVeiculo || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium tabular-nums text-[#FA4C00]">{i.tripNumber}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-muted">{i.origem || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap tabular-nums">{fmtHora(i.etaSec)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap tabular-nums font-semibold" style={min != null ? { color: corEspera(min) } : undefined}>
+                              <td className="px-3 py-3 whitespace-nowrap">
+                                <span className="block font-medium tabular-nums">{i.placa || "—"}</span>
+                                <span className="block text-xs text-muted">{i.tipoVeiculo || "—"}</span>
+                              </td>
+                              <td className="px-3 py-3 whitespace-nowrap font-medium tabular-nums text-[#FA4C00]">{i.tripNumber}</td>
+                              <td className="px-3 py-3 text-muted"><div className="max-w-[170px] truncate" title={i.origem || undefined}>{i.origem || "—"}</div></td>
+                              <td className="px-3 py-3 whitespace-nowrap tabular-nums">{fmtHora(i.etaSec)}</td>
+                              <td className="px-3 py-3 whitespace-nowrap tabular-nums font-semibold" style={min != null ? { color: corEspera(min) } : undefined}>
                                 {min != null ? fmtDuracao(min) : <span className="text-muted font-normal">—</span>}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap tabular-nums font-semibold" style={i.fila?.esperaMin ? { color: corEspera(i.fila.esperaMin) } : undefined}>
+                              <td className="px-3 py-3 whitespace-nowrap tabular-nums font-semibold" style={i.fila?.esperaMin ? { color: corEspera(i.fila.esperaMin) } : undefined}>
                                 {i.fila?.esperaMin ? fmtDuracao(i.fila.esperaMin) : <span className="text-muted font-normal">—</span>}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted">{fmtHora(i.fila?.emEsperaDesdeSec)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(i.fila?.pacotes || 0)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium">{i.motorista || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium text-[#8B5CF6]">{i.fila?.docaAtribuida || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium text-[#22C55E]">{i.fila?.docaOcupada || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap"><PilulaLh status={i.statusLh} /></td>
-                              <td className="px-4 py-3 whitespace-nowrap"><PilulaFila status={i.fila?.status} /></td>
+                              <td className="px-3 py-3 whitespace-nowrap tabular-nums text-muted">{fmtHora(i.fila?.emEsperaDesdeSec)}</td>
+                              <td className="px-3 py-3 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(i.fila?.pacotes || 0)}</td>
+                              <td className="px-3 py-3 font-medium"><div className="max-w-[190px] truncate" title={i.motorista || undefined}>{i.motorista || "—"}</div></td>
+                              <td className="px-3 py-3 whitespace-nowrap font-medium text-[#8B5CF6]">{i.fila?.docaAtribuida || "—"}</td>
+                              <td className="px-3 py-3 whitespace-nowrap font-medium text-[#22C55E]">{i.fila?.docaOcupada || "—"}</td>
+                              <td className="px-3 py-3 whitespace-nowrap"><PilulaLh status={i.statusLh} /></td>
+                              <td className="px-3 py-3 whitespace-nowrap"><PilulaFila status={i.fila?.status} /></td>
                             </tr>
                           );
                         })}

@@ -116,6 +116,25 @@
 }
 
 /* =====================================================
+   SCROLLBAR NO TEMA — fina, com as cores das bordas.
+   Sem isso o navegador desenha a barra clara (branca) em cima do tema escuro.
+===================================================== */
+.scroll-tema {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-2) transparent;
+}
+.scroll-tema::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-tema::-webkit-scrollbar-track { background: transparent; }
+.scroll-tema::-webkit-scrollbar-thumb {
+  background: var(--color-border-2);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scroll-tema::-webkit-scrollbar-thumb:hover { background: var(--color-subtle); background-clip: padding-box; }
+.scroll-tema::-webkit-scrollbar-corner { background: transparent; }
+
+/* =====================================================
    EXPORT MODE
 ===================================================== */
 body.exporting-report .export-hide,
