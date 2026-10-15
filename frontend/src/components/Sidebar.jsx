@@ -611,7 +611,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
                   <div
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      recebimentoOpen ? "max-h-52 opacity-100" : "max-h-0 opacity-0"
+                      recebimentoOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
                     }`}
                   >
                     <div className="ml-6 mt-1 space-y-1">
@@ -629,6 +629,21 @@ export default function Sidebar({ isOpen, onClose }) {
                         label="Veículos recebidos"
                         active={location.pathname === "/operacao/recebimento/veiculos-recebidos"}
                         onClick={() => go("/operacao/recebimento/veiculos-recebidos")}
+                      />
+                      <SidebarSubItem
+                        label="Previsão de recebimento"
+                        active={location.pathname === "/operacao/recebimento/previsao"}
+                        onClick={() => go("/operacao/recebimento/previsao")}
+                      />
+                      <SidebarSubItem
+                        label="Viagens"
+                        active={location.pathname === "/operacao/recebimento/viagens"}
+                        onClick={() => go("/operacao/recebimento/viagens")}
+                      />
+                      <SidebarSubItem
+                        label="Mapa da frota"
+                        active={location.pathname === "/operacao/recebimento/mapa"}
+                        onClick={() => go("/operacao/recebimento/mapa")}
                       />
                     </div>
                   </div>

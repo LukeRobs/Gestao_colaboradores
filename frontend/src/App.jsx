@@ -101,6 +101,9 @@ import OperacaoRoute from "./routes/OperacaoRoute";
 import Transbordo from "./pages/recebimento/Transbordo";
 import FilaRecebimento from "./pages/recebimento/FilaRecebimento";
 import VeiculosRecebidos from "./pages/recebimento/VeiculosRecebidos";
+import PrevisaoRecebimento from "./pages/recebimento/PrevisaoRecebimento";
+import ViagensRecebimento from "./pages/recebimento/ViagensRecebimento";
+import MapaFrota from "./pages/recebimento/MapaFrota";
 import ReportRoute from "./routes/report";
 
 export default function App() {
@@ -229,6 +232,33 @@ export default function App() {
         element={
           <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
             <VeiculosRecebidos />
+          </OperacaoRoute>
+        }
+      />
+
+      <Route
+        path="/operacao/recebimento/previsao"
+        element={
+          <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
+            <PrevisaoRecebimento />
+          </OperacaoRoute>
+        }
+      />
+
+      <Route
+        path="/operacao/recebimento/viagens"
+        element={
+          <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
+            <ViagensRecebimento />
+          </OperacaoRoute>
+        }
+      />
+
+      <Route
+        path="/operacao/recebimento/mapa"
+        element={
+          <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
+            <MapaFrota />
           </OperacaoRoute>
         }
       />
