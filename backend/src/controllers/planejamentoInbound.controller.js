@@ -4,7 +4,7 @@ const { ESTACOES, obterViagem } = require("../services/planejamentoInbound/viage
 const planejamento = require("../services/planejamentoInbound/previsao.service");
 
 /**
- * Planning Inbound (viagens, previsão de recebimento e mapa da frota), vindo da planilha de monitoramento.
+ * Planning Inbound (viagens, previsão de recebimento e mapa), vindo da planilha de monitoramento.
  * Cada estação vê só as suas viagens: vale o req.dbContext.estacaoId (a do usuário ou a do seletor de estações
  * irmãs) e a planilha só tem as estações mapeadas em ESTACOES (hoje Jaboatão e Recife 04).
  */
@@ -40,4 +40,4 @@ exports.viagem = rota("a viagem", async (req, res, spx) => {
   return d ? successResponse(res, d) : notFoundResponse(res, "Viagem não encontrada");
 });
 
-exports.mapa = rota("o mapa da frota", async (req, res, spx) => successResponse(res, await planejamento.mapa(spx)));
+exports.mapa = rota("o mapa", async (req, res, spx) => successResponse(res, await planejamento.mapa(spx)));

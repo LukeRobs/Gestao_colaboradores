@@ -1,4 +1,4 @@
-// Mapa da frota: Leaflet + OpenStreetMap (gratuito, sem chave). Carregado sob demanda, então só as telas
+// Mapa: Leaflet + OpenStreetMap (gratuito, sem chave). Carregado sob demanda, então só as telas
 // com mapa baixam a biblioteca.
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";

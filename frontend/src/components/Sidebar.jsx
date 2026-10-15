@@ -641,7 +641,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         onClick={() => go("/operacao/recebimento/viagens")}
                       />
                       <SidebarSubItem
-                        label="Mapa da frota"
+                        label="Mapa"
                         active={location.pathname === "/operacao/recebimento/mapa"}
                         onClick={() => go("/operacao/recebimento/mapa")}
                       />

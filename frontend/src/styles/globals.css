@@ -226,7 +226,7 @@ html:not(.dark) .hover\:bg-\[\#3A3A3C\]:hover { background-color: var(--color-su
 html:not(.dark) .bg-\[\#3A3A3C\] { background-color: var(--color-surface-3) !important; }
 
 /* =====================================================
-   MAPA DA FROTA (Leaflet) — marcadores, clusters e popups no tema
+   MAPA (Leaflet) — marcadores, clusters e popups no tema
 ===================================================== */
 .fm-marker { background: transparent; border: 0; }
 /* Mapa escuro: o mesmo mapa claro do OpenStreetMap com as cores invertidas (os marcadores não são afetados). */

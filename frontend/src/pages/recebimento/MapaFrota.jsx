@@ -247,7 +247,7 @@ export default function MapaFrota() {
         <main className="p-4 sm:p-6 xl:p-10 2xl:px-20 space-y-5 max-w-[1800px] mx-auto">
           <PageHeader
             kicker="Operação · Recebimento"
-            titulo="Mapa da frota"
+            titulo="Mapa"
             subtitulo={dados ? `Posição dos veículos pela telemetria · destino ${dados.estacao.nome}` : "Posição dos veículos pela telemetria"}
             atualizadoEm={atualizadoEm}
             atualizando={atualizando}

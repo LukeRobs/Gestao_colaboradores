@@ -1,4 +1,4 @@
-// Constantes e formatação das telas do Planning Inbound (Previsão de recebimento, Viagens e Mapa da frota).
+// Constantes e formatação das telas do Planning Inbound (Previsão de recebimento, Viagens e Mapa).
 import { FUSO, fmtDuracao } from "./filaUtils";
 
 export { FUSO, fmtDuracao };

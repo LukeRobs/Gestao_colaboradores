@@ -2,7 +2,7 @@ const { instanteSP, getTurnoOperacionalAtual } = require("../../utils/turnoMapaO
 const { listarTodas, resumo, observacao, horaSP, iso, ESTACOES } = require("./viagens.service");
 
 /**
- * Previsão de recebimento: cards e curvas de um dia operacional (06:00 às 05:59) da estação, e o mapa da frota.
+ * Previsão de recebimento: cards e curvas de um dia operacional (06:00 às 05:59) da estação, e o mapa.
  * "Previsto" = viagem programada para chegar no dia (pelo ETA planejado), sem as canceladas/no show.
  * "Recebido" = viagem já descarregada. Quem já chegou mas ainda não descarregou conta como pendente ("no pátio").
  */
