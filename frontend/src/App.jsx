@@ -99,6 +99,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import LabelRoute from "./routes/LabelRoute";
 import OperacaoRoute from "./routes/OperacaoRoute";
 import Transbordo from "./pages/recebimento/Transbordo";
+import FilaRecebimento from "./pages/recebimento/FilaRecebimento";
 import ReportRoute from "./routes/report";
 
 export default function App() {
@@ -209,6 +210,15 @@ export default function App() {
         element={
           <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
             <Transbordo />
+          </OperacaoRoute>
+        }
+      />
+
+      <Route
+        path="/operacao/recebimento/fila"
+        element={
+          <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
+            <FilaRecebimento />
           </OperacaoRoute>
         }
       />

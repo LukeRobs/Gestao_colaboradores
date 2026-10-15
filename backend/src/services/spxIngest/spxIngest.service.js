@@ -2,7 +2,7 @@ const { prisma } = require("../../config/database");
 
 /** Dados que os userscripts do SPX enviam ao COPEOPLE: TOs de transbordo (CD) e viagens. */
 
-const MODULO = { TRANSBORDO: "TRANSBORDO", TRIP_LIST: "TRIP_LIST", TRIP_HISTORY: "TRIP_HISTORY" };
+const MODULO = { TRANSBORDO: "TRANSBORDO", TRIP_LIST: "TRIP_LIST", TRIP_HISTORY: "TRIP_HISTORY", QUEUE_LIST: "QUEUE_LIST" };
 const MAX_ITENS = 5000;
 
 /* ---------- estação do SPX -> estação do COPEOPLE ---------- */
@@ -109,6 +109,32 @@ async function receberTripList(idEstacao, corpo) {
   return { total };
 }
 
+/* ---------- Fila de veículos / Queue List (foto única, substituída) ---------- */
+const MAX_FILA = 1000;
+
+async function receberQueueList(idEstacao, corpo) {
+  const lista = (corpo.list || []).slice(0, MAX_FILA);
+  const f = Number(corpo.fetchedAt);
+  const fetchedAt = Number.isFinite(f) && f > 0 ? BigInt(Math.round(f)) : BigInt(Date.now());
+  const payload = {
+    list: lista,
+    total: corpo.total ?? lista.length,
+    pending_total: corpo.pending_total ?? 0,
+    assigned_total: corpo.assigned_total ?? 0,
+    on_hold_total: corpo.on_hold_total ?? 0,
+    occupied_total: corpo.occupied_total ?? 0,
+    fetchedAt: Number(fetchedAt),
+    station_id: corpo.station_id,
+  };
+  await prisma.spxQueueLista.upsert({
+    where: { idEstacao },
+    create: { idEstacao, payload, fetchedAt },
+    update: { payload, fetchedAt, recebidoEm: new Date() },
+  });
+  await registrarStatus(idEstacao, MODULO.QUEUE_LIST, fetchedAt, lista.length);
+  return { total: lista.length };
+}
+
 /* ---------- Histórico de viagens (acumula por trip_number) ---------- */
 async function receberTripHistory(idEstacao, corpo) {
   const porTrip = new Map();
@@ -147,4 +173,4 @@ async function lerTripHistory(idEstacao) {
   return { list: linhas.map((l) => l.payload), fetchedAt: status?.ultimoFetchedAt == null ? null : Number(status.ultimoFetchedAt) };
 }
 
-module.exports = { MODULO, estacaoDoSpx, receberTransbordo, receberTripList, receberTripHistory, lerTripList, lerTripHistory };
+module.exports = { MODULO, estacaoDoSpx, receberTransbordo, receberTripList, receberQueueList, receberTripHistory, lerTripList, lerTripHistory };

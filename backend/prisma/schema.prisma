@@ -1285,6 +1285,16 @@ model SpxTripLista {
   @@map("spx_trip_lista")
 }
 
+// Fila de veículos do SPX (Queue List): foto única por estação, substituída a cada envio.
+model SpxQueueLista {
+  idEstacao  Int      @id @map("id_estacao")
+  payload    Json
+  fetchedAt  BigInt?  @map("fetched_at")
+  recebidoEm DateTime @default(now()) @map("recebido_em")
+
+  @@map("spx_queue_lista")
+}
+
 // Histórico de viagens (acumula por trip_number).
 model SpxTripHistorico {
   idEstacao    Int      @map("id_estacao")

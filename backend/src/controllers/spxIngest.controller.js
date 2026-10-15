@@ -41,6 +41,7 @@ const ler = (leitor, nome) => async (req, res) => {
 
 exports.receberTransbordo = enviar((id, corpo) => svc.receberTransbordo(id, corpo.list, corpo.fetchedAt), "transbordo-cd");
 exports.receberTripList = enviar((id, corpo) => svc.receberTripList(id, corpo), "trip-list");
-exports.receberTripHistory = enviar((id, corpo) => svc.receberTripHistory(id, corpo), "trip-history");
+exports.receberQueueList = enviar((id, corpo) => svc.receberQueueList(id, corpo), "queue-list");
+exports.receberTripHistory =enviar((id, corpo) => svc.receberTripHistory(id, corpo), "trip-history");
 exports.lerTripList = ler(svc.lerTripList, "ler trip-list");
 exports.lerTripHistory = ler(svc.lerTripHistory, "ler trip-history");

@@ -620,6 +620,11 @@ export default function Sidebar({ isOpen, onClose }) {
                         active={location.pathname === "/operacao/recebimento/transbordo"}
                         onClick={() => go("/operacao/recebimento/transbordo")}
                       />
+                      <SidebarSubItem
+                        label="Fila de veículos"
+                        active={location.pathname === "/operacao/recebimento/fila"}
+                        onClick={() => go("/operacao/recebimento/fila")}
+                      />
                     </div>
                   </div>
                 </div>
