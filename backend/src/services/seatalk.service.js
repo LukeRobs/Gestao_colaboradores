@@ -244,15 +244,24 @@ async function sendImageToGroup(imageBase64, groupId, metadata = {}) {
  * @param {string} content - Texto (format 1 = markdown, 2 = texto puro)
  * @param {object} [options]
  * @param {1|2} [options.format]
+ * @param {string[]} [options.mentionEmails] - E-mails a mencionar (@) na mensagem
  */
 async function sendTextToGroup(groupId, content, options = {}) {
   const accessToken = await getAccessToken()
+  const emailsMencao = (options.mentionEmails || []).filter(Boolean)
 
   const response = await axios.post(
     "https://openapi.seatalk.io/messaging/v2/group_chat",
     {
       group_id: groupId,
-      message: { tag: "text", text: { format: options.format || 1, content } },
+      message: {
+        tag: "text",
+        text: {
+          format: options.format || 1,
+          content,
+          ...(emailsMencao.length > 0 ? { mentioned_email_list: emailsMencao } : {}),
+        },
+      },
     },
     {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },

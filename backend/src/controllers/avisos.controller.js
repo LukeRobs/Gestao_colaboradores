@@ -1,6 +1,6 @@
 const { prisma } = require("../config/database");
 const { successResponse, errorResponse, notFoundResponse } = require("../utils/response");
-const { notificarAvisoLabel } = require("../services/seatalkLabel.service");
+const { notificarAvisoLabel, notificarAvisoResolvido } = require("../services/seatalkLabel.service");
 
 /* =====================================================
    AVISOS DA LABEL (estilo Waze)
@@ -148,10 +148,12 @@ const encerrarAviso = async (req, res) => {
     const aviso = await prisma.mapaAviso.findFirst({ where: { idAviso: req.params.idAviso, idEstacao } });
     if (!aviso) return notFoundResponse(res, "Aviso não encontrado");
     if (aviso.encerradoEm) return successResponse(res, null, "Aviso já estava encerrado");
-    await prisma.mapaAviso.update({
+    const encerrado = await prisma.mapaAviso.update({
       where: { idAviso: aviso.idAviso },
       data: { encerradoEm: new Date(), encerradoPorId: req.user?.id ?? null, encerradoPorNome: req.user?.name ?? null },
     });
+    // Avisa o grupo que foi resolvido (só se ainda estava valendo: um aviso que já expirou sozinho não "resolve" nada).
+    if (aviso.expiraEm > new Date()) notificarAvisoResolvido(encerrado);
     return successResponse(res, null, "Aviso encerrado");
   } catch (err) {
     console.error("❌ Erro ao encerrar aviso:", err);
