@@ -27,7 +27,7 @@ const COLUNAS = [
   { chave: "chegada", rotulo: "Desde a chegada", valor: (i) => (i.chegouSec ? -i.chegouSec : -1e15) },
   { chave: "espera", rotulo: "Espera", valor: (i) => i.fila?.esperaMin ?? -1 },
   { chave: "emEspera", rotulo: "Em espera desde", valor: (i) => i.fila?.emEsperaDesdeSec ?? 0 },
-  { chave: "pacotes", rotulo: "Pacotes", direita: true, valor: (i) => i.pacotes ?? 0 },
+  { chave: "pacotes", rotulo: "Pacotes pend.", direita: true, valor: (i) => i.pacotes ?? 0 },
   { chave: "motorista", rotulo: "Motorista", valor: (i) => (i.motorista || "").toLowerCase() },
   { chave: "docaAtribuida", rotulo: "Doca atrib.", valor: (i) => (i.fila?.docaAtribuida || "").toLowerCase() },
   { chave: "docaOcupada", rotulo: "Doca ocup.", valor: (i) => (i.fila?.docaOcupada || "").toLowerCase() },
@@ -305,7 +305,7 @@ export default function FilaRecebimento() {
               <FaixaIndicadores
                 rotulo="Indicadores da fila"
                 itens={[
-                  { rotulo: "Viagens ativas", valor: formatNumero(itens.length), destaque: true, apoio: `${formatNumero(kpis.pacotes)} pacotes nas viagens ativas` },
+                  { rotulo: "Viagens ativas", valor: formatNumero(itens.length), destaque: true, apoio: `${formatNumero(kpis.pacotes)} pacotes pendentes` },
                   { rotulo: "Em trânsito", valor: formatNumero(contagem.TRANSITO), cor: "#F59E0B", apoio: "a caminho" },
                   { rotulo: "Descarregando", valor: formatNumero(contagem.DESCARREGANDO), cor: "#22C55E", apoio: "na doca" },
                   { rotulo: "Pendentes na fila", valor: formatNumero(kpis.pendentes), cor: "#8B5CF6", apoio: "aguardando doca" },
