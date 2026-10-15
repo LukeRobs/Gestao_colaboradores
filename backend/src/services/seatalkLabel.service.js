@@ -100,7 +100,10 @@ function montarTexto(aviso, contexto) {
     `**Horário:** ${horaSP(aviso.criadoEm)}`,
     `**Fica no mapa por:** ${duracaoTexto(duracaoMin)}`,
   ];
-  if (marcados.length > 0) linhas.push("", `**Avisar:** ${marcados.map((p) => p.nome).join(", ")}`);
+  // Em markdown o Seatalk só marca (@) quando a tag está no próprio texto; a lista de e-mails sozinha não funciona.
+  if (marcados.length > 0) {
+    linhas.push("", marcados.map((p) => `<mention-tag target="seatalk://user?email=${p.email}"/>`).join(" "));
+  }
   return linhas.join("\n");
 }
 
@@ -137,7 +140,7 @@ const grupoLabel = () => process.env.SEATALK_LABEL_GROUP_ID || GRUPO_PADRAO;
 async function notificarAvisoLabel(aviso) {
   try {
     const texto = montarTexto(aviso, await carregarContexto(aviso));
-    await sendTextToGroup(grupoLabel(), texto, { mentionEmails: quemMarcar(aviso).map((p) => p.email) });
+    await sendTextToGroup(grupoLabel(), texto);
   } catch (err) {
     console.error("⚠️ [SEATALK-LABEL] Falha ao enviar report da ocorrência:", err.response?.data || err.message);
   }
