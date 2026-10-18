@@ -1447,6 +1447,75 @@ async function buildInputsManuais({ frequencias, colaboradoresMap }) {
   return { total, porColaborador, porJustificativa };
 }
 
+/* ---------- SINERGIAS POR DESTINO (pessoas únicas) ---------- */
+async function buildSinergias({ inicio, fim, estacaoFilter, turnoSelecionado }) {
+  const DESTINO_LABEL = {
+    FULL: "Full",
+    TRATATIVAS: "Tratativas",
+    OUTRA_OPERACAO: "Outra operação",
+    ALMOXARIFADO: "Almoxarifado",
+    MEIO_AMBIENTE: "Meio ambiente",
+    TREINAMENTO: "Treinamento",
+  };
+
+  const isAll = !turnoSelecionado || turnoSelecionado === "ALL";
+
+  const solicitacoes = await prisma.solicitacaoOperacional.findMany({
+    where: {
+      tipo: "SINERGIA",
+      status: "APROVADA",
+      data: { gte: inicio, lte: fim },
+      colaborador: {
+        ...estacaoFilter,
+        ...(isAll ? {} : { turno: { nomeTurno: turnoSelecionado } }),
+      },
+    },
+    select: {
+      opsId: true,
+      sinergiaDestino: true,
+      colaborador: { select: { turno: { select: { nomeTurno: true } } } },
+    },
+  });
+
+  // Pessoas únicas no total, por destino e por destino × turno (o mesmo
+  // colaborador enviado em vários dias conta 1; enviado a destinos
+  // diferentes conta em cada um). Turno = turno atual do colaborador.
+  const pessoasTotal = new Set();
+  const pessoasPorDestino = {};
+  const turnosSet = new Set();
+  solicitacoes.forEach(s => {
+    const destino = s.sinergiaDestino || "SEM_DESTINO";
+    const turno = normalize(s.colaborador?.turno?.nomeTurno) || "Sem turno";
+    pessoasTotal.add(s.opsId);
+    turnosSet.add(turno);
+    if (!pessoasPorDestino[destino]) {
+      pessoasPorDestino[destino] = { pessoas: new Set(), porTurno: {} };
+    }
+    const d = pessoasPorDestino[destino];
+    d.pessoas.add(s.opsId);
+    if (!d.porTurno[turno]) d.porTurno[turno] = new Set();
+    d.porTurno[turno].add(s.opsId);
+  });
+
+  const total = pessoasTotal.size;
+
+  const porDestino = Object.entries(pessoasPorDestino)
+    .map(([destino, d]) => ({
+      destino,
+      label: DESTINO_LABEL[destino] || "Sem destino",
+      quantidade: d.pessoas.size,
+      percentual: total > 0 ? Number(((d.pessoas.size / total) * 100).toFixed(1)) : 0,
+      porTurno: Object.fromEntries(
+        Object.entries(d.porTurno).map(([t, set]) => [t, set.size])
+      ),
+    }))
+    .sort((a, b) => b.quantidade - a.quantidade);
+
+  const turnos = Array.from(turnosSet).sort((a, b) => a.localeCompare(b));
+
+  return { total, turnos, porDestino };
+}
+
 /* =====================================================
    CONTROLLER — DASHBOARD ADMIN
 ===================================================== */
@@ -1871,6 +1940,13 @@ const carregarDashboardAdmin = async (req, res) => {
         inputsManuais: await buildInputsManuais({
           frequencias,
           colaboradoresMap,
+        }),
+
+        sinergias: await buildSinergias({
+          inicio: inicioFinal,
+          fim: fimFinal,
+          estacaoFilter,
+          turnoSelecionado,
         }),
 
         faltasPorTempoCasa: buildFaltasPorTempoCasa({
