@@ -104,6 +104,7 @@ import VeiculosRecebidos from "./pages/recebimento/VeiculosRecebidos";
 import PrevisaoRecebimento from "./pages/recebimento/PrevisaoRecebimento";
 import ViagensRecebimento from "./pages/recebimento/ViagensRecebimento";
 import MapaFrota from "./pages/recebimento/MapaFrota";
+import StageIn from "./pages/recebimento/StageIn";
 import ReportRoute from "./routes/report";
 
 export default function App() {
@@ -250,6 +251,15 @@ export default function App() {
         element={
           <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
             <ViagensRecebimento />
+          </OperacaoRoute>
+        }
+      />
+
+      <Route
+        path="/operacao/recebimento/stage-in"
+        element={
+          <OperacaoRoute roles={["ADMIN", "ALTA_GESTAO", "LIDERANCA"]} estacoes={[1, 6]}>
+            <StageIn />
           </OperacaoRoute>
         }
       />

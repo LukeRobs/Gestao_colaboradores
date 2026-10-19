@@ -1295,6 +1295,16 @@ model SpxQueueLista {
   @@map("spx_queue_lista")
 }
 
+// Inbound Staging Area (Stage IN) do SPX: foto única por estação, substituída a cada envio.
+model SpxStageInLista {
+  idEstacao  Int      @id @map("id_estacao")
+  payload    Json
+  fetchedAt  BigInt?  @map("fetched_at")
+  recebidoEm DateTime @default(now()) @map("recebido_em")
+
+  @@map("spx_stage_in_lista")
+}
+
 // Veículos recebidos: registro definitivo de cada viagem que chegou na estação (a fila do SPX esquece o veículo ao finalizar).
 model SpxVeiculoRecebido {
   idEstacao       Int       @map("id_estacao")

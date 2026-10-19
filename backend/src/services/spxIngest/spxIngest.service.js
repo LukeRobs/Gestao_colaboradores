@@ -3,7 +3,7 @@ const veiculosRecebidos = require("./veiculosRecebidos.service");
 
 /** Dados que os userscripts do SPX enviam ao COPEOPLE: TOs de transbordo (CD) e viagens. */
 
-const MODULO = { TRANSBORDO: "TRANSBORDO", TRIP_LIST: "TRIP_LIST", TRIP_HISTORY: "TRIP_HISTORY", QUEUE_LIST: "QUEUE_LIST" };
+const MODULO = { TRANSBORDO: "TRANSBORDO", TRIP_LIST: "TRIP_LIST", TRIP_HISTORY: "TRIP_HISTORY", QUEUE_LIST: "QUEUE_LIST", STAGE_IN: "STAGE_IN" };
 const MAX_ITENS = 5000;
 
 /* ---------- estação do SPX -> estação do COPEOPLE ---------- */
@@ -110,6 +110,21 @@ async function receberTripList(idEstacao, corpo) {
   return { total };
 }
 
+/* ---------- Inbound Staging Area / Stage IN (foto única, substituída) ---------- */
+async function receberStageIn(idEstacao, corpo) {
+  const lista = (corpo.list || []).slice(0, MAX_ITENS);
+  const f = Number(corpo.fetchedAt);
+  const fetchedAt = Number.isFinite(f) && f > 0 ? BigInt(Math.round(f)) : BigInt(Date.now());
+  const payload = { list: lista, total: corpo.total ?? lista.length, fetchedAt: Number(fetchedAt), station_id: corpo.station_id };
+  await prisma.spxStageInLista.upsert({
+    where: { idEstacao },
+    create: { idEstacao, payload, fetchedAt },
+    update: { payload, fetchedAt, recebidoEm: new Date() },
+  });
+  await registrarStatus(idEstacao, MODULO.STAGE_IN, fetchedAt, lista.length);
+  return { total: lista.length };
+}
+
 /* ---------- Fila de veículos / Queue List (foto única, substituída) ---------- */
 const MAX_FILA = 1000;
 
@@ -177,4 +192,4 @@ async function lerTripHistory(idEstacao) {
   return { list: linhas.map((l) => l.payload), fetchedAt: status?.ultimoFetchedAt == null ? null : Number(status.ultimoFetchedAt) };
 }
 
-module.exports = { MODULO, estacaoDoSpx, receberTransbordo, receberTripList, receberQueueList, receberTripHistory, lerTripList, lerTripHistory };
+module.exports = { MODULO, estacaoDoSpx, receberTransbordo, receberTripList, receberQueueList, receberStageIn, receberTripHistory, lerTripList, lerTripHistory };

@@ -24,6 +24,7 @@ router.post("/transbordo-cd", ctrl.receberTransbordo);
 router.post("/trip-list", ctrl.receberTripList);
 router.post("/trip-history", ctrl.receberTripHistory);
 router.post("/queue-list", ctrl.receberQueueList);
+router.post("/stage-in", ctrl.receberStageIn);
 router.get("/trip-list", ctrl.lerTripList);
 router.get("/trip-history", ctrl.lerTripHistory);
 

@@ -611,7 +611,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
                   <div
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      recebimentoOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+                      recebimentoOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                     }`}
                   >
                     <div className="ml-6 mt-1 space-y-1">
@@ -644,6 +644,11 @@ export default function Sidebar({ isOpen, onClose }) {
                         label="Mapa"
                         active={location.pathname === "/operacao/recebimento/mapa"}
                         onClick={() => go("/operacao/recebimento/mapa")}
+                      />
+                      <SidebarSubItem
+                        label="Stage IN"
+                        active={location.pathname === "/operacao/recebimento/stage-in"}
+                        onClick={() => go("/operacao/recebimento/stage-in")}
                       />
                     </div>
                   </div>
