@@ -5,7 +5,7 @@ import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer
 import { CircleCheck, Gauge, Layers, ListOrdered, Sun, TriangleAlert } from "lucide-react";
 import { formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { CardGrafico } from "./PrevisaoPecas";
-import { Pilula } from "./FilaPecas";
+import { LinhaSincronizacao, Pilula } from "./FilaPecas";
 import { corAging, corOcupacao, corTurno, fmtDur, rgba, zonaCurta } from "./stageInUtils";
 
 const reduzirMovimento = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -13,21 +13,6 @@ const EIXO = { tick: { fill: "var(--color-muted)", fontSize: 11 }, axisLine: fal
 const GRADE = { stroke: "var(--color-border)", strokeDasharray: "2 4", strokeOpacity: 0.9 };
 const compacto = (n) => (n >= 1000 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : String(n));
 const rotuloValor = (v) => (v > 0 ? (v >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : String(v)) : "");
-
-/** Estado da sincronização com o SPX: "Online · atualizado às 13:36 · próxima atualização ~10s". */
-export function LinhaSincronizacao({ sincronizacao }) {
-  const cores = { online: "#22C55E", atrasado: "#F59E0B", offline: "#FF453A", conectando: "#8B8B93" };
-  const rotulos = { online: "Online", atrasado: "Dados desatualizados", offline: "Offline", conectando: "Conectando" };
-  const { estado, detalhe, proxima } = sincronizacao;
-  return (
-    <p role="status" className="flex items-center gap-2 text-xs text-muted flex-wrap">
-      <span aria-hidden="true" className={`w-2 h-2 rounded-full ${estado === "online" ? "motion-safe:animate-pulse" : ""}`} style={{ background: cores[estado] }} />
-      <b className="text-page font-semibold">{rotulos[estado]}</b>
-      {detalhe && <span>· {detalhe}</span>}
-      {proxima != null && <span className="tabular-nums">· próxima atualização ~{proxima}s</span>}
-    </p>
-  );
-}
 
 /** Zona: chip com a zona escolhida, pílulas para trocar (com a contagem) e a linha de sincronização. */
 export function FiltroZona({ abas, valor, onChange, rotuloAtual, sincronizacao }) {

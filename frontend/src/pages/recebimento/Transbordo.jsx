@@ -1,130 +1,72 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, CircleAlert, CircleCheck, Inbox, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Boxes, CalendarDays, CircleAlert, CircleCheck, Inbox, MapPin, Package, Scale, Search, Truck } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
-import {
-  AbasSegmentadas,
-  Aviso,
-  DiaNavegador,
-  EstadoVazio,
-  Esqueleto,
-  FaixaIndicadores,
-  PageHeader,
-} from "../../components/mapaOperacional/ui";
+import { AbasSegmentadas, Aviso, DiaNavegador, EstadoVazio, Esqueleto, PageHeader } from "../../components/mapaOperacional/ui";
 import { BTN_SECUNDARIO, FOCO, INPUT, formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { TransbordoAPI } from "../../services/transbordo";
+import { FUSO, fmtDuracao } from "./filaUtils";
+import { LinhaSincronizacao, Paginacao } from "./FilaPecas";
+import { CardGrafico, Destaque, Kpi, KpiDestaque } from "./PrevisaoPecas";
+import { ColunasHora, JanelaScan, ListaOrigens, ModalTO, ModalVeiculo, SeloStatus } from "./TransbordoPecas";
+import { METRICAS, TURNOS, agruparVeiculos, chaveVeiculo, fmtDataBR, fmtHora, fmtKg, origensDoDia, resumoPorTurno, serieHora, temExcecao } from "./transbordoUtils";
 
 const POLL_MS = 15000;
 const ATRASO_MS = 5 * 60 * 1000; // sem sincronizar há mais que isso = dados desatualizados
-const TURNOS = ["T1", "T2", "T3"];
-// O dia operacional começa às 06:00 — o gráfico segue essa ordem (T3 da madrugada fecha o dia à direita).
-const HORAS_DO_DIA = [...Array.from({ length: 18 }, (_, i) => i + 6), ...Array.from({ length: 6 }, (_, i) => i)];
 
-const fmtKg = (gramas) => ((gramas || 0) / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const fmtHora = (t) => (t.hora == null ? "—" : `${String(t.hora).padStart(2, "0")}:${String(t.minuto).padStart(2, "0")}`);
-const fmtDataBR = (iso) => iso.split("-").reverse().join("/");
-const temExcecao = (t) => Array.isArray(t.abnormalLabels) && t.abnormalLabels.length > 0;
-
-const COLUNAS = [
-  { chave: "toNumber", rotulo: "TO", tipo: "texto" },
-  { chave: "packTypeName", rotulo: "Tipo", tipo: "texto" },
-  { chave: "parcels", rotulo: "Pacotes", tipo: "numero", direita: true },
-  { chave: "weightG", rotulo: "Peso", tipo: "numero", direita: true },
-  { chave: "loadedStationName", rotulo: "Estação remetente", tipo: "texto" },
-  { chave: "scanEm", rotulo: "Hora do scan", tipo: "texto" },
-  { chave: "dockNumber", rotulo: "Doca", tipo: "texto" },
-  { chave: "operator", rotulo: "Operador", tipo: "texto" },
-  { chave: "tripNumber", rotulo: "LH", tipo: "texto" },
-  { chave: "excecao", rotulo: "Status", tipo: "excecao" },
+const COLUNAS_TOS = [
+  { chave: "toNumber", rotulo: "TO", valor: (t) => t.toNumber.toLowerCase() },
+  { chave: "packTypeName", rotulo: "Tipo", valor: (t) => (t.packTypeName || "").toLowerCase() },
+  { chave: "parcels", rotulo: "Pacotes", direita: true, valor: (t) => t.parcels ?? 0 },
+  { chave: "weightG", rotulo: "Peso", direita: true, valor: (t) => t.weightG ?? 0 },
+  { chave: "loadedStationName", rotulo: "Origem", valor: (t) => (t.loadedStationName || "").toLowerCase() },
+  { chave: "scanEm", rotulo: "Scan", titulo: "Hora do scan", valor: (t) => t.scanEm || "" },
+  { chave: "dockNumber", rotulo: "Doca", valor: (t) => (t.dockNumber || "").toLowerCase() },
+  { chave: "tripNumber", rotulo: "Veículo · LT", valor: (t) => (t.tripNumber || "").toLowerCase() },
+  { chave: "excecao", rotulo: "Status", valor: (t) => (temExcecao(t) ? 1 : 0) },
 ];
 
-function ordenar(lista, chave, asc) {
-  const col = COLUNAS.find((c) => c.chave === chave);
-  const valor = (t) => {
-    if (col.tipo === "excecao") return temExcecao(t) ? 1 : 0;
-    if (col.tipo === "numero") return t[chave] ?? 0;
-    return String(t[chave] ?? "").toLowerCase();
-  };
+const COLUNAS_VEICULOS = [
+  { chave: "placa", rotulo: "Veículo", valor: (v) => (v.placa || "").toLowerCase() },
+  { chave: "lt", rotulo: "LT · origem", valor: (v) => (v.lt || "").toLowerCase() },
+  { chave: "janela", rotulo: "Janela de scan", valor: (v) => v.ultimoScan || "" },
+  { chave: "duracao", rotulo: "Tempo", titulo: "Do primeiro ao último scan", valor: (v) => v.duracaoMin },
+  { chave: "doca", rotulo: "Doca", valor: (v) => (v.doca || "").toLowerCase() },
+  { chave: "tos", rotulo: "TOs", direita: true, valor: (v) => v.tos },
+  { chave: "pacotes", rotulo: "Pacotes", direita: true, valor: (v) => v.pacotes },
+  { chave: "peso", rotulo: "Peso", direita: true, valor: (v) => v.pesoG },
+  { chave: "motorista", rotulo: "Motorista", valor: (v) => (v.motorista || "").toLowerCase() },
+  { chave: "excecoes", rotulo: "Status", valor: (v) => v.excecoes },
+];
+
+function ordenar(lista, colunas, chave, asc) {
+  const col = colunas.find((c) => c.chave === chave);
   return [...lista].sort((a, b) => {
-    const va = valor(a);
-    const vb = valor(b);
+    const va = col.valor(a);
+    const vb = col.valor(b);
     const r = typeof va === "number" ? va - vb : va.localeCompare(vb);
     return asc ? r : -r;
   });
 }
 
-function StatusSincronizacao({ estado, detalhe, proxima }) {
-  const cores = { online: "#22C55E", atrasado: "#F59E0B", offline: "#FF453A", conectando: "#8B8B93" };
-  const rotulos = { online: "Online", atrasado: "Dados desatualizados", offline: "Offline", conectando: "Conectando" };
+function Cabecalho({ colunas, ordem, onOrdenar }) {
   return (
-    <div role="status" className="inline-flex items-center gap-3 rounded-full border border-default bg-surface px-4 h-10 text-xs text-muted">
-      <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: cores[estado] }} />
-      <span>
-        <b className="text-page font-semibold">{rotulos[estado]}</b>
-        {detalhe && <span> · {detalhe}</span>}
-      </span>
-      {proxima != null && <span className="hidden sm:inline border-l border-default pl-3 tabular-nums">próxima atualização ~{proxima}s</span>}
-    </div>
-  );
-}
-
-function Campo({ rotulo, children, mono }) {
-  return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-wide text-muted">{rotulo}</dt>
-      <dd className={`mt-0.5 text-sm font-medium ${mono ? "tabular-nums" : ""}`}>{children || "—"}</dd>
-    </div>
-  );
-}
-
-function Detalhe({ t, onClose }) {
-  useEffect(() => {
-    const aoTeclar = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50" onClick={onClose}>
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Detalhes da TO ${t.toNumber}`}
-        className="h-full w-full max-w-sm bg-surface border-l border-default shadow-2xl flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 px-5 h-16 border-b border-default shrink-0">
-          <h2 className="font-semibold tabular-nums truncate">{t.toNumber}</h2>
-          <button type="button" onClick={onClose} aria-label="Fechar detalhe" className={`ml-auto h-10 w-10 grid place-items-center rounded-lg text-muted hover:text-page hover:bg-surface-2 cursor-pointer ${FOCO}`}>
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
-        <dl className="p-5 space-y-4 overflow-y-auto">
-          {temExcecao(t) && (
-            <div role="alert" className="flex gap-2 rounded-xl border border-[#FF453A]/30 bg-[#FF453A]/10 px-3 py-2.5 text-sm text-[#FF453A]">
-              <CircleAlert size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
-              <span>{t.abnormalLabels.join(", ")}</span>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <Campo rotulo="Pacotes" mono>{formatNumero(t.parcels)}</Campo>
-            <Campo rotulo="Peso" mono>{`${fmtKg(t.weightG)} kg`}</Campo>
-            <Campo rotulo="Tipo">{t.packTypeName}</Campo>
-            <Campo rotulo="Hora do scan" mono>{fmtHora(t)}</Campo>
-          </div>
-          <Campo rotulo="Estação remetente">{t.loadedStationName}</Campo>
-          <Campo rotulo="Estação destino">{t.unloadedStationName}</Campo>
-          <Campo rotulo="Doca">{t.dockNumber}</Campo>
-          <Campo rotulo="Operador">{t.operator}</Campo>
-          <div className="grid grid-cols-2 gap-4">
-            <Campo rotulo="Viagem (LH)" mono>{t.tripNumber}</Campo>
-            <Campo rotulo="Placa" mono>{t.vehicleNumber}</Campo>
-          </div>
-          <Campo rotulo="Motorista">{t.driverName}</Campo>
-        </dl>
-      </aside>
-    </div>
+    <thead className="sticky top-0 z-10 bg-surface-2">
+      <tr className="text-xs text-muted uppercase tracking-wide">
+        {colunas.map((c) => {
+          const ativa = ordem.chave === c.chave;
+          return (
+            <th key={c.chave} scope="col" aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-3 py-3.5 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
+              <button type="button" title={c.titulo} onClick={() => onOrdenar(c.chave)} className={`inline-flex items-center gap-1 uppercase tracking-wide cursor-pointer hover:text-page ${ativa ? "text-[#FA4C00]" : ""} ${FOCO}`}>
+                {c.rotulo}
+                {ativa && (ordem.asc ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
+              </button>
+            </th>
+          );
+        })}
+      </tr>
+    </thead>
   );
 }
 
@@ -137,8 +79,14 @@ export default function Transbordo() {
   const [origem, setOrigem] = useState("");
   const [busca, setBusca] = useState("");
   const [turno, setTurno] = useState("TODOS");
-  const [ordem, setOrdem] = useState({ chave: "scanEm", asc: false });
-  const [selecionada, setSelecionada] = useState(null);
+  const [metrica, setMetrica] = useState("pacotes");
+  const [vista, setVista] = useState("tos");
+  const [ordemTos, setOrdemTos] = useState({ chave: "scanEm", asc: false });
+  const [ordemVeic, setOrdemVeic] = useState({ chave: "janela", asc: false });
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
+  const [toAberta, setToAberta] = useState(null);
+  const [ltAberto, setLtAberto] = useState(null);
   const [atualizando, setAtualizando] = useState(false);
   const [atualizadoEm, setAtualizadoEm] = useState(null);
   const [agora, setAgora] = useState(() => Date.now());
@@ -154,11 +102,9 @@ export default function Transbordo() {
     } catch (e) {
       setOffline(true);
       if (e.response?.status === 403) setErro(e.response.data?.message || "Este módulo não está disponível para a sua estação.");
-      else if (!dados) setErro("Não foi possível carregar o transbordo.");
     } finally {
       setProximaEm(Date.now() + POLL_MS);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dia]);
 
   useEffect(() => {
@@ -194,14 +140,14 @@ export default function Transbordo() {
         if (origem && t.loadedStationName !== origem) return false;
         if (!ignorarTurno && turno !== "TODOS" && t.turno !== turno) return false;
         if (!q) return true;
-        return [t.toNumber, t.loadedStationName, t.operator, t.tripNumber, t.dockNumber].some((v) => (v || "").toLowerCase().includes(q));
+        return [t.toNumber, t.loadedStationName, t.operator, t.tripNumber, t.vehicleNumber, t.driverName, t.dockNumber].some((v) => (v || "").toLowerCase().includes(q));
       });
     },
     [origem, turno, busca]
   );
 
   const visiveis = useMemo(() => filtrar(lista), [filtrar, lista]);
-  const tabela = useMemo(() => ordenar(visiveis, ordem.chave, ordem.asc), [visiveis, ordem]);
+  const veiculos = useMemo(() => agruparVeiculos(visiveis), [visiveis]);
 
   const kpis = useMemo(() => {
     const pacotes = visiveis.reduce((s, t) => s + (t.parcels || 0), 0);
@@ -210,33 +156,24 @@ export default function Transbordo() {
     return { pacotes, peso, origensAtivas, excecoes: visiveis.filter(temExcecao).length };
   }, [visiveis]);
 
-  const porHora = useMemo(() => {
-    const m = new Array(24).fill(0);
-    visiveis.forEach((t) => {
-      if (t.hora != null) m[t.hora] += t.parcels || 0;
-    });
-    return m;
-  }, [visiveis]);
-  const maxHora = Math.max(1, ...porHora);
+  const porHora = useMemo(() => serieHora(visiveis, metrica), [visiveis, metrica]);
+  const topOrigens = useMemo(() => origensDoDia(visiveis, metrica), [visiveis, metrica]);
+  const resumoTurnos = useMemo(() => resumoPorTurno(filtrar(lista, { ignorarTurno: true })), [filtrar, lista]);
+  const pico = useMemo(() => porHora.reduce((m, h) => (h.valor > (m?.valor ?? 0) ? h : m), null), [porHora]);
 
-  const topOrigens = useMemo(() => {
-    const c = {};
-    visiveis.forEach((t) => {
-      const o = t.loadedStationName || "(sem origem)";
-      c[o] = (c[o] || 0) + 1;
-    });
-    return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  }, [visiveis]);
+  /* ---------- tabelas (ordenação + paginação) ---------- */
+  const tabelaTos = useMemo(() => ordenar(visiveis, COLUNAS_TOS, ordemTos.chave, ordemTos.asc), [visiveis, ordemTos]);
+  const tabelaVeic = useMemo(() => ordenar(veiculos, COLUNAS_VEICULOS, ordemVeic.chave, ordemVeic.asc), [veiculos, ordemVeic]);
+  const linhasAtivas = vista === "tos" ? tabelaTos : tabelaVeic;
+  const totalPaginas = Math.max(1, Math.ceil(linhasAtivas.length / porPagina));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const daPagina = linhasAtivas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
 
-  const resumoTurnos = useMemo(() => {
-    const agg = Object.fromEntries(TURNOS.map((t) => [t, { tos: 0, pacotes: 0 }]));
-    filtrar(lista, { ignorarTurno: true }).forEach((t) => {
-      if (!t.turno) return;
-      agg[t.turno].tos += 1;
-      agg[t.turno].pacotes += t.parcels || 0;
-    });
-    return agg;
-  }, [filtrar, lista]);
+  const alternarOrdem = (chave) => {
+    const set = vista === "tos" ? setOrdemTos : setOrdemVeic;
+    set((o) => (o.chave === chave ? { chave, asc: !o.asc } : { chave, asc: false }));
+    setPagina(1);
+  };
 
   /* ---------- sincronização (ONLINE / DESATUALIZADO / OFFLINE) ---------- */
   const ultimoSync = dados?.sincronizacao?.ultimoFetchedAt ?? null;
@@ -251,7 +188,7 @@ export default function Transbordo() {
       detalheSync = "o Tampermonkey ainda não enviou dados";
     } else {
       const atrasoMs = agora - ultimoSync;
-      const hhmm = new Date(ultimoSync).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const hhmm = new Date(ultimoSync).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: FUSO });
       estadoSync = atrasoMs < ATRASO_MS ? "online" : "atrasado";
       const min = Math.floor(atrasoMs / 60000);
       detalheSync = `atualizado às ${hhmm}${min > 0 ? ` (há ${min} min)` : ""}`;
@@ -266,12 +203,14 @@ export default function Transbordo() {
     setTurno("TODOS");
     setBusca("");
     setDia(null);
+    setPagina(1);
   };
 
   const anterior = dados?.contagemDiaAnterior || 0;
   const tendencia = anterior > 0 ? Math.round(((visiveis.length - anterior) / anterior) * 100) : null;
-
-  const alternarOrdem = (chave) => setOrdem((o) => (o.chave === chave ? { chave, asc: !o.asc } : { chave, asc: false }));
+  const abertaVeic = ltAberto ? veiculos.find((v) => v.chave === ltAberto) : null;
+  const semDados = lista.length === 0;
+  const unidadeMetrica = METRICAS[metrica].unidade;
 
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
@@ -280,7 +219,7 @@ export default function Transbordo() {
       <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="p-4 sm:p-6 xl:p-10 2xl:px-20 space-y-5 max-w-[1800px] mx-auto">
+        <main className="p-4 sm:p-6 xl:p-10 2xl:px-20 space-y-6 max-w-[1800px] mx-auto">
           <PageHeader
             kicker="Operação · Recebimento"
             titulo="Transbordo"
@@ -290,243 +229,280 @@ export default function Transbordo() {
             onAtualizar={atualizarAgora}
           />
 
-          {erro ? (
-            <Aviso tipo="erro">{erro}</Aviso>
+          {erro || (!dados && offline) ? (
+            <Aviso tipo="erro">{erro || "Não foi possível carregar o transbordo."}</Aviso>
           ) : !dados ? (
-            <div aria-busy="true" aria-label="Carregando transbordo" className="space-y-4">
-              <Esqueleto className="h-24" />
-              <Esqueleto className="h-16" />
+            <div aria-busy="true" aria-label="Carregando transbordo" className="space-y-6">
+              <Esqueleto className="h-44" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3">
+                <Esqueleto className="h-56 sm:col-span-3 xl:col-span-1" />
+                <Esqueleto className="h-56" />
+                <Esqueleto className="h-56" />
+                <Esqueleto className="h-56" />
+              </div>
+              <Esqueleto className="h-72" />
               <Esqueleto className="h-64" />
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <StatusSincronizacao estado={estadoSync} detalhe={detalheSync} proxima={proxima} />
-                <DiaNavegador data={diaSel} maximo={diaAtual} onChange={(d) => setDia(d === diaAtual ? null : d)} />
-              </div>
+              {/* ---------- dia, filtros e sincronização ---------- */}
+              <section aria-label="Dia operacional e filtros" className="anim-in rounded-2xl border border-default bg-surface p-4 space-y-4">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span aria-hidden="true" className="grid place-items-center w-10 h-10 rounded-xl bg-[#FA4C00]/12 text-[#FA4C00] shrink-0">
+                      <CalendarDays size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">Dia operacional</p>
+                      <p className="text-base font-semibold tabular-nums">
+                        {fmtDataBR(diaSel || diaAtual)}
+                        <span className="ml-2 text-sm font-normal text-muted">06:00 às 05:59</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-auto">
+                    <DiaNavegador data={diaSel} maximo={diaAtual} onChange={(d) => { setDia(d === diaAtual ? null : d); setPagina(1); }} />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="w-full sm:w-60">
+                    <label htmlFor="tb-origem" className="block text-xs text-muted mb-1.5">Origem</label>
+                    <select id="tb-origem" value={origem} onChange={(e) => { setOrigem(e.target.value); setPagina(1); }} className={`${INPUT} cursor-pointer`}>
+                      <option value="">Todas</option>
+                      {origens.map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="relative flex-1 min-w-[240px] max-w-xl">
+                    <label htmlFor="tb-busca" className="block text-xs text-muted mb-1.5">Buscar</label>
+                    <Search size={15} className="absolute left-3.5 bottom-3.5 text-muted pointer-events-none" aria-hidden="true" />
+                    <input id="tb-busca" type="search" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} placeholder="TO, LT, placa, motorista…" className={`${INPUT} pl-10`} />
+                  </div>
+                  <div className="w-full sm:w-64">
+                    <span className="block text-xs text-muted mb-1.5">Turno</span>
+                    <AbasSegmentadas rotulo="Turno" valor={turno} onChange={(v) => { setTurno(v); setPagina(1); }} opcoes={[{ valor: "TODOS", rotulo: "Todos" }, ...TURNOS.map((t) => ({ valor: t, rotulo: t }))]} />
+                  </div>
+                  <button type="button" onClick={limpar} disabled={!filtrosAtivos} className={`${BTN_SECUNDARIO} disabled:opacity-50`}>
+                    Limpar filtros
+                  </button>
+                  <p className="ml-auto text-sm text-muted tabular-nums" aria-live="polite">
+                    <b className="text-page">{formatNumero(veiculos.length)}</b> {veiculos.length === 1 ? "veículo" : "veículos"} · <b className="text-page">{formatNumero(visiveis.length)}</b> de {formatNumero(lista.length)} {lista.length === 1 ? "TO" : "TOs"} no dia
+                  </p>
+                </div>
+
+                <LinhaSincronizacao sincronizacao={{ estado: estadoSync, detalhe: detalheSync, proxima }} />
+              </section>
 
               {estadoSync === "offline" && <Aviso tipo="alerta">Sem conexão com o servidor — os dados exibidos podem estar desatualizados.</Aviso>}
               {estadoSync === "atrasado" && ehHoje && <Aviso tipo="alerta">Dados desatualizados — o Tampermonkey pode estar offline ou sem sincronizar.</Aviso>}
 
-              <FaixaIndicadores
-                rotulo="Indicadores do transbordo"
-                itens={[
-                  {
-                    rotulo: "TOs de transbordo",
-                    valor: formatNumero(visiveis.length),
-                    destaque: true,
-                    apoio: tendencia === null ? undefined : `${tendencia >= 0 ? "▲" : "▼"} ${Math.abs(tendencia)}% vs dia anterior (${formatNumero(anterior)})`,
-                  },
-                  { rotulo: "Pacotes", valor: formatNumero(kpis.pacotes), apoio: "soma dos pacotes por TO" },
-                  { rotulo: "Peso", valor: `${fmtKg(kpis.peso)} kg`, apoio: "total escaneado no dia" },
-                  {
-                    rotulo: "Origens ativas",
-                    valor: formatNumero(kpis.origensAtivas.size),
-                    apoio: kpis.origensAtivas.size ? [...kpis.origensAtivas].slice(0, 2).join(", ") + (kpis.origensAtivas.size > 2 ? ` +${kpis.origensAtivas.size - 2}` : "") : "nenhuma estação com TO no dia",
-                  },
-                  {
-                    rotulo: "Exceções",
-                    valor: formatNumero(kpis.excecoes),
-                    cor: kpis.excecoes > 0 ? "#FF453A" : "#22C55E",
-                    apoio: kpis.excecoes > 0 ? "requer verificação" : "nenhuma pendência",
-                  },
-                ]}
-              />
-
-              <section aria-label="Filtros" className="bg-surface rounded-2xl border border-default p-4 flex items-end gap-3 flex-wrap">
-                <div className="min-w-[200px]">
-                  <label htmlFor="tb-origem" className="block text-xs text-muted mb-1.5">Origem</label>
-                  <select id="tb-origem" value={origem} onChange={(e) => setOrigem(e.target.value)} className={`${INPUT} min-w-[200px] cursor-pointer`}>
-                    <option value="">Todas</option>
-                    {origens.map((o) => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[220px] max-w-sm">
-                  <label htmlFor="tb-busca" className="block text-xs text-muted mb-1.5">Buscar</label>
-                  <div className="relative">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
-                    <input id="tb-busca" type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="TO, doca, operador, LH…" className={`${INPUT} pl-10`} />
-                  </div>
-                </div>
-                <div className="w-full sm:w-64">
-                  <span className="block text-xs text-muted mb-1.5">Turno</span>
-                  <AbasSegmentadas rotulo="Turno" valor={turno} onChange={setTurno} opcoes={[{ valor: "TODOS", rotulo: "Todos" }, ...TURNOS.map((t) => ({ valor: t, rotulo: t }))]} />
-                </div>
-                <button type="button" onClick={limpar} disabled={!filtrosAtivos} className={`${BTN_SECUNDARIO} disabled:opacity-50`}>
-                  Limpar filtros
-                </button>
-                <p className="ml-auto text-sm text-muted tabular-nums" aria-live="polite">
-                  <b className="text-page">{visiveis.length}</b> {visiveis.length === 1 ? "TO" : "TOs"} de {lista.length} no dia
-                </p>
+              {/* ---------- indicadores ---------- */}
+              <section aria-label="Indicadores do transbordo" className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3">
+                <KpiDestaque
+                  className="sm:col-span-3 xl:col-span-1"
+                  indice={0}
+                  icone={<Package size={20} />}
+                  rotulo="Pacotes em transbordo"
+                  valor={formatNumero(kpis.pacotes)}
+                  apoio={tendencia === null ? "soma dos pacotes de cada TO" : `TOs ${tendencia >= 0 ? "▲" : "▼"} ${Math.abs(tendencia)}% vs dia anterior (${formatNumero(anterior)})`}
+                  extras={[
+                    { icone: <Truck size={13} />, rotulo: "Veículos (LT)", valor: formatNumero(veiculos.length) },
+                    { icone: <Boxes size={13} />, rotulo: "TOs de transbordo", valor: formatNumero(visiveis.length) },
+                  ]}
+                />
+                <Kpi
+                  indice={1}
+                  icone={<Scale size={16} />}
+                  rotulo="Peso escaneado"
+                  valor={`${fmtKg(kpis.peso)} kg`}
+                  tom="#3B82F6"
+                  apoio={veiculos.length ? `${fmtKg(kpis.peso / veiculos.length)} kg por veículo` : "total escaneado no dia"}
+                />
+                <Kpi
+                  indice={2}
+                  icone={<MapPin size={16} />}
+                  rotulo="Origens ativas"
+                  valor={formatNumero(kpis.origensAtivas.size)}
+                  tom="#8B5CF6"
+                  apoio={kpis.origensAtivas.size ? [...kpis.origensAtivas].slice(0, 2).join(", ") + (kpis.origensAtivas.size > 2 ? ` +${kpis.origensAtivas.size - 2}` : "") : "nenhuma estação com TO no dia"}
+                />
+                <Kpi
+                  indice={3}
+                  icone={kpis.excecoes > 0 ? <CircleAlert size={16} /> : <CircleCheck size={16} />}
+                  rotulo="Exceções"
+                  valor={formatNumero(kpis.excecoes)}
+                  tom={kpis.excecoes > 0 ? "#FF453A" : "#22C55E"}
+                  corValor={kpis.excecoes > 0 ? "#FF453A" : "#22C55E"}
+                  apoio={kpis.excecoes > 0 ? "requer verificação" : "nenhuma pendência"}
+                />
               </section>
 
+              {/* ---------- por hora e origens ---------- */}
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <section aria-label="Pacotes por hora" className="xl:col-span-2 bg-surface rounded-2xl border border-default p-5">
-                  <h2 className="text-sm font-semibold mb-1">Pacotes por hora</h2>
-                  <p className="text-xs text-muted mb-4">{fmtDataBR(diaSel || diaAtual)} · {visiveis.length} {visiveis.length === 1 ? "TO" : "TOs"} · dia operacional (06:00 às 05:59)</p>
-                  <div className="overflow-x-auto">
-                    <div className="flex items-end gap-1 h-44 min-w-[640px]" role="img" aria-label="Gráfico de pacotes escaneados por hora">
-                      {HORAS_DO_DIA.map((h) => {
-                        const v = porHora[h];
-                        const alt = v > 0 ? Math.max(4, Math.round((v / maxHora) * 120)) : 0;
-                        return (
-                          <div key={h} className="flex-1 min-w-[24px] flex flex-col items-center justify-end gap-1 h-full">
-                            <span className="text-[10px] tabular-nums text-muted h-4">{v > 0 ? formatNumero(v) : ""}</span>
-                            {alt > 0 ? (
-                              <div className="w-full rounded-t bg-[#FA4C00] opacity-85 hover:opacity-100 transition-opacity" style={{ height: alt }} title={`${formatNumero(v)} pacotes às ${String(h).padStart(2, "0")}:00`} />
-                            ) : (
-                              <div className="w-full h-0.5 rounded bg-[var(--color-border)]" />
-                            )}
-                            <span className="text-[10px] tabular-nums text-muted">{String(h).padStart(2, "0")}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </section>
-
-                <section aria-label="Top origens" className="bg-surface rounded-2xl border border-default p-5">
-                  <h2 className="text-sm font-semibold mb-4">Top origens</h2>
-                  {topOrigens.length === 0 ? (
-                    <p className="text-sm text-muted text-center py-8">Nenhuma TO no período selecionado</p>
-                  ) : (
-                    <ul className="space-y-3 max-h-56 overflow-y-auto">
-                      {topOrigens.map(([nome, qtd]) => (
-                        <li key={nome} className="flex items-center gap-3" title={nome}>
-                          <span className="w-2/5 shrink-0 truncate text-xs text-muted">{nome}</span>
-                          <div className="flex-1 h-1.5 rounded bg-surface-2 overflow-hidden">
-                            <div className="h-full rounded bg-[#FA4C00]" style={{ width: `${Math.max(4, Math.round((qtd / topOrigens[0][1]) * 100))}%` }} />
-                          </div>
-                          <span className="w-10 text-right text-xs font-semibold tabular-nums">{formatNumero(qtd)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                <div className="xl:col-span-2 flex flex-col [&>section]:flex-1">
+                  <CardGrafico
+                    icone={<Package size={17} />}
+                    titulo={`${METRICAS[metrica].rotulo} por hora`}
+                    subtitulo={`${fmtDataBR(diaSel || diaAtual)} · ${formatNumero(visiveis.length)} ${visiveis.length === 1 ? "TO" : "TOs"} · dia operacional (06:00 às 05:59)`}
+                    indice={1}
+                    legenda={
+                      <div className="w-full sm:w-72">
+                        <AbasSegmentadas rotulo="Métrica dos gráficos" valor={metrica} onChange={setMetrica} opcoes={Object.entries(METRICAS).map(([valor, m]) => ({ valor, rotulo: m.rotulo }))} />
+                      </div>
+                    }
+                    destaques={pico && pico.valor > 0 ? <Destaque rotulo="Pico" valor={`${pico.hora}h · ${formatNumero(pico.valor)} ${unidadeMetrica}`} /> : null}
+                  >
+                    <ColunasHora dados={porHora} metrica={metrica} />
+                  </CardGrafico>
+                </div>
+                <CardGrafico icone={<MapPin size={17} />} titulo="Top origens" subtitulo={`Por ${unidadeMetrica}`} indice={2}>
+                  <ListaOrigens origens={topOrigens} metrica={metrica} />
+                </CardGrafico>
               </div>
 
-              <section aria-label="Comparação por turno" className="bg-surface rounded-2xl border border-default overflow-hidden">
-                <div className="px-5 py-4 border-b border-default">
-                  <h2 className="text-sm font-semibold">Comparação por turno <span className="font-normal text-muted">— clique numa linha para filtrar</span></h2>
-                </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs text-muted uppercase tracking-wide">
-                      <th scope="col" className="text-left font-medium px-5 py-3">Turno</th>
-                      <th scope="col" className="text-right font-medium px-5 py-3">TOs</th>
-                      <th scope="col" className="text-right font-medium px-5 py-3">Pacotes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-default">
-                    {TURNOS.map((t) => (
-                      <tr
-                        key={t}
-                        tabIndex={0}
-                        aria-pressed={turno === t}
-                        onClick={() => setTurno(turno === t ? "TODOS" : t)}
-                        onKeyDown={(e) => e.key === "Enter" && setTurno(turno === t ? "TODOS" : t)}
-                        className={`cursor-pointer transition-colors ${FOCO} ${turno === t ? "bg-[#FA4C00]/10" : "hover:bg-surface-2"}`}
-                      >
-                        <td className="px-5 py-3 font-semibold">{t}</td>
-                        <td className="px-5 py-3 text-right tabular-nums">{formatNumero(resumoTurnos[t].tos)}</td>
-                        <td className="px-5 py-3 text-right tabular-nums">{formatNumero(resumoTurnos[t].pacotes)}</td>
+              {/* ---------- comparação por turno ---------- */}
+              <CardGrafico icone={<CalendarDays size={17} />} titulo="Comparação por turno" subtitulo="Clique numa linha para filtrar a página pelo turno" indice={3}>
+                <div className="overflow-x-auto scroll-tema">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-muted uppercase tracking-wide">
+                        <th scope="col" className="text-left font-medium px-4 py-3">Turno</th>
+                        <th scope="col" className="text-right font-medium px-4 py-3">Veículos (LT)</th>
+                        <th scope="col" className="text-right font-medium px-4 py-3">TOs</th>
+                        <th scope="col" className="text-right font-medium px-4 py-3">Pacotes</th>
                       </tr>
-                    ))}
-                    <tr className="font-semibold">
-                      <td className="px-5 py-3">Total</td>
-                      <td className="px-5 py-3 text-right tabular-nums">{formatNumero(TURNOS.reduce((s, t) => s + resumoTurnos[t].tos, 0))}</td>
-                      <td className="px-5 py-3 text-right tabular-nums">{formatNumero(TURNOS.reduce((s, t) => s + resumoTurnos[t].pacotes, 0))}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </section>
+                    </thead>
+                    <tbody className="divide-y divide-default">
+                      {TURNOS.map((t) => (
+                        <tr
+                          key={t}
+                          tabIndex={0}
+                          aria-pressed={turno === t}
+                          onClick={() => { setTurno(turno === t ? "TODOS" : t); setPagina(1); }}
+                          onKeyDown={(e) => e.key === "Enter" && (setTurno(turno === t ? "TODOS" : t), setPagina(1))}
+                          className={`cursor-pointer transition-colors ${FOCO} ${turno === t ? "bg-[#FA4C00]/10" : "hover:bg-surface-2"}`}
+                        >
+                          <td className="px-4 py-3 font-semibold">{t}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{formatNumero(resumoTurnos[t].veiculos)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{formatNumero(resumoTurnos[t].tos)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{formatNumero(resumoTurnos[t].pacotes)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-semibold">
+                        <td className="px-4 py-3">Total</td>
+                        <td className="px-4 py-3 text-right tabular-nums">{formatNumero(new Set(filtrar(lista, { ignorarTurno: true }).map(chaveVeiculo)).size)}</td>
+                        <td className="px-4 py-3 text-right tabular-nums">{formatNumero(TURNOS.reduce((s, t) => s + resumoTurnos[t].tos, 0))}</td>
+                        <td className="px-4 py-3 text-right tabular-nums">{formatNumero(TURNOS.reduce((s, t) => s + resumoTurnos[t].pacotes, 0))}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-xs text-muted">Um veículo que escaneia em mais de um turno aparece em cada um; o total conta cada veículo uma vez.</p>
+              </CardGrafico>
 
-              <section aria-label="TOs de transbordo" className="bg-surface rounded-2xl border border-default overflow-hidden">
-                <div className="px-5 py-4 border-b border-default">
-                  <h2 className="text-sm font-semibold">TOs de transbordo (CD) <span className="font-normal text-muted">· {fmtDataBR(diaSel || diaAtual)}</span></h2>
+              {/* ---------- tabela ---------- */}
+              <section aria-label="TOs e veículos de transbordo" className="anim-in rounded-2xl border border-default bg-surface overflow-hidden">
+                <div className="flex items-center justify-between gap-3 flex-wrap p-5">
+                  <div>
+                    <h2 className="text-sm font-semibold leading-tight">{vista === "tos" ? "TOs de transbordo (CD)" : "Veículos (LT) do transbordo"}</h2>
+                    <p className="text-xs text-muted mt-1 tabular-nums">
+                      {fmtDataBR(diaSel || diaAtual)} · {formatNumero(linhasAtivas.length)} {vista === "tos" ? (linhasAtivas.length === 1 ? "TO" : "TOs") : linhasAtivas.length === 1 ? "veículo" : "veículos"} · clique na linha para ver o detalhe
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-72">
+                    <AbasSegmentadas
+                      rotulo="Visualização da tabela"
+                      valor={vista}
+                      onChange={(v) => { setVista(v); setPagina(1); }}
+                      opcoes={[
+                        { valor: "tos", rotulo: `TOs (${formatNumero(visiveis.length)})` },
+                        { valor: "veiculos", rotulo: `Veículos (${formatNumero(veiculos.length)})` },
+                      ]}
+                    />
+                  </div>
                 </div>
 
-                {lista.length === 0 ? (
+                {semDados ? (
                   <EstadoVazio
                     icone={ultimoSync == null ? <Inbox size={28} aria-hidden="true" /> : <CircleCheck size={28} className="text-[#22C55E]" aria-hidden="true" />}
                     titulo={ultimoSync == null ? "Aguardando sincronização" : "Sem TOs de transbordo neste dia"}
-                    descricao={
-                      ultimoSync == null
-                        ? "O Tampermonkey ainda não enviou dados de transbordo desta estação."
-                        : "A sincronização está ativa e nenhuma TO com tag CD foi encontrada neste dia operacional."
-                    }
+                    descricao={ultimoSync == null ? "O Tampermonkey ainda não enviou dados de transbordo desta estação." : "A sincronização está ativa e nenhuma TO com tag CD foi encontrada neste dia operacional."}
                   />
-                ) : tabela.length === 0 ? (
-                  <EstadoVazio
-                    icone={<Search size={28} aria-hidden="true" />}
-                    titulo="Nenhum registro para os filtros selecionados"
-                    acao={<button type="button" onClick={limpar} className={`${BTN_SECUNDARIO} h-10 mt-2`}>Limpar filtros</button>}
-                  />
+                ) : linhasAtivas.length === 0 ? (
+                  <EstadoVazio icone={<Search size={28} aria-hidden="true" />} titulo="Nenhum registro para os filtros selecionados" acao={<button type="button" onClick={limpar} className={`${BTN_SECUNDARIO} h-10 mt-2`}>Limpar filtros</button>} />
                 ) : (
-                  <div className="overflow-auto max-h-[640px] scroll-tema">
+                  <div className="overflow-auto max-h-[680px] scroll-tema border-t border-default">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 z-10 bg-surface-2">
-                        <tr className="text-xs text-muted uppercase tracking-wide">
-                          {COLUNAS.map((c) => {
-                            const ativa = ordem.chave === c.chave;
-                            return (
-                              <th key={c.chave} scope="col" aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-4 py-3 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
-                                <button type="button" onClick={() => alternarOrdem(c.chave)} className={`inline-flex items-center gap-1 uppercase tracking-wide cursor-pointer hover:text-page ${ativa ? "text-[#FA4C00]" : ""} ${FOCO}`}>
-                                  {c.rotulo}
-                                  {ativa && (ordem.asc ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
-                                </button>
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-default">
-                        {tabela.map((t) => {
-                          const exc = temExcecao(t);
-                          return (
-                            <tr
-                              key={t.toNumber}
-                              tabIndex={0}
-                              onClick={() => setSelecionada(t)}
-                              onKeyDown={(e) => e.key === "Enter" && setSelecionada(t)}
-                              className={`cursor-pointer hover:bg-surface-2 transition-colors ${FOCO} ${exc ? "shadow-[inset_3px_0_0_#FF453A]" : ""}`}
-                            >
-                              <td className="px-4 py-3 whitespace-nowrap font-medium tabular-nums text-[#FA4C00]">{t.toNumber}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-muted">{t.packTypeName || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(t.parcels)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-right tabular-nums text-muted">{fmtKg(t.weightG)} kg</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium">{t.loadedStationName || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap font-medium tabular-nums">{fmtHora(t)}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-muted">{t.dockNumber || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap">{t.operator || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap tabular-nums text-muted">{t.tripNumber || "—"}</td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {exc ? (
-                                  <span className="inline-flex items-center gap-1 rounded-md border border-[#FF453A]/35 bg-[#FF453A]/10 px-2 py-0.5 text-xs font-semibold text-[#FF453A]">
-                                    <CircleAlert size={12} aria-hidden="true" /> Exceção
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-md border border-[#22C55E]/30 bg-[#22C55E]/10 px-2 py-0.5 text-xs font-semibold text-[#22C55E]">
-                                    <CircleCheck size={12} aria-hidden="true" /> OK
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
+                      {vista === "tos" ? (
+                        <>
+                          <Cabecalho colunas={COLUNAS_TOS} ordem={ordemTos} onOrdenar={alternarOrdem} />
+                          <tbody className="divide-y divide-default">
+                            {daPagina.map((t) => (
+                              <tr key={t.toNumber} tabIndex={0} onClick={() => setToAberta(t.toNumber)} onKeyDown={(e) => e.key === "Enter" && setToAberta(t.toNumber)} className={`cursor-pointer hover:bg-surface-2 transition-colors ${FOCO}`}>
+                                <td className="px-3 py-3.5 whitespace-nowrap font-medium tabular-nums text-[#FA4C00]">{t.toNumber}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-muted">{t.packTypeName || "—"}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(t.parcels)}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-right tabular-nums text-muted">{fmtKg(t.weightG)} kg</td>
+                                <td className="px-3 py-3.5 font-medium"><div className="max-w-[190px] truncate" title={t.loadedStationName || undefined}>{t.loadedStationName || "—"}</div></td>
+                                <td className="px-3 py-3.5 whitespace-nowrap font-medium tabular-nums">{fmtHora(t)}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-muted">{(t.dockNumber || "").replace(/^Doca\s+(Outbound\s+|Inbound\s+)?/i, "") || "—"}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap">
+                                  <span className="block font-medium tabular-nums">{t.vehicleNumber || "—"}</span>
+                                  <span className="block text-xs tabular-nums text-muted">{t.tripNumber || "—"}</span>
+                                </td>
+                                <td className="px-3 py-3.5 whitespace-nowrap"><SeloStatus t={t} /></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </>
+                      ) : (
+                        <>
+                          <Cabecalho colunas={COLUNAS_VEICULOS} ordem={ordemVeic} onOrdenar={alternarOrdem} />
+                          <tbody className="divide-y divide-default">
+                            {daPagina.map((v) => (
+                              <tr key={v.chave} tabIndex={0} onClick={() => setLtAberto(v.chave)} onKeyDown={(e) => e.key === "Enter" && setLtAberto(v.chave)} className={`cursor-pointer hover:bg-surface-2 transition-colors ${FOCO}`}>
+                                <td className="px-3 py-3.5 whitespace-nowrap font-semibold tabular-nums">{v.placa || "—"}</td>
+                                <td className="px-3 py-3.5">
+                                  <span className="block font-medium tabular-nums text-[#FA4C00] whitespace-nowrap">{v.lt || "—"}</span>
+                                  <span className="block max-w-[190px] truncate text-xs text-muted" title={v.origem || undefined}>{v.origem ? `${v.origem}${v.outrasOrigens ? ` +${v.outrasOrigens}` : ""}` : "—"}</span>
+                                </td>
+                                <td className="px-3 py-3.5 whitespace-nowrap"><JanelaScan v={v} /></td>
+                                <td className="px-3 py-3.5 whitespace-nowrap tabular-nums">{v.duracaoMin > 0 ? fmtDuracao(v.duracaoMin) : <span className="text-muted">—</span>}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-muted">{(v.doca || "").replace(/^Doca\s+(Outbound\s+|Inbound\s+)?/i, "") || "—"}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(v.tos)}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-right font-semibold tabular-nums">{formatNumero(v.pacotes)}</td>
+                                <td className="px-3 py-3.5 whitespace-nowrap text-right tabular-nums text-muted">{fmtKg(v.pesoG)} kg</td>
+                                <td className="px-3 py-3.5 font-medium"><div className="max-w-[150px] truncate" title={v.motorista || undefined}>{v.motorista || "—"}</div></td>
+                                <td className="px-3 py-3.5 whitespace-nowrap">
+                                  {v.excecoes > 0 ? (
+                                    <span className="inline-flex items-center gap-1 rounded-md border border-[#FF453A]/35 bg-[#FF453A]/10 px-2 py-0.5 text-xs font-semibold text-[#FF453A]">
+                                      <CircleAlert size={12} aria-hidden="true" /> {v.excecoes}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-md border border-[#22C55E]/30 bg-[#22C55E]/10 px-2 py-0.5 text-xs font-semibold text-[#22C55E]">
+                                      <CircleCheck size={12} aria-hidden="true" /> OK
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </>
+                      )}
                     </table>
                   </div>
                 )}
+                {linhasAtivas.length > 0 && <Paginacao total={linhasAtivas.length} pagina={paginaAtual} porPagina={porPagina} onPagina={setPagina} onPorPagina={(n) => { setPorPagina(n); setPagina(1); }} />}
               </section>
             </>
           )}
         </main>
       </MainLayout>
 
-      {selecionada && <Detalhe t={selecionada} onClose={() => setSelecionada(null)} />}
+      {toAberta && lista.find((t) => t.toNumber === toAberta) && <ModalTO t={lista.find((t) => t.toNumber === toAberta)} onClose={() => setToAberta(null)} />}
+      {abertaVeic && <ModalVeiculo v={abertaVeic} onClose={() => setLtAberto(null)} />}
     </div>
   );
 }

@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Layers, Maximize2, Minimize2, Zap } from "lucide-react";
 import { BTN_SECUNDARIO, formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { EstadoVazio } from "../../components/mapaOperacional/ui";
-import { Pilula } from "./FilaPecas";
-import { LinhaSincronizacao } from "./StageInPecas";
+import { LinhaSincronizacao, Pilula } from "./FilaPecas";
 import { corAging, corOcupacao, fmtDur, resumoZonaOperacional, zonaCurta } from "./stageInUtils";
 
 // Visão Operacional (para a TV do galpão): uma ficha por zona com os números do turno e a fila FIFO das ruas mais antigas.
