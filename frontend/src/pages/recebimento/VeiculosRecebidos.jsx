@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, CircleAlert, CircleCheck, Circle, Inbox, Search, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Boxes, CalendarDays, CircleAlert, CircleCheck, Circle, Clock, Gauge, Hourglass, Inbox, Info, Package, Search, Truck, X } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
-import { Aviso, DiaNavegador, EstadoVazio, Esqueleto, FaixaIndicadores, PageHeader } from "../../components/mapaOperacional/ui";
+import { Aviso, DiaNavegador, EstadoVazio, Esqueleto, PageHeader } from "../../components/mapaOperacional/ui";
 import { BTN_SECUNDARIO, FOCO, INPUT, formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { FilaRecebimentoAPI } from "../../services/filaRecebimento";
 import { corEspera, fmtDuracao, fmtInstante, fmtPeso } from "./filaUtils";
 import { BlocoEstacao, Campo, ComposicaoCarga, Paginacao, Pilula } from "./FilaPecas";
+import { Kpi, KpiDestaque } from "./PrevisaoPecas";
 
 const POLL_MS = 60000; // o dia atual se atualiza sozinho; dia passado não muda
 const fmtDataBR = (iso) => iso.split("-").reverse().join("/");
@@ -17,16 +18,14 @@ const docaDe = (r) => r.docaOcupada || r.docaAtribuida || "";
 const divergente = (r) => r.esperados > 0 && r.descarregados < r.esperados;
 
 const COLUNAS = [
-  { chave: "placa", rotulo: "Placa / veículo", valor: (r) => (r.placa || "").toLowerCase() },
-  { chave: "tripNumber", rotulo: "LH", valor: (r) => (r.tripNumber || "").toLowerCase() },
-  { chave: "origem", rotulo: "Origem", valor: (r) => (r.origem || "").toLowerCase() },
-  { chave: "chegada", rotulo: "Chegada", valor: (r) => ms(r.chegouEm) },
-  { chave: "fim", rotulo: "Fim da descarga", valor: (r) => ms(r.descargaFimEm || r.finalizadoEm) },
+  { chave: "placa", rotulo: "Veículo", valor: (r) => (r.placa || "").toLowerCase() },
+  { chave: "tripNumber", rotulo: "LH · origem", valor: (r) => (r.tripNumber || "").toLowerCase() },
+  { chave: "chegada", rotulo: "Chegada → fim", valor: (r) => ms(r.chegouEm) },
   { chave: "tempo", rotulo: "Na estação", valor: (r) => r.tempoNaEstacaoMin ?? -1 },
-  { chave: "espera", rotulo: "Espera na fila", valor: (r) => r.esperaMaxMin ?? 0 },
+  { chave: "espera", rotulo: "Espera", titulo: "Espera na fila", valor: (r) => r.esperaMaxMin ?? 0 },
   { chave: "doca", rotulo: "Doca", valor: (r) => docaDe(r).toLowerCase() },
   { chave: "pacotes", rotulo: "Pacotes", direita: true, valor: (r) => r.pacotes ?? 0 },
-  { chave: "descarga", rotulo: "TOs descarregadas", direita: true, valor: (r) => r.descarregados ?? 0 },
+  { chave: "descarga", rotulo: "TOs", titulo: "TOs descarregadas", direita: true, valor: (r) => r.descarregados ?? 0 },
   { chave: "motorista", rotulo: "Motorista", valor: (r) => (r.motorista || "").toLowerCase() },
 ];
 
@@ -245,7 +244,7 @@ export default function VeiculosRecebidos() {
       <MainLayout>
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="p-4 sm:p-6 xl:p-10 2xl:px-20 space-y-5 max-w-[1800px] mx-auto">
+        <main className="p-4 sm:p-6 xl:p-10 2xl:px-20 space-y-6 max-w-[1800px] mx-auto">
           <PageHeader
             kicker="Operação · Recebimento"
             titulo="Veículos recebidos"
@@ -259,69 +258,97 @@ export default function VeiculosRecebidos() {
             <Aviso tipo="erro">{erro || "Não foi possível carregar os veículos recebidos."}</Aviso>
           ) : !dados ? (
             <div aria-busy="true" aria-label="Carregando veículos recebidos" className="space-y-4">
-              <Esqueleto className="h-24" />
-              <Esqueleto className="h-16" />
+              <Esqueleto className="h-36" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3">
+                <Esqueleto className="h-56 sm:col-span-3 xl:col-span-1" />
+                <Esqueleto className="h-56" />
+                <Esqueleto className="h-56" />
+                <Esqueleto className="h-56" />
+              </div>
               <Esqueleto className="h-64" />
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <p className="text-sm text-muted">Dia operacional das 06:00 às 05:59 · um veículo entra aqui quando finaliza a descarga.</p>
-                <DiaNavegador data={diaSel} maximo={diaAtual} onChange={(d) => { setDia(d === diaAtual ? null : d); setPagina(1); }} />
-              </div>
-
-              {offline && <Aviso tipo="alerta">Sem conexão com o servidor — os dados exibidos podem estar desatualizados.</Aviso>}
-
-              <FaixaIndicadores
-                rotulo="Indicadores dos veículos recebidos"
-                itens={[
-                  {
-                    rotulo: "Veículos recebidos",
-                    valor: formatNumero(visiveis.length),
-                    destaque: true,
-                    apoio: fmtDataBR(diaSel || diaAtual),
-                  },
-                  {
-                    rotulo: "Total de pacotes recebidos",
-                    valor: formatNumero(kpis.pacotes),
-                    grande: true,
-                    cor: "#FA4C00",
-                    apoio: `volume dos ${formatNumero(visiveis.length)} ${visiveis.length === 1 ? "veículo" : "veículos"} do dia${kpis.semPacotes ? ` · ${kpis.semPacotes} sem volume informado` : ""}`,
-                  },
-                  { rotulo: "TOs descarregadas", valor: formatNumero(kpis.tos), apoio: "soma das descargas" },
-                  { rotulo: "Tempo médio na estação", valor: kpis.tempoMedio != null ? fmtDuracao(kpis.tempoMedio) : "—", apoio: "da chegada ao fim da descarga" },
-                  {
-                    rotulo: "Espera média na fila",
-                    valor: kpis.esperaMedia != null ? fmtDuracao(kpis.esperaMedia) : "—",
-                    cor: kpis.esperaMedia != null ? corEspera(kpis.esperaMedia) : undefined,
-                    apoio: kpis.comEspera ? `${kpis.comEspera} de ${visiveis.length} com fila registrada` : "sem fila registrada",
-                  },
-                  {
-                    rotulo: "Maior permanência",
-                    valor: kpis.maior ? fmtDuracao(kpis.maior.tempoNaEstacaoMin) : "—",
-                    cor: kpis.maior ? corEspera(kpis.maior.tempoNaEstacaoMin) : undefined,
-                    apoio: kpis.maior ? kpis.maior.placa || kpis.maior.tripNumber : "sem veículo no dia",
-                  },
-                ]}
-              />
-
-              <section aria-label="Filtros" className="bg-surface rounded-2xl border border-default p-4 flex items-end gap-3 flex-wrap">
-                <div className="flex-1 min-w-[220px] max-w-md">
-                  <label htmlFor="vr-busca" className="block text-xs text-muted mb-1.5">Buscar</label>
-                  <div className="relative">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
-                    <input id="vr-busca" type="search" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} placeholder="Motorista, placa, agência, LH, origem, doca…" className={`${INPUT} pl-10`} />
+              {/* ---------- dia e busca ---------- */}
+              <section aria-label="Dia operacional e busca" className="anim-in rounded-2xl border border-default bg-surface p-4 space-y-4">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span aria-hidden="true" className="grid place-items-center w-10 h-10 rounded-xl bg-[#FA4C00]/12 text-[#FA4C00] shrink-0">
+                      <CalendarDays size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">Dia operacional</p>
+                      <p className="text-base font-semibold tabular-nums">
+                        {fmtDataBR(diaSel || diaAtual)}
+                        <span className="ml-2 text-sm font-normal text-muted">06:00 às 05:59</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-auto">
+                    <DiaNavegador data={diaSel} maximo={diaAtual} onChange={(d) => { setDia(d === diaAtual ? null : d); setPagina(1); }} />
                   </div>
                 </div>
-                <button type="button" onClick={limpar} disabled={!filtrosAtivos} className={`${BTN_SECUNDARIO} disabled:opacity-50`}>
-                  Limpar filtros
-                </button>
-                <p className="ml-auto text-sm text-muted tabular-nums" aria-live="polite">
-                  <b className="text-page">{visiveis.length}</b> {visiveis.length === 1 ? "veículo" : "veículos"} de {lista.length} no dia
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative flex-1 min-w-[240px] max-w-xl">
+                    <label htmlFor="vr-busca" className="sr-only">Buscar veículo recebido</label>
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
+                    <input id="vr-busca" type="search" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar por motorista, placa, agência, LH, origem ou doca…" className={`${INPUT} pl-10`} />
+                  </div>
+                  <button type="button" onClick={limpar} disabled={!filtrosAtivos} className={`${BTN_SECUNDARIO} disabled:opacity-50`}>
+                    Limpar filtros
+                  </button>
+                  <p className="ml-auto text-sm text-muted tabular-nums" aria-live="polite">
+                    <b className="text-page">{visiveis.length}</b> {visiveis.length === 1 ? "veículo" : "veículos"} de {lista.length} no dia
+                  </p>
+                </div>
+
+                <p className="flex items-center gap-2 text-xs text-muted">
+                  <Info size={13} className="shrink-0" aria-hidden="true" />
+                  Um veículo entra aqui quando finaliza a descarga.
                 </p>
               </section>
 
-              <section aria-label="Veículos recebidos" className="bg-surface rounded-2xl border border-default overflow-hidden">
+              {offline && <Aviso tipo="alerta">Sem conexão com o servidor — os dados exibidos podem estar desatualizados.</Aviso>}
+
+              {/* ---------- indicadores ---------- */}
+              <section aria-label="Indicadores dos veículos recebidos" className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3">
+                <KpiDestaque
+                    className="sm:col-span-3 xl:col-span-1"
+                    indice={0}
+                    icone={<Package size={20} />}
+                    rotulo="Total de pacotes recebidos"
+                    valor={formatNumero(kpis.pacotes)}
+                    apoio={`volume dos ${formatNumero(visiveis.length)} ${visiveis.length === 1 ? "veículo" : "veículos"} finalizados no dia`}
+                    aviso={kpis.semPacotes ? `${kpis.semPacotes} ${kpis.semPacotes === 1 ? "veículo" : "veículos"} sem volume informado` : null}
+                    extras={[
+                      { icone: <Truck size={13} />, rotulo: "Veículos recebidos", valor: formatNumero(visiveis.length) },
+                      { icone: <Boxes size={13} />, rotulo: "TOs descarregadas", valor: formatNumero(kpis.tos) },
+                    ]}
+                />
+                <Kpi indice={1} icone={<Clock size={16} />} rotulo="Tempo médio na estação" valor={kpis.tempoMedio != null ? fmtDuracao(kpis.tempoMedio) : "—"} tom="#3B82F6" apoio="da chegada ao fim da descarga" />
+                <Kpi
+                  indice={2}
+                  icone={<Hourglass size={16} />}
+                  rotulo="Espera média na fila"
+                  valor={kpis.esperaMedia != null ? fmtDuracao(kpis.esperaMedia) : "—"}
+                  tom={kpis.esperaMedia != null ? corEspera(kpis.esperaMedia) : "#F59E0B"}
+                  corValor={kpis.esperaMedia != null ? corEspera(kpis.esperaMedia) : undefined}
+                  apoio={kpis.comEspera ? `${kpis.comEspera} de ${visiveis.length} com fila registrada` : "sem fila registrada"}
+                />
+                <Kpi
+                  indice={3}
+                  icone={<Gauge size={16} />}
+                  rotulo="Maior permanência"
+                  valor={kpis.maior ? fmtDuracao(kpis.maior.tempoNaEstacaoMin) : "—"}
+                  tom={kpis.maior ? corEspera(kpis.maior.tempoNaEstacaoMin) : "#8B8B93"}
+                  corValor={kpis.maior ? corEspera(kpis.maior.tempoNaEstacaoMin) : undefined}
+                  apoio={kpis.maior ? kpis.maior.placa || kpis.maior.tripNumber : "sem veículo no dia"}
+                />
+              </section>
+
+              {/* ---------- tabela ---------- */}
+              <section aria-label="Veículos recebidos" className="anim-in rounded-2xl border border-default bg-surface overflow-hidden">
                 {lista.length === 0 ? (
                   <EstadoVazio
                     icone={<Inbox size={28} aria-hidden="true" />}
@@ -342,8 +369,8 @@ export default function VeiculosRecebidos() {
                           {COLUNAS.map((c) => {
                             const ativa = ordem.chave === c.chave;
                             return (
-                              <th key={c.chave} scope="col" aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-3 py-3 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
-                                <button type="button" onClick={() => alternarOrdem(c.chave)} className={`inline-flex items-center gap-1 uppercase tracking-wide cursor-pointer hover:text-page ${ativa ? "text-[#FA4C00]" : ""} ${FOCO}`}>
+                              <th key={c.chave} scope="col" aria-sort={ativa ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-3 py-3.5 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
+                                <button type="button" title={c.titulo} onClick={() => alternarOrdem(c.chave)} className={`inline-flex items-center gap-1 uppercase tracking-wide cursor-pointer hover:text-page ${ativa ? "text-[#FA4C00]" : ""} ${FOCO}`}>
                                   {c.rotulo}
                                   {ativa && (ordem.asc ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
                                 </button>
@@ -353,45 +380,66 @@ export default function VeiculosRecebidos() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-default">
-                        {daPagina.map((r) => (
-                          <tr
-                            key={r.tripNumber}
-                            tabIndex={0}
-                            onClick={() => setSelecionado(r.tripNumber)}
-                            onKeyDown={(e) => e.key === "Enter" && setSelecionado(r.tripNumber)}
-                            className={`cursor-pointer hover:bg-surface-2 transition-colors ${FOCO}`}
-                          >
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              <span className="block font-medium tabular-nums">{r.placa || "—"}</span>
-                              <span className="block text-xs text-muted">{r.tipoVeiculo || "—"}</span>
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap font-medium tabular-nums text-[#FA4C00]">{r.tripNumber}</td>
-                            <td className="px-3 py-3 text-muted"><div className="max-w-[170px] truncate" title={r.origem || undefined}>{r.origem || "—"}</div></td>
-                            <td className="px-3 py-3 whitespace-nowrap tabular-nums">{fmtInstante(r.chegouEm)}</td>
-                            <td className="px-3 py-3 whitespace-nowrap tabular-nums">{fmtInstante(r.descargaFimEm || r.finalizadoEm)}</td>
-                            <td className="px-3 py-3 whitespace-nowrap tabular-nums font-semibold" style={r.tempoNaEstacaoMin ? { color: corEspera(r.tempoNaEstacaoMin) } : undefined}>
-                              {r.tempoNaEstacaoMin ? fmtDuracao(r.tempoNaEstacaoMin) : <span className="text-muted font-normal">—</span>}
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap tabular-nums font-semibold" style={r.esperaMaxMin > 0 ? { color: corEspera(r.esperaMaxMin) } : undefined}>
-                              {r.esperaMaxMin > 0 ? fmtDuracao(r.esperaMaxMin) : <span className="text-muted font-normal">—</span>}
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap font-medium text-[#22C55E]">{docaDe(r) || <span className="text-muted font-normal">—</span>}</td>
-                            <td className="px-3 py-3 whitespace-nowrap text-right tabular-nums font-semibold">
-                              {r.pacotes > 0 ? formatNumero(r.pacotes) : <span className="text-muted font-normal" title="Sem volume informado na planilha">—</span>}
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-right tabular-nums">
-                              {divergente(r) ? (
-                                <span className="inline-flex items-center gap-1 font-semibold text-[#F59E0B]" title="Descarregou menos que o esperado">
-                                  <CircleAlert size={13} aria-hidden="true" />
-                                  {formatNumero(r.descarregados)}<span className="font-normal text-muted"> / {formatNumero(r.esperados)}</span>
+                        {daPagina.map((r) => {
+                          const doca = docaDe(r).replace(/^Doca\s+/i, "");
+                          const corTempo = r.tempoNaEstacaoMin ? corEspera(r.tempoNaEstacaoMin) : null;
+                          return (
+                            <tr
+                              key={r.tripNumber}
+                              tabIndex={0}
+                              onClick={() => setSelecionado(r.tripNumber)}
+                              onKeyDown={(e) => e.key === "Enter" && setSelecionado(r.tripNumber)}
+                              className={`cursor-pointer hover:bg-surface-2 transition-colors ${FOCO}`}
+                            >
+                              <td className="px-3 py-3.5 whitespace-nowrap">
+                                <span className="block font-semibold tabular-nums">{r.placa || "—"}</span>
+                                <span className="block text-xs text-muted">{r.tipoVeiculo || "—"}</span>
+                              </td>
+                              <td className="px-3 py-3.5">
+                                <span className="block font-medium tabular-nums text-[#FA4C00] whitespace-nowrap">{r.tripNumber}</span>
+                                <span className="block max-w-[170px] truncate text-xs text-muted" title={r.origem || undefined}>{r.origem || "—"}</span>
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap tabular-nums">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span className="font-medium">{fmtInstante(r.chegouEm)}</span>
+                                  <ArrowRight size={13} className="text-muted" aria-label="até" />
+                                  <span className="font-medium">{fmtInstante(r.descargaFimEm || r.finalizadoEm)}</span>
                                 </span>
-                              ) : (
-                                <span className="font-semibold">{formatNumero(r.descarregados)}</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-3 font-medium"><div className="max-w-[190px] truncate" title={r.motorista || undefined}>{r.motorista || "—"}</div></td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap">
+                                {corTempo ? (
+                                  <span className="inline-flex rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums" style={{ color: corTempo, background: `${corTempo}1F` }}>{fmtDuracao(r.tempoNaEstacaoMin)}</span>
+                                ) : (
+                                  <span className="text-muted">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap tabular-nums font-semibold" style={r.esperaMaxMin > 0 ? { color: corEspera(r.esperaMaxMin) } : undefined}>
+                                {r.esperaMaxMin > 0 ? fmtDuracao(r.esperaMaxMin) : <span className="text-muted font-normal">—</span>}
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap">
+                                {doca ? (
+                                  <span className="inline-flex rounded-md border border-[#22C55E]/30 bg-[#22C55E]/10 px-2 py-0.5 text-xs font-semibold text-[#22C55E]">{doca}</span>
+                                ) : (
+                                  <span className="text-muted">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap text-right tabular-nums font-semibold">
+                                {r.pacotes > 0 ? formatNumero(r.pacotes) : <span className="text-muted font-normal" title="Sem volume informado na planilha">—</span>}
+                              </td>
+                              <td className="px-3 py-3.5 whitespace-nowrap text-right tabular-nums">
+                                {divergente(r) ? (
+                                  <span className="inline-flex items-center gap-1 font-semibold text-[#F59E0B]" title="Descarregou menos que o esperado">
+                                    <CircleAlert size={13} aria-hidden="true" />
+                                    {formatNumero(r.descarregados)}<span className="font-normal text-muted"> / {formatNumero(r.esperados)}</span>
+                                  </span>
+                                ) : (
+                                  <span className="font-semibold">{formatNumero(r.descarregados)}</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3.5 font-medium"><div className="max-w-[150px] truncate" title={r.motorista || undefined}>{r.motorista || "—"}</div></td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

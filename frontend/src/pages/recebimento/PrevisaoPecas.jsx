@@ -36,6 +36,42 @@ export function Kpi({ icone, rotulo, valor, apoio, tom = "#FA4C00", corValor, ba
   );
 }
 
+/**
+ * Card de destaque (o número principal da tela): ícone, valor bem grande, apoio e uma linha de indicadores
+ * secundários embaixo. `extras`: [{ icone, rotulo, valor }].
+ */
+export function KpiDestaque({ icone, rotulo, valor, apoio, aviso, extras, indice = 0, className = "" }) {
+  return (
+    <div className={`anim-in relative overflow-hidden rounded-2xl border border-[#FA4C00]/30 bg-surface p-5 sm:p-6 flex flex-col ${className}`} style={{ "--i": indice }}>
+      <div aria-hidden="true" className="pointer-events-none absolute -top-28 -right-24 h-72 w-72 rounded-full bg-[#FA4C00]/15 blur-3xl" />
+      <div className="relative flex items-center gap-3">
+        <span aria-hidden="true" className="grid place-items-center w-10 h-10 rounded-xl bg-[#FA4C00]/15 text-[#FA4C00] shrink-0">
+          {icone}
+        </span>
+        <p className="text-sm font-medium text-muted">{rotulo}</p>
+      </div>
+      <p className="relative mt-5 text-5xl sm:text-6xl leading-none font-semibold tabular-nums tracking-tight">{valor}</p>
+      {apoio && <p className="relative mt-3 text-sm text-muted">{apoio}</p>}
+      {aviso && <p className="relative mt-3 inline-flex w-fit items-center rounded-full bg-[#F59E0B]/12 px-2.5 py-1 text-xs font-medium text-[#F59E0B]">{aviso}</p>}
+      {extras?.length > 0 && (
+        <dl className="relative mt-auto pt-5">
+          <div className="grid grid-cols-2 gap-4 border-t border-default pt-4">
+            {extras.map((e) => (
+              <div key={e.rotulo}>
+                <dt className="flex items-center gap-1.5 text-xs text-muted">
+                  <span aria-hidden="true" className="text-[#FA4C00]">{e.icone}</span>
+                  {e.rotulo}
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums">{e.valor}</dd>
+              </div>
+            ))}
+          </div>
+        </dl>
+      )}
+    </div>
+  );
+}
+
 /** Cartão de gráfico: ícone, título/subtítulo, legenda e (opcional) uma faixa de destaques acima do gráfico. */
 export function CardGrafico({ icone, titulo, subtitulo, legenda, destaques, children, indice = 0 }) {
   return (

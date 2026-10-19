@@ -203,7 +203,7 @@ html:not(.dark) .bg-\[\#3A2F1B\]  { background-color: #FFFBEB !important; }
 html:not(.dark) .bg-\[\#2A1E3B\]  { background-color: #F5F3FF !important; }
 
 /* Sidebar item ativo em light */
-html:not(.dark) .bg-surface-2.text-page {
+html:not(.dark) aside .bg-surface-2.text-page {
   background-color: #FFF0EB !important;
   color: #FA4C00 !important;
 }
