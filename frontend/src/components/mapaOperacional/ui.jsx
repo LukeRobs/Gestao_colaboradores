@@ -141,19 +141,21 @@ export function Esqueleto({ className = "" }) {
 
 /* ---------- Faixa de indicadores (um painel só, em vez de N cards) ---------- */
 
-const COLUNAS_XL = { 3: "xl:grid-cols-3", 4: "xl:grid-cols-4", 5: "xl:grid-cols-5", 6: "xl:grid-cols-6" };
+const COLUNAS_XL = { 3: "xl:grid-cols-3", 4: "xl:grid-cols-4", 5: "xl:grid-cols-5", 6: "xl:grid-cols-6", 7: "xl:grid-cols-7", 8: "xl:grid-cols-8" };
 
+/** `itens`: { rotulo, valor, apoio?, cor?, destaque?, grande? }. `grande` ocupa 2 colunas, com número maior e fundo em destaque. */
 export function FaixaIndicadores({ itens, rotulo }) {
+  const colunas = itens.reduce((soma, item) => soma + (item.grande ? 2 : 1), 0);
   return (
     <section aria-label={rotulo} className="rounded-2xl border border-default bg-surface overflow-hidden">
-      <dl className={`grid grid-cols-2 sm:grid-cols-3 ${COLUNAS_XL[itens.length] || "xl:grid-cols-5"} -mr-px -mb-px`}>
+      <dl className={`grid grid-cols-2 sm:grid-cols-3 ${COLUNAS_XL[colunas] || "xl:grid-cols-5"} -mr-px -mb-px`}>
         {itens.map((item) => (
-          <div key={item.rotulo} className="border-r border-b border-default p-4">
-            <dt className="text-xs text-muted">{item.rotulo}</dt>
-            <dd className={`mt-1 font-semibold tabular-nums ${item.destaque ? "text-3xl" : "text-2xl"}`} style={item.cor ? { color: item.cor } : undefined}>
+          <div key={item.rotulo} className={`border-r border-b border-default p-4 ${item.grande ? "col-span-2 bg-[#FA4C00]/8 flex flex-col justify-center" : ""}`}>
+            <dt className={`text-xs ${item.grande ? "font-semibold text-page" : "text-muted"}`}>{item.rotulo}</dt>
+            <dd className={`mt-1 font-semibold tabular-nums ${item.grande ? "text-5xl leading-none tracking-tight" : item.destaque ? "text-3xl" : "text-2xl"}`} style={item.cor ? { color: item.cor } : undefined}>
               {item.valor}
             </dd>
-            {item.apoio && <p className="text-xs text-muted mt-0.5">{item.apoio}</p>}
+            {item.apoio && <p className={`text-xs text-muted ${item.grande ? "mt-2" : "mt-0.5"}`}>{item.apoio}</p>}
           </div>
         ))}
       </dl>
