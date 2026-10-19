@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronRight, Layers, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Boxes, ChevronRight, Clock, Gauge, Layers, Package, Route, Search, Timer, X } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
-import { Aviso, EstadoVazio, Esqueleto, FaixaIndicadores, PageHeader } from "../../components/mapaOperacional/ui";
+import { AbasSegmentadas, Aviso, EstadoVazio, Esqueleto, PageHeader } from "../../components/mapaOperacional/ui";
 import { FOCO, INPUT, formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { StageInAPI } from "../../services/stageIn";
 import { FUSO } from "./filaUtils";
-import { Paginacao } from "./FilaPecas";
-import { AbasZona, CardZona, PainelOcupacao, PainelTop5, PainelTurno, Secao, TabelaCalor } from "./StageInPecas";
+import { Paginacao, Pilula } from "./FilaPecas";
+import { CardGrafico, Destaque, Kpi, KpiDestaque } from "./PrevisaoPecas";
+import { CardZona, ComposicaoPerfil, FiltroZona, GraficoAging, PainelOcupacao, PainelTop5, PainelTurno, TabelaCalor } from "./StageInPecas";
 import { FAIXAS_AGING, PERFIS, corAging, corOcupacao, cruzamentoAging, fmtDur, mapaCoresZonas, montarRuas, resumoPerfil, zonaCurta } from "./stageInUtils";
 
 const POLL_MS = 15000;
@@ -25,7 +26,6 @@ const COLUNAS = [
   { chave: "capacidade", rotulo: "Cap.", titulo: "Capacidade da rua", direita: true, valor: (r) => r.capacidade },
   { chave: "ocupacao", rotulo: "Ocupação", valor: (r) => r.ocupacao },
   { chave: "aging", rotulo: "Aging", valor: (r) => r.aging },
-  { chave: "operador", rotulo: "Operador", valor: (r) => r.operador.toLowerCase() },
 ];
 
 function ordenar(lista, chave, asc) {
@@ -36,21 +36,6 @@ function ordenar(lista, chave, asc) {
     const r = typeof va === "number" ? va - vb : va.localeCompare(vb);
     return asc ? r : -r;
   });
-}
-
-function StatusSincronizacao({ estado, detalhe, proxima }) {
-  const cores = { online: "#22C55E", atrasado: "#F59E0B", offline: "#FF453A", conectando: "#8B8B93" };
-  const rotulos = { online: "Online", atrasado: "Dados desatualizados", offline: "Offline", conectando: "Conectando" };
-  return (
-    <div role="status" className="inline-flex items-center gap-3 rounded-full border border-default bg-surface px-4 h-10 text-xs text-muted">
-      <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: cores[estado] }} />
-      <span>
-        <b className="text-page font-semibold">{rotulos[estado]}</b>
-        {detalhe && <span> · {detalhe}</span>}
-      </span>
-      {proxima != null && <span className="hidden sm:inline border-l border-default pl-3 tabular-nums">próxima atualização ~{proxima}s</span>}
-    </div>
-  );
 }
 
 function Perfis({ tosPerfil }) {
@@ -112,6 +97,8 @@ export default function StageIn() {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
   const [abertas, setAbertas] = useState(() => new Set());
+  const [vistaAging, setVistaAging] = useState("grafico");
+  const [vistaPerfil, setVistaPerfil] = useState("resumo");
   const [atualizando, setAtualizando] = useState(false);
   const [atualizadoEm, setAtualizadoEm] = useState(null);
   const [agora, setAgora] = useState(() => Date.now());
@@ -261,25 +248,31 @@ export default function StageIn() {
   }
   const proxima = Math.max(0, Math.round((proximaEm - agora) / 1000));
 
-  const zonasCruzamento = cruzamento.zonas.map((z) => ({
-    nome: z,
-    apoio: relatorio?.porZona?.[z] ? `${formatNumero(relatorio.porZona[z].pacotes)} pcts` : `${formatNumero(cruzamento.totaisZona[z] || 0)} TOs`,
-  }));
-  const linhasCruzamento = FAIXAS_AGING.map((f, i) => {
-    const total = cruzamento.zonas.reduce((s, z) => s + (cruzamento.celulas[i][z] || 0), 0);
-    return { rotulo: f.rotulo, celulas: cruzamento.celulas[i], total, extra: cruzamento.unidadesFaixa[i] > 0 ? Math.round(total / cruzamento.unidadesFaixa[i]) : null };
-  }).filter((l) => l.total > 0);
+  // Memoizados para o gráfico não reanimar a cada tick do relógio (a tela se redesenha todo segundo).
+  const zonasCruzamento = useMemo(
+    () =>
+      cruzamento.zonas.map((z) => ({
+        nome: z,
+        apoio: relatorio?.porZona?.[z] ? `${formatNumero(relatorio.porZona[z].pacotes)} pcts` : `${formatNumero(cruzamento.totaisZona[z] || 0)} TOs`,
+      })),
+    [cruzamento, relatorio]
+  );
+  const linhasCruzamento = useMemo(
+    () =>
+      FAIXAS_AGING.map((f, i) => {
+        const total = cruzamento.zonas.reduce((s, z) => s + (cruzamento.celulas[i][z] || 0), 0);
+        return { rotulo: f.rotulo, celulas: cruzamento.celulas[i], total, extra: cruzamento.unidadesFaixa[i] > 0 ? Math.round(total / cruzamento.unidadesFaixa[i]) : null };
+      }).filter((l) => l.total > 0),
+    [cruzamento]
+  );
   const totalCruzamento = cruzamento.zonas.reduce((s, z) => s + (cruzamento.totaisZona[z] || 0), 0);
   const unidadesCruzamento = cruzamento.unidadesFaixa.reduce((s, v) => s + v, 0);
 
-  const kpiItens = [
-    { rotulo: "Total de pacotes", valor: kpis.pacotes != null ? formatNumero(kpis.pacotes) : "—", grande: true, apoio: kpis.pacotes != null ? "da planilha Report" : "planilha Report indisponível" },
-    { rotulo: "TOs em staging", valor: formatNumero(kpis.totalTOs), cor: "#FA4C00", apoio: kpis.gaiolas ? `+ ${kpis.gaiolas} gaiolas` : "agora" },
-    { rotulo: "Ruas ativas", valor: formatNumero(ativas.length), cor: "#3B82F6", apoio: "com TOs alocadas" },
-    { rotulo: "Maior aging", valor: kpis.maior ? fmtDur(kpis.maior.aging) : "—", cor: kpis.maior ? corAging(kpis.maior.aging) : undefined, apoio: kpis.maior?.nome || "—" },
-    { rotulo: "Aging médio", valor: kpis.media ? fmtDur(Math.round(kpis.media)) : "—", cor: "#F59E0B", apoio: "nas ruas ativas" },
-    { rotulo: "Pacotes por TO", valor: kpis.porTo != null ? formatNumero(kpis.porTo) : "—", cor: "#8B5CF6", apoio: kpis.gaiolas ? "TOs + gaiolas" : "SPP médio" },
-  ];
+  const totalZonas = abas[0]?.contagem || 0;
+  const criticos = FAIXAS_AGING.reduce((s, f, i) => (f.min >= 46800 ? s + cruzamento.zonas.reduce((t, z) => t + (cruzamento.celulas[i][z] || 0), 0) : s), 0);
+  const pico = linhasCruzamento.reduce((m, l) => (!m || l.total > m.total ? l : m), null);
+  const unidadeCruzamento = cruzamento.temReport ? "pacotes" : "TOs";
+  const rotuloAtual = zonaValida ? zonaCurta(zonaValida) : "Todas as zonas";
 
   return (
     <div className="flex min-h-screen bg-page text-page overflow-x-hidden">
@@ -301,178 +294,240 @@ export default function StageIn() {
           {erro || (!dados && offline) ? (
             <Aviso tipo="erro">{erro || "Não foi possível carregar o Stage IN."}</Aviso>
           ) : !dados ? (
-            <div aria-busy="true" aria-label="Carregando o Stage IN" className="space-y-4">
-              <Esqueleto className="h-10" />
-              <Esqueleto className="h-32" />
+            <div aria-busy="true" aria-label="Carregando o Stage IN" className="space-y-6">
+              <Esqueleto className="h-44" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3">
+                <Esqueleto className="h-56 sm:col-span-3 xl:col-span-1" />
+                <Esqueleto className="h-56" />
+                <Esqueleto className="h-56" />
+                <Esqueleto className="h-56" />
+              </div>
+              <Esqueleto className="h-72" />
               <Esqueleto className="h-64" />
-              <Esqueleto className="h-64" />
+            </div>
+          ) : ruas.length === 0 ? (
+            <div className="rounded-2xl border border-default bg-surface">
+              <EstadoVazio
+                icone={<Layers size={30} aria-hidden="true" />}
+                titulo="Aguardando sincronização"
+                descricao="O Tampermonkey ainda não enviou as ruas do Inbound Staging Area desta estação. Instale ou atualize o script stage_in_sync no computador da operação."
+              />
             </div>
           ) : (
             <>
-              <StatusSincronizacao estado={estadoSync} detalhe={detalheSync} proxima={proxima} />
+              {/* ---------- zona e sincronização ---------- */}
+              <FiltroZona
+                abas={abas}
+                valor={zonaValida || TODAS}
+                onChange={(z) => { setZonaAtiva(z); setPagina(1); }}
+                rotuloAtual={rotuloAtual}
+                sincronizacao={{ estado: estadoSync, detalhe: detalheSync, proxima }}
+              />
+
               {estadoSync === "offline" && <Aviso tipo="alerta">Sem conexão com o servidor — os dados exibidos podem estar desatualizados.</Aviso>}
               {estadoSync === "atrasado" && <Aviso tipo="alerta">Dados desatualizados — o Tampermonkey pode estar offline ou sem sincronizar.</Aviso>}
               {!temReport && <Aviso tipo="alerta">{relatorio?.erro || "A planilha de Report não está disponível."} As contagens de pacotes ficam de fora até ela voltar.</Aviso>}
 
-              {ruas.length === 0 ? (
-                <div className="rounded-2xl border border-default bg-surface">
-                  <EstadoVazio
-                    icone={<Layers size={30} aria-hidden="true" />}
-                    titulo="Aguardando sincronização"
-                    descricao="O Tampermonkey ainda não enviou as ruas do Inbound Staging Area desta estação. Instale ou atualize o script stage_in_sync no computador da operação."
-                  />
-                </div>
-              ) : (
-                <>
-                  <AbasZona abas={abas} valor={zonaValida || TODAS} onChange={(z) => { setZonaAtiva(z); setPagina(1); }} />
+              {/* ---------- indicadores ---------- */}
+              <section aria-label="Indicadores do Stage IN" className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-3">
+                <KpiDestaque
+                  className="sm:col-span-3 xl:col-span-1"
+                  indice={0}
+                  icone={<Package size={20} />}
+                  rotulo="Total de pacotes no staging"
+                  valor={kpis.pacotes != null ? formatNumero(kpis.pacotes) : "—"}
+                  apoio={kpis.pacotes != null ? `da planilha Report · ${rotuloAtual.toLowerCase()}` : "planilha Report indisponível"}
+                  extras={[
+                    { icone: <Boxes size={13} />, rotulo: "TOs em staging", valor: formatNumero(kpis.totalTOs) },
+                    { icone: <Route size={13} />, rotulo: "Ruas ativas", valor: formatNumero(ativas.length) },
+                  ]}
+                />
+                <Kpi
+                  indice={1}
+                  icone={<Gauge size={16} />}
+                  rotulo="Maior aging"
+                  valor={kpis.maior ? fmtDur(kpis.maior.aging) : "—"}
+                  tom={kpis.maior ? corAging(kpis.maior.aging) : "#8B8B93"}
+                  corValor={kpis.maior ? corAging(kpis.maior.aging) : undefined}
+                  apoio={kpis.maior ? kpis.maior.nome : "nenhuma rua com TOs"}
+                />
+                <Kpi indice={2} icone={<Clock size={16} />} rotulo="Aging médio" valor={kpis.media ? fmtDur(Math.round(kpis.media)) : "—"} tom="#F59E0B" apoio="nas ruas com TOs" />
+                <Kpi
+                  indice={3}
+                  icone={<Package size={16} />}
+                  rotulo="Pacotes por TO"
+                  valor={kpis.porTo != null ? formatNumero(kpis.porTo) : "—"}
+                  tom="#8B5CF6"
+                  apoio={kpis.gaiolas ? `${formatNumero(kpis.totalTOs)} TOs + ${kpis.gaiolas} gaiolas` : "SPP médio do staging"}
+                />
+              </section>
 
-                  <FaixaIndicadores rotulo="Indicadores do Stage IN" itens={kpiItens} />
+              {/* ---------- visão por zona ---------- */}
+              {cardsZona.length > 0 && (
+                <CardGrafico icone={<Layers size={17} />} titulo="Visão por zona" subtitulo={temReport ? "Pacotes em cada zona, com SPP e aging das ruas" : "TOs em cada zona, com aging das ruas"} indice={1}>
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+                    {cardsZona.map((z) => {
+                      const media = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
+                      const maior = z.agings.length ? Math.max(...z.agings) : 0;
+                      const spp = z.pacotes != null && z.tos + z.gaiolas > 0 ? Math.round(z.pacotes / (z.tos + z.gaiolas)) : null;
+                      return (
+                        <CardZona
+                          key={z.nome}
+                          nome={z.nome}
+                          cor={cores[z.nome]}
+                          valor={formatNumero(z.pacotes ?? z.tos)}
+                          unidade={z.pacotes != null ? "pacotes" : "TOs"}
+                          participacao={totalZonas > 0 ? ((z.pacotes ?? z.tos) / totalZonas) * 100 : null}
+                          metricas={[
+                            ...(z.pacotes != null ? [{ rotulo: "TOs", valor: `${z.tos}${z.gaiolas ? ` + ${z.gaiolas} CG` : ""}` }] : []),
+                            ...(spp != null ? [{ rotulo: "SPP", valor: spp }] : []),
+                            ...(z.spps.length ? [{ rotulo: "máx", valor: Math.round(Math.max(...z.spps)) }, { rotulo: "mín", valor: Math.round(Math.min(...z.spps)) }] : []),
+                            ...(media ? [{ rotulo: "média", valor: fmtDur(Math.round(media)) }] : []),
+                            ...(maior ? [{ rotulo: "pico", valor: fmtDur(maior) }] : []),
+                          ]}
+                        />
+                      );
+                    })}
+                  </div>
+                </CardGrafico>
+              )}
 
-                  {cardsZona.length > 0 && (
-                    <Secao titulo="Visão por zona" subtitulo={temReport ? "Distribuição de pacotes por zona e faixa de aging" : "Distribuição de TOs por zona e faixa de aging"} indice={1}>
-                      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-                        {cardsZona.map((z) => {
-                          const media = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
-                          const pico = z.agings.length ? Math.max(...z.agings) : 0;
-                          const spp = z.pacotes != null && z.tos + z.gaiolas > 0 ? Math.round(z.pacotes / (z.tos + z.gaiolas)) : null;
-                          return (
-                            <CardZona
-                              key={z.nome}
-                              nome={z.nome}
-                              cor={cores[z.nome]}
-                              valor={formatNumero(z.pacotes ?? z.tos)}
-                              unidade={z.pacotes != null ? "pacotes" : "TOs"}
-                              metricas={[
-                                ...(z.pacotes != null ? [{ rotulo: "TOs", valor: `${z.tos}${z.gaiolas ? ` + ${z.gaiolas} CG` : ""}` }] : []),
-                                ...(spp != null ? [{ rotulo: "SPP", valor: spp }] : []),
-                                ...(z.spps.length ? [{ rotulo: "máx", valor: Math.round(Math.max(...z.spps)) }, { rotulo: "mín", valor: Math.round(Math.min(...z.spps)) }] : []),
-                                ...(media ? [{ rotulo: "média", valor: fmtDur(Math.round(media)) }] : []),
-                                ...(pico ? [{ rotulo: "pico", valor: fmtDur(pico) }] : []),
-                              ]}
-                            />
-                          );
-                        })}
+              {/* ---------- aging ---------- */}
+              {linhasCruzamento.length > 0 && (
+                <CardGrafico
+                  icone={<Timer size={17} />}
+                  titulo="Aging do staging"
+                  subtitulo={`${unidadeCruzamento === "pacotes" ? "Pacotes" : "TOs"} por faixa de tempo parado, por zona`}
+                  indice={2}
+                  legenda={
+                    <div className="w-full sm:w-56">
+                      <AbasSegmentadas rotulo="Visualização do aging" valor={vistaAging} onChange={setVistaAging} opcoes={[{ valor: "grafico", rotulo: "Gráfico" }, { valor: "tabela", rotulo: "Tabela" }]} />
+                    </div>
+                  }
+                  destaques={
+                    <>
+                      <Destaque rotulo="Acima de 13h" valor={`${formatNumero(criticos)} ${unidadeCruzamento} · ${totalCruzamento ? Math.round((criticos / totalCruzamento) * 100) : 0}%`} cor={criticos > 0 ? "#FF453A" : undefined} />
+                      {pico && <Destaque rotulo="Faixa com mais" valor={`${pico.rotulo} · ${formatNumero(pico.total)}`} />}
+                    </>
+                  }
+                >
+                  {vistaAging === "grafico" ? (
+                    <GraficoAging linhas={linhasCruzamento} zonas={zonasCruzamento} cores={cores} />
+                  ) : (
+                    <TabelaCalor
+                      primeiraColuna="Faixa de aging"
+                      linhas={linhasCruzamento}
+                      zonas={zonasCruzamento}
+                      cores={cores}
+                      totaisZona={cruzamento.totaisZona}
+                      totalGeral={totalCruzamento}
+                      extraRotulo={cruzamento.temReport ? "SPP" : undefined}
+                      extraTotal={unidadesCruzamento > 0 ? Math.round(totalCruzamento / unidadesCruzamento) : null}
+                    />
+                  )}
+                </CardGrafico>
+              )}
+
+              {/* ---------- perfil de pacote ---------- */}
+              {perfil && (
+                <CardGrafico
+                  icone={<Boxes size={17} />}
+                  titulo="Perfil de pacote"
+                  subtitulo="Tamanho dos pacotes nas TOs em staging (planilha de perfil)"
+                  indice={3}
+                  legenda={
+                    !perfil.vazio && (
+                      <div className="w-full sm:w-56">
+                        <AbasSegmentadas rotulo="Visualização do perfil" valor={vistaPerfil} onChange={setVistaPerfil} opcoes={[{ valor: "resumo", rotulo: "Resumo" }, { valor: "zonas", rotulo: "Por zona" }]} />
                       </div>
-                      {linhasCruzamento.length > 0 && (
-                        <div className="mt-5">
-                          <TabelaCalor
-                            primeiraColuna="Faixa de aging"
-                            linhas={linhasCruzamento}
-                            zonas={zonasCruzamento}
-                            cores={cores}
-                            totaisZona={cruzamento.totaisZona}
-                            totalGeral={totalCruzamento}
-                            extraRotulo={cruzamento.temReport ? "SPP" : undefined}
-                            extraTotal={unidadesCruzamento > 0 ? Math.round(totalCruzamento / unidadesCruzamento) : null}
-                          />
-                        </div>
-                      )}
-                    </Secao>
+                    )
+                  }
+                >
+                  {perfil.vazio ? (
+                    <p className="text-sm text-muted">Esta zona não possui classificação de perfil de pacote (PP/P/M/G/Bulky) na planilha de origem.</p>
+                  ) : vistaPerfil === "resumo" ? (
+                    <ComposicaoPerfil perfis={PERFIS} totais={perfil.totais} total={perfil.total} />
+                  ) : (
+                    <TabelaCalor
+                      primeiraColuna="Perfil"
+                      linhas={PERFIS.map((p, i) => ({ rotulo: p.rotulo, cor: p.cor, celulas: perfil.celulas[i], total: perfil.zonas.reduce((s, z) => s + perfil.celulas[i][z], 0) }))}
+                      zonas={perfil.zonas.map((z) => ({ nome: z, apoio: `${formatNumero(perfil.totaisZona[z])} pcts` }))}
+                      cores={cores}
+                      totaisZona={perfil.totaisZona}
+                      totalGeral={perfil.total}
+                    />
                   )}
+                </CardGrafico>
+              )}
 
-                  {perfil && (
-                    <Secao titulo="Perfil de pacote" subtitulo="Tamanho dos pacotes nas TOs em staging (planilha de perfil)" indice={2}>
-                      {perfil.vazio ? (
-                        <p className="text-sm text-muted">Esta zona não possui classificação de perfil de pacote (PP/P/M/G/Bulky) na planilha de origem.</p>
-                      ) : (
-                        <>
-                          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 xl:grid-cols-7">
-                            {PERFIS.map((p) => (
-                              <CardZona
-                                key={p.chave}
-                                nome={p.rotulo}
-                                cor={p.cor}
-                                valor={formatNumero(perfil.totais[p.chave])}
-                                unidade="pacotes"
-                                metricas={[{ rotulo: "do total", valor: `${perfil.total ? ((perfil.totais[p.chave] / perfil.total) * 100).toFixed(1).replace(".", ",") : "0,0"}%` }]}
-                              />
-                            ))}
-                          </div>
-                          <div className="mt-5">
-                            <TabelaCalor
-                              primeiraColuna="Perfil"
-                              linhas={PERFIS.map((p, i) => ({ rotulo: p.rotulo, cor: p.cor, celulas: perfil.celulas[i], total: perfil.zonas.reduce((s, z) => s + perfil.celulas[i][z], 0) }))}
-                              zonas={perfil.zonas.map((z) => ({ nome: z, apoio: `${formatNumero(perfil.totaisZona[z])} pcts` }))}
-                              cores={cores}
-                              totaisZona={perfil.totaisZona}
-                              totalGeral={perfil.total}
-                            />
-                          </div>
-                        </>
-                      )}
-                    </Secao>
-                  )}
+              {/* ---------- apoio ---------- */}
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
+                <PainelTop5 ruas={top5} cores={cores} indice={4} />
+                <PainelOcupacao linhas={ocupacao} cores={cores} indice={5} />
+                <div className="lg:col-span-2 2xl:col-span-1 flex flex-col [&>section]:flex-1">
+                  <PainelTurno turnos={turnos} indice={6} />
+                </div>
+              </div>
 
-                  <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
-                    <PainelTop5 ruas={top5} cores={cores} indice={3} />
-                    <PainelOcupacao linhas={ocupacao} cores={cores} indice={4} />
-                    <div className="lg:col-span-2 2xl:col-span-1 flex flex-col [&>section]:flex-1">
-                      <PainelTurno turnos={turnos} indice={5} />
+              {/* ---------- detalhamento por rua ---------- */}
+              <section aria-label="Detalhamento por rua" className="anim-in rounded-2xl border border-default bg-surface overflow-hidden" style={{ "--i": 7 }}>
+                <div className="flex items-center justify-between gap-3 flex-wrap p-5">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <span aria-hidden="true" className="grid place-items-center w-9 h-9 rounded-xl bg-[#FA4C00]/12 text-[#FA4C00] shrink-0">
+                      <Route size={17} />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold leading-tight">Detalhamento por rua</h2>
+                      <p className="text-xs text-muted mt-1 tabular-nums" aria-live="polite">
+                        <b className="text-page">{formatNumero(visiveis.length)}</b> {visiveis.length === 1 ? "rua" : "ruas"}{zonaValida ? ` em ${zonaCurta(zonaValida)}` : ""} · clique na rua para ver as TOs
+                      </p>
                     </div>
                   </div>
-
-                  <section aria-label="Detalhamento por rua" className="anim-in rounded-2xl border border-default bg-surface overflow-hidden" style={{ "--i": 6 }}>
-                    <div className="flex items-center justify-between gap-3 flex-wrap p-5">
-                      <div>
-                        <h2 className="text-sm font-semibold leading-tight">Detalhamento por rua</h2>
-                        <p className="text-xs text-muted mt-1 tabular-nums">{formatNumero(visiveis.length)} ruas{zonaValida ? ` em ${zonaCurta(zonaValida)}` : ""} · clique na rua para ver as TOs</p>
-                      </div>
-                      <div className="relative w-full sm:w-72">
-                        <Search size={15} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-                        <input
-                          type="search"
-                          value={busca}
-                          onChange={(e) => { setBusca(e.target.value); setPagina(1); }}
-                          placeholder="Buscar rua, zona ou operador"
-                          aria-label="Buscar rua, zona ou operador"
-                          className={`${INPUT} pl-9 pr-9`}
-                        />
-                        {busca && (
-                          <button type="button" onClick={() => setBusca("")} aria-label="Limpar busca" className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 grid place-items-center rounded-lg text-muted hover:text-page cursor-pointer ${FOCO}`}>
-                            <X size={14} aria-hidden="true" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {visiveis.length === 0 ? (
-                      <EstadoVazio icone={<Search size={28} aria-hidden="true" />} titulo="Nenhuma rua encontrada" descricao="Ajuste a busca ou a zona selecionada." />
-                    ) : (
-                      <div className="overflow-x-auto scroll-tema">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-y border-default text-xs text-muted">
-                              {COLUNAS.map((c) => {
-                                const ativo = ordem.chave === c.chave;
-                                return (
-                                  <th key={c.chave} scope="col" aria-sort={ativo ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-4 py-2.5 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
-                                    <button type="button" title={c.titulo} onClick={() => alternarOrdem(c.chave)} className={`inline-flex items-center gap-1 cursor-pointer hover:text-page rounded ${FOCO} ${ativo ? "text-page" : ""}`}>
-                                      {c.rotulo}
-                                      {ativo && (ordem.asc ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
-                                    </button>
-                                  </th>
-                                );
-                              })}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {daPagina.map((r) => {
-                              const aberta = abertas.has(r.nome);
-                              return (
-                                <RuaLinha key={r.nome} r={r} aberta={aberta} cor={cores[r.zona]} onAlternar={() => alternarRua(r.nome)} perfilPorTo={dados.perfil?.porTo} />
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                  <div className="relative w-full sm:w-80">
+                    <label htmlFor="si-busca" className="sr-only">Buscar rua, zona ou operador</label>
+                    <Search size={15} aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                    <input id="si-busca" type="search" value={busca} onChange={(e) => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar rua, zona ou operador…" className={`${INPUT} pl-10 pr-10`} />
+                    {busca && (
+                      <button type="button" onClick={() => setBusca("")} aria-label="Limpar busca" className={`absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 grid place-items-center rounded-lg text-muted hover:text-page cursor-pointer ${FOCO}`}>
+                        <X size={14} aria-hidden="true" />
+                      </button>
                     )}
+                  </div>
+                </div>
 
-                    {visiveis.length > 0 && (
-                      <Paginacao total={visiveis.length} pagina={paginaAtual} porPagina={porPagina} onPagina={setPagina} onPorPagina={(n) => { setPorPagina(n); setPagina(1); }} />
-                    )}
-                  </section>
-                </>
-              )}
+                {visiveis.length === 0 ? (
+                  <EstadoVazio icone={<Search size={28} aria-hidden="true" />} titulo="Nenhuma rua encontrada" descricao="Ajuste a busca ou a zona selecionada." />
+                ) : (
+                  <div className="overflow-x-auto scroll-tema">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-y border-default bg-surface-2/40 text-xs text-muted">
+                          {COLUNAS.map((c) => {
+                            const ativo = ordem.chave === c.chave;
+                            return (
+                              <th key={c.chave} scope="col" aria-sort={ativo ? (ordem.asc ? "ascending" : "descending") : "none"} className={`font-medium px-3 py-2.5 whitespace-nowrap ${c.direita ? "text-right" : "text-left"}`}>
+                                <button type="button" title={c.titulo} onClick={() => alternarOrdem(c.chave)} className={`inline-flex items-center gap-1 cursor-pointer hover:text-page rounded ${FOCO} ${ativo ? "text-page" : ""}`}>
+                                  {c.rotulo}
+                                  {ativo && (ordem.asc ? <ArrowUp size={12} aria-hidden="true" /> : <ArrowDown size={12} aria-hidden="true" />)}
+                                </button>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {daPagina.map((r) => (
+                          <RuaLinha key={r.nome} r={r} aberta={abertas.has(r.nome)} cor={cores[r.zona]} onAlternar={() => alternarRua(r.nome)} perfilPorTo={dados.perfil?.porTo} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {visiveis.length > 0 && (
+                  <Paginacao total={visiveis.length} pagina={paginaAtual} porPagina={porPagina} onPagina={setPagina} onPorPagina={(n) => { setPorPagina(n); setPagina(1); }} />
+                )}
+              </section>
             </>
           )}
         </main>
@@ -482,24 +537,26 @@ export default function StageIn() {
 }
 
 function RuaLinha({ r, aberta, cor, onAlternar, perfilPorTo }) {
-  const num = "px-4 py-3 text-right tabular-nums";
+  const num = "px-3 py-3 text-right tabular-nums";
   return (
     <>
       <tr className={`border-b border-default transition-colors hover:bg-surface-2/60 ${r.tos > 0 ? "" : "text-muted"}`}>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3">
           <button type="button" onClick={onAlternar} aria-expanded={aberta} className={`inline-flex items-center gap-2 font-medium text-left whitespace-nowrap cursor-pointer rounded ${FOCO}`}>
             <ChevronRight size={14} aria-hidden="true" className={`shrink-0 text-muted transition-transform motion-reduce:transition-none ${aberta ? "rotate-90" : ""}`} />
             {r.nome}
           </button>
+          {r.operador !== "—" && <span className="block pl-6 text-[11px] text-muted truncate max-w-48" title={`Operador: ${r.operador}`}>{r.operador}</span>}
         </td>
-        <td className="px-4 py-3 whitespace-nowrap">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1" style={{ color: cor, background: `${cor}1f` }}>
+        <td className="px-3 py-3 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: cor }} />
             {zonaCurta(r.zona)}
           </span>
         </td>
-        <td className="px-4 py-3 whitespace-nowrap">
+        <td className="px-3 py-3 whitespace-nowrap">
           {r.area ? (
-            <span className="text-xs font-semibold rounded-md px-2 py-0.5" style={{ color: r.area.cor, background: `${r.area.cor}1f` }}>{r.area.rotulo}</span>
+            <Pilula cor={r.area.cor}>{r.area.rotulo}</Pilula>
           ) : (
             <span className="text-muted">—</span>
           )}
@@ -508,16 +565,15 @@ function RuaLinha({ r, aberta, cor, onAlternar, perfilPorTo }) {
         <td className={`${num} ${r.pacotes ? "font-semibold" : ""}`}>{r.pacotes != null ? formatNumero(r.pacotes) : "—"}</td>
         <td className={num}>{r.spp != null ? Math.round(r.spp) : "—"}</td>
         <td className={`${num} text-muted`}>{r.capacidade}</td>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2.5 min-w-32">
-            <div role="img" aria-label={`Ocupação ${r.ocupacaoTexto}`} className="h-1.5 w-20 rounded-full bg-surface-2 overflow-hidden">
+        <td className="px-3 py-3">
+          <div className="flex items-center gap-2 min-w-24">
+            <div role="img" aria-label={`Ocupação ${r.ocupacaoTexto}`} className="h-1.5 w-14 rounded-full bg-surface-2 overflow-hidden">
               <div className="h-full rounded-full" style={{ width: `${Math.min(r.ocupacao, 100)}%`, background: corOcupacao(r.ocupacao) }} />
             </div>
             <span className="text-xs tabular-nums text-muted whitespace-nowrap">{r.ocupacaoTexto}</span>
           </div>
         </td>
-        <td className="px-4 py-3 whitespace-nowrap font-semibold tabular-nums" style={{ color: r.aging ? corAging(r.aging) : undefined }}>{fmtDur(r.aging)}</td>
-        <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">{r.operador}</td>
+        <td className="px-3 py-3 whitespace-nowrap tabular-nums">{r.aging ? <Pilula cor={corAging(r.aging)} icone={<Clock size={11} aria-hidden="true" />}>{fmtDur(r.aging)}</Pilula> : <span className="text-muted">—</span>}</td>
       </tr>
       {aberta && (
         <tr className="border-b border-default bg-surface-2/40">

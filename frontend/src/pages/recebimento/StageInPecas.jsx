@@ -1,64 +1,87 @@
-// Peças de interface do Stage IN: abas de zona, cards por zona, tabelas de calor e painéis de apoio.
+// Peças de interface do Stage IN: filtro de zona, cards por zona, gráfico de aging, perfil, tabelas de calor e painéis de apoio.
 
+import { useEffect, useMemo, useState } from "react";
+import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Gauge, Layers, ListOrdered, Sun } from "lucide-react";
 import { formatNumero } from "../../components/mapaOperacional/uiTokens";
+import { CardGrafico } from "./PrevisaoPecas";
 import { corAging, corOcupacao, corTurno, fmtDur, rgba, zonaCurta } from "./stageInUtils";
 
-/** Abas de zona com a contagem de cada uma (pacotes quando há Report, senão TOs). */
-export function AbasZona({ abas, valor, onChange }) {
-  return (
-    <div role="tablist" aria-label="Zona" className="flex gap-1.5 overflow-x-auto pb-1 scroll-tema">
-      {abas.map((a) => {
-        const ativo = valor === a.chave;
-        return (
-          <button
-            key={a.chave}
-            role="tab"
-            type="button"
-            aria-selected={ativo}
-            onClick={() => onChange(a.chave)}
-            className={`h-10 px-3.5 inline-flex items-center gap-2 rounded-xl border text-sm font-medium whitespace-nowrap cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FA4C00]/70 ${
-              ativo ? "bg-[#FA4C00] border-[#FA4C00] text-white" : "bg-surface border-default text-muted hover:text-page hover:bg-surface-2"
-            }`}
-          >
-            {a.cor && <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: ativo ? "#fff" : a.cor }} />}
-            {a.rotulo}
-            <span className={`tabular-nums text-xs px-1.5 py-0.5 rounded-md ${ativo ? "bg-black/20" : "bg-surface-2"}`}>{formatNumero(a.contagem)}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+const reduzirMovimento = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const EIXO = { tick: { fill: "var(--color-muted)", fontSize: 11 }, axisLine: false, tickLine: false };
+const GRADE = { stroke: "var(--color-border)", strokeDasharray: "2 4", strokeOpacity: 0.9 };
+const compacto = (n) => (n >= 1000 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : String(n));
+const rotuloValor = (v) => (v > 0 ? (v >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : String(v)) : "");
 
-function Cabecalho({ titulo, subtitulo }) {
+/** Zona: chip com a zona escolhida, pílulas para trocar (com a contagem) e a linha de sincronização. */
+export function FiltroZona({ abas, valor, onChange, rotuloAtual, sincronizacao }) {
+  const cores = { online: "#22C55E", atrasado: "#F59E0B", offline: "#FF453A", conectando: "#8B8B93" };
+  const rotulos = { online: "Online", atrasado: "Dados desatualizados", offline: "Offline", conectando: "Conectando" };
+  const { estado, detalhe, proxima } = sincronizacao;
   return (
-    <div className="mb-4">
-      <h2 className="text-sm font-semibold leading-tight">{titulo}</h2>
-      {subtitulo && <p className="text-xs text-muted mt-1">{subtitulo}</p>}
-    </div>
-  );
-}
+    <section aria-label="Zona" className="anim-in rounded-2xl border border-default bg-surface p-4 space-y-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <span aria-hidden="true" className="grid place-items-center w-10 h-10 rounded-xl bg-[#FA4C00]/12 text-[#FA4C00] shrink-0">
+          <Layers size={18} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs text-muted">Zona do staging</p>
+          <p className="text-base font-semibold truncate">{rotuloAtual}</p>
+        </div>
+      </div>
 
-export function Secao({ titulo, subtitulo, indice = 0, children }) {
-  return (
-    <section aria-label={titulo} className="anim-in rounded-2xl border border-default bg-surface p-5" style={{ "--i": indice }}>
-      <Cabecalho titulo={titulo} subtitulo={subtitulo} />
-      {children}
+      <div role="tablist" aria-label="Zona" className="flex gap-2 overflow-x-auto pb-1 scroll-tema">
+        {abas.map((a) => {
+          const ativo = valor === a.chave;
+          return (
+            <button
+              key={a.chave}
+              role="tab"
+              type="button"
+              aria-selected={ativo}
+              onClick={() => onChange(a.chave)}
+              className={`h-10 px-3.5 inline-flex items-center gap-2 rounded-xl border text-sm font-medium whitespace-nowrap cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FA4C00]/70 ${
+                ativo ? "bg-[#FA4C00] border-[#FA4C00] text-white" : "bg-surface-2/60 border-default text-muted hover:text-page hover:bg-surface-2"
+              }`}
+            >
+              {a.cor && <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: ativo ? "#fff" : a.cor }} />}
+              {a.rotulo}
+              <span className={`tabular-nums text-xs px-1.5 py-0.5 rounded-md ${ativo ? "bg-black/20" : "bg-surface"}`}>{formatNumero(a.contagem)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p role="status" className="flex items-center gap-2 text-xs text-muted flex-wrap">
+        <span aria-hidden="true" className={`w-2 h-2 rounded-full ${estado === "online" ? "motion-safe:animate-pulse" : ""}`} style={{ background: cores[estado] }} />
+        <b className="text-page font-semibold">{rotulos[estado]}</b>
+        {detalhe && <span>· {detalhe}</span>}
+        {proxima != null && <span className="tabular-nums">· próxima atualização ~{proxima}s</span>}
+      </p>
     </section>
   );
 }
 
-/** Card de uma zona: número principal e os indicadores de apoio. `metricas`: [{ rotulo, valor }]. */
-export function CardZona({ nome, cor, valor, unidade, metricas }) {
+/** Card de uma zona: número principal, participação no total e os indicadores de apoio. `metricas`: [{ rotulo, valor }]. */
+export function CardZona({ nome, cor, valor, unidade, metricas, participacao }) {
   return (
-    <div className="rounded-xl border border-default bg-surface-2/50 p-4 border-t-2" style={{ borderTopColor: cor }}>
-      <p className="text-xs font-semibold uppercase tracking-wide truncate" style={{ color: cor }} title={nome}>
-        {zonaCurta(nome)}
-      </p>
-      <p className="mt-2 text-3xl leading-none font-semibold tabular-nums">{valor}</p>
+    <div className="rounded-xl border border-default bg-surface-2/50 p-4 flex flex-col">
+      <div className="flex items-center gap-2 min-w-0">
+        <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cor }} />
+        <p className="text-xs font-semibold uppercase tracking-wide truncate" title={nome}>{zonaCurta(nome)}</p>
+      </div>
+      <p className="mt-3 text-3xl leading-none font-semibold tabular-nums">{valor}</p>
       <p className="mt-1 text-xs text-muted">{unidade}</p>
+      {participacao != null && (
+        <div className="mt-3">
+          <div role="img" aria-label={`${participacao.toFixed(0)}% do total`} className="h-1.5 rounded-full bg-surface overflow-hidden">
+            <div className="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${Math.max(participacao, 2)}%`, background: cor }} />
+          </div>
+          <p className="mt-1 text-[11px] text-muted tabular-nums">{participacao.toFixed(1).replace(".", ",")}% do total</p>
+        </div>
+      )}
       {metricas.length > 0 && (
-        <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <dl className="mt-3 pt-3 border-t border-default flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
           {metricas.map((m) => (
             <div key={m.rotulo} className="flex gap-1">
               <dt>{m.rotulo}</dt>
@@ -67,6 +90,70 @@ export function CardZona({ nome, cor, valor, unidade, metricas }) {
           ))}
         </dl>
       )}
+    </div>
+  );
+}
+
+function TooltipAging({ active, payload, label, zonas }) {
+  if (!active || !payload?.length) return null;
+  const linhas = payload.filter((p) => p.dataKey !== "total" && p.value > 0);
+  const total = payload.find((p) => p.dataKey === "total")?.value ?? linhas.reduce((s, p) => s + p.value, 0);
+  return (
+    <div className="rounded-xl border border-default bg-surface px-3.5 py-3 shadow-xl text-xs min-w-[170px]">
+      <p className="font-semibold text-page mb-2">Aging {label}</p>
+      <ul className="space-y-1.5">
+        {linhas.map((p) => (
+          <li key={p.dataKey} className="flex items-center gap-2">
+            <span aria-hidden="true" className="w-2.5 h-2.5 rounded-sm" style={{ background: p.color }} />
+            <span className="text-muted truncate max-w-32">{zonaCurta(zonas[p.dataKey])}</span>
+            <span className="ml-auto font-semibold tabular-nums text-page">{formatNumero(p.value)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 pt-2 border-t border-default text-muted tabular-nums">Total · <b className="text-page">{formatNumero(total)}</b></p>
+    </div>
+  );
+}
+
+/** Colunas empilhadas por zona: pacotes (ou TOs) por faixa de aging. */
+export function GraficoAging({ linhas, zonas, cores }) {
+  // Anima só na entrada: a tela atualiza a cada poucos segundos e as colunas não podem recomeçar do zero.
+  const [animar, setAnimar] = useState(() => !reduzirMovimento());
+  useEffect(() => {
+    const t = setTimeout(() => setAnimar(false), 1200);
+    return () => clearTimeout(t);
+  }, []);
+  const chaves = useMemo(() => Object.fromEntries(zonas.map((z, i) => [`z${i}`, z.nome])), [zonas]);
+  const dados = useMemo(
+    () => linhas.map((l) => ({ faixa: l.rotulo, total: l.total, ...Object.fromEntries(zonas.map((z, i) => [`z${i}`, l.celulas[z.nome] || 0])) })),
+    [linhas, zonas]
+  );
+  return (
+    <div>
+      <ul className="flex flex-wrap gap-2 mb-3 text-xs text-muted" aria-label="Legenda do gráfico">
+        {zonas.map((z) => (
+          <li key={z.nome} className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-1">
+            <span aria-hidden="true" className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: cores[z.nome] }} />
+            {zonaCurta(z.nome)}
+          </li>
+        ))}
+      </ul>
+      <div className="h-72" role="img" aria-label="Pacotes por faixa de aging, empilhados por zona">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={dados} margin={{ top: 22, right: 8, left: -8, bottom: 0 }}>
+            <CartesianGrid {...GRADE} vertical={false} />
+            <XAxis dataKey="faixa" {...EIXO} interval={0} />
+            <YAxis {...EIXO} width={48} allowDecimals={false} tickFormatter={compacto} />
+            <Tooltip content={<TooltipAging zonas={chaves} />} cursor={{ fill: "var(--color-surface-2)", opacity: 0.7 }} />
+            {zonas.map((z, i) => (
+              <Bar key={z.nome} dataKey={`z${i}`} stackId="aging" fill={cores[z.nome]} maxBarSize={44} radius={i === zonas.length - 1 ? [6, 6, 0, 0] : 0} isAnimationActive={animar} />
+            ))}
+            <Line dataKey="total" stroke="none" dot={false} activeDot={false} legendType="none" isAnimationActive={false}>
+              <LabelList dataKey="total" position="top" offset={6} formatter={rotuloValor} style={{ fill: "var(--color-muted)", fontSize: 10, fontWeight: 700 }} />
+            </Line>
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -133,10 +220,38 @@ export function TabelaCalor({ primeiraColuna, linhas, zonas, cores, totaisZona, 
   );
 }
 
+/** Composição do perfil de pacote: barra única e um bloco por perfil (valor e participação). */
+export function ComposicaoPerfil({ perfis, totais, total }) {
+  return (
+    <div>
+      <div role="img" aria-label="Composição por perfil de pacote" className="flex h-3 w-full gap-0.5 rounded-full overflow-hidden bg-surface-2">
+        {total > 0 &&
+          perfis
+            .filter((p) => totais[p.chave] > 0)
+            .map((p) => (
+              <span key={p.chave} title={`${p.rotulo}: ${formatNumero(totais[p.chave])}`} className="h-full first:rounded-l-full last:rounded-r-full transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${(totais[p.chave] / total) * 100}%`, background: p.cor }} />
+            ))}
+      </div>
+      <ul className="mt-4 grid gap-2 grid-cols-2 sm:grid-cols-4 xl:grid-cols-7">
+        {perfis.map((p) => (
+          <li key={p.chave} className="rounded-xl bg-surface-2/60 px-3 py-2.5">
+            <p className="flex items-center gap-1.5 text-xs text-muted">
+              <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: p.cor }} />
+              {p.rotulo}
+            </p>
+            <p className="mt-1 text-lg font-semibold tabular-nums leading-none">{formatNumero(totais[p.chave])}</p>
+            <p className="mt-1 text-[11px] text-muted tabular-nums">{total ? ((totais[p.chave] / total) * 100).toFixed(1).replace(".", ",") : "0,0"}%</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Top 5 ruas com maior aging. */
 export function PainelTop5({ ruas, cores, indice }) {
   return (
-    <Secao titulo="Top 5 ruas por aging" subtitulo="As ruas com TOs há mais tempo no staging" indice={indice}>
+    <CardGrafico icone={<ListOrdered size={17} />} titulo="Top 5 ruas por aging" subtitulo="As ruas com TOs há mais tempo no staging" indice={indice}>
       {ruas.length === 0 ? (
         <p className="text-sm text-muted py-6 text-center">Nenhuma rua ativa</p>
       ) : (
@@ -155,14 +270,14 @@ export function PainelTop5({ ruas, cores, indice }) {
           ))}
         </ol>
       )}
-    </Secao>
+    </CardGrafico>
   );
 }
 
 /** Ocupação (TOs ÷ capacidade) por zona, só com as ruas disponíveis. */
 export function PainelOcupacao({ linhas, cores, indice }) {
   return (
-    <Secao titulo="Ocupação por zona" subtitulo="TOs em relação à capacidade das ruas disponíveis" indice={indice}>
+    <CardGrafico icone={<Gauge size={17} />} titulo="Ocupação por zona" subtitulo="TOs em relação à capacidade das ruas disponíveis" indice={indice}>
       {linhas.length === 0 ? (
         <p className="text-sm text-muted py-6 text-center">—</p>
       ) : (
@@ -170,9 +285,12 @@ export function PainelOcupacao({ linhas, cores, indice }) {
           {linhas.map((l) => (
             <li key={l.zona}>
               <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="font-medium truncate" style={{ color: cores[l.zona] }}>{zonaCurta(l.zona)}</span>
+                <span className="inline-flex items-center gap-2 font-medium truncate">
+                  <span aria-hidden="true" className="w-2 h-2 rounded-full shrink-0" style={{ background: cores[l.zona] }} />
+                  {zonaCurta(l.zona)}
+                </span>
                 <span className="tabular-nums text-muted text-xs shrink-0">
-                  {l.tos}/{l.capacidade} · <b className="text-page text-sm">{l.pct.toFixed(1).replace(".", ",")}%</b>
+                  {l.tos}/{l.capacidade} · <b className="text-sm" style={{ color: corOcupacao(l.pct) }}>{l.pct.toFixed(1).replace(".", ",")}%</b>
                 </span>
               </div>
               <div role="img" aria-label={`Ocupação de ${zonaCurta(l.zona)}: ${l.pct.toFixed(0)}%`} className="mt-1.5 h-2 rounded-full bg-surface-2 overflow-hidden">
@@ -182,7 +300,7 @@ export function PainelOcupacao({ linhas, cores, indice }) {
           ))}
         </ul>
       )}
-    </Secao>
+    </CardGrafico>
   );
 }
 
@@ -197,13 +315,13 @@ export function PainelTurno({ turnos, indice }) {
     return { ...t, cor: corTurno(t.nome, i), fracao, tamanho: fracao * C, inicio: C * (0.25 - (total > 0 ? antes / total : 0)) };
   });
   return (
-    <Secao titulo="Turno que endereçou" subtitulo="Pacotes por turno em que a TO foi endereçada" indice={indice}>
+    <CardGrafico icone={<Sun size={17} />} titulo="Turno que endereçou" subtitulo="Pacotes por turno em que a TO foi endereçada" indice={indice}>
       {turnos.length === 0 ? (
         <p className="text-sm text-muted py-6 text-center">Sem dados do Report</p>
       ) : (
         <div className="flex items-center gap-5 flex-wrap">
           <div className="relative w-32 h-32 shrink-0">
-            <svg viewBox="0 0 100 100" width="128" height="128" role="img" aria-label="Pacotes por turno" className="block -rotate-0">
+            <svg viewBox="0 0 100 100" width="128" height="128" role="img" aria-label="Pacotes por turno" className="block">
               <circle cx="50" cy="50" r={R} fill="none" stroke="var(--color-surface-2)" strokeWidth="17" />
               {segmentos.map((s) => (
                 <circle key={s.nome} cx="50" cy="50" r={R} fill="none" stroke={s.cor} strokeWidth="17" strokeDasharray={`${s.tamanho.toFixed(3)} ${(C - s.tamanho).toFixed(3)}`} strokeDashoffset={s.inicio.toFixed(3)} />
@@ -228,6 +346,6 @@ export function PainelTurno({ turnos, indice }) {
           </ul>
         </div>
       )}
-    </Secao>
+    </CardGrafico>
   );
 }
