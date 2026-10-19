@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Boxes, ChevronRight, Clock, Gauge, Layers, Package, Route, Search, Timer, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Boxes, ChevronRight, Clock, Gauge, LayoutDashboard, Layers, Monitor, Package, Route, Search, Timer, X } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import MainLayout from "../../components/MainLayout";
-import { AbasSegmentadas, Aviso, EstadoVazio, Esqueleto, PageHeader } from "../../components/mapaOperacional/ui";
+import { AbasPagina, AbasSegmentadas, Aviso, EstadoVazio, Esqueleto, PageHeader } from "../../components/mapaOperacional/ui";
 import { FOCO, INPUT, formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { StageInAPI } from "../../services/stageIn";
 import { FUSO } from "./filaUtils";
 import { Paginacao, Pilula } from "./FilaPecas";
 import { CardGrafico, Destaque, Kpi, KpiDestaque } from "./PrevisaoPecas";
-import { CardZona, ComposicaoPerfil, FiltroZona, GraficoAging, PainelOcupacao, PainelTop5, PainelTurno, TabelaCalor } from "./StageInPecas";
-import { FAIXAS_AGING, PERFIS, corAging, corOcupacao, cruzamentoAging, fmtDur, mapaCoresZonas, montarRuas, resumoPerfil, zonaCurta } from "./stageInUtils";
+import StageInOperacional from "./StageInOperacional";
+import { AgingCritico, CardZona, ComposicaoPerfil, FiltroZona, GraficoAging, PainelOcupacao, PainelTop5, PainelTurno, TabelaCalor } from "./StageInPecas";
+import { FAIXAS_AGING, PERFIS, agingCritico, corAging, corOcupacao, cruzamentoAging, fmtDur, mapaCoresZonas, montarRuas, naFaixa, resumoPerfil, zonaCurta } from "./stageInUtils";
 
 const POLL_MS = 15000;
 const ATRASO_MS = 5 * 60 * 1000; // o script envia a cada 60s: sem sincronizar há mais que isso = desatualizado
@@ -53,9 +54,10 @@ function Perfis({ tosPerfil }) {
   );
 }
 
-function TosDaRua({ rua, perfilPorTo }) {
+function TosDaRua({ rua, perfilPorTo, faixa }) {
   if (!rua.tosRua.length) return <p className="text-sm text-muted px-1">Nenhuma TO na planilha para esta rua.</p>;
-  const tos = [...rua.tosRua].sort((a, b) => b.agingH - a.agingH);
+  // Com uma faixa de aging escolhida, as TOs dela vêm primeiro e ficam destacadas.
+  const tos = [...rua.tosRua].sort((a, b) => (faixa ? Number(naFaixa(b, faixa)) - Number(naFaixa(a, faixa)) : 0) || b.agingH - a.agingH);
   return (
     <div className="overflow-x-auto scroll-tema">
       <table className="w-full text-xs">
@@ -71,7 +73,7 @@ function TosDaRua({ rua, perfilPorTo }) {
         </thead>
         <tbody>
           {tos.map((t) => (
-            <tr key={t.to} className="border-t border-default">
+            <tr key={t.to} className={`border-t border-default ${naFaixa(t, faixa) ? "bg-[#FA4C00]/10" : ""}`}>
               <td className="py-1.5 pr-4 font-mono">{t.to}</td>
               <td className="py-1.5 pr-4 text-right tabular-nums">{t.pacotes}</td>
               <td className="py-1.5 pr-4 tabular-nums" style={{ color: corAging(t.agingH * 3600) }}>{fmtDur(Math.round(t.agingH * 3600))}</td>
@@ -97,6 +99,8 @@ export default function StageIn() {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
   const [abertas, setAbertas] = useState(() => new Set());
+  const [visao, setVisao] = useState("painel");
+  const [faixaCritica, setFaixaCritica] = useState(null);
   const [vistaAging, setVistaAging] = useState("grafico");
   const [vistaPerfil, setVistaPerfil] = useState("resumo");
   const [atualizando, setAtualizando] = useState(false);
@@ -205,11 +209,14 @@ export default function StageIn() {
     [relatorio, temReport]
   );
 
+  const critico = useMemo(() => agingCritico(naZona), [naZona]);
+
   const visiveis = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    const lista = q ? disponiveis.filter((r) => [r.nome, r.zona, r.operador].some((v) => v.toLowerCase().includes(q))) : disponiveis;
+    let lista = q ? disponiveis.filter((r) => [r.nome, r.zona, r.operador].some((v) => v.toLowerCase().includes(q))) : disponiveis;
+    if (faixaCritica) lista = lista.filter((r) => r.tosRua.some((to) => naFaixa(to, faixaCritica)));
     return ordenar(lista, ordem.chave, ordem.asc);
-  }, [disponiveis, busca, ordem]);
+  }, [disponiveis, busca, ordem, faixaCritica]);
 
   const totalPaginas = Math.max(1, Math.ceil(visiveis.length / porPagina));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -315,6 +322,24 @@ export default function StageIn() {
             </div>
           ) : (
             <>
+              <AbasPagina
+                rotulo="Visão do Stage IN"
+                valor={visao}
+                onChange={setVisao}
+                opcoes={[
+                  { valor: "painel", rotulo: "Painel", icone: <LayoutDashboard size={15} aria-hidden="true" /> },
+                  { valor: "operacional", rotulo: "Operacional", icone: <Monitor size={15} aria-hidden="true" /> },
+                ]}
+              />
+
+              {visao === "operacional" ? (
+                <>
+                  {estadoSync === "offline" && <Aviso tipo="alerta">Sem conexão com o servidor — os dados exibidos podem estar desatualizados.</Aviso>}
+                  {estadoSync === "atrasado" && <Aviso tipo="alerta">Dados desatualizados — o Tampermonkey pode estar offline ou sem sincronizar.</Aviso>}
+                  <StageInOperacional ruas={ruas} cores={cores} relatorio={relatorio} sincronizacao={{ estado: estadoSync, detalhe: detalheSync, proxima }} />
+                </>
+              ) : (
+              <>
               {/* ---------- zona e sincronização ---------- */}
               <FiltroZona
                 abas={abas}
@@ -428,6 +453,9 @@ export default function StageIn() {
                 </CardGrafico>
               )}
 
+              {/* ---------- criticidade de aging ---------- */}
+              {critico && <AgingCritico info={critico} ativa={faixaCritica} onSelecionar={(f) => { setFaixaCritica(f); setPagina(1); }} indice={3} />}
+
               {/* ---------- perfil de pacote ---------- */}
               {perfil && (
                 <CardGrafico
@@ -495,8 +523,19 @@ export default function StageIn() {
                   </div>
                 </div>
 
+                {faixaCritica && (
+                  <div className="mx-5 mb-4 flex items-center gap-3 flex-wrap rounded-xl border border-[#FA4C00]/40 bg-[#FA4C00]/8 px-4 py-2.5 text-sm">
+                    <span>
+                      Filtro de aging: <b>{faixaCritica.rotulo}</b> <span className="text-muted">· só as ruas com TOs nessa faixa; as TOs ficam destacadas ao abrir a rua</span>
+                    </span>
+                    <button type="button" onClick={() => { setFaixaCritica(null); setPagina(1); }} className={`ml-auto h-9 px-3 inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-[#FA4C00] hover:bg-[#FA4C00]/10 cursor-pointer ${FOCO}`}>
+                      <X size={14} aria-hidden="true" /> Limpar filtro
+                    </button>
+                  </div>
+                )}
+
                 {visiveis.length === 0 ? (
-                  <EstadoVazio icone={<Search size={28} aria-hidden="true" />} titulo="Nenhuma rua encontrada" descricao="Ajuste a busca ou a zona selecionada." />
+                  <EstadoVazio icone={<Search size={28} aria-hidden="true" />} titulo="Nenhuma rua encontrada" descricao="Ajuste a busca, a faixa de aging ou a zona selecionada." />
                 ) : (
                   <div className="overflow-x-auto scroll-tema">
                     <table className="w-full text-sm">
@@ -517,7 +556,7 @@ export default function StageIn() {
                       </thead>
                       <tbody>
                         {daPagina.map((r) => (
-                          <RuaLinha key={r.nome} r={r} aberta={abertas.has(r.nome)} cor={cores[r.zona]} onAlternar={() => alternarRua(r.nome)} perfilPorTo={dados.perfil?.porTo} />
+                          <RuaLinha key={r.nome} r={r} aberta={abertas.has(r.nome)} cor={cores[r.zona]} onAlternar={() => alternarRua(r.nome)} perfilPorTo={dados.perfil?.porTo} faixa={faixaCritica} />
                         ))}
                       </tbody>
                     </table>
@@ -528,6 +567,8 @@ export default function StageIn() {
                   <Paginacao total={visiveis.length} pagina={paginaAtual} porPagina={porPagina} onPagina={setPagina} onPorPagina={(n) => { setPorPagina(n); setPagina(1); }} />
                 )}
               </section>
+              </>
+              )}
             </>
           )}
         </main>
@@ -536,7 +577,7 @@ export default function StageIn() {
   );
 }
 
-function RuaLinha({ r, aberta, cor, onAlternar, perfilPorTo }) {
+function RuaLinha({ r, aberta, cor, onAlternar, perfilPorTo, faixa }) {
   const num = "px-3 py-3 text-right tabular-nums";
   return (
     <>
@@ -578,7 +619,7 @@ function RuaLinha({ r, aberta, cor, onAlternar, perfilPorTo }) {
       {aberta && (
         <tr className="border-b border-default bg-surface-2/40">
           <td colSpan={COLUNAS.length} className="px-6 py-4">
-            <TosDaRua rua={r} perfilPorTo={perfilPorTo} />
+            <TosDaRua rua={r} perfilPorTo={perfilPorTo} faixa={faixa} />
           </td>
         </tr>
       )}

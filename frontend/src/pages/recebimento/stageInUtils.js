@@ -183,3 +183,64 @@ export function resumoPerfil(perfil, zonaAtiva) {
   const totaisZona = Object.fromEntries(zonas.map((z) => [z, celulas.reduce((s, c) => s + c[z], 0)]));
   return { totais, total, zonas, celulas, totaisZona, vazio: regs.length === 0 };
 }
+
+/* ---------- Criticidade de aging (por TO, em horas) ---------- */
+
+export const FAIXAS_CRITICAS = [
+  { chave: "b1", rotulo: "0 – 1 dia", min: 0, max: 24, dica: "Backlog dentro do SLA operacional. Faixa saudável." },
+  { chave: "b2", rotulo: "1 – 2 dias", min: 24, max: 48, dica: "Pacotes com 1–2 dias: exige rotação ativa para não envelhecer." },
+  { chave: "b3", rotulo: "2 – 3 dias", min: 48, max: 72, dica: "Perto do limite de SLA: escalar para a supervisão." },
+  { chave: "b4", rotulo: "Mais de 3 dias", min: 72, max: Infinity, dica: "Violação de SLA: ação imediata." },
+];
+
+export const naFaixa = (t, faixa) => !!faixa && t.agingH >= faixa.min && t.agingH < faixa.max;
+
+const COR_SEV = { ok: "#22C55E", warn: "#F59E0B", crit: "#FF453A", danger: "#FF453A" };
+
+/** Pacotes e TOs por faixa de aging, com a gravidade de cada uma e o alerta geral. Sem TOs/pacotes devolve null. */
+export function agingCritico(ruas) {
+  const tos = ruas.flatMap((r) => r.tosRua);
+  const total = tos.reduce((s, t) => s + t.pacotes, 0);
+  if (!tos.length || total === 0) return null;
+  const faixas = FAIXAS_CRITICAS.map((f) => {
+    const doGrupo = tos.filter((t) => naFaixa(t, f));
+    const pacotes = doGrupo.reduce((s, t) => s + t.pacotes, 0);
+    const pct = (pacotes / total) * 100;
+    let sev;
+    let status;
+    if (f.chave === "b1") [sev, status] = ["ok", "Saudável"];
+    else if (f.chave === "b2") [sev, status] = ["warn", "Atenção"];
+    else if (f.chave === "b3") [sev, status] = pct <= 1 ? ["warn", "Controlado"] : pct <= 3 ? ["crit", "Crítico"] : ["danger", "Risco de SLA"];
+    else [sev, status] = pct <= 1 ? ["crit", "Crítico"] : ["danger", "Perigo"];
+    return { ...f, pacotes, pct, tos: doGrupo.length, sev, status, cor: COR_SEV[sev] };
+  });
+  const b3 = faixas[2];
+  const b4 = faixas[3];
+  const alerta = b4.pct > 3 ? { nivel: "vermelho", texto: "Risco de SLA — backlog acima de 3 dias passa de 3% do total" } : b3.pct > 3 ? { nivel: "ambar", texto: "Aging crítico — acúmulo de 2 a 3 dias acima do limite" } : null;
+  return { faixas, total, alerta };
+}
+
+/** Uma zona do painel Operacional: totais, aging, ocupação e as ruas mais antigas (FIFO). */
+export function resumoZonaOperacional(nome, todasRuas, relatorio) {
+  const daZona = todasRuas.filter((r) => r.zona === nome);
+  const ativas = daZona.filter((r) => r.tos > 0);
+  const tos = ativas.reduce((s, r) => s + r.tos, 0);
+  const unidades = ativas.reduce((s, r) => s + r.unidades, 0);
+  const capacidade = daZona.reduce((s, r) => s + r.capacidade, 0);
+  const pacotes = relatorio?.disponivel && relatorio.porZona[nome] ? relatorio.porZona[nome].pacotes : ativas.reduce((s, r) => s + (r.pacotes || 0), 0);
+  const agings = ativas.map((r) => r.aging).filter((v) => v > 0);
+  const pico = agings.length ? Math.max(...agings) : 0;
+  return {
+    nome,
+    ruasAtivas: ativas.length,
+    tos,
+    pacotes,
+    spp: pacotes > 0 && unidades > 0 ? Math.round(pacotes / unidades) : null,
+    agingMedio: agings.length ? Math.round(agings.reduce((s, v) => s + v, 0) / agings.length) : 0,
+    pico,
+    ocupacao: capacidade > 0 ? (tos / capacidade) * 100 : 0,
+    fifo: [...ativas].filter((r) => r.aging > 0).sort((a, b) => b.aging - a.aging).slice(0, 10),
+    critica: pico > 86400,
+    alerta: pico > 25200 && pico <= 86400,
+  };
+}

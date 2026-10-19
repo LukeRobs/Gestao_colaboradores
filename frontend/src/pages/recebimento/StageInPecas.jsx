@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, LabelList, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Gauge, Layers, ListOrdered, Sun } from "lucide-react";
+import { CircleCheck, Gauge, Layers, ListOrdered, Sun, TriangleAlert } from "lucide-react";
 import { formatNumero } from "../../components/mapaOperacional/uiTokens";
 import { CardGrafico } from "./PrevisaoPecas";
+import { Pilula } from "./FilaPecas";
 import { corAging, corOcupacao, corTurno, fmtDur, rgba, zonaCurta } from "./stageInUtils";
 
 const reduzirMovimento = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -13,11 +14,23 @@ const GRADE = { stroke: "var(--color-border)", strokeDasharray: "2 4", strokeOpa
 const compacto = (n) => (n >= 1000 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : String(n));
 const rotuloValor = (v) => (v > 0 ? (v >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : String(v)) : "");
 
-/** Zona: chip com a zona escolhida, pílulas para trocar (com a contagem) e a linha de sincronização. */
-export function FiltroZona({ abas, valor, onChange, rotuloAtual, sincronizacao }) {
+/** Estado da sincronização com o SPX: "Online · atualizado às 13:36 · próxima atualização ~10s". */
+export function LinhaSincronizacao({ sincronizacao }) {
   const cores = { online: "#22C55E", atrasado: "#F59E0B", offline: "#FF453A", conectando: "#8B8B93" };
   const rotulos = { online: "Online", atrasado: "Dados desatualizados", offline: "Offline", conectando: "Conectando" };
   const { estado, detalhe, proxima } = sincronizacao;
+  return (
+    <p role="status" className="flex items-center gap-2 text-xs text-muted flex-wrap">
+      <span aria-hidden="true" className={`w-2 h-2 rounded-full ${estado === "online" ? "motion-safe:animate-pulse" : ""}`} style={{ background: cores[estado] }} />
+      <b className="text-page font-semibold">{rotulos[estado]}</b>
+      {detalhe && <span>· {detalhe}</span>}
+      {proxima != null && <span className="tabular-nums">· próxima atualização ~{proxima}s</span>}
+    </p>
+  );
+}
+
+/** Zona: chip com a zona escolhida, pílulas para trocar (com a contagem) e a linha de sincronização. */
+export function FiltroZona({ abas, valor, onChange, rotuloAtual, sincronizacao }) {
   return (
     <section aria-label="Zona" className="anim-in rounded-2xl border border-default bg-surface p-4 space-y-4">
       <div className="flex items-center gap-3 min-w-0">
@@ -52,12 +65,7 @@ export function FiltroZona({ abas, valor, onChange, rotuloAtual, sincronizacao }
         })}
       </div>
 
-      <p role="status" className="flex items-center gap-2 text-xs text-muted flex-wrap">
-        <span aria-hidden="true" className={`w-2 h-2 rounded-full ${estado === "online" ? "motion-safe:animate-pulse" : ""}`} style={{ background: cores[estado] }} />
-        <b className="text-page font-semibold">{rotulos[estado]}</b>
-        {detalhe && <span>· {detalhe}</span>}
-        {proxima != null && <span className="tabular-nums">· próxima atualização ~{proxima}s</span>}
-      </p>
+      <LinhaSincronizacao sincronizacao={sincronizacao} />
     </section>
   );
 }
@@ -245,6 +253,62 @@ export function ComposicaoPerfil({ perfis, totais, total }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * Criticidade de aging: pacotes por faixa de tempo de cada TO, com a gravidade da faixa.
+ * Clicar numa faixa filtra a tabela de ruas (`ativa` é a faixa escolhida; clicar de novo limpa).
+ */
+export function AgingCritico({ info, ativa, onSelecionar, indice }) {
+  const maior = Math.max(...info.faixas.map((f) => f.pacotes), 1);
+  const alerta = info.alerta;
+  return (
+    <CardGrafico
+      icone={<TriangleAlert size={17} />}
+      titulo="Criticidade de aging"
+      subtitulo={`Backlog por tempo de cada TO em staging · ${formatNumero(info.total)} pacotes · clique numa faixa para filtrar as ruas`}
+      indice={indice}
+      legenda={
+        alerta ? (
+          <Pilula cor="#FF453A" icone={<TriangleAlert size={12} aria-hidden="true" />}>{alerta.texto}</Pilula>
+        ) : (
+          <Pilula cor="#22C55E" icone={<CircleCheck size={12} aria-hidden="true" />}>Aging dentro dos limites operacionais</Pilula>
+        )
+      }
+    >
+      <ul className="space-y-2">
+        {info.faixas.map((f) => {
+          const marcada = ativa?.chave === f.chave;
+          return (
+            <li key={f.chave}>
+              <button
+                type="button"
+                aria-pressed={marcada}
+                onClick={() => onSelecionar(marcada ? null : f)}
+                title={f.dica}
+                className={`w-full grid items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-left cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#FA4C00]/70 grid-cols-[1fr_auto] sm:grid-cols-[8.5rem_6.5rem_1fr_3.5rem_7.5rem] ${
+                  marcada ? "border-[#FA4C00] bg-[#FA4C00]/8" : "border-default bg-surface-2/50 hover:bg-surface-2"
+                }`}
+              >
+                <span className="text-sm font-semibold" style={{ color: f.cor }}>{f.rotulo}</span>
+                <span className="text-right sm:text-left">
+                  <span className="block text-base font-semibold tabular-nums leading-none" style={{ color: f.cor }}>{formatNumero(f.pacotes)}</span>
+                  <span className="block mt-1 text-[11px] text-muted tabular-nums">{f.tos} {f.tos === 1 ? "TO" : "TOs"}</span>
+                </span>
+                <span role="img" aria-label={`${f.pct.toFixed(1)}% do total`} className="col-span-2 sm:col-span-1 h-2 rounded-full bg-surface overflow-hidden">
+                  <span className="block h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${(f.pacotes / maior) * 100}%`, background: f.cor }} />
+                </span>
+                <span className="text-sm font-semibold tabular-nums sm:text-right" style={{ color: f.cor }}>{f.pct.toFixed(1).replace(".", ",")}%</span>
+                <span className="justify-self-end sm:justify-self-start">
+                  <Pilula cor={f.cor}>{f.status}</Pilula>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </CardGrafico>
   );
 }
 
