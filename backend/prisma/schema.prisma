@@ -170,6 +170,7 @@ model Setor {
   treinamentos            TreinamentoSetor[]
   solicitacoesTreinamento SolicitacaoTreinamento[]
 
+  @@unique([nomeSetor, idEstacao], map: "uq_setor_nome_estacao")
   @@index([idEstacao], map: "idx_setor_id_estacao")
   @@map("setor")
 }
