@@ -1,6 +1,7 @@
 const { prisma } = require("../../config/database");
 const { getTurnoOperacionalAtual, instanteSP } = require("../../utils/turnoMapaOperacional");
 const { LH_DESCARREGANDO, juntar, estacaoResumo, num } = require("./filaRecebimento.service");
+const planejamento = require("../planejamentoInbound/viagens.service");
 
 /**
  * Veículos recebidos: um registro definitivo por viagem que chegou na estação. A fila do SPX esquece o veículo
@@ -161,7 +162,24 @@ function janelaDoDia(diaStr) {
 const iso = (d) => (d ? d.toISOString() : null);
 const minEntre = (a, b) => (a && b ? Math.max(0, Math.round((b - a) / 60000)) : null);
 
-async function listar(idEstacao, diaQuery) {
+/**
+ * Pacotes por LH vindos da planilha do Planning Inbound (total do carregamento). O histórico do SPX devolve -1 para
+ * viagem finalizada e a fila só dá o número enquanto o veículo está nela, então a planilha é a fonte que cobre quase
+ * todas. Se a planilha estiver fora do ar, a tela segue só com o que foi visto ao vivo.
+ */
+async function pacotesDaPlanilha(spxStationId) {
+  const porLh = new Map();
+  if (!spxStationId) return porLh;
+  try {
+    const r = await planejamento.listarTodas(spxStationId);
+    (r?.viagens || []).forEach((v) => v.pacotesInformado > 0 && porLh.set(v.lh, v.pacotesInformado));
+  } catch (err) {
+    console.error("⚠️ [VEICULOS-RECEBIDOS] planilha de pacotes indisponível:", err.message);
+  }
+  return porLh;
+}
+
+async function listar(idEstacao, diaQuery, spxStationId) {
   const atual = getTurnoOperacionalAtual();
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(diaQuery || "") ? diaQuery : atual.diaOperacionalStr;
   const { inicio, fim } = janelaDoDia(dia);
@@ -174,6 +192,8 @@ async function listar(idEstacao, diaQuery) {
     },
     orderBy: [{ chegouEm: "desc" }, { primeiroVistoEm: "desc" }],
   });
+
+  const pacotesPlanilha = await pacotesDaPlanilha(spxStationId);
 
   const lista = linhas.map((l) => {
     const saida = l.descargaFimEm || l.finalizadoEm;
@@ -193,6 +213,8 @@ async function listar(idEstacao, diaQuery) {
       finalizadoEm: iso(l.finalizadoEm),
       esperaMaxMin: l.esperaMaxMin,
       pacotesFila: l.pacotesFila,
+      // total de pacotes do veículo: planilha (carregamento completo) e, sem ela, o maior valor visto na fila
+      pacotes: pacotesPlanilha.get(l.tripNumber) ?? (l.pacotesFila > 0 ? l.pacotesFila : 0),
       carregados: l.carregados,
       descarregados: l.descarregados,
       esperados: l.esperados,

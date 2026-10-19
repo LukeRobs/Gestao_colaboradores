@@ -25,6 +25,7 @@ const COLUNAS = [
   { chave: "tempo", rotulo: "Na estação", valor: (r) => r.tempoNaEstacaoMin ?? -1 },
   { chave: "espera", rotulo: "Espera na fila", valor: (r) => r.esperaMaxMin ?? 0 },
   { chave: "doca", rotulo: "Doca", valor: (r) => docaDe(r).toLowerCase() },
+  { chave: "pacotes", rotulo: "Pacotes", direita: true, valor: (r) => r.pacotes ?? 0 },
   { chave: "descarga", rotulo: "TOs descarregadas", direita: true, valor: (r) => r.descarregados ?? 0 },
   { chave: "motorista", rotulo: "Motorista", valor: (r) => (r.motorista || "").toLowerCase() },
 ];
@@ -109,7 +110,7 @@ function ModalViagem({ r, onClose }) {
                 <Campo rotulo="Doca atribuída">{r.docaAtribuida}</Campo>
                 <Campo rotulo="Doca ocupada">{r.docaOcupada}</Campo>
                 <Campo rotulo="Número da fila" mono>{r.filaNumero}</Campo>
-                <Campo rotulo="Pacotes na fila" mono>{r.pacotesFila > 0 ? formatNumero(r.pacotesFila) : null}</Campo>
+                <Campo rotulo="Pacotes" mono>{r.pacotes > 0 ? formatNumero(r.pacotes) : null}</Campo>
               </dl>
               {r.tripName && <Campo rotulo="Viagem">{r.tripName}</Campo>}
               <div className="space-y-2">
@@ -209,7 +210,9 @@ export default function VeiculosRecebidos() {
     const media = (arr, f) => (arr.length ? Math.round(arr.reduce((s, r) => s + f(r), 0) / arr.length) : null);
     const maior = comTempo.reduce((m, r) => (!m || r.tempoNaEstacaoMin > m.tempoNaEstacaoMin ? r : m), null);
     return {
-      pacotes: visiveis.reduce((s, r) => s + (r.descarregados || 0), 0),
+      pacotes: visiveis.reduce((s, r) => s + (r.pacotes || 0), 0),
+      tos: visiveis.reduce((s, r) => s + (r.descarregados || 0), 0),
+      semPacotes: visiveis.filter((r) => !r.pacotes).length,
       tempoMedio: media(comTempo, (r) => r.tempoNaEstacaoMin),
       esperaMedia: media(comEspera, (r) => r.esperaMaxMin),
       comEspera: comEspera.length,
@@ -272,8 +275,13 @@ export default function VeiculosRecebidos() {
               <FaixaIndicadores
                 rotulo="Indicadores dos veículos recebidos"
                 itens={[
-                  { rotulo: "Veículos recebidos", valor: formatNumero(visiveis.length), destaque: true, apoio: `${fmtDataBR(diaSel || diaAtual)}` },
-                  { rotulo: "TOs descarregadas", valor: formatNumero(kpis.pacotes), apoio: "soma das descargas" },
+                  {
+                    rotulo: "Veículos recebidos",
+                    valor: formatNumero(visiveis.length),
+                    destaque: true,
+                    apoio: `${formatNumero(kpis.pacotes)} pacotes · ${fmtDataBR(diaSel || diaAtual)}${kpis.semPacotes ? ` · ${kpis.semPacotes} sem volume` : ""}`,
+                  },
+                  { rotulo: "TOs descarregadas", valor: formatNumero(kpis.tos), apoio: "soma das descargas" },
                   { rotulo: "Tempo médio na estação", valor: kpis.tempoMedio != null ? fmtDuracao(kpis.tempoMedio) : "—", apoio: "da chegada ao fim da descarga" },
                   {
                     rotulo: "Espera média na fila",
@@ -361,6 +369,9 @@ export default function VeiculosRecebidos() {
                               {r.esperaMaxMin > 0 ? fmtDuracao(r.esperaMaxMin) : <span className="text-muted font-normal">—</span>}
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap font-medium text-[#22C55E]">{docaDe(r) || <span className="text-muted font-normal">—</span>}</td>
+                            <td className="px-3 py-3 whitespace-nowrap text-right tabular-nums font-semibold">
+                              {r.pacotes > 0 ? formatNumero(r.pacotes) : <span className="text-muted font-normal" title="Sem volume informado na planilha">—</span>}
+                            </td>
                             <td className="px-3 py-3 whitespace-nowrap text-right tabular-nums">
                               {divergente(r) ? (
                                 <span className="inline-flex items-center gap-1 font-semibold text-[#F59E0B]" title="Descarregou menos que o esperado">

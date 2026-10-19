@@ -56,7 +56,7 @@ const listarRecebidos = async (req, res) => {
       return errorResponse(res, "Este módulo não está disponível para a sua estação.", 403);
     }
     const [dados, stFila, stHistorico] = await Promise.all([
-      veiculosRecebidos.listar(idEstacao, req.query.data),
+      veiculosRecebidos.listar(idEstacao, req.query.data, estacao.spxStationId),
       prisma.spxIngestStatus.findUnique({ where: { idEstacao_modulo: { idEstacao, modulo: MODULO.QUEUE_LIST } } }),
       prisma.spxIngestStatus.findUnique({ where: { idEstacao_modulo: { idEstacao, modulo: MODULO.TRIP_HISTORY } } }),
     ]);
