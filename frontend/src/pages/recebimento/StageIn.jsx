@@ -365,7 +365,7 @@ export default function StageIn() {
               {/* ---------- visão por zona ---------- */}
               {cardsZona.length > 0 && (
                 <CardGrafico icone={<Layers size={17} />} titulo="Visão por zona" subtitulo={temReport ? "Pacotes em cada zona, com SPP e aging das ruas" : "TOs em cada zona, com aging das ruas"} indice={1}>
-                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))]">
                     {cardsZona.map((z) => {
                       const media = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
                       const maior = z.agings.length ? Math.max(...z.agings) : 0;
