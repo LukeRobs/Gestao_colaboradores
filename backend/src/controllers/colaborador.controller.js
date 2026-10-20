@@ -294,6 +294,8 @@ const getColaboradorById = async (req, res) => {
         where: {
           opsId,
           presente: true, // apenas quem realmente participou
+          // Só treinamentos finalizados: rascunho, aberto (ainda não aconteceu/validou) e cancelado não são "realizados"
+          treinamento: { status: "FINALIZADO" },
         },
         include: {
           treinamento: {
