@@ -65,7 +65,9 @@ function autoJustificativa(status) {
   if (status === "AB") return "ATESTADO_OBITO";
   if (status === "JE") return "JUSTICA_ELEITORAL";
   if (status === "PE2") return "TREINAMENTO_PE2";
-  return "BANCO_DE_HORAS";
+  // Sem justificativa automática: quem lança escolhe. O padrão antigo ("Banco de Horas")
+  // gravava BH como motivo em qualquer status e escondia o que de fato foi feito.
+  return "";
 }
 
 function toHHMM(iso) {
@@ -91,7 +93,7 @@ export default function EditarPresencaModal({
   const [renderKey, setRenderKey] = useState(0);
   const [horaEntrada, setHoraEntrada] = useState("");
   const [horaSaida, setHoraSaida] = useState("");
-  const [justificativa, setJustificativa] = useState("BANCO_DE_HORAS");
+  const [justificativa, setJustificativa] = useState("");
   const [loading, setLoading] = useState(false);
   const isOnboarding = status === "ON";
   const isFaltaInjustificada = status === "F";
@@ -332,7 +334,7 @@ export default function EditarPresencaModal({
               className="w-full bg-surface-2 border border-default rounded-xl px-4 py-2 disabled:opacity-50"
             >
               <option value="">Selecione uma justificativa</option>
-              {JUSTIFICATIVAS.map((j) => (
+              {JUSTIFICATIVAS.filter((j) => !(isLideranca && j.code === "BANCO_DE_HORAS")).map((j) => (
                 <option key={j.code} value={j.code}>
                   {j.label}
                 </option>

@@ -1169,6 +1169,33 @@ const ajusteManualPresenca = async (req, res) => {
       return errorResponse(res, `Status inválido: ${status}`, 400);
     }
 
+    /* ===============================
+       REGRAS DA LIDERANÇA (valem no servidor, não só na tela)
+       - Presença (P): só ajusta horário de uma Presença que já existe;
+         marcar presença num dia sem P é com ADMIN / Alta Gestão.
+       - Justificativa "Banco de Horas" só acompanha o status BH, que a liderança
+         não lança aqui (vai por Solicitação Operacional). Sem isso, dava para
+         contornar o bloqueio usando outro status com essa justificativa.
+    =============================== */
+    if (req.user?.role === "LIDERANCA") {
+      if (status === "P") {
+        const atual = await lerEstadoAnteriorFrequencia(opsId, dataRef);
+        if (atual?.tipoAusencia?.codigo !== "P") {
+          return forbiddenResponse(
+            res,
+            "A liderança só pode ajustar o horário de uma Presença já existente. Para marcar presença neste dia, procure ADMIN ou Alta Gestão."
+          );
+        }
+      }
+
+      if (justificativaNormalizada === "BANCO_DE_HORAS" && status !== "BH") {
+        return forbiddenResponse(
+          res,
+          "A justificativa Banco de Horas só vale para o status BH, que a liderança lança por Solicitação Operacional. Escolha a justificativa correta para este status."
+        );
+      }
+    }
+
     /* =====================================================
        ONBOARDING
     ===================================================== */
