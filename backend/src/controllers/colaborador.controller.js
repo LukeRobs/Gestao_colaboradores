@@ -17,7 +17,7 @@ const {
 } = require("../utils/validacaoCadastro");
 const { getEstacoesDoGrupo } = require("../config/estacaoGrupos");
 const { processarImportacao } = require("../services/importColaboradores.service");
-const { comAuditoriaStatus, listarAuditoriaStatus } = require("../services/auditoriaStatusColaborador.service");
+const { comAuditoriaStatus, desativarAcessosDoColaborador, listarAuditoriaStatus } = require("../services/auditoriaStatusColaborador.service");
 const { OPS_IDS_LIDERES_TREINAMENTO_CROSS_ESTACAO } = require("../config/lideresTreinamentoCrossEstacao");
 const {
   successResponse,
@@ -1055,6 +1055,7 @@ const updateColaborador = async (req, res) => {
     let payloadDesligamento = null; // { dataDesligamento, tipoDesligamento }
     let payloadAfastamento  = null; // { dataInicio, dataFim }
     let payloadFerias       = null; // { dataInicio, dataFim }
+    const saidaStatus = {}; // recebe acessosDesativados quando o colaborador vira INATIVO
 
     const colaborador = await prisma.$transaction(async (tx) => {
       const hoje = startOfDayBR();
@@ -1096,7 +1097,7 @@ const updateColaborador = async (req, res) => {
 
       const atualizado = await comAuditoriaStatus(
         tx,
-        { opsId, userId: req.user?.id ?? null, origem: "EDICAO_COLABORADOR" },
+        { opsId, userId: req.user?.id ?? null, origem: "EDICAO_COLABORADOR", saida: saidaStatus },
         () => tx.colaborador.update({ where: { opsId }, data })
       );
 
@@ -1346,7 +1347,9 @@ const updateColaborador = async (req, res) => {
     return successResponse(
       res,
       colaborador.atualizado,
-      "Colaborador atualizado com sucesso"
+      saidaStatus.acessosDesativados > 0
+        ? "Colaborador inativado e o acesso dele ao sistema também foi inativado"
+        : "Colaborador atualizado com sucesso"
     );
   } catch (err) {
     console.error("❌ ERRO UPDATE COLABORADOR:", err?.message || err);
@@ -1431,6 +1434,9 @@ const deleteColaborador = async (req, res) => {
 
       // frequencia_historico cascateia automaticamente no banco
       await tx.frequencia.deleteMany({ where: { opsId } });
+
+      // O usuário de acesso não é apagado (tem histórico de aprovações etc.), mas não pode continuar entrando.
+      await desativarAcessosDoColaborador(tx, { opsId, email: colaborador.email, exceptUserId: req.user?.id ?? null });
 
       await tx.colaborador.delete({ where: { opsId } });
     }, { timeout: 30000 });
