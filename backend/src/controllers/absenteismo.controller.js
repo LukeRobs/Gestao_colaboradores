@@ -312,11 +312,36 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
 
     const DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
+    // Só os campos que as contagens usam. Antes, cada linha trazia o colaborador inteiro com 5 relações
+    // completas: num período de ~80 dias isso passava de 2 GB de memória e derrubava o servidor (OOM).
+    const colaboradorDistribuicao = {
+      select: {
+        status: true,
+        dataDesligamento: true,
+        genero: true,
+        empresa: { select: { razaoSocial: true } },
+        setor: { select: { nomeSetor: true } },
+        turno: { select: { nomeTurno: true } },
+        lider: { select: { nomeCompleto: true } },
+        escala: { select: { nomeEscala: true } },
+      },
+    };
+
+    // Filtrar pelo id do tipo (resolvido uma vez, tabela minúscula) em vez de pelo código via relação:
+    // o banco usa o índice de frequência direto e a consulta cai de ~10 s para poucos segundos.
+    const tiposFiltro = await prisma.tipoAusencia.findMany({
+      where: { codigo: { in: [...new Set(["F", "FJ", "AA", ...HC_APTO_CODES])] } },
+      select: { idTipoAusencia: true, codigo: true },
+    });
+    const idsPorCodigos = (codigos) => tiposFiltro.filter((t) => codigos.includes(t.codigo)).map((t) => t.idTipoAusencia);
+    const whereHcApto = buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds);
+
     const [frequenciasAll, atestados, hcAptoRecords] = await Promise.all([
-      // Busca TODOS os registros (igual ao operacional) — filtra código em JS para evitar problemas com is/nullable
+      // Só faltas (F/FJ) e atestado de acompanhamento (AA) — são os únicos códigos que o cálculo abaixo usa.
       prisma.frequencia.findMany({
         where: {
           dataReferencia: { gte: inicioDate, lte: fimDate },
+          idTipoAusencia: { in: idsPorCodigos(["F", "FJ", "AA"]) },
           colaborador: {
             is: {
               cargo: { is: { nomeCargo: { in: CARGOS_ABSENTEISMO } } },
@@ -330,24 +355,38 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
             },
           },
         },
-        include: {
-          colaborador: {
-            include: { empresa: true, setor: true, turno: true, lider: true, escala: true },
-          },
-          tipoAusencia: true,
+        select: {
+          opsId: true,
+          dataReferencia: true,
+          tipoAusencia: { select: { codigo: true } },
+          colaborador: colaboradorDistribuicao,
         },
       }),
       prisma.atestadoMedico.findMany({
         where: buildWhereAtestado(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
-        include: {
-          colaborador: {
-            include: { empresa: true, setor: true, turno: true, lider: true, escala: true },
-          },
+        select: {
+          opsId: true,
+          dataInicio: true,
+          colaborador: colaboradorDistribuicao,
         },
       }),
       prisma.frequencia.findMany({
-        where: buildWhereHcApto(inicioDate, fimDate, empresaId, estacaoId, extras, empresaIds),
-        include: { colaborador: { include: { turno: true, empresa: true } } },
+        where: {
+          ...whereHcApto,
+          OR: [
+            { idTipoAusencia: { in: idsPorCodigos(HC_APTO_CODES) } },
+            { idTipoAusencia: null, horaEntrada: { not: null } },
+          ],
+        },
+        select: {
+          dataReferencia: true,
+          colaborador: {
+            select: {
+              empresa: { select: { razaoSocial: true } },
+              turno: { select: { nomeTurno: true } },
+            },
+          },
+        },
       }),
     ]);
 
@@ -432,7 +471,9 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
     const toArray = (obj) =>
       Object.entries(obj)
         .map(([name, v]) => ({ name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados }))
-        .sort((a, b) => b.value - a.value);
+        // Empate no total: desempata pelo nome. Sem isso a ordem dos empatados (e quem entra no Top 10 de líderes)
+        // dependia da ordem em que o banco devolvia as linhas, e mudava de uma chamada para outra.
+        .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
 
     /* toArray com HC Apto — inclui todos os turnos/empresas com HC, mesmo com 0 ausências */
     const toArrayWithHc = (obj, hcMap) => {
@@ -446,7 +487,7 @@ const getDistribuicoesAbsenteismo = async (req, res) => {
             : null;
           return { name, faltas: v.faltas, atestados: v.atestados, value: v.faltas + v.atestados, headcount, taxa };
         })
-        .sort((a, b) => b.value - a.value);
+        .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
     };
 
     return successResponse(res, {
