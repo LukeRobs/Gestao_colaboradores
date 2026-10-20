@@ -298,6 +298,7 @@ const getColaboradorById = async (req, res) => {
         include: {
           treinamento: {
             select: {
+              idTreinamento: true,
               tema: true,
               dataTreinamento: true,
             },
@@ -309,6 +310,7 @@ const getColaboradorById = async (req, res) => {
       });
 
     const treinamentosDTO = treinamentosParticipados.map((t) => ({
+      id: t.treinamento.idTreinamento, // o perfil abre a tela do treinamento por este id
       tema: t.treinamento.tema,
       data: t.treinamento.dataTreinamento,
     }));

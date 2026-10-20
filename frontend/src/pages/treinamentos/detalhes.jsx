@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";import MainLayout from "../../components/MainLayout";
+import { useParams, useNavigate, useLocation } from "react-router-dom";import MainLayout from "../../components/MainLayout";
 import {
   ArrowLeft,
   CheckCircle,
@@ -29,6 +29,9 @@ import toast from "react-hot-toast";
 export default function DetalhesTreinamento() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Quando vem do perfil do colaborador, a seta volta para o perfil (e não para a lista de treinamentos).
+  const voltarPara = location.state?.voltarPara || "/treinamentos";
   const { logout, user } = useContext(AuthContext);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -210,7 +213,7 @@ export default function DetalhesTreinamento() {
         <main className="px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full max-w-7xl mx-auto">
           {/* HEADER */}
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate("/treinamentos")} className="text-muted hover:text-white">
+            <button onClick={() => navigate(voltarPara)} aria-label="Voltar" className="text-muted hover:text-white">
               <ArrowLeft />
             </button>
             <div>

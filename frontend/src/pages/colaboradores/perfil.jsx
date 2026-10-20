@@ -549,18 +549,37 @@ export default function PerfilColaborador() {
               <EmptyState text="Nenhum treinamento registrado para este colaborador." />
             ) : (
               <div className="space-y-2">
-                {treinos.itens.map((t, idx) => (
-                  <div key={idx} className="flex items-center gap-4 bg-page border border-default rounded-xl p-4 hover:border-blue-500/30 transition-colors cursor-default">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
-                      <BookOpen size={14} className="text-blue-400" />
+                {treinos.itens.map((t, idx) => {
+                  const conteudo = (
+                    <>
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+                        <BookOpen size={14} className="text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{t.tema}</p>
+                        <p className="text-xs text-muted mt-0.5">{new Date(t.data).toLocaleDateString("pt-BR")}</p>
+                      </div>
+                      <ChevronRight size={14} className="text-muted shrink-0" />
+                    </>
+                  );
+                  const base = "flex items-center gap-4 w-full text-left bg-page border border-default rounded-xl p-4 transition-colors";
+                  // Clica e abre os detalhes do treinamento (participantes, lista de presença etc.)
+                  return t.id ? (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => navigate(`/treinamentos/${t.id}`, { state: { voltarPara: `/colaboradores/${opsId}` } })}
+                      aria-label={`Abrir o treinamento ${t.tema}`}
+                      className={`${base} cursor-pointer hover:border-blue-500/40 hover:bg-surface-2 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50`}
+                    >
+                      {conteudo}
+                    </button>
+                  ) : (
+                    <div key={idx} className={`${base} hover:border-blue-500/30 cursor-default`}>
+                      {conteudo}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{t.tema}</p>
-                      <p className="text-xs text-muted mt-0.5">{new Date(t.data).toLocaleDateString("pt-BR")}</p>
-                    </div>
-                    <ChevronRight size={14} className="text-muted shrink-0" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </ProfileSection>
