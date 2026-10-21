@@ -1525,6 +1525,7 @@ enum StatusSugestao {
 enum TipoDeslocamento {
   MOBILIDADE // vale combustível
   FRETADO
+  VALE_TRANSPORTE // VT
 }
 
 enum TipoDesligamento {

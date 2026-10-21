@@ -17,6 +17,7 @@ const TIPOS_DESLIGAMENTO = [
 const TIPOS_DESLOCAMENTO = [
   { value: "MOBILIDADE", label: "Mobilidade" },
   { value: "FRETADO", label: "Fretado" },
+  { value: "VALE_TRANSPORTE", label: "Vale Transporte" },
 ];
 
 const MOTIVOS_DESLIGAMENTO = [

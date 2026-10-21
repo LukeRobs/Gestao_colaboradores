@@ -272,6 +272,7 @@ export default function NovoColaborador() {
               options={[
                 { value: "MOBILIDADE", label: "Mobilidade" },
                 { value: "FRETADO", label: "Fretado" },
+                { value: "VALE_TRANSPORTE", label: "Vale Transporte" },
               ]}
             />
 

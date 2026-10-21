@@ -42,7 +42,7 @@ function getInitials(name = "") {
     .join("");
 }
 
-const DESLOCAMENTO_LABEL = { MOBILIDADE: "Mobilidade", FRETADO: "Fretado" };
+const DESLOCAMENTO_LABEL = { MOBILIDADE: "Mobilidade", FRETADO: "Fretado", VALE_TRANSPORTE: "Vale Transporte" };
 
 function fmt(date, opts = {}) {
   if (!date) return "—";

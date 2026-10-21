@@ -429,14 +429,14 @@ const listarEscalas = async (req, res) => {
   }
 };
 
-const TIPOS_DESLOCAMENTO = ["MOBILIDADE", "FRETADO"];
+const TIPOS_DESLOCAMENTO = ["MOBILIDADE", "FRETADO", "VALE_TRANSPORTE"];
 
 // Vazio/nulo = não informado; qualquer outro valor precisa ser um dos tipos válidos.
 const normalizarTipoDeslocamento = (valor) => {
   if (valor === undefined || valor === null || valor === "") return { valor: null };
   const tipo = String(valor).trim().toUpperCase();
   if (!TIPOS_DESLOCAMENTO.includes(tipo)) {
-    return { erro: "Tipo de deslocamento inválido. Use Mobilidade ou Fretado." };
+    return { erro: "Tipo de deslocamento inválido. Use Mobilidade, Fretado ou Vale Transporte." };
   }
   return { valor: tipo };
 };

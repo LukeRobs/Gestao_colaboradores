@@ -27,7 +27,7 @@ const formatarData = (data) => {
   return `${dia}/${mes}/${ano}`;
 };
 
-const DESLOCAMENTO_LABEL = { MOBILIDADE: 'Mobilidade', FRETADO: 'Fretado' };
+const DESLOCAMENTO_LABEL = { MOBILIDADE: 'Mobilidade', FRETADO: 'Fretado', VALE_TRANSPORTE: 'Vale Transporte' };
 
 // Mesmos critérios do perfil do colaborador: atestados = todos os registrados; faltas = FI/FJ (tipos 3 e 32); MD = só as assinadas.
 const contarPorColaborador = (linhas) => new Map(linhas.map((l) => [l.opsId, l._count._all]));
