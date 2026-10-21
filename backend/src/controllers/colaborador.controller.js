@@ -429,6 +429,18 @@ const listarEscalas = async (req, res) => {
   }
 };
 
+const TIPOS_DESLOCAMENTO = ["MOBILIDADE", "FRETADO"];
+
+// Vazio/nulo = não informado; qualquer outro valor precisa ser um dos tipos válidos.
+const normalizarTipoDeslocamento = (valor) => {
+  if (valor === undefined || valor === null || valor === "") return { valor: null };
+  const tipo = String(valor).trim().toUpperCase();
+  if (!TIPOS_DESLOCAMENTO.includes(tipo)) {
+    return { erro: "Tipo de deslocamento inválido. Use Mobilidade ou Fretado." };
+  }
+  return { valor: tipo };
+};
+
 /* ================= CREATE ================= */
 const createColaborador = async (req, res) => {
   try {
@@ -451,7 +463,13 @@ const createColaborador = async (req, res) => {
       contatoEmergenciaNome,
       contatoEmergenciaTelefone,
       idLider,
+      tipoDeslocamento,
     } = req.body;
+
+    const deslocamentoValidado = normalizarTipoDeslocamento(tipoDeslocamento);
+    if (deslocamentoValidado.erro) {
+      return res.status(400).json({ error: deslocamentoValidado.erro });
+    }
 
     // Remove espaços/tabs acidentais (ex.: copiado de uma planilha) antes de
     // validar/gravar — ops_id é a chave primária, então qualquer whitespace
@@ -658,6 +676,7 @@ const createColaborador = async (req, res) => {
       genero: genero || null,
       contatoEmergenciaNome: contatoEmergenciaNomeLimpo,
       contatoEmergenciaTelefone: contatoEmergenciaTelefoneLimpo,
+      tipoDeslocamento: deslocamentoValidado.valor,
       matricula,
       dataAdmissao: dataAdmissaoDate,
       horarioInicioJornada: horario,
@@ -850,6 +869,7 @@ const updateColaborador = async (req, res) => {
       idLiderSubstituto,
       cipa,
       gestante,
+      tipoDeslocamento,
     } = req.body;
 
     const data = {};
@@ -889,6 +909,13 @@ const updateColaborador = async (req, res) => {
     if (dataFimStatus !== undefined) data.dataFimStatus = dataFimStatus ? new Date(`${dataFimStatus}T00:00:00`) : null;
     if (cipa !== undefined) data.cipa = Boolean(cipa);
     if (gestante !== undefined) data.gestante = Boolean(gestante);
+    if (tipoDeslocamento !== undefined) {
+      const deslocamentoValidado = normalizarTipoDeslocamento(tipoDeslocamento);
+      if (deslocamentoValidado.erro) {
+        return res.status(400).json({ error: deslocamentoValidado.erro });
+      }
+      data.tipoDeslocamento = deslocamentoValidado.valor;
+    }
 
     if (dataAdmissao !== undefined) {
       data.dataAdmissao = dataAdmissao ? new Date(`${dataAdmissao}T00:00:00`) : undefined;
@@ -2031,7 +2058,7 @@ function toArray(val) {
 
 function buildWhere(query, dbContext) {
   const {
-    search, status, idSetor, idCargo, idEmpresa, idLider, escala, turno, cipa, gestante,
+    search, status, idSetor, idCargo, idEmpresa, idLider, escala, turno, cipa, gestante, tipoDeslocamento,
   } = query;
 
   const where = {};
@@ -2058,6 +2085,9 @@ function buildWhere(query, dbContext) {
   if (gestante === "true") statusConditions.push({ gestante: true });
   if (statusConditions.length === 1) andConditions.push(statusConditions[0]);
   else if (statusConditions.length > 1) andConditions.push({ OR: statusConditions });
+
+  const tipoDeslocamentoArr = toArray(tipoDeslocamento)?.filter((t) => TIPOS_DESLOCAMENTO.includes(t));
+  if (tipoDeslocamentoArr?.length) where.tipoDeslocamento = { in: tipoDeslocamentoArr };
 
   const idSetorArr = toArray(idSetor);
   if (idSetorArr) where.idSetor = { in: idSetorArr.map(Number) };

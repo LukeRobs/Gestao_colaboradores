@@ -14,6 +14,11 @@ const TIPOS_DESLIGAMENTO = [
   { value: "DP", label: "DP: Desligamento Planejado" },
 ];
 
+const TIPOS_DESLOCAMENTO = [
+  { value: "MOBILIDADE", label: "Mobilidade" },
+  { value: "FRETADO", label: "Fretado" },
+];
+
 const MOTIVOS_DESLIGAMENTO = [
   { value: "COMPLIANCE", label: "Compliance" },
   { value: "ALTO_INDICE_ABS", label: "Alto índice de ABS" },
@@ -63,6 +68,7 @@ export default function EditarColaborador() {
     dataFimStatus: "",
     cipa: false,
     gestante: false,
+    tipoDeslocamento: "",
   });
 
   /* ================= LOAD ================= */
@@ -114,6 +120,7 @@ export default function EditarColaborador() {
           dataFimStatus: c.dataFimStatus ? c.dataFimStatus.substring(0, 10) : "",
           cipa: c.cipa ?? false,
           gestante: c.gestante ?? false,
+          tipoDeslocamento: c.tipoDeslocamento || "",
         });
       } catch (err) {
         console.error(err);
@@ -227,6 +234,7 @@ export default function EditarColaborador() {
         dataFimStatus: form.dataFimStatus || null,
         cipa: form.cipa,
         gestante: form.gestante,
+        tipoDeslocamento: form.tipoDeslocamento || null,
       };
 
       await api.put(`/colaboradores/${opsId}`, payload);
@@ -372,6 +380,14 @@ export default function EditarColaborador() {
                 value: l.opsId,
                 label: `${l.nomeCompleto} — ${l.opsId}`,
               }))}
+            />
+
+            <Select
+              label="Tipo de Deslocamento"
+              name="tipoDeslocamento"
+              value={form.tipoDeslocamento}
+              onChange={handleChange}
+              options={TIPOS_DESLOCAMENTO}
             />
           </Section>
 

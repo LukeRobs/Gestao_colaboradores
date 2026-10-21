@@ -41,6 +41,8 @@ function getInitials(name = "") {
     .join("");
 }
 
+const DESLOCAMENTO_LABEL = { MOBILIDADE: "Mobilidade", FRETADO: "Fretado" };
+
 function fmt(date, opts = {}) {
   if (!date) return "—";
   return new Date(date).toLocaleDateString("pt-BR", { timeZone: "UTC", ...opts });
@@ -261,6 +263,7 @@ export default function PerfilColaborador() {
               <OrgInfo label="Setor"    value={vinculo.setor    || colaborador.setor?.nomeSetor} />
               <OrgInfo label="Cargo"    value={vinculo.cargo    || colaborador.cargo?.nomeCargo} />
               <OrgInfo label="Turno"    value={vinculo.turno    || colaborador.turno?.nomeTurno} />
+              <OrgInfo label="Deslocamento" value={DESLOCAMENTO_LABEL[colaborador.tipoDeslocamento]} />
               <OrgInfo label="Líder"    value={vinculo.lider} span />
             </div>
           </ProfileSection>

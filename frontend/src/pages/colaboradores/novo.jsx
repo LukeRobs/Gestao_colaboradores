@@ -33,6 +33,7 @@ export default function NovoColaborador() {
     dataAdmissao: "",
     horarioInicioJornada: "",
     status: "ATIVO",
+    tipoDeslocamento: "",
   });
 
   const [empresas, setEmpresas] = useState([]);
@@ -261,6 +262,17 @@ export default function NovoColaborador() {
                 value: l.opsId,
                 label: `${l.nomeCompleto} — ${l.opsId}`,
               }))}
+            />
+
+            <Select
+              label="Tipo de Deslocamento"
+              name="tipoDeslocamento"
+              value={form.tipoDeslocamento}
+              onChange={handleChange}
+              options={[
+                { value: "MOBILIDADE", label: "Mobilidade" },
+                { value: "FRETADO", label: "Fretado" },
+              ]}
             />
 
           </Section>

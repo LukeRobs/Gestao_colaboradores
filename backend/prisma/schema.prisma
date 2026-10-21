@@ -323,6 +323,7 @@ model Colaborador {
   contatoEmergenciaTelefone             String?                              @map("contato_emergencia_telefone") @db.VarChar(20)
   cipa                                  Boolean                              @default(false)
   gestante                              Boolean                              @default(false)
+  tipoDeslocamento                      TipoDeslocamento?                    @map("tipo_deslocamento")
   acidentes                             AcidenteTrabalho[]
   atestadosMedicos                      AtestadoMedico[]
   ausencias                             Ausencia[]
@@ -1518,6 +1519,12 @@ enum StatusSugestao {
   PENDENTE
   APROVADA
   REJEITADA
+}
+
+// Como o colaborador se desloca até a estação.
+enum TipoDeslocamento {
+  MOBILIDADE // vale combustível
+  FRETADO
 }
 
 enum TipoDesligamento {
