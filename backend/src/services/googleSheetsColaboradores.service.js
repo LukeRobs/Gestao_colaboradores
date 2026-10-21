@@ -27,6 +27,11 @@ const formatarData = (data) => {
   return `${dia}/${mes}/${ano}`;
 };
 
+const DESLOCAMENTO_LABEL = { MOBILIDADE: 'Mobilidade', FRETADO: 'Fretado' };
+
+// Mesmos critérios do perfil do colaborador: atestados = todos os registrados; faltas = FI/FJ (tipos 3 e 32); MD = só as assinadas.
+const contarPorColaborador = (linhas) => new Map(linhas.map((l) => [l.opsId, l._count._all]));
+
 // 📊 Exportar todos os colaboradores para o Google Sheets
 const exportarColaboradores = async (prisma) => {
   console.log('\n📊 ===== EXPORTAR COLABORADORES =====');
@@ -45,6 +50,12 @@ const exportarColaboradores = async (prisma) => {
   });
 
   console.log(`👥 Colaboradores encontrados: ${colaboradores.length}`);
+
+  const [atestadosPorOps, faltasPorOps, mdsPorOps] = await Promise.all([
+    prisma.atestadoMedico.groupBy({ by: ['opsId'], _count: { _all: true } }),
+    prisma.frequencia.groupBy({ by: ['opsId'], where: { idTipoAusencia: { in: [3, 32] } }, _count: { _all: true } }),
+    prisma.medidaDisciplinar.groupBy({ by: ['opsId'], where: { status: 'ASSINADO' }, _count: { _all: true } }),
+  ]).then((r) => r.map(contarPorColaborador));
 
   const headers = [
     'OPS ID',
@@ -65,6 +76,10 @@ const exportarColaboradores = async (prisma) => {
     'Escala',
     'Estação',
     'Líder',
+    'Deslocamento',
+    'Atestados Médicos',
+    'Faltas',
+    'Medidas Disciplinares',
   ];
 
   const rows = colaboradores.map((c) => [
@@ -86,6 +101,10 @@ const exportarColaboradores = async (prisma) => {
     c.escala?.nomeEscala || '',
     c.estacao?.nomeEstacao || '',
     c.lider?.nomeCompleto || '',
+    DESLOCAMENTO_LABEL[c.tipoDeslocamento] || '',
+    atestadosPorOps.get(c.opsId) || 0,
+    faltasPorOps.get(c.opsId) || 0,
+    mdsPorOps.get(c.opsId) || 0,
   ]);
 
   const values = [headers, ...rows];
@@ -110,7 +129,7 @@ const exportarColaboradores = async (prisma) => {
     resource: { values },
   });
 
-  // 🕐 Registrar hora da última atualização na célula T1
+  // 🕐 Registrar hora da última atualização na célula X1
   const horaAtualizacao = new Date().toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
@@ -123,7 +142,7 @@ const exportarColaboradores = async (prisma) => {
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: COLABORADORES_SPREADSHEET_ID,
-    range: `${COLABORADORES_SHEET}!T1`,
+    range: `${COLABORADORES_SHEET}!X1`,
     valueInputOption: 'RAW',
     resource: {
       values: [[`Última atualização: ${horaAtualizacao}`]],

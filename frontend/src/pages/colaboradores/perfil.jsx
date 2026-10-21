@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   UserCheck,
   ChevronRight,
+  Bus,
 } from "lucide-react";
 
 import Sidebar from "../../components/Sidebar";
@@ -232,6 +233,10 @@ export default function PerfilColaborador() {
                         {vinculo.turno}
                       </span>
                     )}
+                    <span className="flex items-center gap-1.5">
+                      <Bus size={13} />
+                      {DESLOCAMENTO_LABEL[colaborador.tipoDeslocamento] || "Deslocamento não informado"}
+                    </span>
                   </div>
                 </div>
               </div>
