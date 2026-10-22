@@ -24,10 +24,13 @@ async function registrarDaFila(idEstacao) {
   const [viagens, fila] = await Promise.all([prisma.spxTripLista.findUnique({ where: { idEstacao } }), prisma.spxQueueLista.findUnique({ where: { idEstacao } })]);
   const listaViagens = Array.isArray(viagens?.payload?.list) ? viagens.payload.list : [];
   const listaFila = Array.isArray(fila?.payload?.list) ? fila.payload.list : [];
+  const estacao = await prisma.estacao.findUnique({ where: { idEstacao }, select: { spxStationId: true } });
+  const meuSpx = estacao?.spxStationId != null ? String(estacao.spxStationId) : null;
 
-  // Só vira "recebido" quem já chegou: entrou na fila do pátio ou já está descarregando (em trânsito ainda não).
+  // Só vira "recebido" quem já chegou: entrou na fila do pátio desta estação ou já está descarregando AQUI (em trânsito ainda não).
+  // A lista de viagens traz rotas que apenas passam pela estação: se a viagem descarrega em outra estação, não foi recebida aqui.
   const linhas = juntar(listaViagens, listaFila)
-    .filter((i) => i.fila || i.statusLh === LH_DESCARREGANDO)
+    .filter((i) => i.fila || (i.statusLh === LH_DESCARREGANDO && (!meuSpx || !i.destinoStationId || i.destinoStationId === meuSpx)))
     .map((i) => ({
       trip_number: String(i.tripNumber).slice(0, 80),
       placa: i.placa,

@@ -56,6 +56,8 @@ function montarItem(trip, q) {
     etaSec: num(dest?.eta) || null,
     chegouSec: num(dest?.ata) || null,
     statusLh: dest?.trip_station_status ?? null,
+    // id SPX da estação em que a viagem está descarregando/em trânsito (para saber se é desta estação ou de outra da rota)
+    destinoStationId: dest?.station != null ? String(dest.station) : null,
     somenteFila: !!trip._fromQueue,
     fila: q
       ? {
