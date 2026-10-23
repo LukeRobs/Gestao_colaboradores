@@ -562,8 +562,21 @@ const cancelarAtestado = async (req, res) => {
           },
         });
 
-        // 🔒 Só remove se ainda for atestado
-        if (freq && freq.idTipoAusencia === 5) {
+        // Outro atestado válido (ativo/finalizado) cobrindo o mesmo dia mantém o AM: sem isso,
+        // cancelar um atestado duplicado apagava o dia mesmo com o outro ainda valendo.
+        const outroAtestadoNoDia = await tx.atestadoMedico.findFirst({
+          where: {
+            opsId,
+            idAtestado: { not: Number(id) },
+            status: { in: ["ATIVO", "FINALIZADO"] },
+            dataInicio: { lte: dataReferencia },
+            dataFim: { gte: dataReferencia },
+          },
+          select: { idAtestado: true },
+        });
+
+        // 🔒 Só remove se ainda for atestado e nenhum outro atestado cobrir o dia
+        if (freq && freq.idTipoAusencia === 5 && !outroAtestadoNoDia) {
           await tx.frequencia.update({
             where: {
               opsId_dataReferencia: {
