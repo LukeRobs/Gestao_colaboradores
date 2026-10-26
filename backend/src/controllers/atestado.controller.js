@@ -20,7 +20,7 @@ const { GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getR2Client } = require("../services/r2");
 
 const BUCKET = process.env.R2_BUCKET_NAME;
-const { isDiaDSR } = require("../utils/dsr");
+const { getDiasDsr } = require("../utils/dsr");
 
 /* =====================================================
    DATAS — BRASIL (FIX DEFINITIVO)
@@ -244,6 +244,9 @@ const createAtestado = async (req, res) => {
 
     const opsId = colaborador.opsId;
     const nomeEscala = colaborador.escala?.nomeEscala || null;
+    // DSR da escala do próprio colaborador (nome + estação): o mesmo nome de escala existe em estações com DSR diferente
+    // (ex.: "I" = dom na estação 2 e qua/sáb na estação 1), e buscar só pelo nome pegava a escala errada.
+    const diasDsrEscala = await getDiasDsr(nomeEscala, prisma, colaborador.idEstacao);
 
     const dias =
       diasAfastamento && Number(diasAfastamento) > 0
@@ -298,7 +301,7 @@ const createAtestado = async (req, res) => {
         });
 
         const ehDSRNoBanco = freqExistente?.idTipoAusencia === 4;
-        const ehDSRPorEscala = await isDiaDSR(dataReferencia, nomeEscala);
+        const ehDSRPorEscala = diasDsrEscala.includes(dataReferencia.getUTCDay());
 
         if (ehDSRNoBanco || ehDSRPorEscala) {
           current.setDate(current.getDate() + 1);
