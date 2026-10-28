@@ -144,10 +144,6 @@ function diffDias(dataA, dataB) {
   return Math.floor((a - b) / (1000 * 60 * 60 * 24));
 }
 
-function uniqueNumbers(arr) {
-  return [...new Set(arr.filter((n) => Number.isInteger(n) && n >= 0))];
-}
-
 function somarDias(data, dias) {
   const d = new Date(data);
   d.setUTCHours(0, 0, 0, 0);
@@ -163,75 +159,6 @@ function somarDias(data, dias) {
 function prazoProximaFolga(ultimaData, domingos) {
   if (ultimaData) return somarDias(ultimaData, INTERVALO_MAX_ENTRE_FOLGAS);
   return domingos[Math.min(MAX_DOMINGOS_TRABALHADOS, domingos.length - 1)];
-}
-
-/**
- * Ordena, por preferência, os domingos candidatos (índices em `domingos`)
- * para a próxima folga do colaborador.
- *
- * Regras:
- * - mantém slot base como referência principal
- * - se o mês tiver 5 domingos, pode usar o próximo domingo
- * - considera a última folga anterior para evitar intervalo muito curto
- *   (< 14 dias) e prefere ficar perto de 28 dias
- *
- * Os candidatos já chegam limitados ao prazo (máx. 3 domingos trabalhados).
- */
-function ordenarCandidatos({ domingos, candidatos, slotBase, ultimaData, capacidade, turno }) {
-  const totalDomingos = domingos.length;
-
-  if (!ultimaData) {
-    // Sem folga anterior: tenta slot base primeiro, depois os outros em ordem
-    const prioritarios = uniqueNumbers([
-      slotBase,
-      totalDomingos >= 5 ? slotBase + 1 : null,
-    ]).filter((idx) => candidatos.includes(idx));
-    return uniqueNumbers([...prioritarios, ...candidatos]);
-  }
-
-  const avaliados = candidatos.map((idx) => {
-    const domingo = domingos[idx];
-    const diasDesdeUltimaFolga = diffDias(domingo, ultimaData);
-
-    let score = 0;
-
-    // 1) penaliza intervalos curtos demais
-    if (diasDesdeUltimaFolga < 14) {
-      score += 1000 + (14 - diasDesdeUltimaFolga) * 20;
-    }
-
-    // 2) prefere o domingo mais perto do prazo (28 dias): evita folgas a mais
-    score += Math.abs(diasDesdeUltimaFolga - INTERVALO_MAX_ENTRE_FOLGAS) * 20;
-
-    const ocupacao = capacidade[turno][isoDate(domingo)]?.folgasPlanejadas || 0;
-    score += ocupacao * 3;
-
-    // 3) favorece o slot base
-    if (idx === slotBase) {
-      score += 0;
-    } else if (totalDomingos >= 5 && idx === slotBase + 1) {
-      score += 15;
-    } else {
-      score += 50 + Math.abs(idx - slotBase) * 10;
-    }
-
-    return { idx, score };
-  });
-
-  avaliados.sort((a, b) => a.score - b.score || a.idx - b.idx);
-  return avaliados.map((item) => item.idx);
-}
-
-function mapearUltimaFolgaAnterior(registros) {
-  const mapa = new Map();
-
-  for (const r of registros) {
-    if (!mapa.has(r.opsId)) {
-      mapa.set(r.opsId, r);
-    }
-  }
-
-  return mapa;
 }
 
 /* =====================================================
@@ -597,42 +524,27 @@ function montarPlanejamento({
           continue;
         }
 
-        // Prazo já vencido (ex.: domingos anteriores já passaram): primeiro domingo possível
+        // Ciclo fixo: 3 domingos trabalhados e o 4º de DSR, ou seja, a folga cai exatamente no prazo
+        // (28 dias depois da anterior). Só sai disso se o domingo do prazo estiver bloqueado, e então
+        // usa o domingo livre mais perto dele. Prazo já vencido (domingos anteriores já passaram):
+        // primeiro domingo possível.
         const vencido = janela.length === 0;
-        const candidatos = vencido
-          ? isoDomingos.map((iso, idx) => ({ iso, idx })).filter((x) => x.iso > ultimaIso).map((x) => x.idx)
-          : janela;
-
         const ordenados = vencido
-          ? candidatos
-          : ordenarCandidatos({ domingos, candidatos, slotBase, ultimaData, capacidade, turno });
-        const ocupacao = (idx) => capacidade[turno][isoDomingos[idx]]?.folgasPlanejadas || 0;
-        const menosOcupados = [...ordenados].sort((a, b) => ocupacao(a) - ocupacao(b));
-        const semCapacidade = ordenados.filter((idx) => !((capacidade[turno][isoDomingos[idx]]?.saldoDisponivel || 0) > 0));
+          ? isoDomingos.map((iso, idx) => ({ iso, idx })).filter((x) => x.iso > ultimaIso).map((x) => x.idx)
+          : [...janela].reverse();
 
-        // 1) dentro do prazo, com capacidade; 2) dentro do prazo, estourando a capacidade (a regra dos
-        // 3 domingos pesa mais); 3) dentro do prazo, substituindo ausência não-DSR (só manual protege)
-        // 4) fora do prazo, qualquer domingo do período (último recurso)
-        let escolhido = ordenados.find((idx) => !semCapacidade.includes(idx) && !bloqueado(idx, false));
-        let forcado = false;
+        let escolhido = ordenados.find((idx) => !bloqueado(idx, false));
+        if (escolhido === undefined) escolhido = ordenados.find((idx) => !bloqueado(idx, true));
         let foraDoPrazo = false;
 
         if (escolhido === undefined) {
-          escolhido = menosOcupados.find((idx) => !bloqueado(idx, false));
-          forcado = escolhido !== undefined;
-        }
-        if (escolhido === undefined) {
-          escolhido = menosOcupados.find((idx) => !bloqueado(idx, true));
-          forcado = escolhido !== undefined;
-        }
-        if (escolhido === undefined) {
-          const resto = isoDomingos
+          escolhido = isoDomingos
             .map((iso, idx) => idx)
-            .filter((idx) => isoDomingos[idx] > ultimaIso && !candidatos.includes(idx))
-            .sort((a, b) => ocupacao(a) - ocupacao(b));
-          escolhido = resto.find((idx) => !bloqueado(idx, true));
-          forcado = foraDoPrazo = escolhido !== undefined;
+            .filter((idx) => isoDomingos[idx] > ultimaIso && !ordenados.includes(idx))
+            .find((idx) => !bloqueado(idx, true));
+          foraDoPrazo = escolhido !== undefined;
         }
+        const forcado = escolhido !== undefined && !vencido && isoDomingos[escolhido] !== prazoIso;
 
         if (escolhido === undefined) {
           naoAlocados.push({
