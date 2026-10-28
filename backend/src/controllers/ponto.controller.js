@@ -1101,17 +1101,23 @@ const ajusteManualPresenca = async (req, res) => {
       "ATESTADO_OBITO",
       "JUSTICA_ELEITORAL",
       "TREINAMENTO_PE2",
+      "TREINAMENTO_PE4",
     ];
 
     let justificativaNormalizada = String(justificativa)
       .trim()
       .toUpperCase();
 
-    // PE2 é um status exclusivo da Recife com justificativa sempre automática
-    // — ignora o que veio do corpo da requisição e força o valor certo,
+    // PE2 (Recife) e PE4 (Jaboatão) são status exclusivos da estação, com justificativa
+    // sempre automática — ignora o que veio do corpo da requisição e força o valor certo,
     // pra não depender só da trava do front-end.
-    if (status === "PE2") {
-      justificativaNormalizada = "TREINAMENTO_PE2";
+    const STATUS_TREINAMENTO = {
+      PE2: { idEstacao: 6, nomeEstacao: "Recife", justificativa: "TREINAMENTO_PE2" },
+      PE4: { idEstacao: 1, nomeEstacao: "Jaboatão", justificativa: "TREINAMENTO_PE4" },
+    };
+    const statusTreinamento = STATUS_TREINAMENTO[status];
+    if (statusTreinamento) {
+      justificativaNormalizada = statusTreinamento.justificativa;
     }
 
     if (!JUSTIFICATIVAS_PERMITIDAS.includes(justificativaNormalizada)) {
@@ -1133,10 +1139,9 @@ const ajusteManualPresenca = async (req, res) => {
       return errorResponse(res, "Colaborador não está ativo", 403);
     }
 
-    // Status PE2 é exclusivo da estação Recife (SoC_PE_Recife, id 6)
-    const ESTACAO_RECIFE = 6;
-    if (status === "PE2" && colaborador.idEstacao !== ESTACAO_RECIFE) {
-      return errorResponse(res, "O status PE2 é exclusivo da estação Recife", 403);
+    // PE2 só vale na Recife (SoC_PE_Recife, id 6) e PE4 só em Jaboatão (id 1)
+    if (statusTreinamento && colaborador.idEstacao !== statusTreinamento.idEstacao) {
+      return errorResponse(res, `O status ${status} é exclusivo da estação ${statusTreinamento.nomeEstacao}`, 403);
     }
 
     // Isolamento por estação: não-ADMIN só pode ajustar colaboradores da sua estação

@@ -33,6 +33,7 @@ const STATUS_CONFIG = {
   AB:  { label: "Licença - Atestado de Óbito", short: "AB", bg: "bg-slate-600/20", text: "text-slate-400" },
   JE:  { label: "Licença - Justiça Eleitoral", short: "JE", bg: "bg-slate-600/20", text: "text-slate-400" },
   PE2: { label: "PE2", short: "PE2", bg: "bg-teal-600/20", text: "text-teal-400" },
+  PE4: { label: "PE4", short: "PE4", bg: "bg-teal-600/20", text: "text-teal-400" },
 };
 
 
@@ -48,6 +49,7 @@ const JUSTIFICATIVA_LABEL = {
   FALTA_INJUSTIFICADA:   "Falta injustificada",
   ON:                    "Onboarding",
   TREINAMENTO_PE2:       "Treinamento PE2",
+  TREINAMENTO_PE4:       "Treinamento PE4",
 };
 function fmtHora(iso) {
   if (!iso) return null;

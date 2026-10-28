@@ -27,6 +27,7 @@ const STATUS_OPTIONS = [
   { code: "AB", label: "Licença - Atestado de Óbito" },
   { code: "JE", label: "Licença - Justiça Eleitoral" },
   { code: "PE2", label: "PE2", onlyEstacao: 6 }, // exclusivo da estação Recife (SoC_PE_Recife)
+  { code: "PE4", label: "PE4", onlyEstacao: 1 }, // exclusivo da estação Jaboatão (SoC_PE_Jabotao_dos_Guararapes)
 ];
 
 // Códigos que a Liderança não pode mais lançar manualmente — precisam
@@ -49,7 +50,7 @@ const JUSTIFICATIVAS = [
 ];
 
 // Status que NÃO mostram campos de hora (justificativa automática)
-const STATUS_SEM_HORARIO = ["BH", "S1", "AB", "JE", "PE2"];
+const STATUS_SEM_HORARIO = ["BH", "S1", "AB", "JE", "PE2", "PE4"];
 
 // Status que habilitam edição de hora (demais mostram campos mas desabilitados)
 const STATUS_COM_HORARIO = ["P"];
@@ -65,6 +66,7 @@ function autoJustificativa(status) {
   if (status === "AB") return "ATESTADO_OBITO";
   if (status === "JE") return "JUSTICA_ELEITORAL";
   if (status === "PE2") return "TREINAMENTO_PE2";
+  if (status === "PE4") return "TREINAMENTO_PE4";
   // Sem justificativa automática: quem lança escolhe. O padrão antigo ("Banco de Horas")
   // gravava BH como motivo em qualquer status e escondia o que de fato foi feito.
   return "";
@@ -100,7 +102,7 @@ export default function EditarPresencaModal({
   const isFolga = status === "FO";
   const isSuspensao = status === "SU";
   const isAbonado = STATUS_ABONADOS.includes(status);
-  const isPE2 = status === "PE2";
+  const isPE2 = status === "PE2" || status === "PE4"; // treinamento: justificativa automática
   const mostrarHorario = !STATUS_SEM_HORARIO.includes(status) && status !== "";
   const permiteHorario = status === "P";
 
