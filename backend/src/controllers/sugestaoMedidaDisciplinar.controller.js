@@ -15,6 +15,33 @@ const { detectarFaltasAutomatico } = require("../services/detectarFaltasAutomati
 const { gerarOnboardingColaborador } = require("../services/dsrBackfill.service")
 
 /* =====================================================
+   TURNO POR NOME
+   Os turnos são cadastrados por estação (T1 de Recife tem id diferente do T1 de
+   Jaboatão) e há colaboradores com o turno de outra estação. Comparar pelo id
+   escondia a maioria das sugestões da liderança; compara-se pelo nome (T1/T2/T3).
+===================================================== */
+
+const SEM_TURNO = "__SEM_TURNO__"
+
+const nomeTurnoDoUsuario = async (opsId) => {
+  const c = await prisma.colaborador.findUnique({
+    where: { opsId },
+    select: { turno: { select: { nomeTurno: true } } },
+  })
+  return c?.turno?.nomeTurno ?? null
+}
+
+const nomeTurnoPorId = async (idTurno) => {
+  const t = await prisma.turno.findUnique({
+    where: { idTurno: Number(idTurno) },
+    select: { nomeTurno: true },
+  })
+  return t?.nomeTurno ?? null
+}
+
+const filtroTurnoPorNome = (nome) => ({ is: { nomeTurno: nome ?? SEM_TURNO } })
+
+/* =====================================================
    CONTADORES POR STATUS
 ===================================================== */
 
@@ -39,13 +66,9 @@ const getContadores = async (req, res) => {
     }
 
     if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
-      const liderColaborador = await prisma.colaborador.findUnique({
-        where: { opsId: req.user.opsId },
-        select: { idTurno: true },
-      });
-      colaboradorFilter.idTurno = liderColaborador?.idTurno ?? -1;
+      colaboradorFilter.turno = filtroTurnoPorNome(await nomeTurnoDoUsuario(req.user.opsId));
     } else {
-      if (turno) colaboradorFilter.idTurno = Number(turno);
+      if (turno) colaboradorFilter.turno = filtroTurnoPorNome(await nomeTurnoPorId(turno));
       if (lider) colaboradorFilter.idLider = lider;
     }
 
@@ -127,16 +150,12 @@ const getAllSugestoes = async (req, res) => {
 
     if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
 
-      const liderColaborador = await prisma.colaborador.findUnique({
-        where: { opsId: req.user.opsId },
-        select: { idTurno: true },
-      });
-      // Restringe ao turno do usuário logado. -1 garante resultado vazio se sem turno.
-      colaboradorFilter.idTurno = liderColaborador?.idTurno ?? -1;
+      // Restringe ao turno do usuário logado. Sem turno, o filtro não casa com ninguém.
+      colaboradorFilter.turno = filtroTurnoPorNome(await nomeTurnoDoUsuario(req.user.opsId));
 
     } else {
 
-      if (turno) colaboradorFilter.idTurno = Number(turno);
+      if (turno) colaboradorFilter.turno = filtroTurnoPorNome(await nomeTurnoPorId(turno));
       if (lider) colaboradorFilter.idLider = lider;
 
     }
@@ -248,7 +267,7 @@ const aprovarSugestao = async (req, res) => {
       select: {
         nomeCompleto: true,
         matricula: true,
-        idTurno: true,
+        turno: { select: { nomeTurno: true } },
       },
     })
 
@@ -257,11 +276,8 @@ const aprovarSugestao = async (req, res) => {
     }
 
     if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
-      const liderColaborador = await prisma.colaborador.findUnique({
-        where: { opsId: req.user.opsId },
-        select: { idTurno: true },
-      });
-      if (!liderColaborador?.idTurno || liderColaborador.idTurno !== colaborador.idTurno) {
+      const turnoLider = await nomeTurnoDoUsuario(req.user.opsId);
+      if (!turnoLider || turnoLider !== colaborador.turno?.nomeTurno) {
         return errorResponse(res, "Você só pode aprovar sugestões de colaboradores do seu turno", 403);
       }
     }
@@ -478,17 +494,11 @@ const rejeitarSugestao = async (req, res) => {
     }
 
     if (req.user?.role === "LIDERANCA" && req.user?.opsId) {
-      const [liderColaborador, sugestaoColaborador] = await Promise.all([
-        prisma.colaborador.findUnique({
-          where: { opsId: req.user.opsId },
-          select: { idTurno: true },
-        }),
-        prisma.colaborador.findUnique({
-          where: { opsId: sugestao.opsId },
-          select: { idTurno: true },
-        }),
+      const [turnoLider, turnoSugestao] = await Promise.all([
+        nomeTurnoDoUsuario(req.user.opsId),
+        nomeTurnoDoUsuario(sugestao.opsId),
       ]);
-      if (!liderColaborador?.idTurno || liderColaborador.idTurno !== sugestaoColaborador?.idTurno) {
+      if (!turnoLider || turnoLider !== turnoSugestao) {
         return errorResponse(res, "Você só pode rejeitar sugestões de colaboradores do seu turno", 403);
       }
     }
