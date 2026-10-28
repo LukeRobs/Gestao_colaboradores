@@ -284,7 +284,8 @@ const createAtestado = async (req, res) => {
         await comAuditoriaStatus(
           tx,
           { opsId, userId: req.user?.id ?? null, origem: "ATESTADO_AFASTAMENTO", detalhe: `Atestado de ${dias} dias` },
-          () => tx.colaborador.update({ where: { opsId }, data: { status: "AFASTADO" } })
+          // As datas do status são o que mantém o afastado visível no Controle de Presença
+          () => tx.colaborador.update({ where: { opsId }, data: { status: "AFASTADO", dataInicioStatus: inicio, dataFimStatus: fim } })
         );
       }
 
