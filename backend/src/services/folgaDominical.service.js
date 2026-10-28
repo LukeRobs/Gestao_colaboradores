@@ -10,6 +10,11 @@ const MINIMO_POR_TURNO = {
   T3: 152,
 };
 
+// Máximo de domingos trabalhados seguidos: no 4º o colaborador precisa folgar.
+// Ou seja, entre duas folgas dominicais passam no máximo 28 dias.
+const MAX_DOMINGOS_TRABALHADOS = 3;
+const INTERVALO_MAX_ENTRE_FOLGAS = (MAX_DOMINGOS_TRABALHADOS + 1) * 7;
+
 // Distribuição percentual por domingo conforme qtd de domingos no mês
 const PERCENTAGENS_POR_DOMINGOS = {
   5: [0.15, 0.15, 0.15, 0.275, 0.275],
@@ -143,37 +148,50 @@ function uniqueNumbers(arr) {
   return [...new Set(arr.filter((n) => Number.isInteger(n) && n >= 0))];
 }
 
+function somarDias(data, dias) {
+  const d = new Date(data);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d;
+}
+
 /**
- * Monta a ordem de preferência dos domingos para aquele colaborador.
+ * Prazo da próxima folga dominical: o domingo em que o colaborador completaria
+ * o 4º domingo trabalhado seguido (28 dias depois da última folga).
+ * Sem folga anterior conhecida, vale o 4º domingo do período.
+ */
+function prazoProximaFolga(ultimaData, domingos) {
+  if (ultimaData) return somarDias(ultimaData, INTERVALO_MAX_ENTRE_FOLGAS);
+  return domingos[Math.min(MAX_DOMINGOS_TRABALHADOS, domingos.length - 1)];
+}
+
+/**
+ * Ordena, por preferência, os domingos candidatos (índices em `domingos`)
+ * para a próxima folga do colaborador.
  *
  * Regras:
  * - mantém slot base como referência principal
  * - se o mês tiver 5 domingos, pode usar o próximo domingo
- * - considera a última folga anterior para evitar:
- *   - intervalo MUITO curto
- *   - intervalo MUITO longo
+ * - considera a última folga anterior para evitar intervalo muito curto
+ *   (< 14 dias) e prefere ficar perto de 28 dias
  *
- * Janela ideal:
- * - < 14 dias => ruim
- * - ideal perto de 28 dias
- * - > 35 dias => começa a ficar ruim
+ * Os candidatos já chegam limitados ao prazo (máx. 3 domingos trabalhados).
  */
-function construirIndicesPreferencia({ domingos, slotBase, ultimaFolga, capacidade, turno, }) {
+function ordenarCandidatos({ domingos, candidatos, slotBase, ultimaData, capacidade, turno }) {
   const totalDomingos = domingos.length;
 
-  const indicesBase = uniqueNumbers([
-    slotBase,
-    totalDomingos >= 5 ? slotBase + 1 : null,
-  ]).filter((idx) => idx < totalDomingos);
-
-  if (!ultimaFolga?.dataDomingo) {
-    // Sem folga anterior: tenta slot base primeiro, depois todos os outros como fallback
-    const todosIndices = Array.from({ length: totalDomingos }, (_, i) => i);
-    return uniqueNumbers([...indicesBase, ...todosIndices]);
+  if (!ultimaData) {
+    // Sem folga anterior: tenta slot base primeiro, depois os outros em ordem
+    const prioritarios = uniqueNumbers([
+      slotBase,
+      totalDomingos >= 5 ? slotBase + 1 : null,
+    ]).filter((idx) => candidatos.includes(idx));
+    return uniqueNumbers([...prioritarios, ...candidatos]);
   }
 
-  const avaliados = domingos.map((domingo, idx) => {
-    const diasDesdeUltimaFolga = diffDias(domingo, ultimaFolga.dataDomingo);
+  const avaliados = candidatos.map((idx) => {
+    const domingo = domingos[idx];
+    const diasDesdeUltimaFolga = diffDias(domingo, ultimaData);
 
     let score = 0;
 
@@ -182,18 +200,13 @@ function construirIndicesPreferencia({ domingos, slotBase, ultimaFolga, capacida
       score += 1000 + (14 - diasDesdeUltimaFolga) * 20;
     }
 
-    // 2) penaliza intervalos longos demais
-    if (diasDesdeUltimaFolga > 35) {
-      score += 250 + (diasDesdeUltimaFolga - 35) * 8;
-    }
-
-    // 3) prefere ficar perto da janela ideal de 28 dias
-    score += Math.abs(diasDesdeUltimaFolga - 28);
+    // 2) prefere o domingo mais perto do prazo (28 dias): evita folgas a mais
+    score += Math.abs(diasDesdeUltimaFolga - INTERVALO_MAX_ENTRE_FOLGAS) * 20;
 
     const ocupacao = capacidade[turno][isoDate(domingo)]?.folgasPlanejadas || 0;
     score += ocupacao * 3;
 
-    // 4) favorece o slot base
+    // 3) favorece o slot base
     if (idx === slotBase) {
       score += 0;
     } else if (totalDomingos >= 5 && idx === slotBase + 1) {
@@ -202,18 +215,11 @@ function construirIndicesPreferencia({ domingos, slotBase, ultimaFolga, capacida
       score += 50 + Math.abs(idx - slotBase) * 10;
     }
 
-    return {
-      idx,
-      score,
-    };
+    return { idx, score };
   });
 
   avaliados.sort((a, b) => a.score - b.score || a.idx - b.idx);
-
-  return uniqueNumbers([
-    ...avaliados.map((item) => item.idx),
-    ...indicesBase,
-  ]).filter((idx) => idx < totalDomingos);
+  return avaliados.map((item) => item.idx);
 }
 
 function mapearUltimaFolgaAnterior(registros) {
@@ -326,14 +332,17 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
   ===================================================== */
   const opsIdsElegiveis = elegiveis.map((c) => c.opsId);
 
+  // Só o DSR dominical conta como folga (FO, BH e outras ausências não zeram a contagem)
+  const idsFolga = new Set([DSR_ID]);
+
   const ultimosDSRRaw = await prisma.$queryRaw`
     SELECT DISTINCT ON ("ops_id")
       "ops_id",
       "data_referencia"
     FROM "frequencia"
-    WHERE 
+    WHERE
       "ops_id" IN (${Prisma.join(opsIdsElegiveis)})
-      AND "id_tipo_ausencia" = ${DSR_ID}
+      AND "id_tipo_ausencia" IN (${Prisma.join([...idsFolga])})
       AND "data_referencia" < ${primeiroDomingoMes}
       AND EXTRACT(DOW FROM "data_referencia") = 0
     ORDER BY "ops_id", "data_referencia" DESC
@@ -347,6 +356,19 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
         opsId: f.ops_id,
         dataDomingo: f.data_referencia,
       });
+    }
+  }
+
+  // Admitido há pouco e sem nenhuma folga dominical: conta os domingos
+  // trabalhados a partir da admissão (o domingo anterior vale como "última folga")
+  for (const c of elegiveis) {
+    if (ultimaFolgaPorOpsId.has(c.opsId) || !c.dataAdmissao) continue;
+
+    const admissao = new Date(c.dataAdmissao);
+    const domingoAnterior = somarDias(admissao, -(admissao.getUTCDay() || 7));
+
+    if (diffDias(primeiroDomingoMes, domingoAnterior) <= INTERVALO_MAX_ENTRE_FOLGAS) {
+      ultimaFolgaPorOpsId.set(c.opsId, { opsId: c.opsId, dataDomingo: domingoAnterior });
     }
   }
 
@@ -477,12 +499,27 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
+    idsFolga,
   };
 }
 
 /* =====================================================
    MOTOR DE PLANEJAMENTO
 ===================================================== */
+
+// Folga que já existe no domingo e conta como a folga do ciclo (não é sobrescrita).
+// Geração mensal: só o DSR manual; o DSR comum do domingo ainda pode ser substituído.
+function folgaFixaMensal(idsFolga) {
+  return (f) =>
+    !!f.idTipoAusencia &&
+    idsFolga.has(f.idTipoAusencia) &&
+    (f.idTipoAusencia !== DSR_ID || Boolean(f.manual));
+}
+
+// Complemento: qualquer folga já lançada (inclusive as automáticas) é mantida.
+function folgaFixaQualquer(idsFolga) {
+  return (f) => !!f.idTipoAusencia && idsFolga.has(f.idTipoAusencia);
+}
 function montarPlanejamento({
   ano,
   mes,
@@ -492,6 +529,7 @@ function montarPlanejamento({
   freqMap,
   capacidade,
   ultimaFolgaPorOpsId,
+  folgaFixa = () => false,
 }) {
   const elegiveisPorTurno = {
     T1: [],
@@ -508,68 +546,109 @@ function montarPlanejamento({
   const ignorados = [];
   const naoAlocados = [];
 
+  if (!domingos.length) return { planejamentos, ignorados, naoAlocados };
+
+  const isoDomingos = domingos.map((d) => isoDate(d));
+  const ultimoDomingoIso = isoDomingos[isoDomingos.length - 1];
+
   for (const turno of ["T1", "T2", "T3"]) {
     const lista = elegiveisPorTurno[turno] || [];
 
-    // 🔥 ADICIONA ISSO
-    lista.sort((a, b) => {
-      const ultimaA = ultimaFolgaPorOpsId.get(a.opsId);
-      const ultimaB = ultimaFolgaPorOpsId.get(b.opsId);
-
-      const diasA = ultimaA?.dataDomingo
-        ? diffDias(new Date(), ultimaA.dataDomingo)
-        : 999;
-
-      const diasB = ultimaB?.dataDomingo
-        ? diffDias(new Date(), ultimaB.dataDomingo)
-        : 999;
-
-      return diasB - diasA; // 🔥 maior primeiro
-    });
+    // Mais urgente primeiro: quem tem o prazo (4º domingo trabalhado) mais próximo
+    const prazoIsoDe = (c) =>
+      isoDate(prazoProximaFolga(ultimaFolgaPorOpsId.get(c.opsId)?.dataDomingo ?? null, domingos));
+    lista.sort((a, b) => prazoIsoDe(a).localeCompare(prazoIsoDe(b)));
 
     for (const colab of lista) {
       const slotBase = getSlotFixoPorOpsId(colab.opsId);
-      const ultimaFolga = ultimaFolgaPorOpsId.get(colab.opsId) || null;
+      const ultimaFolgaAnterior = ultimaFolgaPorOpsId.get(colab.opsId) || null;
+      let ultimaData = ultimaFolgaAnterior?.dataDomingo ?? null;
 
-      const indicesPreferencia = construirIndicesPreferencia({
-        domingos,
-        slotBase,
-        ultimaFolga,
-        capacidade,
-        turno,
-      });
-
-      let alocado = false;
-      let motivoNaoAlocado = null;
-
-      for (const idxDomingo of indicesPreferencia) {
-        const domingo = domingos[idxDomingo];
-        if (!domingo) continue;
-
-        const dataKey = isoDate(domingo);
-        const freqKey = `${colab.opsId}__${dataKey}`;
-        const freqExistente = freqMap.get(freqKey);
-
-        const slotCapacidade = capacidade[turno][dataKey];
-        if (!slotCapacidade || slotCapacidade.saldoDisponivel <= 0) {
-          motivoNaoAlocado = `Sem capacidade no ${idxDomingo + 1}º domingo para o turno ${turno}.`;
-          continue;
-        }
-
-        if (freqExistente?.manual) {
-          motivoNaoAlocado = `Já existe frequência manual em ${dataKey}.`;
-          continue;
-        }
-
-        // Bloqueia apenas ausências que NÃO são DSR (atestados, férias, afastamentos etc.)
+      const freqDe = (idx) => freqMap.get(`${colab.opsId}__${isoDomingos[idx]}`);
+      const bloqueado = (idx, ignorarAusencia) => {
+        const f = freqDe(idx);
+        if (f?.manual) return true;
+        // Bloqueia ausências que NÃO são DSR (atestados, férias, afastamentos etc.)
         // DSR semanal (id === DSR_ID) pode ser sobrescrito pelo dominical
-        if (
-          freqExistente?.idTipoAusencia &&
-          freqExistente.idTipoAusencia !== DSR_ID
-        ) {
-          motivoNaoAlocado = `Já existe ausência não elegível para substituição em ${dataKey}.`;
+        if (!ignorarAusencia && f?.idTipoAusencia && f.idTipoAusencia !== DSR_ID) return true;
+        return false;
+      };
+
+      // Cada volta resolve a próxima folga obrigatória; em mês de 5 domingos
+      // quem folga no 1º volta a precisar de folga no 5º (28 dias depois).
+      for (let volta = 0; volta < domingos.length; volta++) {
+        const prazo = prazoProximaFolga(ultimaData, domingos);
+        const prazoIso = isoDate(prazo);
+        if (prazoIso > ultimoDomingoIso) break; // não precisa de mais folga neste período
+
+        const ultimaIso = ultimaData ? isoDate(ultimaData) : "";
+        const janela = isoDomingos
+          .map((iso, idx) => ({ iso, idx }))
+          .filter((x) => x.iso > ultimaIso && x.iso <= prazoIso)
+          .map((x) => x.idx);
+
+        // Folga já lançada na janela (FO/BH, DSR manual...): zera a contagem de domingos trabalhados
+        const fixa = janela.filter((idx) => {
+          const f = freqDe(idx);
+          return f && folgaFixa(f);
+        });
+        if (fixa.length) {
+          ultimaData = domingos[fixa[fixa.length - 1]];
           continue;
         }
+
+        // Prazo já vencido (ex.: domingos anteriores já passaram): primeiro domingo possível
+        const vencido = janela.length === 0;
+        const candidatos = vencido
+          ? isoDomingos.map((iso, idx) => ({ iso, idx })).filter((x) => x.iso > ultimaIso).map((x) => x.idx)
+          : janela;
+
+        const ordenados = vencido
+          ? candidatos
+          : ordenarCandidatos({ domingos, candidatos, slotBase, ultimaData, capacidade, turno });
+        const ocupacao = (idx) => capacidade[turno][isoDomingos[idx]]?.folgasPlanejadas || 0;
+        const menosOcupados = [...ordenados].sort((a, b) => ocupacao(a) - ocupacao(b));
+        const semCapacidade = ordenados.filter((idx) => !((capacidade[turno][isoDomingos[idx]]?.saldoDisponivel || 0) > 0));
+
+        // 1) dentro do prazo, com capacidade; 2) dentro do prazo, estourando a capacidade (a regra dos
+        // 3 domingos pesa mais); 3) dentro do prazo, substituindo ausência não-DSR (só manual protege)
+        // 4) fora do prazo, qualquer domingo do período (último recurso)
+        let escolhido = ordenados.find((idx) => !semCapacidade.includes(idx) && !bloqueado(idx, false));
+        let forcado = false;
+        let foraDoPrazo = false;
+
+        if (escolhido === undefined) {
+          escolhido = menosOcupados.find((idx) => !bloqueado(idx, false));
+          forcado = escolhido !== undefined;
+        }
+        if (escolhido === undefined) {
+          escolhido = menosOcupados.find((idx) => !bloqueado(idx, true));
+          forcado = escolhido !== undefined;
+        }
+        if (escolhido === undefined) {
+          const resto = isoDomingos
+            .map((iso, idx) => idx)
+            .filter((idx) => isoDomingos[idx] > ultimaIso && !candidatos.includes(idx))
+            .sort((a, b) => ocupacao(a) - ocupacao(b));
+          escolhido = resto.find((idx) => !bloqueado(idx, true));
+          forcado = foraDoPrazo = escolhido !== undefined;
+        }
+
+        if (escolhido === undefined) {
+          naoAlocados.push({
+            opsId: colab.opsId,
+            nomeCompleto: colab.nomeCompleto,
+            turno,
+            escala: colab.escala?.nomeEscala || null,
+            slotBase: slotBase + 1,
+            ultimaFolgaAnterior: ultimaData ? isoDate(ultimaData) : null,
+            motivo: "Todos os domingos possuem frequência manual — impossível alocar.",
+          });
+          break;
+        }
+
+        const domingo = domingos[escolhido];
+        const slotCapacidade = capacidade[turno][isoDomingos[escolhido]];
 
         planejamentos.push({
           opsId: colab.opsId,
@@ -579,109 +658,32 @@ function montarPlanejamento({
           ano,
           mes,
           dataDomingo: domingo,
-          domingo: dataKey,
-          domingoIndex: idxDomingo,
+          domingo: isoDomingos[escolhido],
+          domingoIndex: escolhido,
           slotBase,
-          slotEscolhido: idxDomingo + 1,
+          slotEscolhido: escolhido + 1,
           criadoPorId: userId,
-          ultimaFolgaAnterior: ultimaFolga?.dataDomingo
-            ? isoDate(ultimaFolga.dataDomingo)
-            : null,
-          diasDesdeUltimaFolga: ultimaFolga?.dataDomingo
-            ? diffDias(domingo, ultimaFolga.dataDomingo)
-            : null,
+          ultimaFolgaAnterior: ultimaData ? isoDate(ultimaData) : null,
+          diasDesdeUltimaFolga: ultimaData ? diffDias(domingo, ultimaData) : null,
+          prazo: prazoIso,
+          ...(forcado && { forcado: true }),
+          ...(foraDoPrazo && { foraDoPrazo: true }),
         });
 
-        slotCapacidade.folgasPlanejadas += 1;
-        slotCapacidade.saldoDisponivel -= 1;
+        if (slotCapacidade) {
+          slotCapacidade.folgasPlanejadas += 1;
+          slotCapacidade.saldoDisponivel = Math.max(0, slotCapacidade.saldoDisponivel - 1);
+        }
 
-        alocado = true;
-        break;
+        ultimaData = domingo;
       }
-
-      if (!alocado) {
-        naoAlocados.push({
-          colab,
-          turno,
-          slotBase,
-          ultimaFolga: ultimaFolga || null,
-          motivo: motivoNaoAlocado || "Não foi possível alocar em domingo válido.",
-        });
-      }
-    }
-  }
-
-  // ─── SEGUNDA PASSAGEM: força alocação dos não-alocados ───────────────────
-  // Ignora saldo e ausências não-DSR; respeita apenas manual=true
-  const aindaNaoAlocados = [];
-
-  for (const item of naoAlocados) {
-    const { colab, turno, slotBase, ultimaFolga } = item;
-
-    // Ordena domingos pela menor ocupação (melhor domingo primeiro)
-    const domingosPorOcupacao = domingos
-      .map((d, idx) => ({ idx, ocupacao: capacidade[turno][isoDate(d)]?.folgasPlanejadas || 0 }))
-      .sort((a, b) => a.ocupacao - b.ocupacao);
-
-    let alocado = false;
-
-    for (const { idx: idxDomingo } of domingosPorOcupacao) {
-      const domingo = domingos[idxDomingo];
-      if (!domingo) continue;
-
-      const dataKey = isoDate(domingo);
-      const freqKey = `${colab.opsId}__${dataKey}`;
-      const freqExistente = freqMap.get(freqKey);
-
-      // Único bloqueio respeitado na força: frequência manual
-      if (freqExistente?.manual) continue;
-
-      planejamentos.push({
-        opsId: colab.opsId,
-        nomeCompleto: colab.nomeCompleto,
-        turno,
-        escala: colab.escala?.nomeEscala || null,
-        ano,
-        mes,
-        dataDomingo: domingo,
-        domingo: dataKey,
-        domingoIndex: idxDomingo,
-        slotBase,
-        slotEscolhido: idxDomingo + 1,
-        criadoPorId: userId,
-        ultimaFolgaAnterior: ultimaFolga?.dataDomingo
-          ? isoDate(ultimaFolga.dataDomingo)
-          : null,
-        diasDesdeUltimaFolga: ultimaFolga?.dataDomingo
-          ? diffDias(domingo, ultimaFolga.dataDomingo)
-          : null,
-        forcado: true,
-      });
-
-      capacidade[turno][dataKey].folgasPlanejadas += 1;
-      alocado = true;
-      break;
-    }
-
-    if (!alocado) {
-      aindaNaoAlocados.push({
-        opsId: colab.opsId,
-        nomeCompleto: colab.nomeCompleto,
-        turno,
-        escala: colab.escala?.nomeEscala || null,
-        slotBase: slotBase + 1,
-        ultimaFolgaAnterior: ultimaFolga?.dataDomingo
-          ? isoDate(ultimaFolga.dataDomingo)
-          : null,
-        motivo: "Todos os domingos possuem frequência manual — impossível alocar.",
-      });
     }
   }
 
   return {
     planejamentos,
     ignorados,
-    naoAlocados: aindaNaoAlocados,
+    naoAlocados,
   };
 }
 
@@ -715,6 +717,7 @@ async function gerarFolgaDominical({ ano, mes, userId, estacaoId = null }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
+    idsFolga,
   } = await carregarContextoPlanejamento({ ano, mes, estacaoId });
 
   const {
@@ -730,6 +733,7 @@ async function gerarFolgaDominical({ ano, mes, userId, estacaoId = null }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
+    folgaFixa: folgaFixaMensal(idsFolga),
   });
 
   if (naoAlocados.length > 0) {
@@ -754,6 +758,9 @@ async function gerarFolgaDominical({ ano, mes, userId, estacaoId = null }) {
     domingos: domingos.length,
     elegiveis: elegiveis.length,
     geradas: planejamentos.length,
+    segundaFolga: planejamentos.length - new Set(planejamentos.map((p) => p.opsId)).size,
+    forcadas: planejamentos.filter((p) => p.forcado).length,
+    foraDoPrazo: planejamentos.filter((p) => p.foraDoPrazo).length,
     ignoradas: ignorados.length,
     naoAlocados: naoAlocados.length,
     totalAtivosTurno,
@@ -764,7 +771,8 @@ async function gerarFolgaDominical({ ano, mes, userId, estacaoId = null }) {
 
 /* =====================================================
    GERAR FOLGA DOMINICAL — INCREMENTAL (COMPLEMENTAR)
-   Preenche só quem é elegível AGORA e ainda não tem folga em domingo do mês,
+   Preenche só quem é elegível AGORA e precisa de folga em domingo do mês
+   (sem folga ainda, ou prestes a completar o 4º domingo trabalhado seguido),
    usando apenas domingos que ainda não passaram. Não apaga nem altera o
    que já foi gerado; as folgas existentes entram na conta de capacidade.
    Cobre quem mudou de escala, entrou ou passou a ser elegível depois da
@@ -785,6 +793,7 @@ async function gerarFolgaDominicalIncremental({ ano, mes, userId, estacaoId = nu
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
+    idsFolga,
   } = await carregarContextoPlanejamento({ ano, mes, estacaoId });
 
   const hoje = hojeBrasilISO();
@@ -798,18 +807,20 @@ async function gerarFolgaDominicalIncremental({ ano, mes, userId, estacaoId = nu
     };
   }
 
-  // Tipos que contam como "folga": DSR, FO (folga) e BH (banco de horas)
-  const tiposFolga = await prisma.tipoAusencia.findMany({
-    where: { codigo: { in: ["DSR", "FO", "BH"] } },
-    select: { idTipoAusencia: true },
-  });
-  const idsFolga = new Set(tiposFolga.map((t) => t.idTipoAusencia));
-  idsFolga.add(DSR_ID);
-
   const jaTemFolga = new Set();
+  const primeiroFuturoIso = isoDate(domingosFuturos[0]);
+  // Última folga conhecida de cada um, incluindo as dos domingos do mês que já passaram
+  const ultimaFolgaAtual = new Map(ultimaFolgaPorOpsId);
 
   for (const f of freqMap.values()) {
-    if (f.idTipoAusencia && idsFolga.has(f.idTipoAusencia)) jaTemFolga.add(f.opsId);
+    if (f.idTipoAusencia && idsFolga.has(f.idTipoAusencia)) {
+      jaTemFolga.add(f.opsId);
+      const iso = isoDate(f.dataReferencia);
+      const atual = ultimaFolgaAtual.get(f.opsId)?.dataDomingo;
+      if (iso < primeiroFuturoIso && (!atual || iso > isoDate(atual))) {
+        ultimaFolgaAtual.set(f.opsId, { opsId: f.opsId, dataDomingo: f.dataReferencia });
+      }
+    }
 
     // Folgas automáticas já geradas ocupam a capacidade do turno naquele domingo
     if (f.idTipoAusencia === DSR_ID && f.justificativa === JUSTIFICATIVA_AUTO) {
@@ -824,25 +835,26 @@ async function gerarFolgaDominicalIncremental({ ano, mes, userId, estacaoId = nu
 
   const semFolga = elegiveis.filter((c) => !jaTemFolga.has(c.opsId));
 
-  if (!semFolga.length) {
-    return {
-      modo: "incremental", ano, mes,
-      domingos: domingosFuturos.length, elegiveis: elegiveis.length,
-      semFolga: 0, geradas: 0, naoAlocados: 0,
-      mensagem: "Todos os elegíveis já têm folga em algum domingo do mês.",
-    };
-  }
-
   const { planejamentos, naoAlocados } = montarPlanejamento({
     ano,
     mes,
     userId,
     domingos: domingosFuturos,
-    elegiveis: semFolga,
+    elegiveis,
     freqMap,
     capacidade,
-    ultimaFolgaPorOpsId,
+    ultimaFolgaPorOpsId: ultimaFolgaAtual,
+    folgaFixa: folgaFixaQualquer(idsFolga),
   });
+
+  if (!planejamentos.length && !naoAlocados.length) {
+    return {
+      modo: "incremental", ano, mes,
+      domingos: domingosFuturos.length, elegiveis: elegiveis.length,
+      semFolga: semFolga.length, geradas: 0, naoAlocados: 0,
+      mensagem: "Todos os elegíveis já têm folga dentro do limite de 3 domingos trabalhados seguidos.",
+    };
+  }
 
   if (!simular) await processarPlanejamentosEmLotes(planejamentos, userId);
 
@@ -1067,6 +1079,7 @@ async function previewFolgaDominical({ ano, mes, estacaoId = null }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
+    idsFolga,
   } = await carregarContextoPlanejamento({ ano, mes, estacaoId });
 
   const {
@@ -1080,6 +1093,7 @@ async function previewFolgaDominical({ ano, mes, estacaoId = null }) {
     freqMap,
     capacidade,
     ultimaFolgaPorOpsId,
+    folgaFixa: folgaFixaMensal(idsFolga),
   });
 
   return {
@@ -1100,6 +1114,8 @@ async function previewFolgaDominical({ ano, mes, estacaoId = null }) {
       slotBase: item.slotBase + 1,
       ultimaFolgaAnterior: item.ultimaFolgaAnterior,
       diasDesdeUltimaFolga: item.diasDesdeUltimaFolga,
+      prazo: item.prazo,
+      forcado: Boolean(item.forcado),
     })),
   };
 }
