@@ -70,7 +70,7 @@ function isDiaDSRSync(data, diasDsr = []) {
 }
 
 // Escalas elegíveis à folga dominical automática (mesma regra do folgaDominical.service)
-const ESCALAS_FOLGA_DOMINICAL = ["B", "C", "G"];
+const ESCALAS_FOLGA_DOMINICAL = ["B", "C", "G", "I"];
 const JUSTIFICATIVA_FOLGA_DOMINICAL = "DSR_FOLGA_DOMINICAL_AUTOMATICA";
 
 /**

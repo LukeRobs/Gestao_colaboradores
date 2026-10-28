@@ -715,7 +715,7 @@ export default function FolgaDominicalPage() {
                 </h1>
               </div>
               <p style={{ margin: "0 0 0 14px", fontSize: 13, color: "var(--color-muted)" }}>
-                Distribuição automática de DSR aos domingos — Escalas B, C e G
+                Distribuição automática de DSR aos domingos — Escalas B, C, G e I (Jaboatão)
               </p>
             </div>
 

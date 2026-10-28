@@ -204,7 +204,7 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
   }
 
   /* =====================================================
-     2) ELEGÍVEIS (ESCALAS B, C, G | CARGOS ELEGÍVEIS)
+     2) ELEGÍVEIS (ESCALAS B, C, G + I DE JABOATÃO | CARGOS ELEGÍVEIS)
   ===================================================== */
   const CARGOS_ELEGIVEIS = [
     "Auxiliar de Logística I",
@@ -216,8 +216,13 @@ async function carregarContextoPlanejamento({ ano, mes, estacaoId = null }) {
       status: "ATIVO",
       ...estacaoFilter,
       escala: {
-        nomeEscala: { in: ["B", "C", "G"] },
         ativo: true,
+        // Escala I de Jaboatão (folga quarta e sábado) trabalha aos domingos e
+        // entra no rodízio; a escala I de outras estações já folga no domingo.
+        OR: [
+          { nomeEscala: { in: ["B", "C", "G"] } },
+          { nomeEscala: "I", idEstacao: 1 },
+        ],
       },
       turno: {
         nomeTurno: { in: ["T1", "T2", "T3"] },
