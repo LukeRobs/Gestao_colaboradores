@@ -5,7 +5,7 @@
 const { prisma } = require("../config/database");
 const csv = require("csvtojson");
 const XLSX = require("xlsx");
-const { preservarFolgaDominicalWhere } = require("../utils/dsr");
+const { preservarFolgaDominicalWhere, getDiasDsr } = require("../utils/dsr");
 const { resolverHorarioJornada } = require("../utils/horarioTurno");
 const {
   normalizarOpsId,
@@ -1189,10 +1189,39 @@ const updateColaborador = async (req, res) => {
           },
         });
 
-        await tx.frequencia.updateMany({
+        // O desligamento sobrescreveu todos os dias restantes do mês (inclusive os de DSR
+        // da escala). Ao reverter, os dias de DSR voltam como DSR; os demais ficam sem status.
+        const diasAutoDeslig = await tx.frequencia.findMany({
           where: { opsId, justificativa: "AUTO_DESLIGAMENTO", manual: false },
-          data: { idTipoAusencia: null, justificativa: null, validado: false },
+          select: { idFrequencia: true, dataReferencia: true },
         });
+
+        const escalaReativacao = atual.idEscala
+          ? await tx.escala.findUnique({ where: { idEscala: atual.idEscala }, select: { nomeEscala: true } })
+          : null;
+        const diasDsrEscala = escalaReativacao
+          ? await getDiasDsr(escalaReativacao.nomeEscala, tx, atual.idEstacao)
+          : [];
+        const tipoDsrReativacao = diasDsrEscala.length
+          ? await tx.tipoAusencia.findFirst({ where: { codigo: "DSR" }, select: { idTipoAusencia: true } })
+          : null;
+
+        const ehDiaDsr = (f) => !!tipoDsrReativacao && diasDsrEscala.includes(new Date(f.dataReferencia).getUTCDay());
+        const idsDsrRestaurar = diasAutoDeslig.filter(ehDiaDsr).map((f) => f.idFrequencia);
+        const idsLimpar = diasAutoDeslig.filter((f) => !ehDiaDsr(f)).map((f) => f.idFrequencia);
+
+        if (idsDsrRestaurar.length) {
+          await tx.frequencia.updateMany({
+            where: { idFrequencia: { in: idsDsrRestaurar } },
+            data: { idTipoAusencia: tipoDsrReativacao.idTipoAusencia, justificativa: "DSR_AUTO", validado: true },
+          });
+        }
+        if (idsLimpar.length) {
+          await tx.frequencia.updateMany({
+            where: { idFrequencia: { in: idsLimpar } },
+            data: { idTipoAusencia: null, justificativa: null, validado: false },
+          });
+        }
       }
 
       /* =========================

@@ -1,0 +1,386 @@
+[
+ {
+  "idFrequencia": 1667696,
+  "opsId": "Ops25107",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1668132,
+  "opsId": "Ops161205",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1668975,
+  "opsId": "Ops124071",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1669000,
+  "opsId": "Ops8612",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1669307,
+  "opsId": "Ops25636",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1670019,
+  "opsId": "Ops124041",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1670375,
+  "opsId": "Ops8621",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1670579,
+  "opsId": "Ops117191",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1671270,
+  "opsId": "Ops100649",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1671167,
+  "opsId": "Ops384105",
+  "de": 66,
+  "para": 9
+ },
+ {
+  "idFrequencia": 1672853,
+  "opsId": "Ops128477",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1673309,
+  "opsId": "Ops8615",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1673359,
+  "opsId": "Ops55743",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1673742,
+  "opsId": "Ops132360",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1674888,
+  "opsId": "Ops108154",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1674913,
+  "opsId": "Ops128470",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1675244,
+  "opsId": "Ops118880",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1675498,
+  "opsId": "Ops24768",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1675984,
+  "opsId": "Ops104059",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1676469,
+  "opsId": "Ops24518",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1679744,
+  "opsId": "Ops297175",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1680229,
+  "opsId": "Ops256615",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1680254,
+  "opsId": "Ops241648",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1678230,
+  "opsId": "Ops104064",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1678281,
+  "opsId": "Ops111756",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1678461,
+  "opsId": "Ops117214",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1678642,
+  "opsId": "Ops18595",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1678823,
+  "opsId": "Ops117223",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1679183,
+  "opsId": "Ops24624",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1680664,
+  "opsId": "Ops133686",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1680818,
+  "opsId": "Ops137392",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1680970,
+  "opsId": "Ops293103",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1681659,
+  "opsId": "Ops282367",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1684336,
+  "opsId": "Ops209566",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 1687322,
+  "opsId": "Ops231018",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 2215398,
+  "opsId": "Ops191304",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 2670550,
+  "opsId": "Ops256539",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 2670552,
+  "opsId": "Ops121368",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 2670601,
+  "opsId": "Ops370835",
+  "de": 66,
+  "para": 4
+ },
+ {
+  "idFrequencia": 2748857,
+  "opsId": "Ops500480",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748881,
+  "opsId": "Ops310554",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748886,
+  "opsId": "Ops447632",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748895,
+  "opsId": "Ops458633",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748890,
+  "opsId": "Ops158927",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748928,
+  "opsId": "Ops95227",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748996,
+  "opsId": "Ops428377",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748995,
+  "opsId": "Ops454785",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749077,
+  "opsId": "Ops594654",
+  "de": 66,
+  "para": 3
+ },
+ {
+  "idFrequencia": 2749090,
+  "opsId": "Ops598860",
+  "de": 66,
+  "para": 3
+ },
+ {
+  "idFrequencia": 2748856,
+  "opsId": "Ops456879",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749050,
+  "opsId": "Ops447638",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749091,
+  "opsId": "Ops296285",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749075,
+  "opsId": "Ops597326",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749066,
+  "opsId": "Ops447635",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748907,
+  "opsId": "Ops605897",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748930,
+  "opsId": "Ops409267",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2748900,
+  "opsId": "Ops447642",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749035,
+  "opsId": "Ops499995",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749030,
+  "opsId": "Ops605838",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749032,
+  "opsId": "Ops508177",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749009,
+  "opsId": "Ops447627",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749036,
+  "opsId": "Ops494145",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749073,
+  "opsId": "Ops484854",
+  "de": 66,
+  "para": 2
+ },
+ {
+  "idFrequencia": 2749080,
+  "opsId": "Ops598843",
+  "de": 66,
+  "para": 2
+ }
+]
