@@ -37,6 +37,8 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "https://gestao-colaboradores.vercel.app",
+  // Origens extras (ex.: Cloudflare Pages) via env, separadas por virgula, sem barra final
+  ...(process.env.CORS_ORIGINS || "").split(",").map((o) => o.trim().replace(/\/+$/, "")).filter(Boolean),
 ];
 
 app.use(
