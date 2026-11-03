@@ -105,6 +105,7 @@ async function receberTripList(idEstacao, corpo) {
     where: { idEstacao },
     create: { idEstacao, payload, fetchedAt },
     update: { payload, fetchedAt, recebidoEm: new Date() },
+    select: { idEstacao: true }, // sem isso o upsert devolve o payload inteiro (trafego de rede do banco)
   });
   await registrarStatus(idEstacao, MODULO.TRIP_LIST, fetchedAt, total);
   return { total };
@@ -120,6 +121,7 @@ async function receberStageIn(idEstacao, corpo) {
     where: { idEstacao },
     create: { idEstacao, payload, fetchedAt },
     update: { payload, fetchedAt, recebidoEm: new Date() },
+    select: { idEstacao: true },
   });
   await registrarStatus(idEstacao, MODULO.STAGE_IN, fetchedAt, lista.length);
   return { total: lista.length };
@@ -146,6 +148,7 @@ async function receberQueueList(idEstacao, corpo) {
     where: { idEstacao },
     create: { idEstacao, payload, fetchedAt },
     update: { payload, fetchedAt, recebidoEm: new Date() },
+    select: { idEstacao: true },
   });
   await registrarStatus(idEstacao, MODULO.QUEUE_LIST, fetchedAt, lista.length);
   // Guarda o histórico dos veículos recebidos; se falhar, a fila ao vivo continua funcionando.
